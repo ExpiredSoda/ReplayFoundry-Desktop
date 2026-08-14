@@ -43,7 +43,10 @@ internal static class RuntimePackTests
         new("Catalog rejects non-HTTPS package URLs", CatalogRequiresHttps),
         new("Catalog download rejects an unapproved redirect host", CatalogRejectsRedirect),
         new("Catalog download rejects a SHA-256 mismatch and cleans partials", CatalogRejectsHashMismatch),
+        new("Catalog download rejects a manifest-hash mismatch and rolls back", CatalogRejectsManifestMismatch),
         new("Catalog requires the exact fixed profile kinds", CatalogRequiresFixedProfile),
+        new("Current catalog requires installed manifest hashes", CatalogRequiresManifestHashes),
+        new("Catalog skips an already installed exact manifest", CatalogSkipsInstalledExactManifest),
         new("Advanced catalog failure rolls back newly installed packs", CatalogRollsBackPartialProfile),
         new("Empty package-store cleanup removes only empty store state", EmptyStoreCleanup),
     ];
@@ -630,16 +633,92 @@ internal static class RuntimePackTests
         Assert(!Directory.Exists(downloads) || !Directory.EnumerateFiles(downloads).Any(), "Hash failure left a downloaded payload.");
     }
 
+    private static async Task CatalogRejectsManifestMismatch()
+    {
+        using Fixture fixture = new();
+        ReplayFoundryRuntimePackManifest manifest = CreateManifest(fixture);
+        await fixture.SealAsync(manifest);
+        string mediaZip = Path.Combine(fixture.Root, "media.zip");
+        ZipFile.CreateFromDirectory(fixture.Source, mediaZip);
+        byte[] payload = await File.ReadAllBytesAsync(mediaZip);
+        var catalog = new ReplayFoundryRuntimePackCatalog(
+            ReplayFoundryRuntimePackCatalog.Schema,
+            "Base",
+            [new ReplayFoundryRuntimePackCatalogItem(
+                manifest.Identity.PackageId,
+                manifest.Identity.Kind,
+                manifest.Identity.SemanticVersion,
+                new Uri("https://downloads.example.test/media.zip"),
+                payload.Length,
+                HashBytes(payload),
+                [],
+                Hash("different-manifest"))],
+            Fixture.Created);
+        using var client = new HttpClient(new StaticResponseHandler(
+            payload,
+            new Uri("https://downloads.example.test/media.zip")));
+        ReplayFoundryRuntimePackStore store = fixture.Store();
+        await AssertThrowsAsync<InvalidDataException>(() =>
+            new ReplayFoundryRuntimePackCatalogInstaller(client, store).InstallAsync(
+                catalog,
+                Path.Combine(fixture.Root, "downloads")));
+        Assert((await store.ListInstalledAsync()).Count == 0,
+            "A manifest-hash mismatch left its downloaded pack installed.");
+    }
+
     private static Task CatalogRequiresFixedProfile()
     {
         ReplayFoundryRuntimePackCatalogItem media = new(
             "replayfoundry-media-tools", ReplayFoundryRuntimePackKind.MediaTools, "1.0.0",
-            new Uri("https://downloads.example.test/media.zip"), 1, Hash("x"), []);
+            new Uri("https://downloads.example.test/media.zip"), 1, Hash("x"), [], Hash("manifest"));
         _ = new ReplayFoundryRuntimePackCatalog(
             ReplayFoundryRuntimePackCatalog.Schema, "Base", [media], Fixture.Created);
         AssertThrows<ArgumentException>(() => new ReplayFoundryRuntimePackCatalog(
             ReplayFoundryRuntimePackCatalog.Schema, "Advanced", [media], Fixture.Created));
         return Task.CompletedTask;
+    }
+
+    private static Task CatalogRequiresManifestHashes()
+    {
+        ReplayFoundryRuntimePackCatalogItem media = new(
+            "replayfoundry-media-tools", ReplayFoundryRuntimePackKind.MediaTools, "1.0.0",
+            new Uri("https://downloads.example.test/media.zip"), 1, Hash("x"), []);
+        AssertThrows<ArgumentException>(() => new ReplayFoundryRuntimePackCatalog(
+            ReplayFoundryRuntimePackCatalog.Schema, "Base", [media], Fixture.Created));
+        _ = new ReplayFoundryRuntimePackCatalog(
+            ReplayFoundryRuntimePackCatalog.PreviousSchema, "Base", [media], Fixture.Created);
+        return Task.CompletedTask;
+    }
+
+    private static async Task CatalogSkipsInstalledExactManifest()
+    {
+        using Fixture fixture = new();
+        ReplayFoundryRuntimePackManifest manifest = CreateManifest(fixture);
+        await fixture.SealAsync(manifest);
+        string mediaZip = Path.Combine(fixture.Root, "media.zip");
+        ZipFile.CreateFromDirectory(fixture.Source, mediaZip);
+        byte[] payload = await File.ReadAllBytesAsync(mediaZip);
+        ReplayFoundryRuntimePackStore store = fixture.Store();
+        await store.InstallAsync(mediaZip, activate: true);
+        var catalog = new ReplayFoundryRuntimePackCatalog(
+            ReplayFoundryRuntimePackCatalog.Schema,
+            "Base",
+            [new ReplayFoundryRuntimePackCatalogItem(
+                manifest.Identity.PackageId,
+                manifest.Identity.Kind,
+                manifest.Identity.SemanticVersion,
+                new Uri("https://downloads.example.test/media.zip"),
+                payload.Length,
+                HashBytes(payload),
+                [],
+                manifest.ManifestHash)],
+            Fixture.Created);
+        var handler = new StaticResponseHandler(payload, new Uri("https://downloads.example.test/media.zip"));
+        using var client = new HttpClient(handler);
+        await new ReplayFoundryRuntimePackCatalogInstaller(client, store).InstallAsync(
+            catalog,
+            Path.Combine(fixture.Root, "downloads"));
+        Assert(handler.RequestCount == 0, "An exact verified installed pack was downloaded again.");
     }
 
     private static async Task CatalogRollsBackPartialProfile()
@@ -650,23 +729,26 @@ internal static class RuntimePackTests
         ZipFile.CreateFromDirectory(fixture.Source, mediaZip);
         byte[] validMedia = await File.ReadAllBytesAsync(mediaZip);
         byte[] invalid = Encoding.UTF8.GetBytes("not a runtime pack");
+        string mediaManifestHash = (await RuntimePackManifestJson.ReadAsync(
+            Path.Combine(fixture.Source, RuntimePackManifestJson.FileName))).ManifestHash;
         ReplayFoundryRuntimePackCatalogItem Item(
             string id,
             ReplayFoundryRuntimePackKind kind,
             string file,
-            byte[] bytes) => new(
+            byte[] bytes,
+            string manifestHash) => new(
                 id, kind, "1.0.0", new Uri("https://downloads.example.test/" + file),
-                bytes.Length, HashBytes(bytes), []);
+                bytes.Length, HashBytes(bytes), [], manifestHash);
         var catalog = new ReplayFoundryRuntimePackCatalog(
             ReplayFoundryRuntimePackCatalog.Schema,
             "Advanced",
             [
-                Item("replayfoundry-media-tools", ReplayFoundryRuntimePackKind.MediaTools, "media.zip", validMedia),
-                Item("replayfoundry-speech", ReplayFoundryRuntimePackKind.SpeechActivity, "speech.zip", invalid),
-                Item("replayfoundry-transcription-runtime", ReplayFoundryRuntimePackKind.TranscriptionRuntime, "tr.zip", invalid),
-                Item("replayfoundry-transcription-model", ReplayFoundryRuntimePackKind.TranscriptionModel, "tm.zip", invalid),
-                Item("replayfoundry-visual-runtime", ReplayFoundryRuntimePackKind.VisualRuntime, "vr.zip", invalid),
-                Item("replayfoundry-visual-model", ReplayFoundryRuntimePackKind.VisualModel, "vm.zip", invalid),
+                Item("replayfoundry-media-tools", ReplayFoundryRuntimePackKind.MediaTools, "media.zip", validMedia, mediaManifestHash),
+                Item("replayfoundry-speech", ReplayFoundryRuntimePackKind.SpeechActivity, "speech.zip", invalid, Hash("speech")),
+                Item("replayfoundry-transcription-runtime", ReplayFoundryRuntimePackKind.TranscriptionRuntime, "tr.zip", invalid, Hash("tr")),
+                Item("replayfoundry-transcription-model", ReplayFoundryRuntimePackKind.TranscriptionModel, "tm.zip", invalid, Hash("tm")),
+                Item("replayfoundry-visual-runtime", ReplayFoundryRuntimePackKind.VisualRuntime, "vr.zip", invalid, Hash("vr")),
+                Item("replayfoundry-visual-model", ReplayFoundryRuntimePackKind.VisualModel, "vm.zip", invalid, Hash("vm")),
             ],
             Fixture.Created);
         var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal)
@@ -703,7 +785,7 @@ internal static class RuntimePackTests
         "Base",
         [new ReplayFoundryRuntimePackCatalogItem(
             "replayfoundry-media-tools", ReplayFoundryRuntimePackKind.MediaTools, "1.0.0",
-            new Uri("https://downloads.example.test/media.zip"), payload.Length, hash, [])],
+            new Uri("https://downloads.example.test/media.zip"), payload.Length, hash, [], Hash("manifest"))],
         Fixture.Created);
 
     private static ReplayFoundryRuntimePackManifest CreateManifest(
@@ -811,8 +893,11 @@ internal static class RuntimePackTests
 
     private sealed class StaticResponseHandler(byte[] payload, Uri finalUri) : HttpMessageHandler
     {
+        public int RequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            RequestCount++;
             var finalRequest = new HttpRequestMessage(HttpMethod.Get, finalUri);
             return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {

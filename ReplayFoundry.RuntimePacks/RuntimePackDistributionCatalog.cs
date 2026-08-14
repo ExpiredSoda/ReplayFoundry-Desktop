@@ -14,7 +14,8 @@ public sealed record ReplayFoundryRuntimePackCatalogItem
         Uri downloadUri,
         long byteLength,
         string sha256,
-        IEnumerable<string> approvedRedirectHosts)
+        IEnumerable<string> approvedRedirectHosts,
+        string? manifestHash = null)
     {
         PackageId = RuntimePackValidation.PackageId(packageId);
         if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
@@ -32,6 +33,9 @@ public sealed record ReplayFoundryRuntimePackCatalogItem
         DownloadUri = downloadUri;
         ByteLength = byteLength;
         Sha256 = RuntimePackValidation.Sha256(sha256, nameof(sha256));
+        ManifestHash = manifestHash is null
+            ? null
+            : RuntimePackValidation.Sha256(manifestHash, nameof(manifestHash));
         ApprovedRedirectHosts = Array.AsReadOnly(hosts);
     }
 
@@ -41,19 +45,23 @@ public sealed record ReplayFoundryRuntimePackCatalogItem
     public Uri DownloadUri { get; }
     public long ByteLength { get; }
     public string Sha256 { get; }
+    public string? ManifestHash { get; }
     public IReadOnlyList<string> ApprovedRedirectHosts { get; }
 }
 
 public sealed class ReplayFoundryRuntimePackCatalog
 {
-    public const string Schema = "replayfoundry-runtime-pack-catalog-1.0";
+    public const string Schema = "replayfoundry-runtime-pack-catalog-1.1";
+    public const string PreviousSchema = "replayfoundry-runtime-pack-catalog-1.0";
     public ReplayFoundryRuntimePackCatalog(
         string schemaVersion,
         string profile,
         IEnumerable<ReplayFoundryRuntimePackCatalogItem> packs,
         DateTimeOffset createdAtUtc)
     {
-        if (schemaVersion != Schema || profile is not ("Base" or "Advanced") || createdAtUtc.Offset != TimeSpan.Zero)
+        if (schemaVersion is not (Schema or PreviousSchema) ||
+            profile is not ("Base" or "Advanced") ||
+            createdAtUtc.Offset != TimeSpan.Zero)
             throw new ArgumentException("Runtime pack catalog metadata is invalid.");
         ReplayFoundryRuntimePackCatalogItem[] snapshot = packs.ToArray();
         if (snapshot.Length == 0 ||
@@ -66,6 +74,8 @@ public sealed class ReplayFoundryRuntimePackCatalog
             : Enum.GetValues<ReplayFoundryRuntimePackKind>().Order().ToArray();
         if (!actualKinds.SequenceEqual(requiredKinds))
             throw new ArgumentException($"The {profile} catalog does not contain its exact fixed runtime profile.", nameof(packs));
+        if (schemaVersion == Schema && snapshot.Any(pack => pack.ManifestHash is null))
+            throw new ArgumentException("Current catalogs must bind every archive to its installed manifest hash.", nameof(packs));
         SchemaVersion = schemaVersion;
         Profile = profile;
         Packs = Array.AsReadOnly(snapshot);
@@ -99,7 +109,8 @@ public static class ReplayFoundryRuntimePackCatalogReader
             dto.SchemaVersion!, dto.Profile!,
             dto.Packs.Select(item => new ReplayFoundryRuntimePackCatalogItem(
                 item.PackageId!, Enum.Parse<ReplayFoundryRuntimePackKind>(item.Kind!, ignoreCase: false), item.SemanticVersion!,
-                new Uri(item.DownloadUrl!, UriKind.Absolute), item.ByteLength, item.Sha256!, item.ApprovedRedirectHosts ?? [])),
+                new Uri(item.DownloadUrl!, UriKind.Absolute), item.ByteLength, item.Sha256!, item.ApprovedRedirectHosts ?? [],
+                item.ManifestHash)),
             dto.CreatedAtUtc);
     }
 
@@ -118,6 +129,7 @@ public static class ReplayFoundryRuntimePackCatalogReader
         public string? DownloadUrl { get; set; }
         public long ByteLength { get; set; }
         public string? Sha256 { get; set; }
+        public string? ManifestHash { get; set; }
         public string[]? ApprovedRedirectHosts { get; set; }
     }
 }
@@ -159,6 +171,21 @@ public sealed class ReplayFoundryRuntimePackCatalogInstaller
             foreach (ReplayFoundryRuntimePackCatalogItem item in catalog.Packs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                InstalledReplayFoundryRuntimePack? alreadyInstalled = item.ManifestHash is null
+                    ? null
+                    : before.SingleOrDefault(pack =>
+                        string.Equals(pack.Manifest.Identity.PackageId, item.PackageId, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(pack.Manifest.ManifestHash, item.ManifestHash, StringComparison.Ordinal));
+                if (alreadyInstalled is not null)
+                {
+                    await _store.ActivateInstalledAsync(
+                        alreadyInstalled.Manifest.Identity.PackageId,
+                        alreadyInstalled.Manifest.ManifestHash,
+                        cancellationToken);
+                    completedCount++;
+                    progress?.Report((completedCount, catalog.Packs.Count, item.PackageId));
+                    continue;
+                }
                 string partial = Path.Combine(root, item.PackageId + ".partial-" + Guid.NewGuid().ToString("N"));
                 string archive = Path.Combine(root, item.PackageId + "-" + item.Sha256 + ".zip");
                 try
@@ -182,11 +209,13 @@ public sealed class ReplayFoundryRuntimePackCatalogInstaller
                     if (!string.Equals(hash, item.Sha256, StringComparison.Ordinal)) throw new InvalidDataException($"Downloaded {item.PackageId} failed SHA-256 verification.");
                     File.Move(partial, archive, overwrite: true);
                     InstalledReplayFoundryRuntimePack installed = await _store.InstallAsync(archive, activate: true, cancellationToken);
+                    completed.Add(installed);
                     if (installed.Manifest.Identity.Kind != item.Kind ||
                         !string.Equals(installed.Manifest.Identity.PackageId, item.PackageId, StringComparison.Ordinal) ||
-                        !string.Equals(installed.Manifest.Identity.SemanticVersion, item.SemanticVersion, StringComparison.Ordinal))
+                        !string.Equals(installed.Manifest.Identity.SemanticVersion, item.SemanticVersion, StringComparison.Ordinal) ||
+                        (item.ManifestHash is not null &&
+                         !string.Equals(installed.Manifest.ManifestHash, item.ManifestHash, StringComparison.Ordinal)))
                         throw new InvalidDataException($"Downloaded {item.PackageId} did not match its catalog identity.");
-                    completed.Add(installed);
                     completedCount++;
                     progress?.Report((completedCount, catalog.Packs.Count, item.PackageId));
                 }

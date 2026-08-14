@@ -1,11 +1,11 @@
 # Replay Foundry Windows distribution
 
-Replay Foundry has two explicit Windows x64 profiles. Both are per-user installs and never modify `PATH`.
+Replay Foundry uses one signed Windows x64 installer. It is a per-user install and never modifies `PATH`.
 
 | Profile | Works offline after setup download | Installed capability |
 | --- | --- | --- |
 | **Base** | Yes | Self-contained WPF app plus verified FFmpeg/ffprobe pack. Deterministic evidence and Moment Finder remain usable with no AI model. |
-| **Advanced** | No; the current one-EXE bootstrapper needs a connection during installation | Base plus Silero VAD, whisper.cpp CPU runtime, the multilingual Whisper small model, and the locally qualified Qwen3-VL CUDA runtime/model. |
+| **Optional Advanced AI** | No; it downloads only when selected during setup or added later from Settings | Base plus Silero VAD, whisper.cpp CPU runtime, the multilingual Whisper small model, and the locally qualified Qwen3-VL CUDA runtime/model. The option is unchecked by default and states its approximate 12.5 GB download. |
 
 Advanced does not change the deterministic fallback. If an optional pack is unavailable or corrupt, its capability is reported unavailable; Replay Foundry does not search `PATH`, substitute another model, or silently weaken the selected analysis mode. Generated Qwen wording remains editable and reviewable rather than carrying an accuracy guarantee. The Whisper small selection is locally qualified for the shipped caption workflow, not a universal transcription-accuracy claim.
 
@@ -51,7 +51,7 @@ copies only fixed package kinds, seals every file with size and SHA-256,
 verifies each pack, and launch-checks the relocated Qwen host before emitting
 the build index.
 
-For an online Advanced build, create a catalog from the verified pack index. The catalog records HTTPS URLs, byte lengths, archive hashes, fixed kinds, versions, and reviewed redirect hosts.
+For the optional online Advanced choice, create a catalog from the verified Advanced pack index. The catalog records HTTPS URLs, byte lengths, archive hashes, installed manifest hashes, fixed kinds, versions, and reviewed redirect hosts. A current catalog lets setup skip an already-installed exact pack without weakening verification.
 
 ```powershell
 eng\New-ReplayFoundryRuntimePackCatalog.ps1 `
@@ -67,24 +67,16 @@ Finally compile an installer profile:
 eng\Build-ReplayFoundryInstaller.ps1 `
   -Version 0.2.0 `
   -YouTubeClientId YOUR_DESKTOP_CLIENT_ID.apps.googleusercontent.com `
-  -AdvancedInstallerUri https://downloads.example.com/ReplayFoundry-Advanced.exe `
+  -AdvancedInstallerUri https://replayfoundry.com/download `
   -Profile Base `
-  -RuntimePackBuildRoot <base-pack-output> `
-  -ArtifactRoot <external-installer-output>
-
-eng\Build-ReplayFoundryInstaller.ps1 `
-  -Version 0.2.0 `
-  -YouTubeClientId YOUR_DESKTOP_CLIENT_ID.apps.googleusercontent.com `
-  -AdvancedInstallerUri https://downloads.example.com/ReplayFoundry-Advanced.exe `
-  -Profile Advanced `
   -RuntimePackBuildRoot <advanced-pack-output> `
   -AdvancedPayloadMode Online `
   -AdvancedCatalogPath <external-output>\advanced-runtime-catalog.json `
   -ArtifactRoot <external-installer-output>
 ```
 
-Both examples create explicitly unsigned `Development` installers. They are
-useful for local installation and VM validation, but they are intentionally
+This example creates an explicitly unsigned `Development` installer. It is
+useful for local installation and VM validation, but it is intentionally
 ineligible for a public release.
 
 The installer build generates its presentation assets deterministically into
@@ -181,7 +173,7 @@ When the support website is ready, either command may additionally pass
 optional: omitting it keeps feedback and crash reports local. The app accepts
 only one fixed HTTPS URL, follows no redirects, and has no fallback endpoint.
 
-The current Advanced payload is approximately 12.5 GB. Inno Setup requires external disk slices once compressed setup data exceeds 4.2 GB, so this payload cannot honestly be delivered as one offline EXE. The build script rejects an oversized `Embedded` profile early. `Embedded` remains available only for a future verified payload below the conservative 4.0 GB one-file ceiling. The current online bootstrapper remains one user-facing EXE while keeping pack repair and upgrades independent.
+The current Advanced payload is approximately 12.5 GB. The signed Standard installer stays small: Advanced AI is an unchecked setup task and downloads the exact pinned catalog only when selected. Inno Setup requires external disk slices once compressed setup data exceeds 4.2 GB, so this payload cannot honestly be embedded into one offline EXE. The build script rejects an oversized `Embedded` profile early. The same retained installer can add or repair Advanced AI later while keeping Base usable independently.
 
 ## Installation and maintenance guarantees
 
@@ -196,7 +188,7 @@ The current Advanced payload is approximately 12.5 GB. Inno Setup requires exter
 - Startup resolves only active verified packs. It does not use `PATH` in Release builds.
 - Temporary download and staging files are cleaned on success, failure, or cancellation.
 
-Settings displays each installed capability, size, version, license summary, and availability. It can open the Advanced installer, invoke repair when a retained installer is local, remove optional packs, or open the package folder. Settings does not contain download, hashing, process, or package-store logic.
+Settings displays each installed capability, size, version, license summary, and availability. It can reopen the same installer to add or repair Advanced AI, remove optional packs, or open the package folder. Settings does not contain download, hashing, process, or package-store logic.
 
 ## External trust approvals confirmed
 

@@ -31,6 +31,9 @@
 #ifndef AdvancedCatalogPath
   #define AdvancedCatalogPath ""
 #endif
+#ifndef OfferAdvancedAi
+  #define OfferAdvancedAi "0"
+#endif
 #ifndef YouTubeCredentialTargetName
   #error YouTubeCredentialTargetName must be supplied by Build-ReplayFoundryInstaller.ps1
 #endif
@@ -97,6 +100,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+#if OfferAdvancedAi == "1"
+Name: "advancedai"; Description: "Add Advanced AI (about 12.5 GB download; NVIDIA GPU recommended)"; GroupDescription: "Optional local capabilities:"; Flags: unchecked
+#endif
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -111,6 +117,9 @@ Source: "{#RuntimePackBuildRoot}\archives\replayfoundry-qwen3-vl-4b-instruct.zip
   #else
 Source: "{#AdvancedCatalogPath}"; DestDir: "{tmp}\ReplayFoundryPacks"; DestName: "advanced-runtime-catalog.json"; Flags: deleteafterinstall
   #endif
+#endif
+#if OfferAdvancedAi == "1"
+Source: "{#AdvancedCatalogPath}"; DestDir: "{tmp}\ReplayFoundryPacks"; DestName: "advanced-runtime-catalog.json"; Flags: deleteafterinstall
 #endif
 
 [Icons]
@@ -175,15 +184,22 @@ end;
 procedure RequireRuntimeInstallerSuccess(const Arguments, LabelText: String);
 var
   ExitCode: Integer;
+  Succeeded: Boolean;
 begin
   WizardForm.StatusLabel.Caption := LabelText;
-  if not Exec(
-    ExpandConstant('{app}\Tools\RuntimeInstaller\ReplayFoundry.RuntimeInstaller.exe'),
-    Arguments,
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ExitCode) or (ExitCode <> 0) then
+  WizardForm.ProgressGauge.Style := npbstMarquee;
+  try
+    Succeeded := Exec(
+      ExpandConstant('{app}\Tools\RuntimeInstaller\ReplayFoundry.RuntimeInstaller.exe'),
+      Arguments,
+      '',
+      SW_HIDE,
+      ewWaitUntilTerminated,
+      ExitCode);
+  finally
+    WizardForm.ProgressGauge.Style := npbstNormal;
+  end;
+  if not Succeeded or (ExitCode <> 0) then
   begin
     RaiseException(LabelText + ' failed. No incomplete runtime pack was activated. Exit code: ' + IntToStr(ExitCode));
   end;
@@ -211,6 +227,14 @@ begin
     'Downloading and installing verified Advanced AI packs');
   #endif
 #endif
+#if OfferAdvancedAi == "1"
+  if WizardIsTaskSelected('advancedai') then
+  begin
+    RequireRuntimeInstallerSuccess(
+      'install-catalog --catalog "' + ExpandConstant('{tmp}\ReplayFoundryPacks\advanced-runtime-catalog.json') + '" --store-root "' + StoreRoot + '"',
+      'Downloading and installing verified Advanced AI packs');
+  end;
+#endif
   RequireRuntimeInstallerSuccess(
     'prune-inactive --store-root "' + StoreRoot + '"',
     'Removing inactive runtime packs');
@@ -221,5 +245,9 @@ begin
   if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-{#InstallerProfile}-Setup.exe'), False) then
   begin
     RaiseException('Unable to retain the current ReplayFoundry installer for repair.');
+  end;
+  if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-Setup.exe'), False) then
+  begin
+    RaiseException('Unable to retain the current ReplayFoundry installer for maintenance.');
   end;
 end;

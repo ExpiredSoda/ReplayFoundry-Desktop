@@ -164,9 +164,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -- '--disable-libopenh264' ffmpeg-build.log
-          grep -- '--disable-libopus' ffmpeg-build.log
-          if grep -E -- '--enable-(libopenh264|libopus|gpl|nonfree)' ffmpeg-build.log; then
+          effective_configure="$(grep -F '+ ./configure ' ffmpeg-build.log)"
+          test -n "${effective_configure}"
+          grep -- '--disable-libopenh264' <<< "${effective_configure}"
+          grep -- '--disable-libopus' <<< "${effective_configure}"
+          if grep -E -- '--enable-(libopenh264|libopus|gpl|nonfree)' <<< "${effective_configure}"; then
             echo 'A forbidden external codec, GPL, or nonfree option remained enabled.' >&2
             exit 1
           fi
@@ -174,10 +176,20 @@ jobs:
           test -n "${binary}"
           mkdir verified-binary
           unzip -q "${binary}" -d verified-binary
-          if grep -a -i -l 'libopenh264' verified-binary/*/bin/*.exe verified-binary/*/bin/avcodec-*.dll; then
-            echo 'OpenH264 identity remained in the produced executable payload.' >&2
+          mapfile -t binary_payloads < <(
+            find verified-binary -type f \( -name '*.exe' -o -name '*.dll' \) -print
+          )
+          test "${#binary_payloads[@]}" -gt 0
+          if grep -a -i -l -E -- '--enable-(libopenh264|libopus)' "${binary_payloads[@]}"; then
+            echo 'A forbidden external-codec enable flag remained in the executable payload.' >&2
             exit 1
           fi
+          for payload in "${binary_payloads[@]}"; do
+            if objdump -p "${payload}" | grep -Eiq 'DLL Name:.*(openh264|opus)'; then
+              echo "A forbidden external codec is linked by ${payload}." >&2
+              exit 1
+            fi
+          done
           if ! grep -a -q 'h264_mf' verified-binary/*/bin/avcodec-*.dll; then
             echo 'The Windows Media Foundation H.264 encoder is missing.' >&2
             exit 1
@@ -188,6 +200,17 @@ jobs:
           sha256sum "${binary}" | tee ffmpeg-binary.sha256
           printf '%s\n' "${binary}" > ffmpeg-binary.path
 
+      - name: Upload FFmpeg binary candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: replayfoundry-ffmpeg-win64-lgpl-shared
+          path: |
+            ffmpeg-builds/artifacts/*.zip
+            ffmpeg-binary.sha256
+            ffmpeg-build.log
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Assemble corresponding source and build evidence
         shell: bash
         run: |
@@ -195,8 +218,8 @@ jobs:
           source_root="corresponding-source"
           mkdir -p "${source_root}/archives" "${source_root}/evidence"
 
-          git -C ffmpeg-builds archive --format=tar.xz --prefix=FFmpeg-Builds/ HEAD \
-            > "${source_root}/archives/FFmpeg-Builds-${BTBN_COMMIT}.tar.xz"
+          git -C ffmpeg-builds archive --format=tar --prefix=FFmpeg-Builds/ HEAD \
+            | xz -T0 -9e > "${source_root}/archives/FFmpeg-Builds-${BTBN_COMMIT}.tar.xz"
           curl --fail --location --retry 3 \
             "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/${FFMPEG_COMMIT}" \
             --output "${source_root}/archives/FFmpeg-${FFMPEG_COMMIT}.tar.gz"
@@ -216,22 +239,12 @@ jobs:
             'External libopus: disabled; FFmpeg native Opus decoding remains available' \
             'The dependency-sources directory is the exact source cache consumed by the pinned build system.' \
             > "${source_root}/README.txt"
-          find "${source_root}" -type f -print0 | sort -z | xargs -0 sha256sum \
+          find "${source_root}" -type f ! -path "${source_root}/SHA256SUMS" -print0 \
+            | sort -z | xargs -0 sha256sum \
             > "${source_root}/SHA256SUMS"
           tar --zstd -cf replayfoundry-ffmpeg-corresponding-source.tar.zst "${source_root}"
           sha256sum replayfoundry-ffmpeg-corresponding-source.tar.zst \
             > replayfoundry-ffmpeg-corresponding-source.tar.zst.sha256
-
-      - name: Upload FFmpeg binary candidate
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: replayfoundry-ffmpeg-win64-lgpl-shared
-          path: |
-            ffmpeg-builds/artifacts/*.zip
-            ffmpeg-binary.sha256
-            ffmpeg-build.log
-          if-no-files-found: error
-          retention-days: 14
 
       - name: Upload corresponding source candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

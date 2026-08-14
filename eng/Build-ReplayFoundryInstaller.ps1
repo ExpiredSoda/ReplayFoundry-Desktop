@@ -128,7 +128,8 @@ if (-not (Test-Path -LiteralPath $packIndexPath -PathType Leaf)) {
     throw "Runtime pack build index was not found: $packIndexPath"
 }
 $packIndex = Get-Content -Raw -LiteralPath $packIndexPath | ConvertFrom-Json
-if ($packIndex.profile -ne $Profile) {
+$offerAdvancedAi = $Profile -eq 'Base' -and -not [string]::IsNullOrWhiteSpace($AdvancedCatalogPath)
+if ($packIndex.profile -ne $Profile -and -not ($offerAdvancedAi -and $packIndex.profile -eq 'Advanced')) {
     throw "Runtime pack profile '$($packIndex.profile)' does not match installer profile '$Profile'."
 }
 foreach ($pack in $packIndex.packs) {
@@ -146,10 +147,10 @@ if ($Profile -eq 'Advanced' -and $AdvancedPayloadMode -eq 'Embedded') {
         throw "The verified Advanced payload is $embeddedPayloadBytes bytes and cannot be emitted as one Inno Setup EXE. Use -AdvancedPayloadMode Online with a pinned HTTPS catalog."
     }
 }
-if ($Profile -eq 'Advanced' -and $AdvancedPayloadMode -eq 'Online') {
+if (($Profile -eq 'Advanced' -and $AdvancedPayloadMode -eq 'Online') -or $offerAdvancedAi) {
     if ([string]::IsNullOrWhiteSpace($AdvancedCatalogPath) -or
         -not (Test-Path -LiteralPath $AdvancedCatalogPath -PathType Leaf)) {
-        throw 'Online Advanced installers require -AdvancedCatalogPath.'
+        throw 'An online Advanced AI offer requires -AdvancedCatalogPath.'
     }
     $AdvancedCatalogPath = [System.IO.Path]::GetFullPath($AdvancedCatalogPath)
 }
@@ -177,6 +178,18 @@ if (-not [string]::IsNullOrWhiteSpace($SignToolPath)) { $publishArguments.SignTo
 if (-not [string]::IsNullOrWhiteSpace($ArtifactSigningDlibPath)) { $publishArguments.ArtifactSigningDlibPath = $ArtifactSigningDlibPath }
 if (-not [string]::IsNullOrWhiteSpace($SigningCorrelationId)) { $publishArguments.SigningCorrelationId = $SigningCorrelationId }
 & (Join-Path $PSScriptRoot 'Publish-ReplayFoundryWindows.ps1') @publishArguments
+
+if (-not [string]::IsNullOrWhiteSpace($AdvancedCatalogPath)) {
+    $runtimeInstaller = Join-Path $publishDirectory 'Tools\RuntimeInstaller\ReplayFoundry.RuntimeInstaller.exe'
+    & $runtimeInstaller verify-catalog --catalog $AdvancedCatalogPath
+    if ($LASTEXITCODE -ne 0) {
+        throw 'The Advanced AI catalog failed the production runtime installer validation.'
+    }
+    $advancedCatalog = Get-Content -Raw -LiteralPath $AdvancedCatalogPath | ConvertFrom-Json
+    if ($advancedCatalog.profile -ne 'Advanced') {
+        throw "The Advanced AI offer requires an Advanced catalog, not '$($advancedCatalog.profile)'."
+    }
+}
 
 & (Join-Path $PSScriptRoot 'New-ReplayFoundryInstallerBranding.ps1') `
     -OutputDirectory $brandingDirectory
@@ -234,6 +247,7 @@ $innoArguments = @(
     "/DRuntimePackBuildRoot=$runtimePackRoot",
     "/DAdvancedPayloadMode=$AdvancedPayloadMode",
     "/DAdvancedCatalogPath=$AdvancedCatalogPath",
+    "/DOfferAdvancedAi=$([int]$offerAdvancedAi)",
     "/DWizardBackImagePath=$wizardBackImagePath",
     "/DWizardSmallImagePath=$wizardSmallImagePath",
     "/DYouTubeCredentialTargetName=$youtubeCredentialTargetName"
@@ -291,7 +305,7 @@ if ($SigningMode -eq 'ArtifactSigning') {
 $installerSignature = Get-AuthenticodeSignature -LiteralPath $installer.FullName
 $appManifestPath = Join-Path $publishDirectory 'release-manifest.json'
 $installerManifest = [ordered]@{
-    schemaVersion = 'replayfoundry-installer-release-manifest-1.0'
+    schemaVersion = 'replayfoundry-installer-release-manifest-1.1'
     productVersion = $Version
     releaseChannel = $ReleaseChannel
     profile = $Profile
@@ -312,6 +326,11 @@ $installerManifest = [ordered]@{
     installerBrandingManifestSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $brandingManifestPath).Hash
     installerBranding = $brandingManifest
     advancedCatalogSha256 = if ([string]::IsNullOrWhiteSpace($AdvancedCatalogPath)) { $null } else { (Get-FileHash -Algorithm SHA256 -LiteralPath $AdvancedCatalogPath).Hash }
+    advancedAi = [ordered]@{
+        offering = if ($offerAdvancedAi) { 'Optional' } elseif ($Profile -eq 'Advanced') { 'Required' } else { 'Unavailable' }
+        selectedByDefault = $Profile -eq 'Advanced'
+        payloadMode = if ([string]::IsNullOrWhiteSpace($AdvancedCatalogPath)) { $AdvancedPayloadMode } else { 'Online' }
+    }
     signing = [ordered]@{
         mode = $SigningMode
         required = $ReleaseChannel -eq 'Production'

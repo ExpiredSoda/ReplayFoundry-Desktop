@@ -182,12 +182,24 @@ if ($runtimeEnvironment -notmatch 'MinimumQwenRuntimeVersion\s*=\s*new\(0, 8, 21
 
 $installerBuilder = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Build-ReplayFoundryInstaller.ps1')
 if ($installerBuilder -notmatch 'embeddedPayloadCeiling' -or
-    $installerBuilder -notmatch 'AdvancedPayloadMode Online') {
+    $installerBuilder -notmatch 'AdvancedPayloadMode Online' -or
+    $installerBuilder -notmatch 'OfferAdvancedAi' -or
+    $installerBuilder -notmatch 'verify-catalog') {
     throw 'The installer build must reject an oversized embedded profile and direct it to the verified online catalog path.'
+}
+$catalogBuilder = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\New-ReplayFoundryRuntimePackCatalog.ps1')
+if ($catalogBuilder -notmatch 'ConvertFrom-Json -DateKind String' -or
+    $catalogBuilder -notmatch '\[DateTimeOffset\]::Parse' -or
+    $catalogBuilder -notmatch 'createdAtUtc = \$createdAtUtc\.ToUniversalTime\(\)\.ToString\(''O''') {
+    throw 'Runtime-pack catalog generation must preserve the signed build timestamp as canonical UTC.'
+}
+if ($catalogBuilder -notmatch "schemaVersion = 'replayfoundry-runtime-pack-catalog-1\.1'" -or
+    $catalogBuilder -notmatch 'manifestHash = \$manifest\.manifestHash') {
+    throw 'Online catalogs must bind each archive to the exact installed manifest hash.'
 }
 if ($installerBuilder -notmatch "ReleaseChannel -eq 'Production'.*SigningMode -ne 'ArtifactSigning'" -or
     $installerBuilder -notmatch 'Invoke-ReplayFoundryArtifactSigning\.ps1' -or
-    $installerBuilder -notmatch 'replayfoundry-installer-release-manifest-1\.0') {
+    $installerBuilder -notmatch 'replayfoundry-installer-release-manifest-1\.1') {
     throw 'Production installers must require Artifact Signing, verify the result, and emit a release manifest.'
 }
 
@@ -198,6 +210,12 @@ if ($installerDefinition -match '\[LEGAL PUBLISHER NAME\]|YOUR-DOMAIN\.example' 
     $installerDefinition -notmatch 'SignedUninstaller=yes' -or
     $installerDefinition -notmatch 'SignTool=\{#ReplayFoundrySignToolName\}') {
     throw 'Installer publisher metadata and signed-uninstaller integration must remain release-ready.'
+}
+if ($installerDefinition -notmatch 'Name: "advancedai"' -or
+    $installerDefinition -notmatch "WizardIsTaskSelected\('advancedai'\)" -or
+    $installerDefinition -notmatch 'about 12\.5 GB download' -or
+    $installerDefinition -notmatch 'ReplayFoundry-Setup\.exe') {
+    throw 'The signed installer must expose the optional Advanced AI download and retain the same installer for later maintenance.'
 }
 
 $publisher = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Publish-ReplayFoundryWindows.ps1')

@@ -56,6 +56,8 @@ internal static class RuntimeInstallerApplication
                     return await CreateManifestAsync(options, cancellation.Token);
                 case "verify":
                     return await VerifyAsync(Required(options, "--source"), cancellation.Token);
+                case "verify-catalog":
+                    return await VerifyCatalogAsync(Required(options, "--catalog"), cancellation.Token);
                 case "install":
                     await store.InstallAsync(Required(options, "--source"), activate: true, cancellation.Token);
                     int installPruned = await store.PruneInactiveAsync(cancellation.Token);
@@ -152,6 +154,14 @@ internal static class RuntimeInstallerApplication
         return (int)RuntimeInstallerExitCode.Success;
     }
 
+    private static async Task<int> VerifyCatalogAsync(string path, CancellationToken cancellationToken)
+    {
+        ReplayFoundryRuntimePackCatalog catalog =
+            await ReplayFoundryRuntimePackCatalogReader.ReadAsync(path, cancellationToken);
+        Console.WriteLine($"Verified {catalog.Profile} runtime catalog with {catalog.Packs.Count} pinned pack(s).");
+        return (int)RuntimeInstallerExitCode.Success;
+    }
+
     private static async Task<int> ListAsync(ReplayFoundryRuntimePackStore store, CancellationToken cancellationToken)
     {
         IReadOnlyList<InstalledReplayFoundryRuntimePack> installed = await store.ListInstalledAsync(cancellationToken);
@@ -208,6 +218,7 @@ internal static class RuntimeInstallerApplication
         Console.Error.WriteLine(error);
         Console.WriteLine("ReplayFoundry.RuntimeInstaller create-manifest --source <dir> --recipe <json> [--output <json>]");
         Console.WriteLine("ReplayFoundry.RuntimeInstaller verify|install|repair --source <dir-or-zip> [--store-root <dir>]");
+        Console.WriteLine("ReplayFoundry.RuntimeInstaller verify-catalog --catalog <json>");
         Console.WriteLine("ReplayFoundry.RuntimeInstaller install-catalog --catalog <json> [--download-root <dir>] [--store-root <dir>]");
         Console.WriteLine("ReplayFoundry.RuntimeInstaller list|cleanup|cleanup-store|prune-inactive [--store-root <dir>]");
         Console.WriteLine("ReplayFoundry.RuntimeInstaller remove --pack-id <id> [--manifest-hash <sha256>] [--store-root <dir>]");

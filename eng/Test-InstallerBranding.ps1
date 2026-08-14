@@ -106,7 +106,9 @@ try {
         'WizardBackImageFile={#WizardBackImagePath}',
         'WizardSmallImageFile={#WizardSmallImagePath}',
         'WizardSetBackImage([], True, True, 255)',
-        'HighContrastActive')) {
+        'HighContrastActive',
+        'WizardForm.ProgressGauge.Style := npbstMarquee',
+        'WizardForm.ProgressGauge.Style := npbstNormal')) {
         if ($installerScript.IndexOf($pattern, [StringComparison]::Ordinal) -lt 0) {
             throw "Installer script is missing branded/high-contrast behavior: $pattern"
         }
@@ -196,6 +198,41 @@ end;
         if ($LASTEXITCODE -ne 0 -or
             -not (Test-Path -LiteralPath (Join-Path $compileOutput 'ReplayFoundry-Branding-Smoke.exe') -PathType Leaf)) {
             throw 'The supported Inno compiler rejected the branded installer directives.'
+        }
+
+        $optionalRoot = Join-Path $testRoot 'optional-advanced'
+        $optionalPublish = Join-Path $optionalRoot 'app'
+        $optionalPacks = Join-Path $optionalRoot 'packs'
+        $optionalArchives = Join-Path $optionalPacks 'archives'
+        $optionalOutput = Join-Path $optionalRoot 'output'
+        [IO.Directory]::CreateDirectory($optionalPublish) | Out-Null
+        [IO.Directory]::CreateDirectory($optionalArchives) | Out-Null
+        [IO.Directory]::CreateDirectory($optionalOutput) | Out-Null
+        Copy-Item -LiteralPath (Join-Path $root '.gitignore') `
+            -Destination (Join-Path $optionalPublish 'payload.txt')
+        Copy-Item -LiteralPath (Join-Path $root '.gitignore') `
+            -Destination (Join-Path $optionalArchives 'replayfoundry-media-tools.zip')
+        $optionalCatalog = Join-Path $optionalRoot 'advanced-runtime-catalog.json'
+        Copy-Item -LiteralPath (Join-Path $root '.gitignore') -Destination $optionalCatalog
+        $installerDefinition = Join-Path $root 'installer\ReplayFoundry.iss'
+        & $compiler /Qp `
+            '/DMyAppVersion=1.0.0-beta.2' `
+            '/DMyAppFileVersion=1.0.0.0' `
+            "/DPublishDir=$optionalPublish" `
+            "/DRepoRoot=$root" `
+            "/DInstallerOutputDir=$optionalOutput" `
+            '/DInstallerProfile=Base' `
+            "/DRuntimePackBuildRoot=$optionalPacks" `
+            '/DAdvancedPayloadMode=Online' `
+            "/DAdvancedCatalogPath=$optionalCatalog" `
+            '/DOfferAdvancedAi=1' `
+            "/DWizardBackImagePath=$first\installer-wizard-background.png" `
+            "/DWizardSmallImagePath=$first\installer-wizard-small.png" `
+            '/DYouTubeCredentialTargetName=ReplayFoundry/YouTube/0123456789ABCDEF0123' `
+            $installerDefinition
+        if ($LASTEXITCODE -ne 0 -or
+            -not (Test-Path -LiteralPath (Join-Path $optionalOutput 'ReplayFoundry-1.0.0-beta.2-Base-win-x64-setup.exe') -PathType Leaf)) {
+            throw 'The supported Inno compiler rejected the optional Advanced AI installer path.'
         }
         Write-Host "Inno compile smoke passed: $compiler"
     }

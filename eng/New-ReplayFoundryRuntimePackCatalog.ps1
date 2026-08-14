@@ -19,9 +19,16 @@ $indexPath = Join-Path $buildRoot 'runtime-pack-build-index.json'
 if (-not (Test-Path -LiteralPath $indexPath -PathType Leaf)) {
     throw "Runtime-pack build index not found: $indexPath"
 }
-$index = Get-Content -Raw -LiteralPath $indexPath | ConvertFrom-Json
+$index = Get-Content -Raw -LiteralPath $indexPath | ConvertFrom-Json -DateKind String
 if ($index.profile -notin @('Base', 'Advanced')) {
     throw "Unsupported runtime-pack profile '$($index.profile)'."
+}
+$createdAtUtc = [DateTimeOffset]::Parse(
+    [string]$index.createdAtUtc,
+    [Globalization.CultureInfo]::InvariantCulture,
+    [Globalization.DateTimeStyles]::RoundtripKind)
+if ($createdAtUtc.Offset -ne [TimeSpan]::Zero) {
+    throw 'Runtime-pack build index createdAtUtc must use UTC.'
 }
 $base = [Uri]::new($BaseUri.TrimEnd('/') + '/')
 $hosts = @($ApprovedRedirectHosts | ForEach-Object { $_.Trim().ToLowerInvariant() })
@@ -51,15 +58,16 @@ $catalogPacks = foreach ($pack in $index.packs) {
         downloadUrl = [Uri]::new($base, [IO.Path]::GetFileName($archive)).AbsoluteUri
         byteLength = [long]$pack.byteLength
         sha256 = $actualHash
+        manifestHash = $manifest.manifestHash
         approvedRedirectHosts = $hosts
     }
 }
 
 $catalog = [ordered]@{
-    schemaVersion = 'replayfoundry-runtime-pack-catalog-1.0'
+    schemaVersion = 'replayfoundry-runtime-pack-catalog-1.1'
     profile = $index.profile
     packs = @($catalogPacks)
-    createdAtUtc = $index.createdAtUtc
+    createdAtUtc = $createdAtUtc.ToUniversalTime().ToString('O', [Globalization.CultureInfo]::InvariantCulture)
 }
 $resolvedOutput = [IO.Path]::GetFullPath($OutputPath)
 New-Item -ItemType Directory -Path (Split-Path -Parent $resolvedOutput) -Force | Out-Null

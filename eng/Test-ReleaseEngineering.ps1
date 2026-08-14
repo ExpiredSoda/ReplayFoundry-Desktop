@@ -54,7 +54,12 @@ foreach ($required in @(
     "external 'CredDeleteW@advapi32.dll stdcall';",
     "CredDelete('{#YouTubeCredentialTargetName}', CredentialTypeGeneric, 0)",
     "if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-{#InstallerProfile}-Setup.exe'), False) then",
-    "RaiseException('Unable to retain the current ReplayFoundry installer for repair.');")) {
+    "RaiseException('Unable to retain the current ReplayFoundry installer for repair.');",
+    'Name: "advancedai"; Description: "Add Advanced AI (about 12.5 GB download; NVIDIA GPU recommended)"',
+    "WizardIsTaskSelected('advancedai')",
+    'WizardForm.ProgressGauge.Style := npbstMarquee',
+    'WizardForm.ProgressGauge.Style := npbstNormal',
+    'ReplayFoundry-Setup.exe')) {
     if (-not $installer.Contains($required, [StringComparison]::Ordinal)) {
         throw "Installer is missing release metadata: $required"
     }
@@ -135,6 +140,11 @@ foreach ($scriptText in @($publisherScript, $installerScript)) {
 if ($installerScript -notmatch 'Get-Process -Id \$PID' -or
     $installerScript -notmatch 'require PowerShell 7 \(pwsh\.exe\)') {
     throw 'Inno Setup signing must invoke the exact PowerShell 7 host used by the release build.'
+}
+if ($installerScript -notmatch 'replayfoundry-installer-release-manifest-1\.1' -or
+    $installerScript -notmatch 'verify-catalog' -or
+    $installerScript -notmatch 'offering = if \(\$offerAdvancedAi\)') {
+    throw 'The installer release manifest must attest the optional verified Advanced AI offering.'
 }
 foreach ($requiredInstallerBuildPattern in @(
     'New-ReplayFoundryInstallerBranding\.ps1',

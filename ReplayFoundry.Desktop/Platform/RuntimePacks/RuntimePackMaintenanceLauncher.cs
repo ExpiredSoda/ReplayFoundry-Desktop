@@ -55,7 +55,9 @@ public sealed class RuntimePackMaintenanceLauncher : IRuntimePackMaintenanceActi
         string[] candidates =
         [
             explicitPath ?? string.Empty,
+            Path.Combine(AppContext.BaseDirectory, "Maintenance", "ReplayFoundry-Setup.exe"),
             Path.Combine(AppContext.BaseDirectory, "Maintenance", "ReplayFoundry-Advanced-Setup.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReplayFoundry", "Installers", "ReplayFoundry-Setup.exe"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReplayFoundry", "Installers", "ReplayFoundry-Advanced-Setup.exe"),
         ];
         string? file = candidates.FirstOrDefault(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path));
