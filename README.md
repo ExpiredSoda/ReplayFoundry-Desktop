@@ -24,7 +24,7 @@ Replay Foundry is a Windows desktop workflow for finding strong gameplay moments
 
 [![Watch the Replay Foundry start-to-finish demo](.github/assets/replayfoundry-demo-poster.jpg)](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.2/ReplayFoundry-3-Minute-Workflow-Demo-1080p.mp4)
 
-The 2 minute 39 second demo follows the real product from installer choices through Generate, Studio, Library, and a scheduled YouTube release. Long local-analysis intervals are condensed and clearly labeled; the product interactions themselves are shown directly.
+The 2 minute 37 second demo follows the real product from installer choices through Generate, Studio, Library, and a scheduled YouTube release. Long local-analysis intervals are condensed and clearly labeled; the product interactions themselves are shown directly.
 
 ## The workflow
 
