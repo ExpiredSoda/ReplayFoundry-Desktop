@@ -4,6 +4,7 @@
   <p><strong>Turn long gameplay recordings into polished vertical clips—locally, deliberately, and under your control.</strong></p>
   <p>
     <img alt="Private preview" src="https://img.shields.io/badge/status-private%20preview-0e7490?style=flat-square" />
+    <a href="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/actions/workflows/desktop-ci.yml"><img alt="Desktop source gate" src="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/actions/workflows/desktop-ci.yml/badge.svg" /></a>
     <img alt="Windows" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-38bdf8?style=flat-square" />
     <img alt="Local first" src="https://img.shields.io/badge/processing-local--first-f5c451?style=flat-square" />
     <img alt="License" src="https://img.shields.io/badge/source-MIT-94a3b8?style=flat-square" />

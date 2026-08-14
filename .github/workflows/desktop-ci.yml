@@ -1,0 +1,57 @@
+name: Desktop source gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore .\ReplayFoundry.slnx
+
+      - name: Build Release
+        run: dotnet build .\ReplayFoundry.slnx -c Release --no-restore
+
+      - name: Run inspection tests
+        run: dotnet run --project .\ReplayFoundry.InspectionTests\ReplayFoundry.InspectionTests.csproj --no-build -c Release
+
+      - name: Run composition tests
+        run: dotnet run --project .\ReplayFoundry.CompositionTests\ReplayFoundry.CompositionTests.csproj --no-build -c Release
+
+      - name: Run preparation tests
+        run: dotnet run --project .\ReplayFoundry.PreparationTests\ReplayFoundry.PreparationTests.csproj --no-build -c Release
+
+      - name: Run runtime-pack tests
+        run: dotnet run --project .\ReplayFoundry.RuntimePacks.Tests\ReplayFoundry.RuntimePacks.Tests.csproj --no-build -c Release
+
+      - name: Verify security boundaries
+        shell: pwsh
+        run: .\eng\Test-SecurityBoundaries.ps1
+
+      - name: Verify repository payload
+        shell: pwsh
+        run: .\eng\Test-RepositoryPayloadGuard.ps1
+
+      - name: Verify runtime-pack boundary
+        shell: pwsh
+        run: .\eng\Test-RuntimePackArchitecture.ps1
