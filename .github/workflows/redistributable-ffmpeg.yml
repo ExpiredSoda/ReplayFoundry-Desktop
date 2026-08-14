@@ -18,6 +18,7 @@ jobs:
     env:
       BTBN_COMMIT: 8c736b2d6fe5da2a10a8896d01e53bfb0ca4f665
       FFMPEG_COMMIT: 8c9502e9b048e21e1cae96477e338ac0635645ba
+      TARGET_IMAGE_DIGEST: ghcr.io/btbn/ffmpeg-builds/base-win64@sha256:4f9c1331e00bba0a6f5d07ba9dc67a86f3300ba04815c0aa45f709844e3c2041
     steps:
       - name: Check out release engineering source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,6 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import os
           from pathlib import Path
 
           openh264 = Path("ffmpeg-builds/scripts.d/50-openh264.sh")
@@ -69,6 +71,14 @@ jobs:
           if source.count(expected) != 1:
               raise SystemExit("Pinned FFmpeg checkout seam changed")
           build.write_text(source.replace(expected, replacement), encoding="utf-8")
+
+          variables = Path("ffmpeg-builds/util/vars.sh")
+          source = variables.read_text(encoding="utf-8")
+          expected = 'TARGET_IMAGE="${REGISTRY}/${REPO}/base-${TARGET}:latest"'
+          replacement = f'TARGET_IMAGE="{os.environ["TARGET_IMAGE_DIGEST"]}"'
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned target-image seam changed")
+          variables.write_text(source.replace(expected, replacement), encoding="utf-8")
 
           makeimage = Path("ffmpeg-builds/makeimage.sh")
           source = makeimage.read_text(encoding="utf-8")
@@ -125,14 +135,14 @@ jobs:
           makeimage.write_text(source, encoding="utf-8")
           PY
           git -C ffmpeg-builds diff --check
-          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh makeimage.sh
+          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh makeimage.sh util/vars.sh
 
       - name: Build the pinned dependency image
         working-directory: ffmpeg-builds
         shell: bash
         run: |
           set -euo pipefail
-          ./makeimage.sh win64 lgpl-shared 8.1 2>&1 | tee ../makeimage.log
+          QUICKBUILD=1 ./makeimage.sh win64 lgpl-shared 8.1 2>&1 | tee ../makeimage.log
 
       - name: Build FFmpeg
         working-directory: ffmpeg-builds
@@ -183,12 +193,13 @@ jobs:
           cp -a ffmpeg-builds/.cache/downloads "${source_root}/dependency-sources"
           cp makeimage.log ffmpeg-build.log ffmpeg-binary.sha256 \
             "${source_root}/evidence/"
-          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh makeimage.sh \
+          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh makeimage.sh util/vars.sh \
             > "${source_root}/evidence/replayfoundry-build-changes.diff"
           printf '%s\n' \
             'ReplayFoundry redistributable FFmpeg source bundle' \
             "FFmpeg commit: ${FFMPEG_COMMIT}" \
             "FFmpeg-Builds commit: ${BTBN_COMMIT}" \
+            "Pinned target toolchain image: ${TARGET_IMAGE_DIGEST}" \
             'Target: win64 lgpl-shared 8.1' \
             'OpenH264: excluded from the dependency image and disabled in FFmpeg' \
             'The dependency-sources directory is the exact source cache consumed by the pinned build system.' \
