@@ -3,49 +3,69 @@
   <h1>Replay Foundry</h1>
   <p><strong>Turn long gameplay recordings into polished vertical clips—locally, deliberately, and under your control.</strong></p>
   <p>
-    <img alt="Private preview" src="https://img.shields.io/badge/status-private%20preview-0e7490?style=flat-square" />
+    <a href="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/latest"><img alt="Public beta" src="https://img.shields.io/badge/status-public%20beta-0e7490?style=flat-square" /></a>
     <a href="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/actions/workflows/desktop-ci.yml"><img alt="Desktop source gate" src="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/actions/workflows/desktop-ci.yml/badge.svg" /></a>
     <img alt="Windows" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-38bdf8?style=flat-square" />
     <img alt="Local first" src="https://img.shields.io/badge/processing-local--first-f5c451?style=flat-square" />
     <img alt="License" src="https://img.shields.io/badge/source-MIT-94a3b8?style=flat-square" />
   </p>
+  <p>
+    <a href="https://replayfoundry.com">Website</a> ·
+    <a href="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.2">Download Beta 2</a> ·
+    <a href="https://buymeacoffee.com/expiredsoda">Support development</a>
+  </p>
 </div>
 
-Replay Foundry is a Windows desktop workflow for finding strong gameplay moments, shaping vertical videos, styling captions, reviewing titles and descriptions, organizing finished work, and preparing YouTube releases. The application keeps editing and AI processing on the creator's PC; uploads happen only through explicit Publish actions.
+![Replay Foundry workflow](.github/assets/replayfoundry-workflow-hero.gif)
 
-> This repository is being polished privately before its public-source launch. Private beta installers may be explicitly marked unsigned for clean-machine testing; public installers will appear only after a signed release candidate passes the complete production gate.
+Replay Foundry is a Windows desktop workflow for finding strong gameplay moments, shaping vertical videos, styling captions, reviewing titles and descriptions, organizing finished work, and preparing YouTube releases. Editing and optional AI processing stay on the creator's PC; uploads happen only through explicit Publish actions.
+
+## Watch the complete workflow
+
+[![Watch the Replay Foundry start-to-finish demo](.github/assets/replayfoundry-demo-poster.jpg)](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.2/ReplayFoundry-3-Minute-Workflow-Demo-1080p.mp4)
+
+The 2 minute 39 second demo follows the real product from installer choices through Generate, Studio, Library, and a scheduled YouTube release. Long local-analysis intervals are condensed and clearly labeled; the product interactions themselves are shown directly.
 
 ## The workflow
 
-| Find | Shape | Finish | Publish |
-| --- | --- | --- | --- |
-| Review long recordings and surface candidate moments. | Compose vertical layouts, trim timing, mix audio, and style animated captions. | Refine metadata, preview the final render, and keep projects organized locally. | Review every YouTube field before an upload or scheduled release. |
+| 01 · Generate | 02 · Studio |
+| --- | --- |
+| ![Generate finds strong moments in a gameplay recording](.github/assets/workflow-01-generate.gif) | ![Studio shapes a vertical gameplay clip](.github/assets/workflow-02-studio.gif) |
+| Choose a recording, set the gameplay region, and let Replay Foundry surface candidate moments with local analysis. | Review the result, trim timing, compose the frame, mix audio, and style animated captions. |
 
-## Preview gallery
+| 03 · Library | 04 · Publish |
+| --- | --- |
+| ![Library organizes finished Replay Foundry videos](.github/assets/workflow-03-library.gif) | ![Publish reviews and schedules a YouTube release](.github/assets/workflow-04-publish.gif) |
+| Keep finished videos and project context organized on the PC. | Review every field, connect YouTube deliberately, and upload now or schedule a release. |
 
-| Product tour | Caption motion | Publishing review |
-| --- | --- | --- |
-| ![Screenshot placeholder](.github/assets/preview-screenshot.svg) | ![Animated demo placeholder](.github/assets/preview-animation.svg) | ![Video demo placeholder](.github/assets/preview-video.svg) |
-| Final application screenshots will replace this card. | A short GIF will demonstrate caption and interaction motion. | A guided demo video will show the complete creator workflow. |
+## Install the beta
+
+Download the Microsoft-signed [Replay Foundry Beta 2 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.2/ReplayFoundry-1.0.0-beta.2-Base-win-x64-setup.exe).
+
+![Base and Advanced AI installer choices](.github/assets/setup-base-advanced.png)
+
+- **Base** installs the core local editing, rendering, transcription, Library, and Publish workflow.
+- **Advanced AI** is optional. Setup downloads the pinned local visual-analysis runtime and model from Replay Foundry hosting after you choose it. The current package is about 12.5 GB and is intended for compatible NVIDIA systems.
+- The installer and runtime catalogs verify signed or hashed release artifacts before use. Large model weights, native runtimes, signing material, and credentials are never stored in this source repository.
+
+This is a prerelease. Back up important work and use the in-app reviewed diagnostics flow when reporting a problem.
 
 ## Product principles
 
 - **Local first:** source media, transcripts, project state, and optional local AI stay on the PC unless the user starts an upload or explicitly sends a reviewed report.
-- **Review before action:** generation results remain editable; publishing requires a deliberate confirmation.
+- **Review before action:** generated clips and metadata remain editable; publishing requires deliberate confirmation.
 - **No silent substitutions:** qualified runtimes and models are verified by manifest and hash. Missing or incompatible capabilities are explained instead of replaced with an unknown tool.
 - **Recoverable workflows:** projects, renders, and publish drafts are durable, while rebuildable caches can be cleared independently.
 - **Accessible motion:** interaction and caption effects respect reduced-motion and high-contrast settings.
 
-## Development
+## Build from source
 
 Requirements:
 
-- Windows 10 19041 or newer
+- Windows 10 version 19041 or newer
 - .NET 10 SDK
 - PowerShell 7
 - Visual Studio 2026 or another Windows desktop build environment
-
-Build and run the model-free verification suites:
 
 ```powershell
 dotnet build .\ReplayFoundry.slnx -c Debug
@@ -55,14 +75,12 @@ dotnet run --project .\ReplayFoundry.PreparationTests\ReplayFoundry.PreparationT
 dotnet run --project .\ReplayFoundry.RuntimePacks.Tests\ReplayFoundry.RuntimePacks.Tests.csproj --no-build -c Debug
 ```
 
-Large native runtimes, model weights, generated packs, signing material, credentials, media, and build artifacts are intentionally absent from Git. See [installer/README.md](installer/README.md) for the verified external-payload release flow and [installer/THIRD-PARTY-COMPLIANCE.md](installer/THIRD-PARTY-COMPLIANCE.md) for distribution review status.
+See [installer/README.md](installer/README.md) for the verified external-payload release flow and [installer/THIRD-PARTY-COMPLIANCE.md](installer/THIRD-PARTY-COMPLIANCE.md) for third-party distribution details.
 
-## Trust and privacy
+## Trust, privacy, and support
 
-Replay Foundry does not embed API secrets or private signing material. Release builds resolve only verified active runtime packs. User reports are sanitized, remain local by default, and are sent only after explicit review and consent. Please report security concerns through the process in [SECURITY.md](SECURITY.md).
+Replay Foundry does not embed API secrets or private signing material. Release builds resolve only verified active runtime packs. User reports are sanitized, remain local by default, and are sent only after explicit review and consent. Please report security concerns through [SECURITY.md](SECURITY.md).
 
-## Project status
-
-The source is under active private release preparation. Private beta releases validate installation and core workflows without implying public-release readiness. The first public milestone will include a signed Windows installer, reviewed runtime catalogs, final media examples, reproducible release manifests, and public support links.
+Replay Foundry is free to download. If it saves you time and you want to help fund continued development, [support Expired Soda on Buy Me a Coffee](https://buymeacoffee.com/expiredsoda). Support is optional and never changes product access.
 
 Copyright © 2026 Expired Soda Studios LLC. Source code is available under the [MIT License](LICENSE.txt); bundled third-party components retain their own licenses and notices.
