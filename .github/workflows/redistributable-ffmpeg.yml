@@ -99,6 +99,8 @@ jobs:
               "    cd ffmpeg\n"
               "    git checkout \"$FFMPEG_COMMIT\"\n"
               "    test \"\\$(git rev-parse HEAD)\" = \"$FFMPEG_COMMIT\"\n\n"
+              "    FF_CONFIGURE=\"\\${FF_CONFIGURE/--enable-libopenh264/--disable-libopenh264}\"\n"
+              "    FF_CONFIGURE=\"\\${FF_CONFIGURE/--enable-libopus/--disable-libopus}\"\n\n"
               "    ./configure"
           )
           if source.count(expected) != 1:
@@ -131,6 +133,7 @@ jobs:
           git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh scripts.d/50-libopus.sh build.sh download.sh util/vars.sh
 
       - name: Restore matching dependency-source cache
+        id: dependency-sources
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ffmpeg-builds/.cache/downloads
@@ -142,6 +145,13 @@ jobs:
         run: |
           set -euo pipefail
           ./download.sh 2>&1 | tee ../dependency-download.log
+
+      - name: Save matching dependency sources
+        if: steps.dependency-sources.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ffmpeg-builds/.cache/downloads
+          key: replayfoundry-ffmpeg-sources-${{ env.BTBN_COMMIT }}-no-openh264-no-libopus-v1
 
       - name: Build FFmpeg
         working-directory: ffmpeg-builds
