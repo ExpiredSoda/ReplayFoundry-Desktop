@@ -59,6 +59,16 @@ jobs:
               source.replace(expected, "ffbuild_enabled() {\n    return 1\n}"),
               encoding="utf-8",
           )
+          source = openh264.read_text(encoding="utf-8")
+          expected = "ffbuild_enabled() {\n    return 1\n}\n\nffbuild_dockerbuild()"
+          replacement = (
+              "ffbuild_enabled() {\n    return 1\n}\n\n"
+              "ffbuild_dockerdl() {\n    return 0\n}\n\n"
+              "ffbuild_dockerbuild()"
+          )
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned OpenH264 download seam changed")
+          openh264.write_text(source.replace(expected, replacement), encoding="utf-8")
 
           opus = Path("ffmpeg-builds/scripts.d/50-libopus.sh")
           source = opus.read_text(encoding="utf-8")
@@ -69,6 +79,18 @@ jobs:
               source.replace(expected, "ffbuild_enabled() {\n    return 1\n}"),
               encoding="utf-8",
           )
+          source = opus.read_text(encoding="utf-8")
+          expected = (
+              "ffbuild_dockerdl() {\n"
+              "    default_dl .\n\n"
+              "    # This is where they decided to put downloads for external dependencies, so it needs to run here\n"
+              "    echo \"./autogen.sh\"\n"
+              "}"
+          )
+          replacement = "ffbuild_dockerdl() {\n    return 0\n}"
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned libopus download seam changed")
+          opus.write_text(source.replace(expected, replacement), encoding="utf-8")
 
           build = Path("ffmpeg-builds/build.sh")
           source = build.read_text(encoding="utf-8")
