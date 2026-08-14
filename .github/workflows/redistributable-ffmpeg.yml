@@ -98,7 +98,7 @@ jobs:
           replacement = (
               "    cd ffmpeg\n"
               "    git checkout \"$FFMPEG_COMMIT\"\n"
-              "    test \"$(git rev-parse HEAD)\" = \"$FFMPEG_COMMIT\"\n\n"
+              "    test \"\\$(git rev-parse HEAD)\" = \"$FFMPEG_COMMIT\"\n\n"
               "    ./configure"
           )
           if source.count(expected) != 1:
