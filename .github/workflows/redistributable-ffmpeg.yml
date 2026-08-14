@@ -62,22 +62,13 @@ jobs:
 
           opus = Path("ffmpeg-builds/scripts.d/50-libopus.sh")
           source = opus.read_text(encoding="utf-8")
-          expected = '    echo "./autogen.sh"\n'
-          replacement = (
-              "    echo 'curl --fail --location --retry 10 --retry-all-errors "
-              "--retry-delay 5 --retry-max-time 1800 --connect-timeout 30 "
-              "--max-time 1800 --remove-on-error --output "
-              "opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz.partial "
-              "https://media.xiph.org/opus/models/opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz'\n"
-              "    echo 'echo \"a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e  "
-              "opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz.partial\" | sha256sum -c -'\n"
-              "    echo 'mv opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz.partial "
-              "opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz'\n"
-              "    echo './autogen.sh'\n"
-          )
+          expected = "ffbuild_enabled() {\n    return 0\n}"
           if source.count(expected) != 1:
-              raise SystemExit("Pinned Opus model-download seam changed")
-          opus.write_text(source.replace(expected, replacement), encoding="utf-8")
+              raise SystemExit("Pinned libopus enable seam changed")
+          opus.write_text(
+              source.replace(expected, "ffbuild_enabled() {\n    return 1\n}"),
+              encoding="utf-8",
+          )
 
           build = Path("ffmpeg-builds/build.sh")
           source = build.read_text(encoding="utf-8")
@@ -136,8 +127,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -- '--disable-libopenh264' ffmpeg-build.log
-          if grep -E -- '--enable-(libopenh264|gpl|nonfree)' ffmpeg-build.log; then
-            echo 'A forbidden OpenH264, GPL, or nonfree option remained enabled.' >&2
+          grep -- '--disable-libopus' ffmpeg-build.log
+          if grep -E -- '--enable-(libopenh264|libopus|gpl|nonfree)' ffmpeg-build.log; then
+            echo 'A forbidden external codec, GPL, or nonfree option remained enabled.' >&2
             exit 1
           fi
           binary="$(find ffmpeg-builds/artifacts -maxdepth 1 -type f -name '*win64-lgpl-shared-8.1.zip' -print -quit)"
@@ -183,6 +175,7 @@ jobs:
             "Pinned LGPL dependency image: ${DEPENDENCY_IMAGE_DIGEST}" \
             'Target: win64 lgpl-shared 8.1' \
             'OpenH264: disabled in FFmpeg, not linked, and not redistributed' \
+            'External libopus: disabled; FFmpeg native Opus decoding remains available' \
             'The dependency-sources directory is the exact source cache consumed by the pinned build system.' \
             > "${source_root}/README.txt"
           find "${source_root}" -type f -print0 | sort -z | xargs -0 sha256sum \

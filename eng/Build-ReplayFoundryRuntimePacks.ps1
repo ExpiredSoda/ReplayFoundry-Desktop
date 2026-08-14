@@ -85,6 +85,13 @@ function Assert-RedistributableFfmpeg([string]$MediaRoot) {
     if ($LASTEXITCODE -ne 0 -or $encoders -notmatch '(?m)^\s*V.*\sh264_mf\s') {
         throw 'FFmpeg must expose the Windows Media Foundation H.264 encoder.'
     }
+    $decoders = (& $ffmpeg -hide_banner -decoders 2>&1) -join "`n"
+    if ($LASTEXITCODE -ne 0 -or $decoders -notmatch '(?m)^\s*A\S*\s+opus\s') {
+        throw 'FFmpeg must retain its native Opus decoder.'
+    }
+    if ($decoders -match '(?m)^\s*A\S*\s+libopus\s') {
+        throw 'FFmpeg must not link the external libopus decoder.'
+    }
     & $ffprobe -hide_banner -version | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'FFprobe launch verification failed.' }
 }
