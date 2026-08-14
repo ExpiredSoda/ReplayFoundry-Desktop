@@ -18,6 +18,7 @@ jobs:
     env:
       BTBN_COMMIT: 8c736b2d6fe5da2a10a8896d01e53bfb0ca4f665
       FFMPEG_COMMIT: 8c9502e9b048e21e1cae96477e338ac0635645ba
+      BASE_IMAGE_DIGEST: ghcr.io/btbn/ffmpeg-builds/base@sha256:bda8a0c319d4c2117ed29af1e37b46c88b5788d6f4e2ef175abbcb02af35ad6b
       TARGET_IMAGE_DIGEST: ghcr.io/btbn/ffmpeg-builds/base-win64@sha256:4f9c1331e00bba0a6f5d07ba9dc67a86f3300ba04815c0aa45f709844e3c2041
     steps:
       - name: Check out release engineering source
@@ -74,6 +75,11 @@ jobs:
 
           variables = Path("ffmpeg-builds/util/vars.sh")
           source = variables.read_text(encoding="utf-8")
+          expected = 'BASE_IMAGE="${REGISTRY}/${REPO}/base:latest"'
+          replacement = f'BASE_IMAGE="{os.environ["BASE_IMAGE_DIGEST"]}"'
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned base-image seam changed")
+          source = source.replace(expected, replacement)
           expected = 'TARGET_IMAGE="${REGISTRY}/${REPO}/base-${TARGET}:latest"'
           replacement = f'TARGET_IMAGE="{os.environ["TARGET_IMAGE_DIGEST"]}"'
           if source.count(expected) != 1:
@@ -199,6 +205,7 @@ jobs:
             'ReplayFoundry redistributable FFmpeg source bundle' \
             "FFmpeg commit: ${FFMPEG_COMMIT}" \
             "FFmpeg-Builds commit: ${BTBN_COMMIT}" \
+            "Pinned source-download image: ${BASE_IMAGE_DIGEST}" \
             "Pinned target toolchain image: ${TARGET_IMAGE_DIGEST}" \
             'Target: win64 lgpl-shared 8.1' \
             'OpenH264: excluded from the dependency image and disabled in FFmpeg' \
