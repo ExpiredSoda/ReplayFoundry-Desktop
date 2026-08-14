@@ -83,4 +83,12 @@ Replay Foundry does not embed API secrets or private signing material. Release b
 
 Replay Foundry is free to download. If it saves you time and you want to help fund continued development, [support Expired Soda on Buy Me a Coffee](https://buymeacoffee.com/expiredsoda). Support is optional and never changes product access.
 
+<div align="center">
+  <a href="https://buymeacoffee.com/expiredsoda">
+    <img src=".github/assets/buy-me-a-coffee-qr.png" width="240" alt="Scan to support Expired Soda on Buy Me a Coffee" />
+  </a>
+  <br />
+  <sub>Scan the code or click it to open the optional support page.</sub>
+</div>
+
 Copyright © 2026 Expired Soda Studios LLC. Source code is available under the [MIT License](LICENSE.txt); bundled third-party components retain their own licenses and notices.
