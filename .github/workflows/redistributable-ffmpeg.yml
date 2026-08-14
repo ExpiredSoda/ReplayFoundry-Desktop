@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 300
     env:
-      BTBN_COMMIT: 8c736b2d6fe5da2a10a8896d01e53bfb0ca4f665
+      BTBN_COMMIT: 2a3249ec58228c661e7ff8fdc9ea997b18aa912b
       FFMPEG_COMMIT: 8c9502e9b048e21e1cae96477e338ac0635645ba
       BASE_IMAGE_DIGEST: ghcr.io/btbn/ffmpeg-builds/base@sha256:bda8a0c319d4c2117ed29af1e37b46c88b5788d6f4e2ef175abbcb02af35ad6b
-      TARGET_IMAGE_DIGEST: ghcr.io/btbn/ffmpeg-builds/base-win64@sha256:4f9c1331e00bba0a6f5d07ba9dc67a86f3300ba04815c0aa45f709844e3c2041
+      DEPENDENCY_IMAGE_DIGEST: ghcr.io/btbn/ffmpeg-builds/win64-lgpl-shared-8.1@sha256:c07cde1a8bbcef7cd6f932e6bc1eca08d1849a9b23102c96713ee1c70b22717a
     steps:
       - name: Check out release engineering source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,10 +80,10 @@ jobs:
           if source.count(expected) != 1:
               raise SystemExit("Pinned base-image seam changed")
           source = source.replace(expected, replacement)
-          expected = 'TARGET_IMAGE="${REGISTRY}/${REPO}/base-${TARGET}:latest"'
-          replacement = f'TARGET_IMAGE="{os.environ["TARGET_IMAGE_DIGEST"]}"'
+          expected = 'IMAGE="${REGISTRY}/${REPO}/${TARGET}-${VARIANT}${ADDINS_STR:+-}${ADDINS_STR}:latest"'
+          replacement = f'IMAGE="{os.environ["DEPENDENCY_IMAGE_DIGEST"]}"'
           if source.count(expected) != 1:
-              raise SystemExit("Pinned target-image seam changed")
+              raise SystemExit("Pinned dependency-image seam changed")
           variables.write_text(source.replace(expected, replacement), encoding="utf-8")
 
           download = Path("ffmpeg-builds/download.sh")
@@ -94,69 +94,16 @@ jobs:
               raise SystemExit("Pinned source-download invocation seam changed")
           download.write_text(source.replace(expected, replacement), encoding="utf-8")
 
-          makeimage = Path("ffmpeg-builds/makeimage.sh")
-          source = makeimage.read_text(encoding="utf-8")
-          expected = '''if [[ -z "$QUICKBUILD" ]]; then
-              BASE_IMAGE_TARGET="${PWD}/.cache/images/base"
-              if [[ ! -d "${BASE_IMAGE_TARGET}" ]]; then
-                  docker buildx --builder ffbuilder build \\
-                      --cache-from=type=local,src=.cache/"${BASE_IMAGE/:/_}" \\
-                      --cache-to=type=local,mode=max,dest=.cache/"${BASE_IMAGE/:/_}" \\
-                      --load --tag "${BASE_IMAGE}" \\
-                      "images/base"
-                  mkdir -p "${BASE_IMAGE_TARGET}"
-                  docker image save "${BASE_IMAGE}" | tar -x -C "${BASE_IMAGE_TARGET}"
-              fi
-
-              IMAGE_TARGET="${PWD}/.cache/images/base-${TARGET}"
-              if [[ ! -d "${IMAGE_TARGET}" ]]; then
-                  docker buildx --builder ffbuilder build \\
-                      --cache-from=type=local,src=.cache/"${TARGET_IMAGE/:/_}" \\
-                      --cache-to=type=local,mode=max,dest=.cache/"${TARGET_IMAGE/:/_}" \\
-                      --build-arg GH_REPO="${REGISTRY}/${REPO}" \\
-                      --build-context "${BASE_IMAGE}=oci-layout://${BASE_IMAGE_TARGET}" \\
-                      --load --tag "${TARGET_IMAGE}" \\
-                      "images/base-${TARGET}"
-                  mkdir -p "${IMAGE_TARGET}"
-                  docker image save "${TARGET_IMAGE}" | tar -x -C "${IMAGE_TARGET}"
-              fi
-
-              CONTEXT_SRC="oci-layout://${IMAGE_TARGET}"
-          else
-              CONTEXT_SRC="docker-image://${TARGET_IMAGE}"
-          fi'''
-          replacement = '''if [[ -z "$QUICKBUILD" ]]; then
-              docker buildx --builder ffbuilder build \\
-                  --load --tag "${BASE_IMAGE}" \\
-                  "images/base"
-
-              docker buildx --builder ffbuilder build \\
-                  --build-arg GH_REPO="${REGISTRY}/${REPO}" \\
-                  --build-context "${BASE_IMAGE}=docker-image://${BASE_IMAGE}" \\
-                  --load --tag "${TARGET_IMAGE}" \\
-                  "images/base-${TARGET}"
-          fi
-
-          CONTEXT_SRC="docker-image://${TARGET_IMAGE}"'''
-          if source.count(expected) != 1:
-              raise SystemExit("Pinned dependency-image export seam changed")
-          source = source.replace(expected, replacement)
-          source = source.replace(
-              '    --cache-from=type=local,src=.cache/"${IMAGE/:/_}" \\\n'
-              '    --cache-to=type=local,mode=max,dest=.cache/"${IMAGE/:/_}" \\\n',
-              '',
-          )
-          makeimage.write_text(source, encoding="utf-8")
           PY
           git -C ffmpeg-builds diff --check
-          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh download.sh makeimage.sh util/vars.sh
+          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh download.sh util/vars.sh
 
-      - name: Build the pinned dependency image
+      - name: Download matching dependency sources
         working-directory: ffmpeg-builds
         shell: bash
         run: |
           set -euo pipefail
-          QUICKBUILD=1 ./makeimage.sh win64 lgpl-shared 8.1 2>&1 | tee ../makeimage.log
+          ./download.sh 2>&1 | tee ../dependency-download.log
 
       - name: Build FFmpeg
         working-directory: ffmpeg-builds
@@ -205,18 +152,18 @@ jobs:
             "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/${FFMPEG_COMMIT}" \
             --output "${source_root}/archives/FFmpeg-${FFMPEG_COMMIT}.tar.gz"
           cp -a ffmpeg-builds/.cache/downloads "${source_root}/dependency-sources"
-          cp makeimage.log ffmpeg-build.log ffmpeg-binary.sha256 \
+          cp dependency-download.log ffmpeg-build.log ffmpeg-binary.sha256 \
             "${source_root}/evidence/"
-          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh download.sh makeimage.sh util/vars.sh \
+          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh download.sh util/vars.sh \
             > "${source_root}/evidence/replayfoundry-build-changes.diff"
           printf '%s\n' \
             'ReplayFoundry redistributable FFmpeg source bundle' \
             "FFmpeg commit: ${FFMPEG_COMMIT}" \
             "FFmpeg-Builds commit: ${BTBN_COMMIT}" \
             "Pinned source-download image: ${BASE_IMAGE_DIGEST}" \
-            "Pinned target toolchain image: ${TARGET_IMAGE_DIGEST}" \
+            "Pinned LGPL dependency image: ${DEPENDENCY_IMAGE_DIGEST}" \
             'Target: win64 lgpl-shared 8.1' \
-            'OpenH264: excluded from the dependency image and disabled in FFmpeg' \
+            'OpenH264: disabled in FFmpeg, not linked, and not redistributed' \
             'The dependency-sources directory is the exact source cache consumed by the pinned build system.' \
             > "${source_root}/README.txt"
           find "${source_root}" -type f -print0 | sort -z | xargs -0 sha256sum \
