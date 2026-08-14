@@ -4,7 +4,7 @@ This file records engineering provenance; it is not a legal opinion. Public redi
 
 | Component | Pinned candidate | License/provenance retained | Current decision |
 | --- | --- | --- | --- |
-| FFmpeg/ffprobe | Replay Foundry shared Windows build from FFmpeg commit `8c9502e9b048e21e1cae96477e338ac0635645ba` and FFmpeg-Builds commit `8c736b2d6fe5da2a10a8896d01e53bfb0ca4f665` | LGPL text, exact build configuration, executable/DLL hashes, pinned build scripts, dependency sources, and corresponding-source archive | Engineering-qualified only after the hosted binary and corresponding-source URLs/hashes are sealed into media pack `8.1.2.32`. |
+| FFmpeg/ffprobe | Replay Foundry shared Windows build from FFmpeg commit `8c9502e9b048e21e1cae96477e338ac0635645ba` and FFmpeg-Builds commit `2a3249ec58228c661e7ff8fdc9ea997b18aa912b` | LGPL text, exact build configuration, executable/DLL hashes, pinned build scripts, dependency sources, and corresponding-source archive | Engineering-qualified only after the hosted binary and corresponding-source URLs/hashes are sealed into media pack `8.1.2.32`. |
 | H.264 encoding | Windows Media Foundation `h264_mf` software encoder | Shared deterministic bitrate/profile policy and model-free command-contract tests | OpenH264 is excluded from both the FFmpeg binary and application command paths. Publisher review of applicable codec/patent obligations remains a business/legal step. |
 | Silero VAD | `v6.2.1` ONNX | MIT text, model hash, official GitHub source | Eligible after final manifest review. |
 | whisper.cpp | `v1.9.1`, commit `f049fff95a089aa9969deb009cdd4892b3e74916` | MIT text, archive/executable/DLL hashes, official release URL | Eligible after final manifest review. |
