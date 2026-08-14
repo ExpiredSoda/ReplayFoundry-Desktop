@@ -60,6 +60,25 @@ jobs:
               encoding="utf-8",
           )
 
+          opus = Path("ffmpeg-builds/scripts.d/50-libopus.sh")
+          source = opus.read_text(encoding="utf-8")
+          expected = '    echo "./autogen.sh"\n'
+          replacement = (
+              "    echo 'curl --fail --location --retry 10 --retry-all-errors "
+              "--retry-delay 5 --retry-max-time 1800 --connect-timeout 30 "
+              "--max-time 1800 --remove-on-error --output "
+              "opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz.partial "
+              "https://media.xiph.org/opus/models/opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz'\n"
+              "    echo 'echo \"a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e  "
+              "opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz.partial\" | sha256sum -c -'\n"
+              "    echo 'mv opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz.partial "
+              "opus_data-a5177ec6fb7d15058e99e57029746100121f68e4890b1467d4094aa336b6013e.tar.gz'\n"
+              "    echo './autogen.sh'\n"
+          )
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned Opus model-download seam changed")
+          opus.write_text(source.replace(expected, replacement), encoding="utf-8")
+
           build = Path("ffmpeg-builds/build.sh")
           source = build.read_text(encoding="utf-8")
           expected = "    cd ffmpeg\n\n    ./configure"
@@ -96,7 +115,7 @@ jobs:
 
           PY
           git -C ffmpeg-builds diff --check
-          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh download.sh util/vars.sh
+          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh scripts.d/50-libopus.sh build.sh download.sh util/vars.sh
 
       - name: Download matching dependency sources
         working-directory: ffmpeg-builds
@@ -154,7 +173,7 @@ jobs:
           cp -a ffmpeg-builds/.cache/downloads "${source_root}/dependency-sources"
           cp dependency-download.log ffmpeg-build.log ffmpeg-binary.sha256 \
             "${source_root}/evidence/"
-          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh download.sh util/vars.sh \
+          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh scripts.d/50-libopus.sh build.sh download.sh util/vars.sh \
             > "${source_root}/evidence/replayfoundry-build-changes.diff"
           printf '%s\n' \
             'ReplayFoundry redistributable FFmpeg source bundle' \
