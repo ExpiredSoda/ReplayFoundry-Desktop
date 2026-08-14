@@ -86,6 +86,14 @@ jobs:
               raise SystemExit("Pinned target-image seam changed")
           variables.write_text(source.replace(expected, replacement), encoding="utf-8")
 
+          download = Path("ffmpeg-builds/download.sh")
+          source = download.read_text(encoding="utf-8")
+          expected = '"${REGISTRY}/${REPO}/base:latest${DOCKER_TAG_SUFFIX:-}" \\\n'
+          replacement = '"${BASE_IMAGE}" \\\n'
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned source-download invocation seam changed")
+          download.write_text(source.replace(expected, replacement), encoding="utf-8")
+
           makeimage = Path("ffmpeg-builds/makeimage.sh")
           source = makeimage.read_text(encoding="utf-8")
           expected = '''if [[ -z "$QUICKBUILD" ]]; then
@@ -141,7 +149,7 @@ jobs:
           makeimage.write_text(source, encoding="utf-8")
           PY
           git -C ffmpeg-builds diff --check
-          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh makeimage.sh util/vars.sh
+          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh download.sh makeimage.sh util/vars.sh
 
       - name: Build the pinned dependency image
         working-directory: ffmpeg-builds
@@ -199,7 +207,7 @@ jobs:
           cp -a ffmpeg-builds/.cache/downloads "${source_root}/dependency-sources"
           cp makeimage.log ffmpeg-build.log ffmpeg-binary.sha256 \
             "${source_root}/evidence/"
-          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh makeimage.sh util/vars.sh \
+          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh download.sh makeimage.sh util/vars.sh \
             > "${source_root}/evidence/replayfoundry-build-changes.diff"
           printf '%s\n' \
             'ReplayFoundry redistributable FFmpeg source bundle' \
