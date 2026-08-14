@@ -1,0 +1,458 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Settings.PrivacyDiagnosticsSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <StackPanel>
+        <Border Style="{DynamicResource Control.CanvasPane}">
+            <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YOUTUBE CONNECTION" />
+                        <TextBlock
+                            Margin="0,4,120,0"
+                            Style="{DynamicResource Text.Body}"
+                            Text="YouTube is optional and off by default. Allowing access does not connect an account or send anything by itself."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <controls:StatusBadge
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Text="{Binding YouTubeConnectionPermissionStatus}" />
+                </Grid>
+
+                <Border Margin="0,14,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock
+                                Foreground="{DynamicResource Brush.TextPrimary}"
+                                FontWeight="SemiBold"
+                                Text="Let Publish connect to YouTube" />
+                            <TextBlock
+                                Margin="0,4,16,0"
+                                Style="{DynamicResource Text.Meta}"
+                                Text="{Binding YouTubeConnectionPermissionDetail}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Margin="0,5,16,0"
+                                Style="{DynamicResource Text.Meta}"
+                                Text="{Binding YouTubeConnectionEnabledAtText}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Grid Grid.Column="1" VerticalAlignment="Center">
+                            <Button
+                                AutomationProperties.Name="Enable YouTube connections"
+                                Command="{Binding EnableYouTubeConnectionsCommand}"
+                                Content="Allow YouTube">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Control.PrimaryButton}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsYouTubeConnectionEnabled}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button
+                                AutomationProperties.Name="Disable YouTube connections"
+                                Command="{Binding DisableYouTubeConnectionsCommand}"
+                                Content="Turn off YouTube &amp; disconnect">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Control.DestructiveButton}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsYouTubeConnectionEnabled}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border
+                    Margin="0,12,0,0"
+                    Padding="12"
+                    Style="{DynamicResource Control.CanvasInsetCard}"
+                    Visibility="{Binding HasOnlineConnectionNotice, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock
+                        Style="{DynamicResource Text.Meta}"
+                        Text="{Binding OnlineConnectionNotice}"
+                        TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasPane}">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,170,0">
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="LOCAL WORDING STYLE LEARNING" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{DynamicResource Text.Body}"
+                            Text="Optionally learn from title, description, and tag corrections that you explicitly save in Studio. This is off by default."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <controls:StatusBadge
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Text="{Binding EditorialMetadataPreferenceLearningStatus}" />
+                </Grid>
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding EditorialMetadataPreferenceLearningDetail}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,7,0,0"
+                    Foreground="{DynamicResource Brush.StatusInfo}"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding EditorialMetadataPreferenceLearningPrivacy}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,7,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding EditorialMetadataPreferenceLearningEnabledAtText}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource Brush.TextSecondary}"
+                    Text="{Binding EditorialMetadataPreferenceLearningPersistence}"
+                    TextWrapping="Wrap" />
+
+                <WrapPanel Margin="0,14,0,0">
+                    <Button
+                        Margin="0,0,8,0"
+                        AutomationProperties.Name="Enable local structural wording style learning"
+                        Command="{Binding EnableEditorialMetadataPreferenceLearningCommand}"
+                        Content="Turn on local learning">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Control.PrimaryButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditorialMetadataPreferenceLearningEnabled}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="Disable local structural wording style learning"
+                        Command="{Binding DisableEditorialMetadataPreferenceLearningCommand}"
+                        Content="Turn off local learning">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Control.GhostButton}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditorialMetadataPreferenceLearningEnabled}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </WrapPanel>
+
+                <Border
+                    Margin="0,12,0,0"
+                    Padding="12"
+                    Style="{DynamicResource Control.CanvasInsetCard}"
+                    Visibility="{Binding HasEditorialMetadataPreferenceLearningNotice, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock
+                        Style="{DynamicResource Text.Meta}"
+                        Text="{Binding EditorialMetadataPreferenceLearningNotice}"
+                        TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasPane}">
+            <StackPanel DataContext="{Binding BugReports}">
+                <Grid>
+                    <StackPanel Margin="0,0,190,0">
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="FEEDBACK &amp; CRASH REPORTS" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{DynamicResource Text.Body}"
+                            Text="Create a report for Replay Foundry support. Crash records are sanitized and saved locally; nothing is ever sent automatically."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <controls:StatusBadge
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Text="{Binding DeliveryStatus}" />
+                </Grid>
+
+                <TextBlock Margin="0,10,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding DeliveryDetail}" TextWrapping="Wrap" />
+                <WrapPanel Margin="0,12,0,0">
+                    <Button
+                        Margin="0,0,8,0"
+                        AutomationProperties.Name="Allow explicitly reviewed bug reports to be sent"
+                        Command="{Binding EnableDeliveryCommand}"
+                        Content="Allow report delivery">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Control.PrimaryButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDeliveryAllowed}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="Turn off bug report delivery"
+                        Command="{Binding DisableDeliveryCommand}"
+                        Content="Turn delivery off">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Control.GhostButton}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDeliveryAllowed}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </WrapPanel>
+
+                <Border Margin="0,14,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="MANUAL FEEDBACK" />
+                        <TextBox
+                            Margin="0,8,0,0"
+                            MaxLength="160"
+                            AutomationProperties.Name="Bug report summary"
+                            Style="{DynamicResource Control.FormTextBox}"
+                            Text="{Binding Summary, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox
+                            Margin="0,8,0,0"
+                            MinHeight="92"
+                            MaxLength="4000"
+                            AcceptsReturn="True"
+                            AutomationProperties.Name="Bug report details"
+                            Style="{DynamicResource Control.FormTextBox}"
+                            Text="{Binding Details, UpdateSourceTrigger=PropertyChanged}"
+                            TextWrapping="Wrap" />
+                        <CheckBox
+                            Margin="0,10,0,0"
+                            IsChecked="{Binding IncludeDiagnostics}"
+                            Content="Include a sanitized system summary (no media, titles, transcripts, tokens, or local paths)" />
+                        <Button
+                            Margin="0,12,0,0"
+                            HorizontalAlignment="Left"
+                            AutomationProperties.Name="Save manual bug report locally"
+                            Command="{Binding SaveManualReportCommand}"
+                            Content="Save report for review"
+                            Style="{DynamicResource Control.PrimaryButton}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                    <StackPanel>
+                        <TextBlock Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="Saved reports" />
+                        <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding OutboxStatus}" />
+                        <ListBox
+                            Margin="0,10,0,0"
+                            MaxHeight="220"
+                            AutomationProperties.Name="Local feedback and crash report outbox"
+                            ItemsSource="{Binding Reports}"
+                            SelectedItem="{Binding SelectedReport}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="3,5">
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}">
+                                            <Run Text="{Binding KindText, Mode=OneWay}" />
+                                            <Run Text=" · " />
+                                            <Run Text="{Binding CreatedText, Mode=OneWay}" />
+                                            <Run Text=" · " />
+                                            <Run Text="{Binding StatusText, Mode=OneWay}" />
+                                        </TextBlock>
+                                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding AttachmentSummary}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Border Margin="0,10,0,0" Padding="10" Style="{DynamicResource Control.CanvasInsetCard}">
+                            <StackPanel>
+                                <TextBlock FontWeight="SemiBold" Text="{Binding SelectedReport.Summary, TargetNullValue=Select a saved report to review}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding SelectedReport.Details}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="Diagnostic attachment preview" />
+                                <ScrollViewer Margin="0,5,0,0" MaxHeight="180" VerticalScrollBarVisibility="Auto">
+                                    <TextBox
+                                        AutomationProperties.Name="Sanitized diagnostic attachment preview"
+                                        IsReadOnly="True"
+                                        Style="{DynamicResource Control.FormTextBox}"
+                                        Text="{Binding SelectedDiagnosticPreview, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Border>
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button
+                                Margin="0,0,8,8"
+                                AutomationProperties.Name="Send selected reviewed report"
+                                Command="{Binding SendSelectedReportCommand}"
+                                Content="Send selected report"
+                                Style="{DynamicResource Control.PrimaryButton}" />
+                            <Button
+                                Margin="0,0,8,8"
+                                AutomationProperties.Name="Delete selected local report"
+                                Command="{Binding DeleteSelectedReportCommand}"
+                                Content="Delete selected"
+                                Style="{DynamicResource Control.DestructiveButton}" />
+                            <Button
+                                Margin="0,0,0,8"
+                                AutomationProperties.Name="Delete all local reports"
+                                Command="{Binding DeleteAllReportsCommand}"
+                                Content="{Binding DeleteAllLabel}"
+                                Style="{DynamicResource Control.DestructiveButton}" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Margin="0,12,0,0"
+                    Style="{DynamicResource Control.CanvasInsetCard}"
+                    Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{DynamicResource Text.Body}" Text="{Binding Notice}" TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasPane}">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,170,0">
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="OPTIONAL RESEARCH SHARING" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{DynamicResource Text.Body}"
+                            Text="Help improve future clip suggestions with anonymous measurements about what you kept or skipped. This is off by default."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <controls:StatusBadge
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Text="{Binding ResearchParticipationStatus}" />
+                </Grid>
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding ResearchParticipationDetail}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,7,0,0"
+                    Foreground="{DynamicResource Brush.StatusInfo}"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding ResearchDeliveryStatus}"
+                    TextWrapping="Wrap" />
+
+                <WrapPanel Margin="0,14,0,0">
+                    <Button
+                        Margin="0,0,8,0"
+                        AutomationProperties.Name="Enable anonymous research contribution"
+                        Command="{Binding EnableResearchParticipationCommand}"
+                        Content="Opt in">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Control.PrimaryButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsResearchParticipationEnabled}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button
+                        Margin="0,0,8,0"
+                        AutomationProperties.Name="Disable anonymous research contribution"
+                        Command="{Binding DisableResearchParticipationCommand}"
+                        Content="Turn off research sharing">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Control.GhostButton}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsResearchParticipationEnabled}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="Delete local research contribution records"
+                        Command="{Binding DeleteResearchFeedbackCommand}"
+                        Content="Delete local research data"
+                        Style="{DynamicResource Control.DestructiveButton}" />
+                </WrapPanel>
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="This consent is separate from YouTube. It never authorizes media upload, and changing it does not affect local clip discovery or personalization."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasPane}">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="WHAT STAYS PRIVATE" />
+                <TextBlock
+                    Margin="0,8,0,0"
+                    Style="{DynamicResource Text.Body}"
+                    Text="{Binding PrivacySummary}"
+                    TextWrapping="Wrap" />
+
+                <TextBlock Margin="0,14,0,0" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="What can leave this PC" />
+                <TextBlock
+                    Margin="0,5,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding YouTubeDataSummary}"
+                    TextWrapping="Wrap" />
+
+                <TextBlock Margin="0,14,0,0" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="What is stored" />
+                <TextBlock
+                    Margin="0,5,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding YouTubeStorageSummary}"
+                    TextWrapping="Wrap" />
+
+                <TextBlock Margin="0,14,0,0" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="Control remains with you" />
+                <TextBlock
+                    Margin="0,5,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    TextWrapping="Wrap">
+                    <Run Text="Enabling YouTube does not perform a connection attempt. Connect, refresh, status check, upload, schedule, thumbnail, and playlist actions remain explicit. " />
+                    <Run Text="You can disable access here, disconnect in Publish, clear local publish history, and manage or delete uploaded videos in YouTube Studio." />
+                </TextBlock>
+
+                <TextBlock
+                    Margin="0,14,0,0"
+                    Foreground="{DynamicResource Brush.StatusInfo}"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="Google OAuth and YouTube actions are governed by Google's privacy policy, YouTube's terms, and the permissions shown in Google's browser consent screen."
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,8,0,0"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding DiagnosticsStatus}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

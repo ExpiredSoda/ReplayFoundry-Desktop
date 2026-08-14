@@ -1,0 +1,38 @@
+Replay Foundry Grounded Editorial Rephrase Policy 2.0
+
+Purpose
+
+This policy separates transport validity from audience-copy quality. A complete
+XGrammar-constrained metadata object is retained even when a semantic copy rule
+needs human review. One bounded rephrase may improve that draft, but rejection
+of the rephrase never discards the source metadata or generated clip.
+
+Structural rerolls
+
+- A user reroll selects a different qualified variant intent from the same
+  immutable evidence and typed authority.
+- The rephraser changes the narrative lens, title opening and syntax, clause
+  order, and description sentence plan. A synonym-only substitution is not a
+  valid reroll.
+- The new structure may use only facts supported by the same typed authority.
+  It cannot add identity, emotion, intent, cause, outcome, dialogue, interface
+  attribution, readable text, or game-specific event detail.
+- Tags, grounding, and temporalVoice remain immutable except for the existing
+  bounded non-English tag omission rule.
+
+Review-required copy
+
+- A schema-valid source rejected by an audience-copy validator is labeled
+  ReviewRequiredMetadata and carries its typed review code.
+- The rephraser may correct that code. If it succeeds, the review flag clears.
+- If it fails, repeats the source, or remains too similar to prior copy, Replay
+  Foundry retains the complete source and exposes its review issue in Studio
+  and Publish. No additional automatic model retry is authorized.
+
+Preserved bounds
+
+- One batch-one greedy XGrammar-constrained text-only rephrase, seed 0, beam
+  count 1, offloaded KV cache, and the 768-token ceiling remain.
+- No video rerun, perception rerun, knowledge retrieval, unconstrained
+  fallback, programmatic semantic repair, or hidden retry is introduced.
+- Policies 1.0 through 1.9 remain readable under their original contracts.

@@ -1,0 +1,63 @@
+ReplayFoundry Visual Semantic Generation Budget Policy 1.0
+
+Purpose
+
+This policy defines one bounded, deterministic generation ceiling and one
+auditable termination contract for the Qwen3-VL visual-semantic research host.
+It changes no prompt, model weight, input video, sampling policy, candidate,
+proxy label, or semantic validation rule.
+
+Active generation configuration
+
+- Model: the existing pinned Qwen3-VL-4B-Instruct revision.
+- Decoding: greedy (`do_sample=false`, `num_beams=1`).
+- Cache: enabled.
+- Active maximum new tokens: 2048.
+- The maximum is a ceiling, not a requested output length.
+- Generation must stop by a configured end-of-sequence token before reaching
+  the ceiling.
+- The host inspects the ordinary returned sequence tensor directly.
+- Scores, logits, attentions, hidden states, caches as returned output, and
+  hidden reasoning are not requested or retained.
+
+Legacy diagnostic configuration
+
+- The former 768-token ceiling may be used exactly once against the frozen
+  ordinal-6 one-case input to classify the retained v0.5A.4 truncation.
+- The legacy diagnostic is not an active provider fallback and may not be used
+  to produce evaluation results.
+- The first 768 generated token IDs from the active-budget rerun must match the
+  legacy diagnostic exactly before the active continuation is accepted.
+
+Termination classification
+
+- EndOfSequence: a configured EOS token is observed before the active ceiling.
+- MaximumNewTokensReached: the generated token count equals the configured
+  ceiling and no EOS token is observed.
+- UnexpectedStop: generation ends below the ceiling without an EOS token.
+- Only EndOfSequence is eligible for strict JSON parsing and completed provider
+  output.
+
+Prohibited behavior
+
+- No forced EOS token.
+- No stop-string shortcut.
+- No JSON completion, brace insertion, string closure, truncation repair, or
+  schema repair.
+- No automatic retry.
+- No dynamic or per-case token escalation.
+- No prompt revision or prompt suffix.
+- No sampling, temperature, beam, repetition-penalty, model, quantization, or
+  backend change.
+- No acceptance of a partial batch or partial JSON object.
+- No second budget increase in this policy cycle.
+
+Audit
+
+Every attempted case records input and generated token counts, the configured
+ceiling, configured EOS token IDs, EOS observation and index, terminal token
+ID, termination reason, generated-token hash, legacy-prefix hash, decoded-text
+hash and byte count, and case identity. A failed case records the same
+generation metadata in the external typed failure envelope. Raw generated text
+is retained only in an explicitly requested external one-case audit after
+bounded text-safety checks.

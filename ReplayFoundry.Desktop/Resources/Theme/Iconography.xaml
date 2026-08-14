@@ -1,0 +1,68 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <FontFamily x:Key="Font.Icon">Segoe Fluent Icons</FontFamily>
+    <Geometry x:Key="Icon.ChevronDown">M 2,4 L 7,9 L 12,4</Geometry>
+    <Geometry x:Key="Icon.ChevronUp">M 2,9 L 7,4 L 12,9</Geometry>
+    <Geometry x:Key="Icon.ChevronRight">M 4,2 L 9,7 L 4,12</Geometry>
+    <Geometry x:Key="Icon.ChevronLeft">M 9,2 L 4,7 L 9,12</Geometry>
+    <Geometry x:Key="Icon.Plus">M 7,2 L 7,12 M 2,7 L 12,7</Geometry>
+    <Geometry x:Key="Icon.Minus">M 2,7 L 12,7</Geometry>
+    <Geometry x:Key="Icon.Check">M 2,7 L 5.5,10.5 L 12,3</Geometry>
+    <Geometry x:Key="Icon.Close">M 3,3 L 11,11 M 11,3 L 3,11</Geometry>
+    <Geometry x:Key="Icon.Heart">M 7,12 C 6,11 2,8 2,5 C 2,2.5 5,1.5 7,4 C 9,1.5 12,2.5 12,5 C 12,8 8,11 7,12 Z</Geometry>
+    <Geometry x:Key="Icon.Trash">M 3,4 L 11,4 M 5,4 L 5,2 L 9,2 L 9,4 M 4,4 L 4.8,12 L 9.2,12 L 10,4 M 6,6 L 6,10 M 8,6 L 8,10</Geometry>
+    <Geometry x:Key="Icon.Search">M 6,2 A 4,4 0 1 0 6,10 A 4,4 0 1 0 6,2 M 9,9 L 12,12</Geometry>
+    <Geometry x:Key="Icon.Filter">M 1,2 L 13,2 L 8,7 L 8,12 L 6,11 L 6,7 Z</Geometry>
+    <Geometry x:Key="Icon.Grid">M 2,2 L 6,2 L 6,6 L 2,6 Z M 8,2 L 12,2 L 12,6 L 8,6 Z M 2,8 L 6,8 L 6,12 L 2,12 Z M 8,8 L 12,8 L 12,12 L 8,12 Z</Geometry>
+    <Geometry x:Key="Icon.List">M 2,2 L 3,2 L 3,3 L 2,3 Z M 5,2 L 12,2 M 2,6 L 3,6 L 3,7 L 2,7 Z M 5,6 L 12,6 M 2,10 L 3,10 L 3,11 L 2,11 Z M 5,10 L 12,10</Geometry>
+    <Geometry x:Key="Icon.Play">M 4,2 L 11,7 L 4,12 Z</Geometry>
+    <Geometry x:Key="Icon.Pause">M 3,2 L 5,2 L 5,12 L 3,12 Z M 9,2 L 11,2 L 11,12 L 9,12 Z</Geometry>
+    <Geometry x:Key="Icon.Stop">M 3,3 L 11,3 L 11,11 L 3,11 Z</Geometry>
+    <Geometry x:Key="Icon.SkipBack">M 3,2 L 3,12 M 11,2 L 4,7 L 11,12 Z</Geometry>
+    <Geometry x:Key="Icon.SkipForward">M 11,2 L 11,12 M 3,2 L 10,7 L 3,12 Z</Geometry>
+    <Geometry x:Key="Icon.Rewind">M 7,2 L 1,7 L 7,12 Z M 13,2 L 7,7 L 13,12 Z</Geometry>
+    <Geometry x:Key="Icon.FastForward">M 1,2 L 7,7 L 1,12 Z M 7,2 L 13,7 L 7,12 Z</Geometry>
+    <Geometry x:Key="Icon.ZoomIn">M 6,2 A 4,4 0 1 0 6,10 A 4,4 0 1 0 6,2 M 9,9 L 12,12 M 6,4 L 6,8 M 4,6 L 8,6</Geometry>
+    <Geometry x:Key="Icon.ZoomOut">M 6,2 A 4,4 0 1 0 6,10 A 4,4 0 1 0 6,2 M 9,9 L 12,12 M 4,6 L 8,6</Geometry>
+    <Geometry x:Key="Icon.Fit">M 2,5 L 2,2 L 5,2 M 9,2 L 12,2 L 12,5 M 12,9 L 12,12 L 9,12 M 5,12 L 2,12 L 2,9</Geometry>
+    <Geometry x:Key="Icon.Fullscreen">M 2,5 L 2,2 L 5,2 M 9,2 L 12,2 L 12,5 M 12,9 L 12,12 L 9,12 M 5,12 L 2,12 L 2,9</Geometry>
+    <Geometry x:Key="Icon.Info">M 7,2 A 5,5 0 1 0 7,12 A 5,5 0 1 0 7,2 M 7,5 L 7,9 M 7,3.5 L 7,3.5</Geometry>
+    <Geometry x:Key="Icon.Warning">M 7,1 L 13,12 L 1,12 Z M 7,5 L 7,8 M 7,10 L 7,10</Geometry>
+    <Geometry x:Key="Icon.Error">M 7,1 A 6,6 0 1 0 7,13 A 6,6 0 1 0 7,1 M 4,4 L 10,10 M 10,4 L 4,10</Geometry>
+    <Geometry x:Key="Icon.Local">M 2,3 L 7,1 L 12,3 L 12,11 L 7,13 L 2,11 Z M 7,1 L 7,13 M 2,3 L 7,5 L 12,3</Geometry>
+    <Geometry x:Key="Icon.CloudUnavailable">M 3,10 A 3,3 0 0 1 4,4 A 4,4 0 0 1 11,6 A 3,3 0 0 1 11,11 M 3,3 L 11,11</Geometry>
+    <Geometry x:Key="Icon.Folder">M 1,3 L 5,3 L 6,5 L 13,5 L 12,12 L 1,12 Z</Geometry>
+    <Geometry x:Key="Icon.Spark">M 7,1 L 8.5,5.5 L 13,7 L 8.5,8.5 L 7,13 L 5.5,8.5 L 1,7 L 5.5,5.5 Z</Geometry>
+    <Geometry x:Key="Icon.Media">M 2,2 L 12,2 L 12,12 L 2,12 Z M 4,9 L 6,6 L 8,8 L 9,7 L 11,10</Geometry>
+    <Geometry x:Key="Icon.Transcript">M 2,2 L 12,2 L 12,12 L 2,12 Z M 4,5 L 10,5 M 4,7 L 10,7 M 4,9 L 8,9</Geometry>
+    <Geometry x:Key="Icon.Music">M 9,2 L 12,1 L 12,9 M 9,2 L 9,10 M 3,7 A 2,2 0 1 0 6,8 A 2,2 0 0 0 3,7 M 9,9 A 2,2 0 1 0 12,10 A 2,2 0 0 0 9,9</Geometry>
+    <Geometry x:Key="Icon.Effects">M 7,1 L 8.5,5.5 L 13,7 L 8.5,8.5 L 7,13 L 5.5,8.5 L 1,7 L 5.5,5.5 Z</Geometry>
+    <Geometry x:Key="Icon.Transition">M 1,4 L 5,4 L 5,2 L 9,7 L 5,12 L 5,10 L 1,10 M 13,4 L 9,4 M 13,10 L 9,10</Geometry>
+    <Geometry x:Key="Icon.Graphics">M 2,2 L 12,2 L 12,12 L 2,12 Z M 4,9 L 6,6 L 8,8 L 10,5</Geometry>
+    <Geometry x:Key="Icon.Caption">M 2,3 L 12,3 L 12,11 L 2,11 Z M 4,6 L 6,6 M 8,6 L 10,6 M 4,8 L 10,8</Geometry>
+    <Geometry x:Key="Icon.Audio">M 2,5 L 5,5 L 8,2 L 8,12 L 5,9 L 2,9 Z M 10,5 A 3,3 0 0 1 10,9 M 11,3 A 5,5 0 0 1 11,11</Geometry>
+    <Geometry x:Key="Icon.Timeline">M 1,7 L 13,7 M 3,4 L 3,10 M 7,2 L 7,12 M 11,4 L 11,10</Geometry>
+    <Geometry x:Key="Icon.Project">M 1,3 L 5,3 L 6,5 L 13,5 L 12,12 L 1,12 Z M 3,7 L 10,7 M 3,9 L 8,9</Geometry>
+    <Geometry x:Key="Icon.Queue">M 2,2 L 12,2 L 12,4 L 2,4 Z M 2,6 L 12,6 L 12,8 L 2,8 Z M 2,10 L 9,10 L 9,12 L 2,12 Z</Geometry>
+    <Geometry x:Key="Icon.History">M 2,7 A 5,5 0 1 0 3,4 M 2,3 L 2,7 L 6,7 M 7,4 L 7,7 L 10,8</Geometry>
+    <Geometry x:Key="Icon.Settings">
+        M 6,1 L 8,1 L 8.5,3 A 4,4 0 0 1 10,4 L 12,3 L 13,5 L 11.5,6.5
+        A 4,4 0 0 1 11.5,8.5 L 13,10 L 12,12 L 10,11 A 4,4 0 0 1 8.5,12
+        L 8,14 L 6,14 L 5.5,12 A 4,4 0 0 1 4,11 L 2,12 L 1,10 L 2.5,8.5
+        A 4,4 0 0 1 2.5,6.5 L 1,5 L 2,3 L 4,4 A 4,4 0 0 1 5.5,3 Z
+        M 7,5 A 2,2 0 1 0 7,9 A 2,2 0 1 0 7,5
+    </Geometry>
+    <Geometry x:Key="Icon.Keyboard">M 1,3 L 13,3 L 13,11 L 1,11 Z M 3,5 L 4,5 M 6,5 L 7,5 M 9,5 L 10,5 M 3,8 L 11,8</Geometry>
+    <Geometry x:Key="Icon.Lock">M 3,6 L 11,6 L 11,12 L 3,12 Z M 5,6 L 5,4 A 2,2 0 0 1 9,4 L 9,6</Geometry>
+    <Geometry x:Key="Icon.Edit">M 2,12 L 3,8 L 9.5,1.5 L 12.5,4.5 L 6,11 Z M 3,8 L 6,11 M 8.5,2.5 L 11.5,5.5</Geometry>
+    <Geometry x:Key="Icon.Export">M 7,1 L 7,9 M 4,4 L 7,1 L 10,4 M 2,7 L 2,12 L 12,12 L 12,7</Geometry>
+    <Geometry x:Key="Icon.Link">M 5,8 L 4,9 A 2,2 0 0 0 7,12 L 9,10 M 9,6 L 10,5 A 2,2 0 0 0 7,2 L 5,4 M 4,8 L 10,4</Geometry>
+    <Geometry x:Key="Icon.CheckCircle">M 7,1 A 6,6 0 1 0 7,13 A 6,6 0 1 0 7,1 M 4,7 L 6,9 L 10,4</Geometry>
+    <Geometry x:Key="Icon.Circle">M 7,2 A 5,5 0 1 0 7,12 A 5,5 0 1 0 7,2</Geometry>
+    <sys:String x:Key="Icon.Glyph.ChromeMinimize">&#xE921;</sys:String>
+    <sys:String x:Key="Icon.Glyph.ChromeMaximize">&#xE922;</sys:String>
+    <sys:String x:Key="Icon.Glyph.ChromeRestore">&#xE923;</sys:String>
+    <sys:String x:Key="Icon.Glyph.ChromeClose">&#xE8BB;</sys:String>
+</ResourceDictionary>

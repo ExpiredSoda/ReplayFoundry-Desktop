@@ -1,0 +1,54 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Settings.AboutSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <Border Style="{DynamicResource Control.CanvasPane}">
+        <StackPanel>
+            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="ABOUT" />
+            <TextBlock
+                Margin="0,10,0,0"
+                Foreground="{DynamicResource Brush.TextPrimary}"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Text="{Binding VersionText}"
+                TextWrapping="Wrap" />
+            <TextBlock
+                Margin="0,6,0,0"
+                Style="{DynamicResource Text.Body}"
+                Text="A free, local-first workspace for finding, editing, rendering, organizing, and publishing gameplay clips."
+                TextWrapping="Wrap" />
+            <controls:StatusBadge
+                Margin="0,14,0,0"
+                Text="Core creation remains free · support is optional" />
+            <Grid Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Margin="0,0,8,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="APPLICATION" />
+                        <TextBlock Margin="0,5,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Free to use" />
+                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="No trial clock or paid core workflow" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Margin="4,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="PROCESSING" />
+                        <TextBlock Margin="0,5,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Local by design" />
+                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="Installed tools and models stay on this PC" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Margin="8,0,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="CREATIVE EXTRAS" />
+                        <TextBlock Margin="0,5,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Optional content" />
+                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="Future stickers, sounds, and templates never unlock core features" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

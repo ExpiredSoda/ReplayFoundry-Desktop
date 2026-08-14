@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "visual-semantic-editorial-observation-2.0",
+  "title": "ReplayFoundry Visual Semantic Editorial Observation 2.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "observableContentType",
+    "hasDistinctEvent",
+    "hasObservablePayoff",
+    "routineTraversalOrMenuOnly",
+    "candidateRequiresMissingContext",
+    "candidateContainsOnlyAmbientChange",
+    "transcriptContextSupport",
+    "observedChanges",
+    "evidenceIntervals",
+    "uncertaintyReasons",
+    "editorialDisposition",
+    "rejectReason",
+    "dispositionRationale"
+  ],
+  "properties": {
+    "observableContentType": {
+      "enum": [
+        "Action",
+        "Dialogue",
+        "Discovery",
+        "Failure",
+        "Humor",
+        "Story",
+        "MenuOrTraversal",
+        "Cinematic",
+        "Other",
+        "Unknown"
+      ]
+    },
+    "hasDistinctEvent": {
+      "$ref": "#/$defs/ternary"
+    },
+    "hasObservablePayoff": {
+      "$ref": "#/$defs/ternary"
+    },
+    "routineTraversalOrMenuOnly": {
+      "$ref": "#/$defs/ternary"
+    },
+    "candidateRequiresMissingContext": {
+      "$ref": "#/$defs/ternary"
+    },
+    "candidateContainsOnlyAmbientChange": {
+      "$ref": "#/$defs/ternary"
+    },
+    "transcriptContextSupport": {
+      "enum": [
+        "Supports",
+        "DoesNotSupport",
+        "NotSupplied",
+        "UnreliableOrAmbiguous"
+      ]
+    },
+    "observedChanges": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/observedChange"
+      }
+    },
+    "evidenceIntervals": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/evidenceInterval"
+      }
+    },
+    "uncertaintyReasons": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/uncertaintyReason"
+      }
+    },
+    "editorialDisposition": {
+      "enum": [
+        "Keep",
+        "Reject",
+        "Unsure"
+      ]
+    },
+    "rejectReason": {
+      "enum": [
+        "RoutineTraversal",
+        "MenuOrInventoryOnly",
+        "NoObservablePayoff",
+        "AmbientChangeOnly",
+        "MissingRequiredContext",
+        "NoDistinctEvent",
+        "InsufficientEvidence",
+        "None"
+      ]
+    },
+    "dispositionRationale": {
+      "$ref": "#/$defs/rationale"
+    }
+  },
+  "$defs": {
+    "ternary": {
+      "enum": [
+        "Yes",
+        "No",
+        "Unsure"
+      ]
+    },
+    "basis": {
+      "enum": [
+        "Visual",
+        "TranscriptContext",
+        "Both"
+      ]
+    },
+    "boundedText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    },
+    "evidenceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$"
+    },
+    "observedChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "description",
+        "evidenceBasis",
+        "evidenceIntervalIds"
+      ],
+      "properties": {
+        "description": {
+          "$ref": "#/$defs/boundedText"
+        },
+        "evidenceBasis": {
+          "$ref": "#/$defs/basis"
+        },
+        "evidenceIntervalIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/evidenceId"
+          }
+        }
+      }
+    },
+    "evidenceInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "startSeconds",
+        "endSeconds",
+        "description",
+        "evidenceBasis"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/evidenceId"
+        },
+        "startSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "endSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "description": {
+          "$ref": "#/$defs/boundedText"
+        },
+        "evidenceBasis": {
+          "$ref": "#/$defs/basis"
+        }
+      }
+    },
+    "uncertaintyReason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "description"
+      ],
+      "properties": {
+        "code": {
+          "enum": [
+            "InsufficientVisualEvidence",
+            "AmbiguousEventBoundary",
+            "TranscriptMayBeInaccurate",
+            "OccludedOrObscured",
+            "FrameSamplingMayMissBriefEvent",
+            "CompositionRegionUnavailable",
+            "TranscriptContextContradictory",
+            "Other"
+          ]
+        },
+        "description": {
+          "$ref": "#/$defs/boundedText"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,235 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Studio.Inspector.StudioClipEditorView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:editing="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Editing">
+    <Border
+        Margin="0,12,0,8"
+        AutomationProperties.Name="Clip boundary editor"
+        Style="{DynamicResource Control.CanvasInsetCard}"
+        Visibility="{Binding IsClipBoundaryEditorVisible, Converter={StaticResource BoolToVisibility}}">
+        <StackPanel>
+            <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Clip boundaries" />
+            <TextBlock
+                Margin="0,4,0,9"
+                Style="{DynamicResource Text.Meta}"
+                Text="Drag for a broad change or use the frame buttons for a precise cut. The preview range follows the draft; nothing renders until you apply it."
+                TextWrapping="Wrap" />
+
+            <Border Margin="0,10,0,0" Padding="10" Background="{DynamicResource Brush.SurfaceElevated}" CornerRadius="7">
+                <StackPanel>
+                    <CheckBox
+                        AutomationProperties.Name="Keep candidate in final render"
+                        Content="Keep this candidate in the final render"
+                        IsChecked="{Binding Preference.IsIncludedInFinalRender, Mode=TwoWay}"
+                        IsEnabled="{Binding Preference.CanChangeRenderInclusion}" />
+                    <TextBlock
+                        Margin="0,5,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="{Binding Preference.RenderDispositionText}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Margin="0,10,0,0" Padding="10" Background="{DynamicResource Brush.SurfaceElevated}" CornerRadius="7">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Your preference" />
+                        <controls:StatusBadge Grid.Column="1" Text="{Binding Preference.PreferenceSelectionText}" />
+                    </Grid>
+                    <TextBlock
+                        Margin="0,3,0,8"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="Like, Neutral, or Dislike helps later selections learn from aggregate clip patterns. Game names, paths, titles, transcripts, and descriptions are not stored in the preference profile."
+                        TextWrapping="Wrap" />
+                    <UniformGrid Columns="3">
+                        <RadioButton
+                            Margin="0,0,4,0"
+                            AutomationProperties.Name="Like this clip"
+                            Command="{Binding Preference.SetPreferenceCommand}"
+                            CommandParameter="{x:Static editing:StudioClipPreferenceRating.Like}"
+                            GroupName="ClipPreference"
+                            IsChecked="{Binding Preference.IsLikeSelected, Mode=OneWay}"
+                            Style="{DynamicResource Control.PreferenceChoice}">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:IconPath Width="14" Height="14" Margin="0,0,6,0" IconKey="Icon.Heart" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                                <TextBlock Text="Like" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton
+                            Margin="2,0"
+                            AutomationProperties.Name="Keep this clip neutral"
+                            Command="{Binding Preference.SetPreferenceCommand}"
+                            CommandParameter="{x:Static editing:StudioClipPreferenceRating.Neutral}"
+                            GroupName="ClipPreference"
+                            IsChecked="{Binding Preference.IsNeutralSelected, Mode=OneWay}"
+                            Style="{DynamicResource Control.PreferenceChoice}">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:IconPath Width="14" Height="14" Margin="0,0,6,0" IconKey="Icon.Minus" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                                <TextBlock Text="Neutral" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton
+                            Margin="4,0,0,0"
+                            AutomationProperties.Name="Dislike this clip"
+                            Command="{Binding Preference.SetPreferenceCommand}"
+                            CommandParameter="{x:Static editing:StudioClipPreferenceRating.Dislike}"
+                            GroupName="ClipPreference"
+                            IsChecked="{Binding Preference.IsDislikeSelected, Mode=OneWay}"
+                            Style="{DynamicResource Control.PreferenceChoice}">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:IconPath Width="14" Height="14" Margin="0,0,6,0" IconKey="Icon.Close" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                                <TextBlock Text="Dislike" />
+                            </StackPanel>
+                        </RadioButton>
+                    </UniformGrid>
+                    <TextBlock
+                        Margin="0,7,0,0"
+                        FontSize="11"
+                        Foreground="{DynamicResource Brush.StatusInfo}"
+                        Text="{Binding Preference.PreferenceActionText}"
+                        TextWrapping="Wrap" />
+                    <TextBlock Margin="0,7,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Preference.PreferenceLearningStatus}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Start · In point" />
+                <TextBlock Grid.Column="1" FontFamily="Consolas" Foreground="{DynamicResource Brush.StatusInfo}" Text="{Binding Clip.StartAdjustmentSummary}" />
+            </Grid>
+            <Grid Margin="0,3,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    MinWidth="42"
+                    AutomationProperties.Name="Move clip start one frame earlier"
+                    Command="{Binding Clip.NudgeStartEarlierCommand}"
+                    Content="−1f"
+                    Style="{DynamicResource Control.GhostButton}"
+                    ToolTip="Move the In point one source frame earlier" />
+                <Slider
+                    Grid.Column="1"
+                    Margin="7,0"
+                    AutomationProperties.Name="Adjust clip start"
+                    AutomationProperties.HelpText="Move the In point earlier or later. Arrow keys move one source frame and Page Up or Down moves one second."
+                    AutoToolTipPlacement="TopLeft"
+                    AutoToolTipPrecision="3"
+                    IsSnapToTickEnabled="True"
+                    LargeChange="1"
+                    Maximum="{Binding Clip.StartAdjustmentMaximumSeconds}"
+                    Minimum="{Binding Clip.StartAdjustmentMinimumSeconds}"
+                    SmallChange="{Binding Clip.BoundaryFrameStepSeconds}"
+                    TickFrequency="{Binding Clip.BoundaryFrameStepSeconds}"
+                    Value="{Binding Clip.StartAdjustmentSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Button
+                    Grid.Column="2"
+                    MinWidth="42"
+                    AutomationProperties.Name="Move clip start one frame later"
+                    Command="{Binding Clip.NudgeStartLaterCommand}"
+                    Content="+1f"
+                    Style="{DynamicResource Control.GhostButton}"
+                    ToolTip="Move the In point one source frame later" />
+            </Grid>
+            <Grid Margin="0,2,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Clip.DraftSourceStartText, StringFormat=Source in: {0}}" />
+                <TextBlock Grid.Column="1" Style="{DynamicResource Text.Meta}" Text="Earlier  ←  Generated  →  Later" />
+            </Grid>
+
+            <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="End · Out point" />
+                <TextBlock Grid.Column="1" FontFamily="Consolas" Foreground="{DynamicResource Brush.StatusInfo}" Text="{Binding Clip.EndAdjustmentSummary}" />
+            </Grid>
+            <Grid Margin="0,3,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    MinWidth="42"
+                    AutomationProperties.Name="Move clip end one frame earlier"
+                    Command="{Binding Clip.NudgeEndEarlierCommand}"
+                    Content="−1f"
+                    Style="{DynamicResource Control.GhostButton}"
+                    ToolTip="Move the Out point one source frame earlier" />
+                <Slider
+                    Grid.Column="1"
+                    Margin="7,0"
+                    AutomationProperties.Name="Adjust clip end"
+                    AutomationProperties.HelpText="Move the Out point earlier or later. Arrow keys move one source frame and Page Up or Down moves one second."
+                    AutoToolTipPlacement="TopLeft"
+                    AutoToolTipPrecision="3"
+                    IsSnapToTickEnabled="True"
+                    LargeChange="1"
+                    Maximum="{Binding Clip.EndAdjustmentMaximumSeconds}"
+                    Minimum="{Binding Clip.EndAdjustmentMinimumSeconds}"
+                    SmallChange="{Binding Clip.BoundaryFrameStepSeconds}"
+                    TickFrequency="{Binding Clip.BoundaryFrameStepSeconds}"
+                    Value="{Binding Clip.EndAdjustmentSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Button
+                    Grid.Column="2"
+                    MinWidth="42"
+                    AutomationProperties.Name="Move clip end one frame later"
+                    Command="{Binding Clip.NudgeEndLaterCommand}"
+                    Content="+1f"
+                    Style="{DynamicResource Control.GhostButton}"
+                    ToolTip="Move the Out point one source frame later" />
+            </Grid>
+            <Grid Margin="0,2,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Clip.DraftSourceEndText, StringFormat=Source out: {0}}" />
+                <TextBlock Grid.Column="1" Style="{DynamicResource Text.Meta}" Text="Earlier  ←  Generated  →  Later" />
+            </Grid>
+            <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Clip.BoundaryPrecisionText}" TextWrapping="Wrap" />
+            <TextBlock Margin="0,6,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Clip.DraftDurationText, StringFormat=Result: {0}}" />
+            <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Clip.BoundaryEditStatus}" TextWrapping="Wrap" />
+            <TextBlock
+                Margin="0,5,0,0"
+                Foreground="{DynamicResource Brush.StatusError}"
+                Text="{Binding Clip.BoundaryEditError}"
+                TextWrapping="Wrap"
+                Visibility="{Binding Clip.HasBoundaryEditError, Converter={StaticResource BoolToVisibility}}" />
+            <ProgressBar
+                Height="4"
+                Margin="0,8,0,0"
+                IsIndeterminate="True"
+                Visibility="{Binding Clip.IsApplyingBoundaryEdit, Converter={StaticResource BoolToVisibility}}" />
+            <WrapPanel Margin="0,10,0,0">
+                <Button
+                    AutomationProperties.Name="Apply clip boundaries"
+                    Command="{Binding Clip.ApplyBoundaryEditCommand}"
+                    Content="Apply clip changes"
+                    Style="{DynamicResource Control.PrimaryButton}" />
+                <Button
+                    Margin="6,0,0,0"
+                    AutomationProperties.Name="Restore generated clip boundaries"
+                    Command="{Binding Clip.ResetBoundaryDraftCommand}"
+                    Content="Restore generated"
+                    Style="{DynamicResource Control.GhostButton}" />
+            </WrapPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

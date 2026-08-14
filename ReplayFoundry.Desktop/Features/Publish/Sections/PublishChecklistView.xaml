@@ -1,0 +1,96 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Publish.Sections.PublishChecklistView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Style="{DynamicResource Control.SectionCard}" AutomationProperties.Name="Publish review and upload">
+        <StackPanel>
+            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="REVIEW" />
+            <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding ReadinessSummary}" TextWrapping="Wrap" />
+
+            <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding Checklist}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Label}" />
+                                <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Value}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding State}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.StatusWarning}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding State}" Value="Ready"><Setter Property="Foreground" Value="{DynamicResource Brush.StatusSuccess}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding State}" Value="Optional"><Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" /></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Margin="0,8,0,0" Style="{DynamicResource Control.InsetCard}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="{Binding OperationTitle}" />
+                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding OperationDetail}" TextWrapping="Wrap" />
+                    <ProgressBar
+                        x:Name="UploadProgress"
+                        x:FieldModifier="internal"
+                        Margin="0,10,0,0"
+                        Height="6"
+                        IsIndeterminate="{Binding IsOperationIndeterminate, Mode=OneWay}"
+                        Maximum="100"
+                        Value="{Binding OperationPercentage, Mode=OneWay}" />
+                </StackPanel>
+            </Border>
+
+            <Border
+                Margin="0,10,0,0"
+                Padding="10"
+                Background="{DynamicResource Brush.InteractiveSelected}"
+                BorderBrush="{DynamicResource Brush.StatusInfo}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Notice}" TextWrapping="Wrap" />
+            </Border>
+            <Expander Margin="0,8,0,0" Header="Technical details" Visibility="{Binding HasTechnicalDetails, Converter={StaticResource BoolToVisibility}}">
+                <TextBox
+                    x:Name="TechnicalDetailsTextBox"
+                    x:FieldModifier="internal"
+                    Margin="0,8,0,0"
+                    IsReadOnly="True"
+                    MaxHeight="140"
+                    Text="{Binding TechnicalDetails, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    VerticalScrollBarVisibility="Auto" />
+            </Expander>
+
+            <WrapPanel Margin="0,14,0,0">
+                <Button
+                    AutomationProperties.Name="Upload video to YouTube"
+                    Command="{Binding PublishCommand}"
+                    Content="{Binding PublishCommandText}"
+                    Style="{DynamicResource Control.PrimaryButton}" />
+                <Button
+                    Margin="8,0,0,0"
+                    AutomationProperties.Name="Cancel YouTube upload"
+                    Command="{Binding CancelPublishCommand}"
+                    Content="Cancel upload"
+                    Style="{DynamicResource Control.WorkspaceButton}" />
+            </WrapPanel>
+
+            <TextBlock
+                Margin="0,10,0,0"
+                Style="{DynamicResource Text.Meta}"
+                Text="For scheduled releases, the video uploads privately now and YouTube publishes it at the selected time. Replay Foundry does not need to stay open."
+                TextWrapping="Wrap" />
+        </StackPanel>
+    </Border>
+</UserControl>

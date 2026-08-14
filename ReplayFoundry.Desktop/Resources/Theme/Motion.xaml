@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <Duration x:Key="Motion.Hover">0:0:0.13</Duration>
+    <Duration x:Key="Motion.Press">0:0:0.083</Duration>
+    <Duration x:Key="Motion.Release">0:0:0.167</Duration>
+    <Duration x:Key="Motion.Panel">0:0:0.16</Duration>
+    <Duration x:Key="Motion.Popup">0:0:0.12</Duration>
+    <Duration x:Key="Motion.Signal">0:0:0.24</Duration>
+    <Duration x:Key="Motion.Ambient">0:0:1.1</Duration>
+    <Duration x:Key="Motion.Reduced">0:0:0</Duration>
+    <CubicEase x:Key="Motion.EaseOut" EasingMode="EaseOut" />
+    <CubicEase x:Key="Motion.EaseInOut" EasingMode="EaseInOut" />
+    <sys:Boolean x:Key="Motion.IsReduced">False</sys:Boolean>
+</ResourceDictionary>

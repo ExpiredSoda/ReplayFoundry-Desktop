@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title description">
+  <title id="title">Replay Foundry animation placeholder</title>
+  <desc id="description">A dark preview card reserved for an animated caption demonstration.</desc>
+  <rect width="960" height="540" rx="28" fill="#08191e"/>
+  <rect x="110" y="128" width="740" height="284" rx="26" fill="#0d2831" stroke="#2e8ba0" stroke-width="2"/>
+  <rect x="220" y="230" width="150" height="54" rx="12" fill="#163d47"/><rect x="388" y="220" width="184" height="74" rx="14" fill="#f5c451"/><rect x="590" y="230" width="150" height="54" rx="12" fill="#163d47"/>
+  <text x="480" y="266" text-anchor="middle" fill="#07171c" font-family="Segoe UI, sans-serif" font-size="27" font-weight="700">CAPTION</text>
+  <text x="480" y="464" text-anchor="middle" fill="#e7f8fc" font-family="Segoe UI, sans-serif" font-size="28" font-weight="600">MOTION DEMO</text>
+  <text x="480" y="496" text-anchor="middle" fill="#8fc4d0" font-family="Segoe UI, sans-serif" font-size="18">Future GIF placeholder</text>
+</svg>

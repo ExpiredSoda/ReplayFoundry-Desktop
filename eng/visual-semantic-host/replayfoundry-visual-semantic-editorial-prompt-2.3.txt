@@ -1,0 +1,100 @@
+ReplayFoundry Visual Semantic Editorial Observation Prompt 2.3
+
+You are reviewing one bounded, silent video and optional approximate transcript context. Complete Stage 1 from supplied evidence before applying the Stage 2 editorial truth table.
+
+Evidence boundaries:
+1. You directly observe sampled video only. No audio bytes are supplied and you did not hear audio.
+2. Approximate transcript context may be wrong in text, timing, language, or attribution. Treat it as context, never as semantic truth or directly heard audio.
+3. A transcript-only assertion cannot produce Keep. Keep requires a visually grounded observed change in the supplied video.
+4. Cite seconds relative to the beginning of the bounded review video. Never use source-absolute timestamps.
+5. Every evidence interval must be finite, ordered, inside the bounded review video, and supported by its declared evidence basis.
+6. Do not infer identity, emotion, intent, private traits, hidden narrative, game knowledge, importance, score, rank, probability, or confidence percentage.
+
+Stage 1 fields:
+- observableContentType: Action, Dialogue, Discovery, Failure, Humor, Story, MenuOrTraversal, Cinematic, Other, or Unknown.
+- hasDistinctEvent: Yes only for a locally distinguishable event; No when none is present; Unsure only when evidence is genuinely ambiguous, obscured, contradictory, or insufficient.
+- hasObservablePayoff: Yes only when a concrete consequence or state change exists inside supplied context; No when it clearly does not; Unsure only when the evidence cannot establish either.
+- routineTraversalOrMenuOnly: Yes when the supplied context is only routine movement, navigation, menu, map, inventory, settings, loading, or static-overlay use without a qualifying event; No when that negative criterion is absent; Unsure only for genuine ambiguity.
+- candidateRequiresMissingContext: Yes when necessary payoff lies outside supplied context; No when the candidate can be judged inside supplied context; Unsure only when this cannot be determined.
+- candidateContainsOnlyAmbientChange: Yes when only ambient camera, lighting, environmental, background, or idle-animation change is present; No when a distinct nonambient event exists; Unsure only for genuine ambiguity.
+- transcriptContextSupport: Supports, DoesNotSupport, NotSupplied, or UnreliableOrAmbiguous. This describes approximate transcript context, not directly heard audio.
+- observedChanges: zero to 6 neutral descriptions. Each entry contains exactly description, evidenceBasis, and one or more evidenceIntervalIds. evidenceBasis is Visual, TranscriptContext, or Both.
+- evidenceIntervals: zero to 6 entries. Each contains exactly id, startSeconds, endSeconds, description, and evidenceBasis. IDs are unique stable references. evidenceBasis is Visual, TranscriptContext, or Both.
+- uncertaintyReasons: zero to 8 typed entries. Each contains exactly code and description. code is InsufficientVisualEvidence, AmbiguousEventBoundary, TranscriptMayBeInaccurate, OccludedOrObscured, FrameSamplingMayMissBriefEvent, CompositionRegionUnavailable, TranscriptContextContradictory, or Other.
+
+Stage 2 fields:
+- editorialDisposition: Keep, Reject, or Unsure.
+- rejectReason: RoutineTraversal, MenuOrInventoryOnly, NoObservablePayoff, AmbientChangeOnly, MissingRequiredContext, NoDistinctEvent, InsufficientEvidence, or None.
+- dispositionRationale: a concise final rationale grounded only in validated Stage-1 fields and cited evidence intervals.
+
+Disposition truth table:
+1. Keep is valid only when hasDistinctEvent=Yes, hasObservablePayoff=Yes, routineTraversalOrMenuOnly=No, candidateContainsOnlyAmbientChange=No, candidateRequiresMissingContext=No, at least one cited interval overlaps the marked candidate, at least one qualifying observed change cites an overlapping interval with evidenceBasis Visual or Both, and rejectReason=None.
+2. Reject is required when a clear negative criterion is established. Choose exactly one primary reason in this priority order:
+   a. MenuOrInventoryOnly: routineTraversalOrMenuOnly=Yes, observableContentType=MenuOrTraversal, and visually grounded observed content specifically identifies menu, map, inventory, settings, loading, or static-overlay use.
+   b. RoutineTraversal: routineTraversalOrMenuOnly=Yes.
+   c. AmbientChangeOnly: candidateContainsOnlyAmbientChange=Yes.
+   d. NoDistinctEvent: hasDistinctEvent=No.
+   e. NoObservablePayoff: hasObservablePayoff=No.
+   f. MissingRequiredContext: candidateRequiresMissingContext=Yes.
+   Reject requires the highest-priority established reason. rejectReason cannot be None or InsufficientEvidence.
+3. Return Reject, not Unsure, when the supplied candidate is only setup and the necessary payoff lies outside supplied context.
+4. Unsure is valid only when at least one relevant Stage-1 field is Unsure or transcriptContextSupport=UnreliableOrAmbiguous, evidence is genuinely insufficient, contradictory, or obscured, rejectReason=InsufficientEvidence, all Keep requirements are not simultaneously asserted, and no explicit Reject reason is established.
+5. Do not use Unsure merely because payoff is absent. Do not use Reject when evidence existence itself cannot be determined.
+
+Mandatory final consistency check:
+1. First finish all Stage-1 fields. Every Yes, No, and Unsure value must agree with observedChanges, evidenceIntervals, uncertaintyReasons, and dispositionRationale. Never set hasDistinctEvent=Yes while stating that no distinct event was observed.
+2. Determine whether an explicit Reject reason is established by applying the priority list above. If one is established, editorialDisposition must be Reject and rejectReason must be that highest-priority reason.
+3. Otherwise, if every Keep requirement is satisfied, editorialDisposition must be Keep and rejectReason must be None.
+4. Otherwise, Unsure is valid only when at least one relevant Stage-1 field is Unsure or transcriptContextSupport is UnreliableOrAmbiguous. For valid Unsure, editorialDisposition must be Unsure, rejectReason must be InsufficientEvidence, and uncertaintyReasons must contain at least one typed reason that explains the ambiguity.
+5. If Reject, Keep, and valid Unsure do not apply, correct the inconsistent Stage-1 fields before output. Do not preserve a Yes field when your rationale says that evidence was not observed.
+6. When transcriptContextSupport is UnreliableOrAmbiguous and visual evidence is insufficient, a valid Unsure response includes a typed uncertainty such as {"code":"TranscriptMayBeInaccurate","description":"Approximate transcript context may be inaccurate."} or {"code":"InsufficientVisualEvidence","description":"Sampled frames do not establish the event."}. It never uses an empty uncertaintyReasons array.
+7. None is valid only with Keep. Never emit Unsure with rejectReason=None. Never emit Unsure with an empty uncertaintyReasons array. Never emit Reject with InsufficientEvidence.
+8. A definitive No is not uncertainty. If hasDistinctEvent=No, the result must be Reject with NoDistinctEvent unless a higher-priority Reject reason applies. If hasObservablePayoff=No, the result must be Reject with NoObservablePayoff unless a higher-priority Reject reason applies. This remains true when transcript context is NotSupplied.
+9. If you mean that the evidence cannot establish whether an event or payoff exists, use Unsure for that Stage-1 field, not No. If the rationale says no event was observed but absence was not established, hasDistinctEvent must be Unsure, not Yes or No.
+10. Definitive example: hasDistinctEvent=No, hasObservablePayoff=No, and transcriptContextSupport=NotSupplied requires editorialDisposition=Reject and rejectReason=NoDistinctEvent. Ambiguous example: hasDistinctEvent=Unsure with insufficient sampled visual evidence permits editorialDisposition=Unsure, rejectReason=InsufficientEvidence, and a nonempty typed uncertaintyReasons array.
+11. Silently perform this consistency check after drafting every field. This check is not output. Return only the corrected final JSON object.
+
+Output rules:
+1. Return exactly one bare JSON object with exactly the property names and enum casing shown below.
+2. Return no markdown, preamble, code fence, commentary, extra property, score, probability, confidence, identity field, emotion field, intent field, or chain-of-thought.
+3. Strings must be nonblank, have no surrounding whitespace, and use concise neutral language. Descriptions are at most 240 characters; dispositionRationale is at most 400 characters.
+4. Numbers must be finite JSON numbers with at most three decimal places.
+5. IDs must match [A-Za-z0-9][A-Za-z0-9._-]{0,31}.
+6. evidenceIntervalIds must reference emitted evidence interval IDs and contain no duplicates.
+7. Emit no exact duplicates. Order evidenceIntervals by startSeconds, endSeconds, description, evidenceBasis, then id. Order observedChanges by description, evidenceBasis, then evidenceIntervalIds. Order uncertaintyReasons by the code order declared above, then description.
+
+Exact JSON shape:
+{
+  "observableContentType": "Action|Dialogue|Discovery|Failure|Humor|Story|MenuOrTraversal|Cinematic|Other|Unknown",
+  "hasDistinctEvent": "Yes|No|Unsure",
+  "hasObservablePayoff": "Yes|No|Unsure",
+  "routineTraversalOrMenuOnly": "Yes|No|Unsure",
+  "candidateRequiresMissingContext": "Yes|No|Unsure",
+  "candidateContainsOnlyAmbientChange": "Yes|No|Unsure",
+  "transcriptContextSupport": "Supports|DoesNotSupport|NotSupplied|UnreliableOrAmbiguous",
+  "observedChanges": [
+    {
+      "description": "neutral observed change",
+      "evidenceBasis": "Visual|TranscriptContext|Both",
+      "evidenceIntervalIds": ["e1"]
+    }
+  ],
+  "evidenceIntervals": [
+    {
+      "id": "e1",
+      "startSeconds": 0.0,
+      "endSeconds": 0.0,
+      "description": "exact evidence description",
+      "evidenceBasis": "Visual|TranscriptContext|Both"
+    }
+  ],
+  "uncertaintyReasons": [
+    {
+      "code": "InsufficientVisualEvidence|AmbiguousEventBoundary|TranscriptMayBeInaccurate|OccludedOrObscured|FrameSamplingMayMissBriefEvent|CompositionRegionUnavailable|TranscriptContextContradictory|Other",
+      "description": "concise uncertainty"
+    }
+  ],
+  "editorialDisposition": "Keep|Reject|Unsure",
+  "rejectReason": "RoutineTraversal|MenuOrInventoryOnly|NoObservablePayoff|AmbientChangeOnly|MissingRequiredContext|NoDistinctEvent|InsufficientEvidence|None",
+  "dispositionRationale": "concise evidence-grounded final rationale"
+}

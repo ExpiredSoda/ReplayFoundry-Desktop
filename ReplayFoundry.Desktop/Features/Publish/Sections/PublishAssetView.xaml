@@ -1,0 +1,56 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Publish.Sections.PublishAssetView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <Border Style="{DynamicResource Control.SectionCard}" AutomationProperties.Name="YouTube video and thumbnail">
+        <StackPanel>
+            <Grid>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="CUSTOM THUMBNAIL" />
+                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Optional. The video player at left is the finalized file that will upload." TextWrapping="Wrap" />
+                </StackPanel>
+                <controls:StatusBadge HorizontalAlignment="Right" VerticalAlignment="Top" Text="{Binding ThumbnailValidationMessage}" />
+            </Grid>
+            <Grid Margin="0,14,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="110" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border
+                    Width="110"
+                    Height="68"
+                    Background="Black"
+                    BorderBrush="{DynamicResource Brush.BorderSubtle}"
+                    BorderThickness="1"
+                    CornerRadius="7"
+                    ClipToBounds="True">
+                    <Grid>
+                        <Image
+                            Source="{Binding ThumbnailFullPath, Converter={StaticResource FileImageSourceConverter}}"
+                            Stretch="Uniform"
+                            Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibility}}" />
+                        <controls:IconPath
+                            Width="24"
+                            Height="24"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IconKey="Icon.Media"
+                            Stroke="{DynamicResource Brush.StatusInfo}"
+                            Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBoolToVisibility}}" />
+                    </Grid>
+                </Border>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <TextBlock Margin="0,4,12,0" Style="{DynamicResource Text.Meta}" Text="{Binding ThumbnailName}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,3,12,0" Style="{DynamicResource Text.Meta}" Text="{Binding ThumbnailValidationMessage}" TextWrapping="Wrap" />
+                </StackPanel>
+                <WrapPanel Grid.Column="3" VerticalAlignment="Center">
+                    <Button Command="{Binding PickThumbnailCommand}" Content="Choose" Style="{DynamicResource Control.WorkspaceButton}" />
+                    <Button Margin="8,0,0,0" Command="{Binding ClearThumbnailCommand}" Content="Clear" Style="{DynamicResource Control.WorkspaceButton}" />
+                </WrapPanel>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

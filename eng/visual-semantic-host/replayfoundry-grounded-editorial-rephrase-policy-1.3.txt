@@ -1,0 +1,69 @@
+Replay Foundry Grounded Editorial Rephrase Policy 1.3
+
+Purpose
+
+This policy retains policy 1.2's bounded text-only polish and rejected-language
+recovery pass. It extends the typed final-language correction to unsupported
+creator embodiment so an unidentified visible person cannot be recast as the
+creator when the creator-experience relation is unestablished.
+
+Accepted-copy polish
+
+- An already accepted canonical metadata object may receive one text-only
+  polish pass exactly as in policy 1.2.
+- A valid materially changed candidate replaces its title and description. An
+  identical candidate or completed semantic rejection keeps the accepted
+  original.
+
+Rejected-language recovery
+
+- Recovery is available only after every completed recovery-pool candidate was
+  rejected by one of these known language rules: NonRetrospectiveVoice,
+  UnsupportedCreatorEmbodiment, ThirdPersonCreatorFraming,
+  FirstPersonTitleSubject, GenericOpening, or IncompleteTitle.
+- The source is one completed schema-valid recovery candidate, its exact typed
+  rejection code, and a sanitized authority summary re-derived from the
+  unchanged grounding packet. No sampled rejection becomes evidence.
+- One batch-one greedy XGrammar-constrained text-only pass may rewrite only
+  titleBody and description. Tags, grounding binding IDs, and temporalVoice
+  remain equivalent as parsed JSON values.
+- For ThirdPersonCreatorFraming under CreatorControlled plus CreatorActed, the
+  correction must remove generic human labels and narrate the supported
+  controlled action retrospectively as I or my. It may not transfer any action
+  absent from the typed primary visual authority.
+- For ThirdPersonCreatorFraming without that exact authority pair, the
+  correction must remove generic human-label openings and use a supported
+  retrospective action, passive result, setting, or state without inventing a
+  creator relationship.
+- For UnsupportedCreatorEmbodiment when the typed creator-experience relation
+  is Unestablished, the correction must remove I, we, my, our, and every
+  generic human subject. It must begin both titleBody and description with a
+  supported completed action, visible result, setting, or state and must not
+  convert the visible person's body, weapon, dialogue, or action into the
+  creator's experience.
+- For UnsupportedCreatorEmbodiment under CreatorControlled plus CreatorActed,
+  only the supported controlled action may use retrospective I or my; another
+  person's body detail, dialogue, emotion, or action remains neutral.
+- The candidate must pass the same strict metadata, grounding,
+  creator-authority, audience-copy, terminal-period, and reroll-diversity
+  validators. A fully valid candidate is recorded as
+  RecoveredRejectedLanguage. Any further semantic or technical failure remains
+  terminal.
+
+Preserved bounds
+
+- The pass receives no video, performs no perception or knowledge retrieval,
+  and uses seed 0, beam count 1, enabled offloaded KV cache, and the existing
+  768-token ceiling.
+- No unconstrained fallback, string substitution, conjugation, deterministic
+  semantic repair, extra retry, new fact, changed citation, changed tag,
+  changed creator authority, or changed evidence scope is permitted.
+
+Attestation
+
+- Current output provenance records the policy identity, whether the pass was
+  attempted and applied, its bounded outcome, source and output canonical JSON
+  hashes, rejection code when applicable, and exact message, rendered prompt,
+  input-token, and raw-output witnesses.
+- Policies 1.0 through 1.2 remain readable under their original output
+  contracts.

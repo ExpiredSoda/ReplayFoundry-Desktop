@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ControlTemplate x:Key="Control.ValidationErrorTemplate">
+        <DockPanel LastChildFill="True">
+            <AdornedElementPlaceholder x:Name="Element" />
+            <TextBlock
+                Margin="6,2,0,0"
+                DockPanel.Dock="Right"
+                Foreground="{DynamicResource Brush.ValidationErrorText}"
+                FontSize="11"
+                Text="{Binding ElementName=Element, Path=AdornedElement.(Validation.Errors)[0].ErrorContent}"
+                TextWrapping="Wrap" />
+        </DockPanel>
+    </ControlTemplate>
+</ResourceDictionary>

@@ -1,0 +1,44 @@
+Replay Foundry Grounded Editorial Synthesis Recovery Pool Policy 1.8
+
+Purpose
+
+This policy preserves policy 1.7's bounded recovery pool and separates one
+interface-attribution rejection from the broader unsupported-interpretation
+rule. A retry can now correct the relationship between readable interface text
+and physical scene objects without discarding otherwise literal copy.
+
+Interface-attribution correction
+
+- UnsupportedInterfaceAttribution is a known completed semantic rejection.
+- Retry guidance keeps screen-space menus, HUD elements, and readable interface
+  text separate from physical objects in the scene.
+- A retry may describe a menu or overlay directly as an interface element.
+- A retry may not claim that interface lettering appeared on, in, or was shown
+  by a screen, display, monitor, sign, or billboard unless the marked primary
+  visual draft explicitly identifies that physical source.
+- This correction does not authorize readable wording, consumer-platform
+  identity, a physical display source, intent, emotion, or unseen causality.
+
+Preserved bounded recovery
+
+- Pool activation, rejected-copy withholding, source selection, immutable
+  messages, typed semantic continuation, effective voice projection, and
+  fail-closed behavior remain those of policy 1.7.
+- The pool remains four serial batch-one candidates with seeds 3407, 3408, 3409,
+  and 3410; do_sample=true; num_beams=1; use_cache=true; temperature=0.7;
+  top_p=0.8; top_k=20; maximum 768 new tokens; and a fresh XGrammar matcher for
+  every candidate.
+- The first fully valid candidate wins. Technical, malformed, incomplete,
+  unknown, StrictOutputValidation, or attestation failures terminate
+  immediately. Four known semantic rejections fail closed.
+- No unconstrained fallback, semantic repair, text repair, dynamic seed, beam
+  search, perception rerun, grounding rerun, or additional logical synthesis
+  pass is permitted.
+
+Attestation
+
+- Current output provenance binds this policy identity and the existing exact
+  synthesis message, rendered prompt, input-token, output, validation, source,
+  and module witnesses.
+- Policy 1.7 artifacts retain their original combined unsupported-interpretation
+  rejection and reader contract.

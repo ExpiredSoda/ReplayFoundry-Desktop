@@ -1,0 +1,155 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Publish.Sections.PublishLibraryBrowserView"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <Border Style="{DynamicResource Control.CanvasPane}" AutomationProperties.Name="Publish Library videos">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="LIBRARY" />
+                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Drag a finished video onto a date, or choose Schedule. Nothing uploads until you confirm it." TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Foreground="{DynamicResource Brush.StatusInfo}"
+                    FontSize="11"
+                    Text="{Binding LibraryResultSummary}" />
+            </Grid>
+            <WrapPanel Grid.Row="1" Margin="0,12,0,0" VerticalAlignment="Center">
+                <TextBox
+                    Width="180"
+                    Margin="0,0,8,8"
+                    AutomationProperties.Name="Search finished Library videos"
+                    Style="{DynamicResource Control.InlineSearchTextBox}"
+                    Text="{Binding LibrarySearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                    ToolTip="Search title, filename, or output folder" />
+                <ComboBox
+                    Width="132"
+                    Margin="0,0,8,8"
+                    AutomationProperties.Name="Filter Publish Library by date"
+                    ItemsSource="{Binding LibraryDateFilters}"
+                    SelectedItem="{Binding LibraryDateFilter, Mode=TwoWay}"
+                    Style="{DynamicResource Control.InlineSelectorComboBox}" />
+                <ComboBox
+                    Width="160"
+                    Margin="0,0,8,8"
+                    AutomationProperties.Name="Filter Publish Library by folder"
+                    DisplayMemberPath="Label"
+                    ItemsSource="{Binding LibraryFolderOptions}"
+                    SelectedValue="{Binding SelectedLibraryFolder, Mode=TwoWay}"
+                    SelectedValuePath="FullPath"
+                    Style="{DynamicResource Control.InlineSelectorComboBox}" />
+                <Button
+                    Margin="0,0,0,8"
+                    AutomationProperties.Name="Clear Publish Library filters"
+                    Command="{Binding ClearLibraryFiltersCommand}"
+                    Content="Clear"
+                    Style="{DynamicResource Control.GhostButton}" />
+            </WrapPanel>
+            <Grid Grid.Row="2" Margin="0,4,0,0">
+                <ListBox
+                    x:Name="LibraryItemsList"
+                    AutomationProperties.Name="Finished videos ready for YouTube"
+                    ItemsSource="{Binding LibraryItems}"
+                    SelectedValue="{Binding SelectedAsset, Mode=TwoWay}"
+                    SelectedValuePath="Asset"
+                    PreviewMouseLeftButtonDown="Items_PreviewMouseLeftButtonDown"
+                    PreviewMouseMove="Items_PreviewMouseMove"
+                    Style="{DynamicResource Control.SectionList}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="98" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        Width="90"
+                                        Height="60"
+                                        Background="Black"
+                                        BorderBrush="Transparent"
+                                        BorderThickness="0"
+                                        CornerRadius="{DynamicResource Radius.OrganicCard}"
+                                        ClipToBounds="True">
+                                        <Grid>
+                                            <Image
+                                                Source="{Binding ThumbnailFullPath, Converter={StaticResource FileImageSourceConverter}}"
+                                                Stretch="Uniform"
+                                                Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibility}}" />
+                                            <controls:IconPath
+                                                Width="20"
+                                                Height="20"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                IconKey="Icon.Media"
+                                                Stroke="{DynamicResource Brush.StatusInfo}"
+                                                Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBoolToVisibility}}" />
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="10,0">
+                                        <TextBlock
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource Brush.TextPrimary}"
+                                            Text="{Binding Title}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Detail}" />
+                                        <TextBlock Margin="0,2,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding CollectionDetail}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            Margin="0,3,0,0"
+                                            FontSize="10"
+                                            Foreground="{DynamicResource Brush.StatusInfo}"
+                                            Text="{Binding Status}" />
+                                    </StackPanel>
+                                    <Button
+                                        Grid.Column="2"
+                                        VerticalAlignment="Center"
+                                        AutomationProperties.Name="{Binding Title, StringFormat=Prepare {0} for YouTube}"
+                                        Command="{Binding DataContext.PrepareAssetCommand, ElementName=Root}"
+                                        CommandParameter="{Binding Asset}"
+                                        Content="Schedule"
+                                        Style="{DynamicResource Control.PrimaryButton}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <controls:EmptyState
+                    MinHeight="180"
+                    IconKey="Icon.Media"
+                    Title="{Binding LibraryEmptyTitle}"
+                    Description="{Binding LibraryEmptyDescription}"
+                    Visibility="{Binding HasVisibleLibraryItems, Converter={StaticResource InverseBoolToVisibility}}" />
+            </Grid>
+            <Border
+                Grid.Row="3"
+                Margin="0,12,0,0"
+                Padding="12,10"
+                Background="{DynamicResource Brush.InteractiveSelected}"
+                BorderBrush="{DynamicResource Brush.StatusInfo}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{DynamicResource Text.Body}"
+                        Text="{Binding DraftSummary}" />
+                    <Button
+                        HorizontalAlignment="Right"
+                        AutomationProperties.Name="Publish every saved draft immediately"
+                        Command="{Binding PublishAllNowCommand}"
+                        Content="Publish all now"
+                        Style="{DynamicResource Control.PrimaryButton}" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

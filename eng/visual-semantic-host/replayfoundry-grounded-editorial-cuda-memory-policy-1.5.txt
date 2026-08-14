@@ -1,0 +1,116 @@
+ReplayFoundry Grounded Editorial CUDA Memory Policy 1.5
+
+Purpose
+
+This policy keeps grounded Qwen editorial metadata from consuming the full
+local CUDA device through PyTorch's native caching allocator, stages the
+qualified vision encoder as one bounded execution unit, and prevents the
+quadratic materialized attention allocation observed on long grounded
+synthesis prompts. It changes no model weight, precision, prompt, video
+sampling, decoding, grounding, or semantic validation rule.
+
+Fixed configuration
+
+- Scope: grounded editorial metadata only.
+- CUDA device: 0.
+- Allocator: PyTorch native CUDA caching allocator.
+- Reserved allocator headroom: 3,221,225,472 bytes (3 GiB).
+- Allocator limit: reported free device memory at admission minus the fixed
+  headroom, expressed to PyTorch as a fraction of total device memory.
+- Startup free-memory gate: the computed allocator limit must remain greater
+  than the retained qualification peak before model loading begins.
+- Pre-generation gate: after releasing only unoccupied PyTorch cache blocks,
+  current reported free device memory must remain at least the fixed 3 GiB
+  headroom before each grounded model generation begins.
+- Model attention implementation: PyTorch scaled dot product attention.
+- Grounded generation attention backend: cuDNN attention, explicitly forced
+  for every grounded model.generate call through torch.nn.attention.sdpa_kernel.
+- Attention fallback: prohibited. If the pinned runtime cannot execute the
+  cuDNN attention backend, grounded generation fails closed.
+- KV cache implementation: Transformers offloaded DynamicCache.
+- Model precision: every floating-point model parameter remains BF16.
+- Language-model placement: CUDA device 0.
+- Vision-encoder backing store: CPU.
+- Vision-encoder execution: Accelerate root-preload CPU offload for the exact
+  Qwen3VLVisionModel class. Every visual parameter is materialized on CUDA 0
+  before any Qwen vision code runs and returns to its CPU backing store as a
+  dormant meta tensor immediately after the visual forward.
+- Vision leaf offload hooks and per-parameter placement exceptions: prohibited.
+- Other CPU model offload: prohibited.
+- Disk model offload: prohibited.
+- Quantization: prohibited.
+- Automatic cap relaxation or fallback: prohibited.
+
+Attention rationale
+
+The qualified long-context reproduction contained six sampled video frames
+and 5,318 input tokens. PyTorch's automatically selected attention path tried
+to materialize a 3.37 GiB language-attention allocation after 9.99 GiB was
+already allocated, exceeding the fixed 11.82 GiB allocator limit. Running the
+same inputs, weights, placement, precision, offloaded KV cache, and allocator
+under PyTorch's explicitly selected cuDNN scaled-dot-product-attention backend
+completed with 8,544,662,016 peak allocated bytes and 8,849,981,440 peak
+reserved bytes. The backend selection removes that materialized allocation;
+it is not permission to relax the allocator limit or evidence rules.
+
+Placement rationale
+
+The pinned Qwen model contains 830,695,424 bytes of BF16 vision parameters.
+The prior leaf-by-leaf Accelerate layout parked each leaf on the meta device
+and relied on its own forward hook to materialize that leaf. Qwen vision code
+also reads registered child parameters while executing parent methods. The
+position-interpolation path reads `model.visual.pos_embed.weight.device`
+before invoking the embedding, and future or less obvious indirect reads can
+bypass a child hook in the same way. A data-less meta tensor is not a value
+and cannot be copied by PyTorch.
+
+Accelerate documents `preload_module_classes` for exactly this structure: a
+registered submodule whose parameters may be used by its parent rather than
+only through the child module's forward. The host therefore removes the
+initial dispatch hooks after they restore concrete CPU values, verifies every
+visual parameter as CPU BF16, and installs one root Qwen3VLVisionModel offload
+hook with submodule preloading. The root hook materializes every visual value
+before the Qwen vision forward begins, including the position table, and
+returns every parameter to the authoritative CPU store after that forward.
+There is no leaf hook or pinned-position exception left to become stale.
+
+The host requires the exact initial load map, the exact root-preload class, a
+single CUDA-0 root offload hook with recursive placement, a CPU BF16 backing
+value for every dormant visual parameter, no descendant vision hooks, CUDA-0
+language parameters and all model buffers, and fails before inference if any
+part of that contract changes.
+
+Qualification reference
+
+The retained `real-qwen-metadata-v1.6.json` artifact uses schema
+`replayfoundry-editorial-metadata-real-quality-1.0`, has SHA-256
+`0EC7F4BE4DD3664091D6808176B2FEA36B7FE016B277422DACA00C4C9D28EC70`, and
+measured 11,705,485,312 peak PyTorch-allocated GPU bytes under the older,
+more demanding all-CUDA placement. That peak remains the conservative
+minimum allocator admission threshold; this policy does not use the cuDNN
+attention backend or root-preload placement as permission to shrink or relax
+the established CUDA cap.
+
+Limitations
+
+The fixed headroom is a limit on allocations managed by PyTorch's CUDA caching
+allocator. It does not include every CUDA-driver, library, Windows WDDM, or
+other-process allocation and therefore does not guarantee that 3 GiB remains
+globally free. The startup and pre-generation gates are contention guards, not
+reservations from other processes. If the forced attention backend, fixed
+allocator, root-preload placement, or admission gate cannot be met, the
+command fails closed; it does not select another attention implementation,
+weaken the policy, quantize the model, or move language-model modules to CPU.
+
+Audit
+
+Every grounded metadata execution records the policy version and hash,
+attention implementation, forced attention backend, attention-fallback flag,
+cache implementation, reported total, startup-free, and externally occupied
+device bytes, required startup-free bytes, fixed allocator headroom, computed
+allocator limit, minimum viable limit, configured and observed allocator
+fractions, the retained qualification peak, pre-generation admission count
+and minimum/current free-memory observations, peak allocated and reserved
+bytes, end allocated/reserved/free bytes, runtime outcome and failure reason,
+and explicit policy flags for the required vision-only CPU backing store,
+quantization, global-free-memory guarantee, and fallback.

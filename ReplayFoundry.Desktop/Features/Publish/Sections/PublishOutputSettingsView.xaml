@@ -1,0 +1,185 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Publish.Sections.PublishOutputSettingsView"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <Border Style="{DynamicResource Control.SectionCard}" AutomationProperties.Name="YouTube release settings">
+        <StackPanel>
+            <Grid>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="RELEASE" />
+                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Choose who can watch, when it goes public, and where it belongs." TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock MaxWidth="360" HorizontalAlignment="Right" Foreground="{DynamicResource Brush.StatusInfo}" FontSize="11" Text="{Binding ScheduleSummary}" TextAlignment="Right" TextWrapping="Wrap" />
+            </Grid>
+
+            <Grid Margin="0,14,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="WHEN" />
+                    <ComboBox
+                        AutomationProperties.Name="YouTube release timing"
+                        DisplayMemberPath="Label"
+                        ItemsSource="{Binding TimingOptions}"
+                        SelectedValue="{Binding Timing, Mode=TwoWay}"
+                        SelectedValuePath="Key"
+                        Style="{DynamicResource Control.FormComboBox}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="VISIBILITY" />
+                    <ComboBox
+                        AutomationProperties.Name="YouTube video visibility"
+                        DisplayMemberPath="Label"
+                        ItemsSource="{Binding VisibilityOptions}"
+                        SelectedValue="{Binding Visibility, Mode=TwoWay}"
+                        SelectedValuePath="Key"
+                        Style="{DynamicResource Control.FormComboBox}" />
+                </StackPanel>
+            </Grid>
+
+            <Border Margin="0,12,0,0" Style="{DynamicResource Control.InsetCard}" Visibility="{Binding IsScheduled, Converter={StaticResource BoolToVisibility}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="DATE" />
+                        <DatePicker
+                            AutomationProperties.Name="Scheduled YouTube release date"
+                            SelectedDate="{Binding ScheduledDate, Mode=TwoWay}"
+                            Style="{DynamicResource Control.FormDatePicker}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="LOCAL TIME" />
+                        <controls:TimePickerField
+                            AutomationName="Scheduled release time"
+                            TimeText="{Binding ScheduledTimeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Grid.ColumnSpan="3" Margin="0,10,0,0">
+                        <TextBlock Margin="0,0,190,0" VerticalAlignment="Center" Style="{DynamicResource Text.Meta}" Text="{Binding TimeZoneLabel}" TextWrapping="Wrap" />
+                        <Button HorizontalAlignment="Right" Command="{Binding UseNextPreferredSlotCommand}" Content="Use next preferred time" Style="{DynamicResource Control.WorkspaceButton}" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="CATEGORY" />
+                    <ComboBox
+                        AutomationProperties.Name="YouTube category"
+                        DisplayMemberPath="Title"
+                        IsEnabled="{Binding IsConnected}"
+                        ItemsSource="{Binding Categories}"
+                        SelectedValue="{Binding SelectedCategoryId, Mode=TwoWay}"
+                        SelectedValuePath="Id"
+                        Style="{DynamicResource Control.FormComboBox}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="PLAYLIST (OPTIONAL)" />
+                    <ComboBox
+                        AutomationProperties.Name="YouTube playlist"
+                        DisplayMemberPath="Label"
+                        IsEnabled="{Binding IsConnected}"
+                        ItemsSource="{Binding PlaylistOptions}"
+                        SelectedValue="{Binding SelectedPlaylistId, Mode=TwoWay}"
+                        SelectedValuePath="Id"
+                        Style="{DynamicResource Control.FormComboBox}" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="AUDIENCE" />
+                    <ComboBox
+                        AutomationProperties.Name="Made for kids audience"
+                        DisplayMemberPath="Label"
+                        ItemsSource="{Binding AudienceOptions}"
+                        SelectedValue="{Binding Audience, Mode=TwoWay}"
+                        SelectedValuePath="Key"
+                        Style="{DynamicResource Control.FormComboBox}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Margin="0,20,0,0">
+                    <CheckBox Content="Notify subscribers" IsChecked="{Binding NotifySubscribers, Mode=TwoWay}" Style="{DynamicResource Control.FormCheckBox}" />
+                    <CheckBox Margin="0,8,0,0" Content="Contains realistic altered or synthetic media" IsChecked="{Binding ContainsSyntheticMedia, Mode=TwoWay}" Style="{DynamicResource Control.FormCheckBox}" />
+                </StackPanel>
+            </Grid>
+
+            <Border Margin="0,14,0,0" Style="{DynamicResource Control.InsetCard}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="130" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="PREFERRED RELEASE DAY" />
+                        <ComboBox ItemsSource="{Binding PreferredDays}" SelectedItem="{Binding PreferredDay, Mode=TwoWay}" Style="{DynamicResource Control.FormComboBox}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="TIME" />
+                        <controls:TimePickerField
+                            AutomationName="Preferred release time"
+                            TimeText="{Binding PreferredTimeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <Button Grid.Column="4" Margin="0,20,0,0" Command="{Binding AddPreferredSlotCommand}" Content="Add time" Style="{DynamicResource Control.WorkspaceButton}" />
+                    <ItemsControl Grid.Row="1" Grid.ColumnSpan="5" Margin="0,12,0,0" ItemsSource="{Binding PreferredSlots}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,0,0,6" Padding="10,7" Background="{DynamicResource Brush.SurfacePanel}" CornerRadius="7">
+                                    <Grid>
+                                        <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextPrimary}">
+                                            <Run Text="{Binding Day, Mode=OneWay}" />
+                                            <Run Text=" · " />
+                                            <Run Text="{Binding LocalTime, Mode=OneWay}" />
+                                        </TextBlock>
+                                        <Button
+                                            HorizontalAlignment="Right"
+                                            Command="{Binding DataContext.RemovePreferredSlotCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="Remove"
+                                            Style="{DynamicResource Control.WorkspaceButton}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock
+                        Grid.Row="1"
+                        Grid.ColumnSpan="5"
+                        Margin="0,12,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="Add a few times you already know work for your channel. Replay Foundry suggests the next one; it does not claim to predict peak engagement."
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasPreferredSlots, Converter={StaticResource InverseBoolToVisibility}}" />
+                </Grid>
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -1,0 +1,37 @@
+Replay Foundry Grounded Editorial Rephrase Policy 1.0
+
+Purpose
+
+This policy adds one bounded text-only editorial polish pass after grounded
+metadata has already passed every synthesis, grounding, creator-authority,
+audience-copy, and reroll-diversity validator. The pass may improve wording; it
+cannot establish or repair facts.
+
+Fixed behavior
+
+- The input is the one already accepted canonical metadata JSON object plus a
+  sanitized typed authority summary re-derived from the unchanged grounding
+  packet.
+- The pass receives no video, performs no perception or knowledge retrieval,
+  and uses one batch-one greedy XGrammar-constrained generation with seed 0,
+  beam count 1, enabled offloaded KV cache, and the existing 768-token ceiling.
+- It may rewrite only titleBody and description. Tags, grounding binding IDs,
+  and temporalVoice must remain byte-for-byte equivalent as JSON values.
+- The complete candidate runs through the same strict metadata, grounding,
+  creator-authority, audience-copy, terminal-period, and reroll-diversity
+  validators as the original synthesis.
+- A fully valid materially changed candidate replaces the title and
+  description. An identical candidate or a completed semantic rejection keeps
+  the original accepted metadata. A technical, incomplete, watchdog, CUDA,
+  parser-contract, or unattested failure remains terminal.
+- No unconstrained fallback, string substitution, conjugation, semantic repair,
+  additional retry, new fact, changed citation, changed tag, changed creator
+  authority, or changed evidence scope is permitted.
+
+Attestation
+
+- Current output provenance records the policy identity, whether the pass was
+  attempted and applied, its bounded outcome, source and output canonical JSON
+  hashes, rejection code when applicable, and exact message, rendered prompt,
+  input-token, and raw-output witnesses.
+- The pre-rephrase output schema remains readable under its original contract.

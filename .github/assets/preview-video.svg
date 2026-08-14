@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title description">
+  <title id="title">Replay Foundry product video placeholder</title>
+  <desc id="description">A dark product card with a play symbol reserved for a future workflow video.</desc>
+  <defs><radialGradient id="halo"><stop stop-color="#38bdf8" stop-opacity=".3"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/></radialGradient></defs>
+  <rect width="960" height="540" rx="28" fill="#07171c"/><circle cx="480" cy="252" r="170" fill="url(#halo)"/><circle cx="480" cy="252" r="88" fill="#10333d" stroke="#38bdf8" stroke-width="3"/><path d="M458 207l74 45-74 45z" fill="#f5c451"/>
+  <text x="480" y="414" text-anchor="middle" fill="#e7f8fc" font-family="Segoe UI, sans-serif" font-size="28" font-weight="600">CREATOR WORKFLOW</text>
+  <text x="480" y="452" text-anchor="middle" fill="#8fc4d0" font-family="Segoe UI, sans-serif" font-size="18">Future guided video placeholder</text>
+</svg>

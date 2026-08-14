@@ -1,0 +1,53 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,xaml}]
+indent_style = space
+indent_size = 4
+
+[*.cs]
+dotnet_analyzer_diagnostic.category-Design.severity = suggestion
+dotnet_analyzer_diagnostic.category-Documentation.severity = suggestion
+dotnet_analyzer_diagnostic.category-Globalization.severity = suggestion
+dotnet_analyzer_diagnostic.category-Interoperability.severity = suggestion
+dotnet_analyzer_diagnostic.category-Maintainability.severity = suggestion
+dotnet_analyzer_diagnostic.category-Naming.severity = suggestion
+dotnet_analyzer_diagnostic.category-Performance.severity = suggestion
+dotnet_analyzer_diagnostic.category-Reliability.severity = suggestion
+dotnet_analyzer_diagnostic.category-Security.severity = warning
+dotnet_analyzer_diagnostic.category-Style.severity = suggestion
+dotnet_analyzer_diagnostic.category-Usage.severity = suggestion
+dotnet_diagnostic.IDE0051.severity = warning
+dotnet_diagnostic.IDE0052.severity = warning
+dotnet_diagnostic.CA1822.severity = none
+
+# The minimum analyzer set includes broad modernization suggestions that are
+# intentionally handled in focused refactors rather than obscuring correctness
+# findings in every build.
+dotnet_diagnostic.CA1512.severity = none
+dotnet_diagnostic.CA1513.severity = none
+dotnet_diagnostic.CA1826.severity = none
+dotnet_diagnostic.CA1854.severity = none
+dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1860.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1865.severity = none
+dotnet_diagnostic.CA1869.severity = none
+dotnet_diagnostic.CA1875.severity = none
+dotnet_diagnostic.CA2263.severity = none
+
+[*.{json,md,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.ps1]
+indent_style = space
+indent_size = 4
+
+[*.py]
+indent_style = space
+indent_size = 4

@@ -1,0 +1,54 @@
+Replay Foundry Grounded Editorial Rephrase Policy 1.5
+
+Purpose
+
+This policy retains policy 1.4's bounded text-only polish and typed language
+recovery. It adds one literal-action recovery for a completed semantic candidate
+that strengthened visual evidence into an unsupported interpretation.
+
+Accepted-copy polish
+
+- An already accepted canonical metadata object may receive one text-only
+  polish pass exactly as in policy 1.4.
+- A valid materially changed candidate replaces its title and description. An
+  identical candidate or completed semantic rejection keeps the accepted
+  original.
+
+Rejected-copy recovery
+
+- Recovery remains limited to completed, schema-valid rejection codes frozen by
+  this policy.
+- UnsupportedMentalState may enter the same single bounded corrective pass as
+  the existing language-form rules.
+- For UnsupportedMentalState and UnsupportedCreatorEmbodiment, sourceMetadata
+  withholds titleBody and description and retains only immutable tags,
+  grounding, and temporalVoice. The rejected audience wording cannot prime the
+  corrective generation.
+- New titleBody and description are derived only from sanitized typedAuthority.
+  UnsupportedMentalState recovery is restricted to literal primaryVisual
+  environment, subjectsAndObjects, and completed physical actions. It omits
+  emotion, intent, reaction, causality, significance, success, completion,
+  transition, defeat, destruction, disappearance, return, and inferred outcome.
+- The exact rejected canonical JSON still supplies the provenance source hash
+  and immutable-field comparison. Withholding changes only model conditioning,
+  not the acceptance predicate or retained audit chain.
+- One batch-one greedy XGrammar-constrained text-only pass may rewrite only
+  titleBody and description. Tags, grounding binding IDs, and temporalVoice
+  remain equivalent as parsed JSON values.
+- The candidate must pass every existing strict grounding, actor, audience,
+  action-strength, language, and diversity validator. Any further semantic or
+  technical failure remains terminal.
+
+Preserved bounds
+
+- No video, perception, knowledge retrieval, unconstrained fallback, string
+  substitution, deterministic semantic repair, extra retry, new fact, changed
+  citation, changed tag, changed creator authority, or changed evidence scope.
+- Seed 0, beam count 1, offloaded KV cache, and the 768-token ceiling remain.
+
+Attestation
+
+- Current output provenance retains the original rejected canonical JSON hash,
+  policy identity, rejection code, outcome, output hash, and exact message,
+  prompt, input-token, and output witnesses.
+- Policies 1.0 through 1.4 remain readable under their original contracts.

@@ -1,0 +1,101 @@
+﻿<Application
+    x:Class="ReplayFoundry.Desktop.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:generate="clr-namespace:ReplayFoundry.Desktop.Features.Generate"
+    xmlns:studio="clr-namespace:ReplayFoundry.Desktop.Features.Studio"
+    xmlns:library="clr-namespace:ReplayFoundry.Desktop.Features.Library"
+    xmlns:publish="clr-namespace:ReplayFoundry.Desktop.Features.Publish"
+    xmlns:settings="clr-namespace:ReplayFoundry.Desktop.Features.Settings"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:converters="clr-namespace:ReplayFoundry.Desktop.Presentation.Converters">
+
+    <Application.Resources>
+
+        <ResourceDictionary>
+
+            <ResourceDictionary.MergedDictionaries>
+
+                <ResourceDictionary Source="Resources/Theme/Colors.xaml" />
+
+                <ResourceDictionary Source="Resources/Theme/Brushes.xaml" />
+
+                <ResourceDictionary Source="Resources/Theme/HighContrast.xaml" />
+
+                <ResourceDictionary Source="Resources/Theme/Iconography.xaml" />
+
+                <ResourceDictionary Source="Resources/Theme/Motion.xaml" />
+
+                <ResourceDictionary Source="Resources/Theme/Typography.xaml" />
+
+                <ResourceDictionary Source="Resources/Theme/Spacing.xaml" />
+
+                <ResourceDictionary Source="Resources/Theme/Dimensions.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/WorkspaceStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/ButtonStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/InputStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/SelectionStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/ScrollStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/MenuPopupStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/RangeProgressStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/ValidationStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/WindowChromeStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/CardStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/FormStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/TabStyles.xaml" />
+
+                <ResourceDictionary Source="Resources/Controls/FloatingDockStyles.xaml" />
+
+                <ResourceDictionary Source="Shell/Guidance/GuidanceViews.xaml" />
+
+            </ResourceDictionary.MergedDictionaries>
+
+            <DataTemplate DataType="{x:Type generate:GenerateViewModel}">
+                <generate:GenerateView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type studio:StudioViewModel}">
+                <studio:StudioView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type library:LibraryViewModel}">
+                <library:LibraryView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type publish:PublishViewModel}">
+                <publish:PublishView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type settings:SettingsViewModel}">
+                <settings:SettingsView />
+            </DataTemplate>
+
+            <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+            <converters:BooleanToVisibilityConverter x:Key="InverseBoolToVisibility" Invert="True" />
+
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+
+            <converters:FileImageSourceConverter x:Key="FileImageSourceConverter" />
+
+            <DataTemplate x:Key="IconButtonContentTemplate">
+                <controls:IconPath Width="16" Height="16" IconKey="{Binding}" Stroke="{DynamicResource Brush.TextPrimary}" StrokeThickness="1.4" Stretch="Uniform" />
+            </DataTemplate>
+
+        </ResourceDictionary>
+
+    </Application.Resources>
+
+</Application>

@@ -1,0 +1,292 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--  Clickable 1-2-3 wizard-step header button.  -->
+    <Style
+        x:Key="GenerationSetup.StepButton"
+        BasedOn="{StaticResource Control.ThemedButton}"
+        TargetType="{x:Type Button}">
+
+        <Setter Property="MinWidth" Value="132" />
+
+        <Setter Property="Padding" Value="12,6" />
+
+        <Setter Property="Background" Value="Transparent" />
+
+        <Setter Property="BorderBrush" Value="Transparent" />
+
+        <Setter Property="BorderThickness" Value="1" />
+
+        <Setter Property="Cursor" Value="Hand" />
+
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+
+        <Setter Property="Template">
+            <Setter.Value>
+
+                <ControlTemplate TargetType="{x:Type Button}">
+
+                    <Border
+                        x:Name="Surface"
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="6">
+
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+
+                        <Trigger Property="IsMouseOver" Value="True">
+
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.GenerateSetupHighlight}" />
+
+                        </Trigger>
+
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.DockFocus}" />
+
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+
+                            <Setter Property="Cursor" Value="Arrow" />
+
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+
+    </Style>
+
+    <Style x:Key="GenerationSetup.SectionCard" TargetType="{x:Type Border}">
+
+        <Setter Property="Padding" Value="20" />
+
+        <Setter Property="Background" Value="{DynamicResource Brush.GenerateSetupField}" />
+
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+
+        <Setter Property="BorderThickness" Value="1" />
+
+        <Setter Property="CornerRadius" Value="8" />
+
+        <Setter Property="Margin" Value="0,0,0,14" />
+
+    </Style>
+
+    <Style x:Key="GenerationSetup.FieldLabel" TargetType="{x:Type TextBlock}">
+
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+
+        <Setter Property="FontSize" Value="15" />
+
+        <Setter Property="FontWeight" Value="SemiBold" />
+
+        <Setter Property="Margin" Value="0,0,0,8" />
+
+    </Style>
+
+    <Style
+        x:Key="GenerationSetup.ComboBox"
+        BasedOn="{StaticResource Control.ThemedComboBox}"
+        TargetType="{x:Type ComboBox}">
+
+        <Setter Property="MinHeight" Value="42" />
+
+        <Setter Property="Padding" Value="10,6" />
+
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+
+        <Setter Property="Background" Value="{DynamicResource Brush.GenerateSetupField}" />
+
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.DockBorder}" />
+
+        <Setter Property="BorderThickness" Value="1" />
+
+    </Style>
+
+    <Style x:Key="GenerationSetup.OptionList" TargetType="{x:Type ListBox}">
+
+        <Setter Property="Background" Value="Transparent" />
+
+        <Setter Property="BorderThickness" Value="0" />
+
+        <Setter Property="Padding" Value="0" />
+
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+
+        <Setter Property="ScrollViewer.CanContentScroll" Value="False" />
+
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+
+    </Style>
+
+    <Style x:Key="GenerationSetup.OptionItem" TargetType="{x:Type ListBoxItem}">
+
+        <Setter Property="Margin" Value="0,0,0,10" />
+
+        <Setter Property="Padding" Value="16,13" />
+
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+
+        <Setter Property="Background" Value="{DynamicResource Brush.GenerateSetupField}" />
+
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+
+        <Setter Property="BorderThickness" Value="1" />
+
+        <Setter Property="Cursor" Value="Hand" />
+
+        <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
+
+        <Setter Property="Template">
+            <Setter.Value>
+
+                <ControlTemplate TargetType="{x:Type ListBoxItem}">
+
+                    <Grid>
+
+                        <Border
+                            x:Name="Surface"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="7">
+
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+
+                        </Border>
+
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+
+                        <Trigger Property="IsMouseOver" Value="True">
+
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.GenerateSetupSelected}" />
+
+                        </Trigger>
+
+                        <Trigger Property="IsSelected" Value="True">
+
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.GenerateSetupPressed}" />
+
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.DockActiveBorder}" />
+
+                            <Setter TargetName="Surface" Property="BorderThickness" Value="2" />
+
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+
+                            <Setter Property="Opacity" Value="0.5" />
+
+                            <Setter Property="Cursor" Value="Arrow" />
+
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+
+    </Style>
+
+    <Style
+        x:Key="GenerationSetup.SecondaryButton"
+        BasedOn="{StaticResource Control.ThemedButton}"
+        TargetType="{x:Type Button}">
+
+        <Setter Property="MinWidth" Value="118" />
+
+        <Setter Property="Height" Value="44" />
+
+        <Setter Property="Padding" Value="18,8" />
+
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+
+        <Setter Property="Background" Value="{DynamicResource Brush.GenerateSetupButton}" />
+
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+
+        <Setter Property="BorderThickness" Value="1" />
+
+        <Setter Property="Cursor" Value="Hand" />
+
+        <Setter Property="Template">
+            <Setter.Value>
+
+                <ControlTemplate TargetType="{x:Type Button}">
+
+                    <Border
+                        x:Name="Surface"
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="6">
+
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+
+                        <Trigger Property="IsMouseOver" Value="True">
+
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.GenerateSetupButtonHover}" />
+
+                        </Trigger>
+
+                        <Trigger Property="IsPressed" Value="True">
+
+                            <Setter TargetName="Surface" Property="Opacity" Value="0.8" />
+
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+
+                            <Setter Property="Opacity" Value="0.4" />
+
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+
+    </Style>
+
+    <Style
+        x:Key="GenerationSetup.PrimaryButton"
+        BasedOn="{StaticResource Control.PrimaryButton}"
+        TargetType="{x:Type Button}">
+
+        <Setter Property="MinWidth" Value="150" />
+
+        <Setter Property="Height" Value="44" />
+
+        <Setter Property="Padding" Value="18,8" />
+
+        <Setter Property="Background" Value="{DynamicResource Brush.GenerateSetupPrimaryButton}" />
+
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.DockActiveBorder}" />
+
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextOnAccent}" />
+
+    </Style>
+
+</ResourceDictionary>

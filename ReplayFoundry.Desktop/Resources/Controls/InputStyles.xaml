@@ -1,0 +1,194 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style x:Key="Control.ThemedTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource Control.KeyboardFocus}">
+        <Setter Property="MinHeight" Value="{DynamicResource Dimension.ControlHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Space8}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Brush.StatusInfo}" />
+        <Setter Property="Validation.ErrorTemplate" Value="{DynamicResource Control.ValidationErrorTemplate}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TextBox}">
+                    <Border
+                        x:Name="Surface"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="8"
+                        Padding="{TemplateBinding Padding}">
+                        <ScrollViewer x:Name="PART_ContentHost" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.BorderFocus}" />
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                        </Trigger>
+                        <Trigger Property="Validation.HasError" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.StatusError}" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.48" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource Control.ThemedTextBox}" />
+    <ControlTemplate x:Key="Control.ComboDropDownToggleTemplate" TargetType="{x:Type ToggleButton}">
+        <Border Background="Transparent" />
+    </ControlTemplate>
+    <Style x:Key="Control.ThemedComboBox" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource Control.KeyboardFocus}">
+        <Setter Property="MinHeight" Value="{DynamicResource Dimension.ControlHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Space8}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="MaxDropDownHeight" Value="300" />
+        <Setter Property="Validation.ErrorTemplate" Value="{DynamicResource Control.ValidationErrorTemplate}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ComboBox}">
+                    <Grid>
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <!--
+                                    The toggle owns the complete field, so clicking the selected
+                                    value, empty padding, or chevron opens the same popup. The
+                                    presentation layer above it does not intercept pointer input.
+                                -->
+                                <ToggleButton
+                                    x:Name="DropDownToggle"
+                                    Grid.ColumnSpan="2"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Focusable="False"
+                                    IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                    Template="{StaticResource Control.ComboDropDownToggleTemplate}" />
+                                <ContentPresenter
+                                    Margin="{TemplateBinding Padding}"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding SelectionBoxItem}"
+                                    ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                    ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                    IsHitTestVisible="False"
+                                    TextElement.Foreground="{TemplateBinding Foreground}" />
+                                <Path
+                                    x:Name="DropDownCaret"
+                                    Grid.Column="1"
+                                    Width="14"
+                                    Height="14"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Data="{DynamicResource Icon.ChevronDown}"
+                                    IsHitTestVisible="False"
+                                    Stroke="{DynamicResource Brush.TextSecondary}"
+                                    StrokeThickness="1.4"
+                                    Stretch="Uniform">
+                                    <Path.RenderTransform>
+                                        <RotateTransform Angle="0" CenterX="7" CenterY="7" />
+                                    </Path.RenderTransform>
+                                </Path>
+                            </Grid>
+                        </Border>
+                        <Popup
+                            x:Name="PART_Popup"
+                            AllowsTransparency="True"
+                            Focusable="False"
+                            IsOpen="{TemplateBinding IsDropDownOpen}"
+                            Placement="Bottom"
+                            PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                            PopupAnimation="Fade"
+                            StaysOpen="False"
+                            VerticalOffset="6">
+                            <Border
+                                x:Name="PopupSurface"
+                                MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                Background="{DynamicResource Brush.SurfaceElevated}"
+                                BorderBrush="{DynamicResource Brush.KineticGlow}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource Radius.OrganicPopup}"
+                                Padding="6">
+                                <Border.Effect>
+                                    <DropShadowEffect
+                                        BlurRadius="14"
+                                        Color="{DynamicResource Color.AccentCyan}"
+                                        Opacity="0.22"
+                                        ShadowDepth="1" />
+                                </Border.Effect>
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" CanContentScroll="True">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.BorderFocus}" /></Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.BorderFocus}" /></Trigger>
+                        <Trigger Property="IsDropDownOpen" Value="True">
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                            <Setter TargetName="DropDownCaret" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180" CenterX="7" CenterY="7" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="Validation.HasError" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.StatusError}" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.48" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource Control.ThemedComboBox}" />
+    <!--
+        A borderless editorial selector for dense filter rows. It reuses the
+        complete shared ComboBox template, popup, keyboard behavior, and UIA
+        semantics instead of introducing a second dropdown control.
+    -->
+    <Style x:Key="Control.InlineSelectorComboBox" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource Control.ThemedComboBox}">
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="8,2" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style x:Key="Control.InlineSearchTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource Control.ThemedTextBox}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10,7" />
+    </Style>
+    <Style TargetType="{x:Type ComboBoxItem}" BasedOn="{StaticResource Control.KeyboardFocus}">
+        <Setter Property="Padding" Value="{DynamicResource Space8}" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                    <Border x:Name="ItemSurface" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" /></Trigger>
+                        <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ItemSurface" Property="Opacity" Value="0.48" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

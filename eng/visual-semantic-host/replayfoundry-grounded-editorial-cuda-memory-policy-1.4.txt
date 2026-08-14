@@ -1,0 +1,109 @@
+ReplayFoundry Grounded Editorial CUDA Memory Policy 1.4
+
+Purpose
+
+This policy keeps grounded Qwen editorial metadata from consuming the full
+local CUDA device through PyTorch's native caching allocator, removes the
+qualified vision encoder's persistent weights from the constrained CUDA
+allocation between vision forwards, and prevents the quadratic materialized
+attention allocation observed on long grounded synthesis prompts. It changes
+no model weight, precision, prompt, video sampling, decoding, grounding, or
+semantic validation rule.
+
+Fixed configuration
+
+- Scope: grounded editorial metadata only.
+- CUDA device: 0.
+- Allocator: PyTorch native CUDA caching allocator.
+- Reserved allocator headroom: 3,221,225,472 bytes (3 GiB).
+- Allocator limit: reported free device memory at admission minus the fixed
+  headroom, expressed to PyTorch as a fraction of total device memory.
+- Startup free-memory gate: the computed allocator limit must remain greater
+  than the retained qualification peak before model loading begins.
+- Pre-generation gate: after releasing only unoccupied PyTorch cache blocks,
+  current reported free device memory must remain at least the fixed 3 GiB
+  headroom before each grounded model generation begins.
+- Model attention implementation: PyTorch scaled dot product attention.
+- Grounded generation attention backend: cuDNN attention, explicitly forced
+  for every grounded model.generate call through torch.nn.attention.sdpa_kernel.
+- Attention fallback: prohibited. If the pinned runtime cannot execute the
+  cuDNN attention backend, grounded generation fails closed.
+- KV cache implementation: Transformers offloaded DynamicCache.
+- Model precision: every floating-point model parameter remains BF16.
+- Language-model placement: CUDA device 0.
+- Vision-encoder backing store: CPU, through one explicit Accelerate load map
+  and its hook-owned weights maps.
+- Vision-encoder execution: CUDA device 0 only while each hooked vision leaf
+  is active; its parameters return to dormant meta tensors afterward.
+- Visual position embedding: restored from its qualified CPU backing store,
+  detached from its leaf offload hook, and pinned on CUDA device 0.
+- Other CPU model offload: prohibited.
+- Disk model offload: prohibited.
+- Quantization: prohibited.
+- Automatic cap relaxation or fallback: prohibited.
+
+Attention rationale
+
+The qualified long-context reproduction contained six sampled video frames
+and 5,318 input tokens. PyTorch's automatically selected attention path tried
+to materialize a 3.37 GiB language-attention allocation after 9.99 GiB was
+already allocated, exceeding the fixed 11.82 GiB allocator limit. Running the
+same inputs, weights, placement, precision, offloaded KV cache, and allocator
+under PyTorch's explicitly selected cuDNN scaled-dot-product-attention backend
+completed with 8,544,662,016 peak allocated bytes and 8,849,981,440 peak
+reserved bytes. The backend selection removes that materialized allocation;
+it is not permission to relax the allocator limit or evidence rules.
+
+Placement rationale
+
+The pinned Qwen model contains 830,695,424 bytes of BF16 vision parameters.
+Accelerate retains their authoritative values in CPU memory, parks hooked
+module parameters on the meta device between calls, materializes them on CUDA
+0 for the bounded vision forward, then returns them to meta. Qwen's position
+interpolation is one exception: it creates index and weight tensors on
+`model.visual.pos_embed.weight.device` before invoking that embedding module.
+Leaving the embedding weight dormant on meta therefore creates data-less meta
+inputs that Accelerate cannot copy to CUDA. The host restores and pins only
+this 4,718,592-byte BF16 position table on CUDA 0 before validation. The rest
+of the vision encoder remains CPU-backed and meta-parked between leaf calls.
+
+The host requires the exact initial load map, the exact final map containing
+the position-table exception, a CUDA-0 offload hook and CPU BF16 backing value
+for every other dormant visual parameter, a hook-free CUDA-0 BF16 position
+table, CUDA-0 language parameters and buffers, and fails before inference if
+any part of that contract changes.
+
+Qualification reference
+
+The retained `real-qwen-metadata-v1.6.json` artifact uses schema
+`replayfoundry-editorial-metadata-real-quality-1.0`, has SHA-256
+`0EC7F4BE4DD3664091D6808176B2FEA36B7FE016B277422DACA00C4C9D28EC70`, and
+measured 11,705,485,312 peak PyTorch-allocated GPU bytes under the older,
+more demanding all-CUDA placement. That peak remains the conservative
+minimum allocator admission threshold; this policy does not use the cuDNN
+attention backend or offload placement as permission to shrink or relax the
+established CUDA cap.
+
+Limitations
+
+The fixed headroom is a limit on allocations managed by PyTorch's CUDA caching
+allocator. It does not include every CUDA-driver, library, Windows WDDM, or
+other-process allocation and therefore does not guarantee that 3 GiB remains
+globally free. The startup and pre-generation gates are contention guards, not
+reservations from other processes. If the forced attention backend, fixed
+allocator, or admission gate cannot be met, the command fails closed; it does
+not select a different attention implementation, weaken the policy, quantize
+the model, or move additional language-model modules to CPU.
+
+Audit
+
+Every grounded metadata execution records the policy version and hash,
+attention implementation, forced attention backend, attention-fallback flag,
+cache implementation, reported total, startup-free, and externally occupied
+device bytes, required startup-free bytes, fixed allocator headroom, computed
+allocator limit, minimum viable limit, configured and observed allocator
+fractions, the retained qualification peak, pre-generation admission count
+and minimum/current free-memory observations, peak allocated and reserved
+bytes, end allocated/reserved/free bytes, runtime outcome and failure reason,
+and explicit policy flags for the required vision-only CPU backing store,
+quantization, global-free-memory guarantee, and fallback.

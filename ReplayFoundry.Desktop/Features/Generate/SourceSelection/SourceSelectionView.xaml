@@ -1,0 +1,407 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Generate.SourceSelection.SourceSelectionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:generate="clr-namespace:ReplayFoundry.Desktop.Features.Generate"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:mode="clr-namespace:ReplayFoundry.Desktop.Features.Generate.ModeSelection"
+    d:DesignHeight="500"
+    d:DesignWidth="980"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+
+        <ResourceDictionary>
+
+            <ResourceDictionary.MergedDictionaries>
+
+                <ResourceDictionary
+                    Source="/ReplayFoundry.Desktop;component/Features/Generate/GenerateResponsiveStyles.xaml" />
+
+            </ResourceDictionary.MergedDictionaries>
+
+        </ResourceDictionary>
+
+    </UserControl.Resources>
+
+    <Grid>
+
+        <Grid Style="{StaticResource Generate.ResponsiveContentGroup}">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <mode:GenerationModeSelector
+                Grid.Row="0"
+                HorizontalAlignment="Stretch"
+                IsCompact="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type generate:GenerateView}}}" />
+
+            <Border
+                Grid.Row="1"
+                Style="{StaticResource Generate.ResponsiveModeGap}" />
+
+            <Border
+                Grid.Row="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Top"
+                AllowDrop="True"
+                Drop="DropZone_Drop"
+                PreviewDragOver="DropZone_PreviewDragOver"
+                Style="{StaticResource Generate.ResponsiveSourcePanel}">
+
+                <Border.Effect>
+
+                    <DropShadowEffect
+                        BlurRadius="30"
+                        Opacity="0.5"
+                        ShadowDepth="8" />
+
+                </Border.Effect>
+
+                <Grid>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel
+                        Grid.Row="0"
+                        HorizontalAlignment="Center">
+
+                        <TextBlock
+                            Style="{StaticResource Generate.ResponsiveHeaderTitle}"
+                            Text="Open or Start a Project" />
+
+                        <TextBlock
+                            Style="{StaticResource Generate.ResponsiveHeaderSubtitle}"
+                            Text="Bring in one video or multiple videos to begin." />
+
+                    </StackPanel>
+
+                    <Border
+                        Grid.Row="1"
+                        Style="{StaticResource Generate.ResponsiveHeaderGap}" />
+
+                    <Border
+                        Grid.Row="2"
+                        Style="{StaticResource Generate.ResponsiveDropZone}">
+
+                        <Grid>
+
+                            <!-- Empty selection state. -->
+                            <Grid>
+
+                                <Grid.Style>
+
+                                    <Style TargetType="{x:Type Grid}">
+
+                                        <Setter
+                                            Property="Visibility"
+                                            Value="Visible" />
+
+                                        <Style.Triggers>
+
+                                            <DataTrigger
+                                                Binding="{Binding HasSelectedSources}"
+                                                Value="True">
+
+                                                <Setter
+                                                    Property="Visibility"
+                                                    Value="Collapsed" />
+
+                                            </DataTrigger>
+
+                                        </Style.Triggers>
+
+                                    </Style>
+
+                                </Grid.Style>
+
+                                <StackPanel
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+
+                                    <StackPanel
+                                        HorizontalAlignment="Center"
+                                        Orientation="Horizontal">
+
+                                        <Button
+                                            Command="{Binding SelectSingleFileCommand}"
+                                            Style="{StaticResource Generate.ResponsiveActionButton}">
+
+                                            <StackPanel>
+
+                                                <TextBlock
+                                                    Style="{StaticResource Generate.ResponsiveActionTitle}"
+                                                    Text="Single File" />
+
+                                                <TextBlock
+                                                    Style="{StaticResource Generate.ResponsiveActionDescription}"
+                                                    Text="Choose exactly one video" />
+
+                                            </StackPanel>
+
+                                        </Button>
+
+                                        <Button
+                                            Command="{Binding SelectMultipleFilesCommand}"
+                                            Style="{StaticResource Generate.ResponsiveActionButton}">
+
+                                            <StackPanel>
+
+                                                <TextBlock
+                                                    Style="{StaticResource Generate.ResponsiveActionTitle}"
+                                                    Text="Multiple Files" />
+
+                                                <TextBlock
+                                                    Style="{StaticResource Generate.ResponsiveActionDescription}"
+                                                    Text="Choose one or more videos" />
+
+                                            </StackPanel>
+
+                                        </Button>
+
+                                    </StackPanel>
+
+                                    <TextBlock
+                                        Style="{StaticResource Generate.ResponsiveOrText}"
+                                        Text="OR" />
+
+                                    <TextBlock
+                                        Style="{StaticResource Generate.ResponsiveDropInstruction}"
+                                        Text="Drag one file or multiple files here" />
+
+                                    <TextBlock
+                                        Style="{StaticResource Generate.ResponsiveFormatsText}"
+                                        Text="Supported formats: MP4, MKV, MOV, AVI" />
+
+                                </StackPanel>
+
+                            </Grid>
+
+                            <!-- Selected-files state. -->
+                            <Grid>
+
+                                <Grid.Style>
+
+                                    <Style TargetType="{x:Type Grid}">
+
+                                        <Setter
+                                            Property="Visibility"
+                                            Value="Collapsed" />
+
+                                        <Style.Triggers>
+
+                                            <DataTrigger
+                                                Binding="{Binding HasSelectedSources}"
+                                                Value="True">
+
+                                                <Setter
+                                                    Property="Visibility"
+                                                    Value="Visible" />
+
+                                            </DataTrigger>
+
+                                        </Style.Triggers>
+
+                                    </Style>
+
+                                </Grid.Style>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="12" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock
+                                    Grid.Row="0"
+                                    HorizontalAlignment="Center"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource Brush.TextPrimary}"
+                                    Text="{Binding SelectionSummary}" />
+
+                                <ScrollViewer
+                                    Grid.Row="2"
+                                    Style="{StaticResource Generate.ResponsiveSelectedList}">
+
+                                    <ItemsControl
+                                        ItemsSource="{Binding SelectedSources}">
+
+                                        <ItemsControl.ItemTemplate>
+
+                                            <DataTemplate>
+
+                                                <Border
+                                                    Style="{StaticResource Generate.FileRow}">
+
+                                                    <Grid>
+
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel>
+
+                                                            <TextBlock
+                                                                FontSize="14"
+                                                                FontWeight="SemiBold"
+                                                                Foreground="{DynamicResource Brush.TextPrimary}"
+                                                                Text="{Binding FileName}"
+                                                                TextTrimming="CharacterEllipsis" />
+
+                                                            <TextBlock
+                                                                Margin="0,3,0,0"
+                                                                FontSize="11"
+                                                                Foreground="{DynamicResource Brush.TextSecondary}"
+                                                                Text="{Binding DirectoryPath}"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                ToolTip="{Binding FullPath}" />
+
+                                                        </StackPanel>
+
+                                                        <Border
+                                                            Grid.Column="1"
+                                                            Margin="16,0,0,0"
+                                                            Padding="8,4"
+                                                            VerticalAlignment="Center"
+                                                            Background="{DynamicResource Brush.ReferenceBadge}"
+                                                            CornerRadius="8">
+
+                                                            <Border.Style>
+
+                                                                <Style TargetType="{x:Type Border}">
+
+                                                                    <Setter
+                                                                        Property="Visibility"
+                                                                        Value="Collapsed" />
+
+                                                                    <Style.Triggers>
+
+                                                                        <DataTrigger
+                                                                            Binding="{Binding IsReference}"
+                                                                            Value="True">
+
+                                                                            <Setter
+                                                                                Property="Visibility"
+                                                                                Value="Visible" />
+
+                                                                        </DataTrigger>
+
+                                                                    </Style.Triggers>
+
+                                                                </Style>
+
+                                                            </Border.Style>
+
+                                                            <TextBlock
+                                                                FontSize="10"
+                                                                FontWeight="Bold"
+                                                                Foreground="{DynamicResource Brush.TextPrimary}"
+                                                                Text="REFERENCE" />
+
+                                                        </Border>
+
+                                                    </Grid>
+
+                                                </Border>
+
+                                            </DataTemplate>
+
+                                        </ItemsControl.ItemTemplate>
+
+                                    </ItemsControl>
+
+                                </ScrollViewer>
+
+                                <StackPanel
+                                    Grid.Row="3"
+                                    Style="{StaticResource Generate.ResponsiveSelectedFooter}">
+
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource Brush.TextSecondary}"
+                                        Text="Drop more files here to add them to this selection." />
+
+                                    <Border
+                                        Style="{StaticResource Generate.SetupSummary}">
+
+                                        <StackPanel>
+
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                Foreground="{DynamicResource Brush.TextPrimary}"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Text="Generation setup saved" />
+
+                                            <TextBlock
+                                                Margin="0,4,0,0"
+                                                HorizontalAlignment="Center"
+                                                Foreground="{DynamicResource Brush.TextSecondary}"
+                                                FontSize="11"
+                                                Text="{Binding GenerationSetupSummary}"
+                                                TextAlignment="Center"
+                                                TextWrapping="Wrap" />
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                    <StackPanel
+                                        Margin="0,12,0,0"
+                                        HorizontalAlignment="Center"
+                                        Orientation="Horizontal">
+
+                                        <Button
+                                            Command="{Binding ContinueToGenerationSetupCommand}"
+                                            Content="{Binding GenerationSetupButtonText}"
+                                            Style="{StaticResource Generate.PrimaryButton}" />
+
+                                        <Button
+                                            Command="{Binding ClearSelectionCommand}"
+                                            Content="Clear Selection"
+                                            Style="{StaticResource Generate.SecondaryButton}" />
+
+                                    </StackPanel>
+
+                                </StackPanel>
+
+                            </Grid>
+
+                        </Grid>
+
+                    </Border>
+
+                    <Border
+                        Grid.Row="3"
+                        Style="{StaticResource Generate.ResponsiveValidationPanel}">
+
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{DynamicResource Brush.ValidationErrorText}"
+                            Text="{Binding ValidationMessage}"
+                            TextWrapping="Wrap" />
+
+                    </Border>
+
+                </Grid>
+
+            </Border>
+
+        </Grid>
+
+    </Grid>
+
+</UserControl>

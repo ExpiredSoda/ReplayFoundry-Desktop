@@ -1,0 +1,85 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Settings.AiModelsSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <Border Style="{DynamicResource Control.CanvasPane}">
+        <StackPanel>
+            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="LOCAL TOOLS &amp; AI" />
+            <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Body}" Text="Replay Foundry keeps its video tools and optional AI on this PC." TextWrapping="Wrap" />
+            <controls:UnavailableBanner Margin="0,12,0,0" Title="{Binding RuntimeProfileStatus}" Description="{Binding AiStatus}" />
+            <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Reroll engine" />
+                    <CheckBox
+                        Margin="0,8,0,0"
+                        AutomationProperties.Name="Use Qwen local AI for Studio and Publish rerolls"
+                        Content="Use Qwen for Studio and Publish rerolls"
+                        IsChecked="{Binding UseLocalAiForEditorialRerolls, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Style="{DynamicResource Control.FormCheckBox}" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="{Binding EditorialRerollPreferenceDetail}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        Text="{Binding EditorialRerollPreferencePersistence}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        Foreground="{DynamicResource Brush.StatusInfo}"
+                        FontSize="11"
+                        Text="{Binding EditorialRerollPreferenceNotice}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasEditorialRerollPreferenceNotice, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+            <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Video tools" />
+                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding ToolchainStatus}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding AiCapabilities}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,8" Style="{DynamicResource Control.CanvasInsetCard}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Capability}" />
+                                    <TextBlock Margin="0,4,18,0" Style="{DynamicResource Text.Meta}" Text="{Binding Detail}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <controls:StatusBadge Grid.Column="1" Text="{Binding Status}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <WrapPanel Margin="0,8,0,0">
+                <Button
+                    AutomationProperties.Name="Install or update Advanced AI"
+                    Command="{Binding AddAdvancedAiCommand}"
+                    Content="{Binding AdvancedAiActionLabel}"
+                    Style="{DynamicResource Control.PrimaryButton}" />
+                <Button Margin="8,0,0,0" AutomationProperties.Name="Repair local tools" Command="{Binding RepairRuntimePacksCommand}" Content="Repair installed tools" Style="{DynamicResource Control.GhostButton}" />
+                <Button Margin="8,0,0,0" AutomationProperties.Name="Remove Advanced AI" Command="{Binding RemoveAdvancedAiCommand}" Content="Remove Advanced AI" Style="{DynamicResource Control.DestructiveButton}" />
+                <Button Margin="8,0,0,0" AutomationProperties.Name="Open local tools folder" Command="{Binding OpenRuntimePackFolderCommand}" Content="Open tools folder" Style="{DynamicResource Control.GhostButton}" />
+            </WrapPanel>
+            <TextBlock Margin="0,12,0,0" Style="{DynamicResource Text.Meta}" Text="Core clip discovery stays available after Advanced AI is removed. Projects and rendered videos are never removed by these buttons." TextWrapping="Wrap" />
+            <Border
+                Margin="0,12,0,0"
+                Padding="10"
+                Style="{DynamicResource Control.CanvasInsetCard}"
+                Visibility="{Binding HasRuntimePackNotice, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock
+                    Style="{DynamicResource Text.Body}"
+                    Text="{Binding RuntimePackNotice}"
+                    TextWrapping="Wrap" />
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

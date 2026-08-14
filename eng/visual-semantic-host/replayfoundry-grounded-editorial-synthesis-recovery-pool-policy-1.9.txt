@@ -1,0 +1,38 @@
+Replay Foundry Grounded Editorial Synthesis Recovery Pool Policy 1.9
+
+Purpose
+
+This policy retains policy 1.8's bounded semantic recovery pool, immutable
+evidence, four fixed seeds, first-valid selection, and strict factual boundary.
+It removes TerminalTitlePeriod from semantic rejection because exactly one
+sentence-style final ASCII period is now canonicalized before semantic
+validation. Punctuation formatting is not a reason to spend another model pass.
+
+Recovery
+
+- Three ordinary greedy synthesis attempts remain bounded by the same evidence.
+- The recovery pool remains four sequential batch-one candidates with seeds
+  3407, 3408, 3409, and 3410, temperature 0.7, top-p 0.8, and top-k 20.
+- Every completed candidate receives the same immutable messages, typed
+  authority, and full factual validators. The first fully valid candidate wins.
+- Technical, malformed, unattested, unknown, and exhausted paths fail closed.
+
+Title punctuation
+
+- One final ASCII period is removed by the canonical metadata validator without
+  changing any word. It is neither a semantic rejection nor a recovery-pool
+  retry reason.
+- All other title, evidence, grounding, language, actor, diversity, and
+  chronology rules remain unchanged.
+
+No game-specific behavior
+
+- The policy contains no game, character, level, scene, or example title.
+- XGrammar constrains JSON structure; it does not perform prose editing or
+  gameplay interpretation.
+
+Attestation
+
+- Current output provenance binds this policy identity, the exact retryable
+  semantic-code set, seeds, messages, prompts, token IDs, and completed outputs.
+- Policy 1.8 and earlier remain readable under their original contracts.

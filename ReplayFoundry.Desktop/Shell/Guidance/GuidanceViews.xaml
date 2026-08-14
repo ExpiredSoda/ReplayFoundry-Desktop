@@ -1,0 +1,349 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:accessibility="clr-namespace:ReplayFoundry.Desktop.Presentation.Accessibility"
+    xmlns:guidance="clr-namespace:ReplayFoundry.Desktop.Shell.Guidance">
+
+    <DataTemplate DataType="{x:Type guidance:FoundryGuideViewModel}">
+        <Border
+            MaxWidth="980"
+            MaxHeight="680"
+            Padding="24"
+            HorizontalAlignment="Stretch"
+            Background="{DynamicResource Brush.OverlaySurface}"
+            BorderBrush="{DynamicResource Brush.BorderStrong}"
+            BorderThickness="1"
+            CornerRadius="8"
+            KeyboardNavigation.TabNavigation="Cycle">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.1*" />
+                    <ColumnDefinition Width="1.6*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,18">
+                    <DockPanel LastChildFill="True">
+                        <Button
+                            DockPanel.Dock="Right"
+                            Width="40"
+                            Height="40"
+                            MinWidth="40"
+                            Padding="0"
+                            AutomationProperties.Name="Close Foundry Guide"
+                            Command="{Binding CloseCommand}"
+                            ToolTip="Close guide">
+                            <TextBlock FontSize="18" Text="×" />
+                        </Button>
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource Text.WorkspaceEyebrow}" Text="FOUNDRY GUIDE" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                FontSize="28"
+                                Style="{DynamicResource Text.WorkspaceTitle}"
+                                Text="Work with less guesswork" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                Style="{DynamicResource Text.Body}"
+                                Text="A searchable map of the surface, its current boundaries, and the keyboard paths that keep you moving." />
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBox
+                        Margin="0,16,0,0"
+                        AutomationProperties.HelpText="Search guide topics by workspace, action, or accessibility need."
+                        AutomationProperties.Name="Search Foundry Guide"
+                        accessibility:FocusOnLoadBehavior.IsEnabled="True"
+                        Style="{DynamicResource Control.ThemedTextBox}"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <ListBox
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Margin="0,0,18,0"
+                    AutomationProperties.Name="Foundry Guide topics"
+                    ItemsSource="{Binding FilteredEntries}"
+                    SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                    ScrollViewer.CanContentScroll="False"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="4">
+                                <TextBlock FontWeight="SemiBold" Text="{Binding Title}" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Margin="0,3,0,0"
+                                    Style="{DynamicResource Text.Meta}"
+                                    Text="{Binding Summary}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <Border
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Padding="20"
+                    Background="{DynamicResource Brush.SurfaceInset}"
+                    BorderBrush="{DynamicResource Brush.BorderSubtle}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                    <StackPanel DataContext="{Binding SelectedEntry}">
+                        <TextBlock
+                            Style="{DynamicResource Text.SectionTitle}"
+                            Text="{Binding Title}"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Margin="0,12,0,0"
+                            Style="{DynamicResource Text.Body}"
+                            Text="{Binding Body}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <StackPanel
+                    Grid.Row="2"
+                    Grid.ColumnSpan="2"
+                    Margin="0,18,0,0"
+                    Orientation="Horizontal">
+                    <Button
+                        MinWidth="160"
+                        AutomationProperties.Name="Open shortcut reference"
+                        Command="{Binding OpenShortcutsCommand}"
+                        Content="Keyboard shortcuts" />
+                    <TextBlock
+                        Margin="14,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="Tip: Ctrl+K opens the command palette." />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type guidance:ShortcutReferenceViewModel}">
+        <Border
+            MaxWidth="760"
+            MaxHeight="620"
+            Padding="24"
+            HorizontalAlignment="Stretch"
+            Background="{DynamicResource Brush.OverlaySurface}"
+            BorderBrush="{DynamicResource Brush.BorderStrong}"
+            BorderThickness="1"
+            CornerRadius="8"
+            KeyboardNavigation.TabNavigation="Cycle">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <DockPanel Margin="0,0,0,16" LastChildFill="True">
+                    <Button
+                        DockPanel.Dock="Right"
+                        Width="40"
+                        Height="40"
+                        MinWidth="40"
+                        Padding="0"
+                        AutomationProperties.Name="Close shortcut reference"
+                        Command="{Binding CloseCommand}"
+                        ToolTip="Close shortcuts">
+                        <TextBlock FontSize="18" Text="×" />
+                    </Button>
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.WorkspaceEyebrow}" Text="SHORTCUTS" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="26"
+                            Style="{DynamicResource Text.WorkspaceTitle}"
+                            Text="Keyboard reference" />
+                    </StackPanel>
+                </DockPanel>
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBox
+                        AutomationProperties.Name="Search keyboard shortcuts"
+                        accessibility:FocusOnLoadBehavior.IsEnabled="True"
+                        Style="{DynamicResource Control.ThemedTextBox}"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <ListBox
+                        Grid.Row="1"
+                        Margin="0,14,0,0"
+                        AutomationProperties.Name="Keyboard shortcut list"
+                        ItemsSource="{Binding FilteredEntries}"
+                        ScrollViewer.CanContentScroll="False"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="4,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="1*" />
+                                        <ColumnDefinition Width="1.3*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Command}" TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Margin="16,0,0,0"
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Gesture}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Margin="16,0,0,0"
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Scope}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type guidance:CommandPaletteViewModel}">
+        <Border
+            MaxWidth="720"
+            MaxHeight="560"
+            Padding="18"
+            HorizontalAlignment="Stretch"
+            Background="{DynamicResource Brush.OverlaySurface}"
+            BorderBrush="{DynamicResource Brush.BorderStrong}"
+            BorderThickness="1"
+            CornerRadius="7"
+            KeyboardNavigation.TabNavigation="Cycle">
+            <Border.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding ExecuteSelectedCommand}" />
+            </Border.InputBindings>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <DockPanel LastChildFill="True">
+                    <Button
+                        DockPanel.Dock="Right"
+                        Width="40"
+                        Height="40"
+                        MinWidth="40"
+                        Padding="0"
+                        AutomationProperties.Name="Close command palette"
+                        Command="{Binding CloseCommand}"
+                        ToolTip="Close palette">
+                        <TextBlock FontSize="18" Text="×" />
+                    </Button>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{DynamicResource Text.SectionTitle}"
+                        Text="What do you want to do?" />
+                </DockPanel>
+                <TextBox
+                    Grid.Row="1"
+                    Margin="0,12,0,8"
+                    VerticalAlignment="Top"
+                    AutomationProperties.Name="Search commands"
+                    accessibility:FocusOnLoadBehavior.IsEnabled="True"
+                    Style="{DynamicResource Control.ThemedTextBox}"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <ListBox
+                    Grid.Row="1"
+                    Margin="0,58,0,0"
+                    AutomationProperties.Name="Command results"
+                    ItemsSource="{Binding FilteredEntries}"
+                    SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                    ScrollViewer.CanContentScroll="False"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="4,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        Text="{Binding Label}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Description}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Margin="18,0,0,0"
+                                    Style="{DynamicResource Text.Meta}"
+                                    Text="{Binding Gesture}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel
+                    Grid.Row="2"
+                    Margin="0,8,0,0"
+                    Orientation="Horizontal">
+                    <Button
+                        MinWidth="110"
+                        Command="{Binding ExecuteSelectedCommand}"
+                        Content="Open" />
+                    <TextBlock
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="Enter opens · Esc closes" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type guidance:TeachingPromptViewModel}">
+        <Border
+            MaxWidth="420"
+            Padding="20"
+            HorizontalAlignment="Stretch"
+            Background="{DynamicResource Brush.OverlaySurface}"
+            BorderBrush="{DynamicResource Brush.BorderStrong}"
+            BorderThickness="1"
+            CornerRadius="12"
+            KeyboardNavigation.TabNavigation="Cycle">
+            <StackPanel>
+                <DockPanel LastChildFill="True">
+                    <Button
+                        DockPanel.Dock="Right"
+                        Width="40"
+                        Height="40"
+                        MinWidth="40"
+                        Padding="0"
+                        AutomationProperties.Name="Dismiss teaching prompt"
+                        Command="{Binding CloseCommand}"
+                        ToolTip="Dismiss tip">
+                        <TextBlock FontSize="18" Text="×" />
+                    </Button>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{DynamicResource Text.SectionTitle}"
+                        Text="{Binding Title}"
+                        TextWrapping="Wrap" />
+                </DockPanel>
+                <TextBlock
+                    Margin="0,10,0,0"
+                    Style="{DynamicResource Text.Body}"
+                    Text="{Binding Body}"
+                    TextWrapping="Wrap" />
+                <Button
+                    Margin="0,16,0,0"
+                    HorizontalAlignment="Left"
+                    MinWidth="120"
+                    Command="{Binding CloseCommand}"
+                    Content="Got it" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>

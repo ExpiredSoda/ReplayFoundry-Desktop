@@ -1,0 +1,49 @@
+Replay Foundry Grounded Editorial Rephrase Policy 1.9
+
+Purpose
+
+This policy retains policy 1.8's bounded text-only polish, typed language
+recovery, English audience-copy recovery, and strict factual validator boundary.
+It removes a contradictory terminal-title-period rejection after the canonical
+metadata validator has already removed exactly one sentence-style final period
+without changing any word.
+
+Mechanical title punctuation
+
+- The canonical metadata validator may remove exactly one final ASCII period
+  from titleBody before the deterministic game hashtag is appended.
+- No word, other punctuation, capitalization, tag, grounding binding,
+  temporalVoice value, or description text is changed by this operation.
+- The rephrase stage must use the canonical validator result. It must not reject
+  the same raw model completion merely because that attested completion carried
+  the one period already removed by canonical validation.
+- Question marks, exclamation marks, ellipses, internal punctuation, and every
+  non-punctuation semantic rule remain under the existing validators.
+
+Audience synthesis
+
+- The bounded rephraser summarizes the dominant gameplay beat instead of
+  inventorying people, props, or successive frames.
+- The title states the main supported action, turn, or visible result. The
+  description expands that same beat in natural chronology.
+- General game context may supply canonical game, installment, setting, or
+  protagonist vocabulary only when the primary visual evidence independently
+  supports the use. It never establishes this clip's event, level, chapter, or
+  location.
+- The rephraser preserves the source event and level of specificity; it cannot
+  make a generic clip sound artificially precise.
+
+Preserved bounds
+
+- One batch-one greedy XGrammar-constrained text-only correction, seed 0, beam
+  count 1, offloaded KV cache, and the 768-token ceiling remain.
+- No game-specific wording, video, perception, knowledge retrieval,
+  unconstrained fallback, semantic repair, extra retry, new fact, changed
+  citation, changed authority, or changed evidence scope is introduced.
+- Policies 1.0 through 1.8 remain readable under their original contracts.
+
+Attestation
+
+- Current output provenance retains the raw completed JSON hash and the
+  canonical validated metadata result, so the one-character normalization is
+  inspectable without turning harmless title punctuation into a failed run.

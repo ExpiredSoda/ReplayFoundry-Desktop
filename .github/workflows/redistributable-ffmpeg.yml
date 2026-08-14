@@ -1,0 +1,168 @@
+name: Redistributable FFmpeg
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: redistributable-ffmpeg
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: LGPL shared Windows build without OpenH264
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      BTBN_COMMIT: 8c736b2d6fe5da2a10a8896d01e53bfb0ca4f665
+      FFMPEG_COMMIT: 8c9502e9b048e21e1cae96477e338ac0635645ba
+    steps:
+      - name: Check out release engineering source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Reclaim runner disk
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /opt/ghc /usr/local/.ghcup /usr/local/lib/android
+          docker system prune --all --force
+          df -h
+
+      - name: Check out the pinned FFmpeg build system
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init ffmpeg-builds
+          git -C ffmpeg-builds remote add origin https://github.com/BtbN/FFmpeg-Builds.git
+          git -C ffmpeg-builds fetch --depth=1 origin "${BTBN_COMMIT}"
+          git -C ffmpeg-builds checkout --detach FETCH_HEAD
+          test "$(git -C ffmpeg-builds rev-parse HEAD)" = "${BTBN_COMMIT}"
+
+      - name: Exclude OpenH264 and pin the FFmpeg source commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          openh264 = Path("ffmpeg-builds/scripts.d/50-openh264.sh")
+          source = openh264.read_text(encoding="utf-8")
+          expected = "ffbuild_enabled() {\n    return 0\n}"
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned OpenH264 enable seam changed")
+          openh264.write_text(
+              source.replace(expected, "ffbuild_enabled() {\n    return 1\n}"),
+              encoding="utf-8",
+          )
+
+          build = Path("ffmpeg-builds/build.sh")
+          source = build.read_text(encoding="utf-8")
+          expected = "    cd ffmpeg\n\n    ./configure"
+          replacement = (
+              "    cd ffmpeg\n"
+              "    git checkout \"$FFMPEG_COMMIT\"\n"
+              "    test \"$(git rev-parse HEAD)\" = \"$FFMPEG_COMMIT\"\n\n"
+              "    ./configure"
+          )
+          if source.count(expected) != 1:
+              raise SystemExit("Pinned FFmpeg checkout seam changed")
+          build.write_text(source.replace(expected, replacement), encoding="utf-8")
+          PY
+          git -C ffmpeg-builds diff --check
+          git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh build.sh
+
+      - name: Build the pinned dependency image
+        working-directory: ffmpeg-builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./makeimage.sh win64 lgpl-shared 8.1 2>&1 | tee ../makeimage.log
+
+      - name: Build FFmpeg
+        working-directory: ffmpeg-builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./build.sh win64 lgpl-shared 8.1 2>&1 | tee ../ffmpeg-build.log
+
+      - name: Verify the redistributable codec boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -- '--disable-libopenh264' ffmpeg-build.log
+          if grep -E -- '--enable-(libopenh264|gpl|nonfree)' ffmpeg-build.log; then
+            echo 'A forbidden OpenH264, GPL, or nonfree option remained enabled.' >&2
+            exit 1
+          fi
+          binary="$(find ffmpeg-builds/artifacts -maxdepth 1 -type f -name '*win64-lgpl-shared-8.1.zip' -print -quit)"
+          test -n "${binary}"
+          mkdir verified-binary
+          unzip -q "${binary}" -d verified-binary
+          if grep -a -i -l 'libopenh264' verified-binary/*/bin/*.exe verified-binary/*/bin/avcodec-*.dll; then
+            echo 'OpenH264 identity remained in the produced executable payload.' >&2
+            exit 1
+          fi
+          if ! grep -a -q 'h264_mf' verified-binary/*/bin/avcodec-*.dll; then
+            echo 'The Windows Media Foundation H.264 encoder is missing.' >&2
+            exit 1
+          fi
+          test -f verified-binary/*/bin/ffmpeg.exe
+          test -f verified-binary/*/bin/ffprobe.exe
+          test -f verified-binary/*/LICENSE.txt
+          sha256sum "${binary}" | tee ffmpeg-binary.sha256
+          printf '%s\n' "${binary}" > ffmpeg-binary.path
+
+      - name: Assemble corresponding source and build evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_root="corresponding-source"
+          mkdir -p "${source_root}/archives" "${source_root}/evidence"
+
+          git -C ffmpeg-builds archive --format=tar.xz --prefix=FFmpeg-Builds/ HEAD \
+            > "${source_root}/archives/FFmpeg-Builds-${BTBN_COMMIT}.tar.xz"
+          curl --fail --location --retry 3 \
+            "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/${FFMPEG_COMMIT}" \
+            --output "${source_root}/archives/FFmpeg-${FFMPEG_COMMIT}.tar.gz"
+          cp -a ffmpeg-builds/.cache/downloads "${source_root}/dependency-sources"
+          cp makeimage.log ffmpeg-build.log ffmpeg-binary.sha256 \
+            "${source_root}/evidence/"
+          git -C ffmpeg-builds diff --binary -- scripts.d/50-openh264.sh build.sh \
+            > "${source_root}/evidence/replayfoundry-build-changes.diff"
+          printf '%s\n' \
+            'ReplayFoundry redistributable FFmpeg source bundle' \
+            "FFmpeg commit: ${FFMPEG_COMMIT}" \
+            "FFmpeg-Builds commit: ${BTBN_COMMIT}" \
+            'Target: win64 lgpl-shared 8.1' \
+            'OpenH264: excluded from the dependency image and disabled in FFmpeg' \
+            'The dependency-sources directory is the exact source cache consumed by the pinned build system.' \
+            > "${source_root}/README.txt"
+          find "${source_root}" -type f -print0 | sort -z | xargs -0 sha256sum \
+            > "${source_root}/SHA256SUMS"
+          tar --zstd -cf replayfoundry-ffmpeg-corresponding-source.tar.zst "${source_root}"
+          sha256sum replayfoundry-ffmpeg-corresponding-source.tar.zst \
+            > replayfoundry-ffmpeg-corresponding-source.tar.zst.sha256
+
+      - name: Upload FFmpeg binary candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: replayfoundry-ffmpeg-win64-lgpl-shared
+          path: |
+            ffmpeg-builds/artifacts/*.zip
+            ffmpeg-binary.sha256
+            ffmpeg-build.log
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload corresponding source candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: replayfoundry-ffmpeg-corresponding-source
+          path: |
+            replayfoundry-ffmpeg-corresponding-source.tar.zst
+            replayfoundry-ffmpeg-corresponding-source.tar.zst.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

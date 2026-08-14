@@ -1,0 +1,97 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style x:Key="Control.PopupSurface" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Effect"><Setter.Value><DropShadowEffect BlurRadius="18" Opacity="0.36" ShadowDepth="4" Color="{DynamicResource Color.DockShadow}" /></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="{x:Type ToolTip}">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="{DynamicResource Space8}" />
+        <Setter Property="HasDropShadow" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToolTip}">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="7"
+                        Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type ContextMenu}">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ContextMenu}">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="8"
+                        Padding="{TemplateBinding Padding}">
+                        <ScrollViewer MaxHeight="420" CanContentScroll="True">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type Menu}">
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfacePanel}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="{x:Type Menu}"><Border Background="{TemplateBinding Background}" Padding="4"><ItemsPresenter /></Border></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="{x:Type MenuItem}" BasedOn="{StaticResource Control.KeyboardFocus}">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="{DynamicResource Space8}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type MenuItem}">
+                    <Border x:Name="MenuItemSurface" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <Grid MinWidth="180">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="22" /><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /></Grid.ColumnDefinitions>
+                            <Path x:Name="CheckGlyph" Width="12" Height="12" Data="{DynamicResource Icon.Check}" Stroke="{DynamicResource Brush.StatusInfo}" StrokeThickness="1.4" Visibility="Collapsed" />
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" />
+                            <Path x:Name="SubmenuGlyph" Grid.Column="2" Width="12" Height="12" Data="{DynamicResource Icon.ChevronRight}" Stroke="{DynamicResource Brush.TextSecondary}" StrokeThickness="1.3" Visibility="Collapsed" />
+                            <Popup
+                                x:Name="PART_Popup"
+                                AllowsTransparency="True"
+                                IsOpen="{TemplateBinding IsSubmenuOpen}"
+                                Placement="Right"
+                                PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                PopupAnimation="Fade"
+                                StaysOpen="True">
+                                <Border Style="{StaticResource Control.PopupSurface}">
+                                    <ItemsPresenter />
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="MenuItemSurface" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" /></Trigger>
+                        <Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" /></Trigger>
+                        <Trigger Property="HasItems" Value="True"><Setter TargetName="SubmenuGlyph" Property="Visibility" Value="Visible" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="MenuItemSurface" Property="Opacity" Value="0.48" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

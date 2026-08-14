@@ -1,0 +1,120 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Publish.Sections.PublishQueueHistoryView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0.8*" />
+            <ColumnDefinition Width="1.2*" />
+        </Grid.ColumnDefinitions>
+        <Border Margin="0,0,6,0" Style="{DynamicResource Control.SectionCard}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="UPLOAD QUEUE" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{DynamicResource Text.Meta}"
+                            Text="One upload runs at a time so progress and cancellation stay clear." />
+                    </StackPanel>
+                    <controls:StatusBadge
+                        Grid.Column="1"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Text="{Binding StatusText}" />
+                </Grid>
+                <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding QueueItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{DynamicResource Control.InsetCard}">
+                                <StackPanel>
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource Brush.TextPrimary}"
+                                        Text="{Binding Title}" />
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Detail}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        Foreground="{DynamicResource Brush.StatusInfo}"
+                                        Text="{Binding Status}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <controls:EmptyState
+                    Margin="0,14,0,0"
+                    Description="Saved drafts remain local until you choose an upload action."
+                    IconKey="Icon.Queue"
+                    Title="No upload in progress"
+                    Visibility="{Binding HasQueueItems, Converter={StaticResource InverseBoolToVisibility}}" />
+            </StackPanel>
+        </Border>
+        <Border Grid.Column="1" Margin="6,0,0,0" Style="{DynamicResource Control.SectionCard}">
+            <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YOUTUBE HISTORY" />
+                        <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Stored only on this PC." />
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <Button
+                            Margin="0,0,8,0"
+                            Command="{Binding ReconcileYouTubeHistoryCommand}"
+                            Content="Check YouTube status"
+                            Style="{DynamicResource Control.WorkspaceButton}" />
+                        <Button
+                            Command="{Binding ClearHistoryCommand}"
+                            Content="Clear local history"
+                            Style="{DynamicResource Control.DestructiveButton}" />
+                    </StackPanel>
+                </Grid>
+                <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding HistoryItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,7" Style="{DynamicResource Control.InsetCard}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource Brush.TextPrimary}"
+                                            Text="{Binding Title}" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            Style="{DynamicResource Text.Meta}"
+                                            Text="{Binding Detail}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Margin="12,0,0,0"
+                                        Foreground="{DynamicResource Brush.StatusInfo}"
+                                        Text="{Binding Status}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <controls:EmptyState
+                    Margin="0,14,0,0"
+                    Description="Completed, scheduled, failed, and cancelled uploads appear here."
+                    IconKey="Icon.History"
+                    Title="No YouTube history yet"
+                    Visibility="{Binding HasHistoryItems, Converter={StaticResource InverseBoolToVisibility}}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

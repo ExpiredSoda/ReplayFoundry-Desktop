@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="ReplayFoundry.Desktop/ReplayFoundry.Desktop.csproj" />
+  <Project Path="ReplayFoundry.InspectionTests/ReplayFoundry.InspectionTests.csproj" />
+  <Project Path="ReplayFoundry.CompositionTests/ReplayFoundry.CompositionTests.csproj" />
+  <Project Path="ReplayFoundry.PreparationTests/ReplayFoundry.PreparationTests.csproj" />
+  <Project Path="ReplayFoundry.RuntimePacks/ReplayFoundry.RuntimePacks.csproj" />
+  <Project Path="ReplayFoundry.RuntimeInstaller/ReplayFoundry.RuntimeInstaller.csproj" />
+  <Project Path="ReplayFoundry.RuntimePacks.Tests/ReplayFoundry.RuntimePacks.Tests.csproj" />
+</Solution>

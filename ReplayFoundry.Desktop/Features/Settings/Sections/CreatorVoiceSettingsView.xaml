@@ -1,0 +1,89 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Settings.CreatorVoiceSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Style="{DynamicResource Control.CanvasPane}">
+        <StackPanel>
+            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="CREATOR VOICE" />
+            <TextBlock
+                Margin="0,6,0,0"
+                Style="{DynamicResource Text.Body}"
+                Text="Set the reusable wording that Generate, Studio rerolls, and Publish use when creating titles and descriptions."
+                TextWrapping="Wrap" />
+            <Border
+                Margin="0,12,0,0"
+                Padding="10"
+                Style="{DynamicResource Control.CanvasInsetCard}">
+                <TextBlock
+                    Style="{DynamicResource Text.Meta}"
+                    Text="Session only: these choices remain local and reset when Replay Foundry closes. Existing clip copy is unchanged until you explicitly reroll it."
+                    TextWrapping="Wrap" />
+            </Border>
+
+            <TextBlock Margin="0,14,0,0" Style="{DynamicResource Text.FormLabel}" Text="Audience name" />
+            <TextBox
+                Margin="0,4,0,0"
+                AutomationProperties.Name="Default creator audience name"
+                IsEnabled="{Binding CreatorVoice.IsAvailable}"
+                MaxLength="40"
+                Style="{DynamicResource Control.FormTextBox}"
+                Text="{Binding CreatorVoice.AudienceAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock
+                Margin="0,4,0,0"
+                Style="{DynamicResource Text.Meta}"
+                Text="Used only when a grounded draft naturally addresses viewers. It is not inserted into every title."
+                TextWrapping="Wrap" />
+
+            <TextBlock Margin="0,12,0,0" Style="{DynamicResource Text.FormLabel}" Text="Naming guidance" />
+            <TextBox
+                MinHeight="76"
+                Margin="0,4,0,0"
+                AcceptsReturn="True"
+                AutomationProperties.Name="Default creator naming guidance"
+                IsEnabled="{Binding CreatorVoice.IsAvailable}"
+                MaxLength="300"
+                Style="{DynamicResource Control.FormTextBox}"
+                Text="{Binding CreatorVoice.NamingGuidance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                TextWrapping="Wrap" />
+            <TextBlock
+                Margin="0,4,0,0"
+                Style="{DynamicResource Text.Meta}"
+                Text="Describe tone and formatting preferences, not facts about a particular game or clip."
+                TextWrapping="Wrap" />
+
+            <TextBlock Margin="0,12,0,0" Style="{DynamicResource Text.FormLabel}" Text="Description signature" />
+            <TextBox
+                MinHeight="76"
+                Margin="0,4,0,0"
+                AcceptsReturn="True"
+                AutomationProperties.Name="Default reusable description signature"
+                IsEnabled="{Binding CreatorVoice.IsAvailable}"
+                MaxLength="1500"
+                Style="{DynamicResource Control.FormTextBox}"
+                Text="{Binding CreatorVoice.DescriptionSignature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                TextWrapping="Wrap" />
+
+            <TextBlock Margin="0,12,0,0" Style="{DynamicResource Text.FormLabel}" Text="Default tags" />
+            <TextBox
+                Margin="0,4,0,0"
+                AutomationProperties.HelpText="Separate tags with commas. Hash symbols are optional."
+                AutomationProperties.Name="Default creator tags"
+                IsEnabled="{Binding CreatorVoice.IsAvailable}"
+                Style="{DynamicResource Control.FormTextBox}"
+                Text="{Binding CreatorVoice.DefaultTags, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <TextBlock
+                Margin="0,12,0,0"
+                Foreground="{DynamicResource Brush.TextSecondary}"
+                Text="{Binding CreatorVoice.Status}"
+                TextWrapping="Wrap" />
+            <Button
+                Margin="0,10,0,0"
+                HorizontalAlignment="Left"
+                AutomationProperties.Name="Save creator voice defaults"
+                Command="{Binding CreatorVoice.SaveCommand}"
+                Content="Save creator voice"
+                Style="{DynamicResource Control.PrimaryButton}" />
+        </StackPanel>
+    </Border>
+</UserControl>

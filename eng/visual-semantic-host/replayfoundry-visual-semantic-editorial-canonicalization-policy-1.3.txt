@@ -1,0 +1,28 @@
+ReplayFoundry Visual Semantic Editorial Canonicalization Policy 1.3
+
+The model emits the frozen visual-semantic-editorial-wire-1.1 record. The
+host expands only its declared codes and fixed positions into the existing
+visual-semantic-editorial-observation-2.0 contract.
+
+Allowed wire expansion:
+- Expand content, ternary, transcript, and basis codes through fixed
+  one-to-one tables.
+- Convert each [id, atSeconds, basis] evidence row into one zero-duration
+  canonical evidence interval and one observed-change reference.
+- Supply neutral fixed descriptions for evidence basis.
+- Apply the frozen editorial truth-table priority to the five model-selected
+  observation flags to derive disposition and reason.
+- Supply one fixed typed uncertainty only when the selected flags do not
+  establish either Keep or a typed Reject.
+- Record wireRepresentationVersion and one schema-shape canonicalization.
+
+Disposition derivation is a deterministic product policy, not model-output
+repair. The host never changes a model-selected flag, timestamp, evidence
+basis, or content code. The strict canonical truth table validates the
+expanded result. Contradictions reject; they are never repaired.
+
+Historical rich observation JSON remains accepted for retained-artifact
+compatibility. Existing ordering, exact-deduplication, numeric preservation,
+and optional outer-JSON-whitespace rules continue unchanged. Semantic repair,
+wrapper removal, approximate field matching, text completion, and fallback to
+unconstrained generation remain prohibited.

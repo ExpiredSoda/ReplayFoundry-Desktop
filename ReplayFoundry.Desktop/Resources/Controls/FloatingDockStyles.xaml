@@ -1,0 +1,118 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:dock="clr-namespace:ReplayFoundry.Desktop.Shell.Dock"
+    xmlns:system="clr-namespace:System.Windows;assembly=PresentationFramework">
+
+    <Style x:Key="Control.DockKeyboardFocus" TargetType="{x:Type Control}">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border
+                        Margin="2"
+                        BorderBrush="{DynamicResource Brush.DockFocus}"
+                        BorderThickness="2"
+                        CornerRadius="7"
+                        SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Control.DockIconTile" TargetType="{x:Type Border}">
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="CornerRadius" Value="5" />
+    </Style>
+
+    <Style x:Key="Control.DockButton" TargetType="{x:Type Button}">
+        <Setter Property="Height" Value="70" />
+        <Setter Property="Margin" Value="2,0" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Control.DockKeyboardFocus}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid ClipToBounds="True">
+                        <Border
+                            x:Name="ActiveSurface"
+                            Margin="5,2"
+                            Background="{DynamicResource Brush.KineticGlowSoft}"
+                            BorderBrush="{DynamicResource Brush.StatusInfo}"
+                            BorderThickness="1"
+                            CornerRadius="9"
+                            IsHitTestVisible="False"
+                            Opacity="0" />
+                        <Border
+                            x:Name="ButtonSurface"
+                            Margin="5,2"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="7">
+                            <Border.RenderTransform>
+                                <TranslateTransform Y="0" />
+                            </Border.RenderTransform>
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <Ellipse
+                            x:Name="IconHalo"
+                            Width="42"
+                            Height="42"
+                            Margin="0,3,0,0"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            Fill="{DynamicResource Brush.KineticGlow}"
+                            IsHitTestVisible="False"
+                            Opacity="0">
+                            <Ellipse.Effect>
+                                <BlurEffect Radius="10" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ButtonSurface" Property="Background" Value="{DynamicResource Brush.DockButtonHover}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Brush.BrandPaper}" />
+                        </Trigger>
+                        <Trigger Property="dock:FloatingDock.IsActive" Value="True">
+                            <Setter TargetName="ButtonSurface" Property="Background" Value="Transparent" />
+                            <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="Transparent" />
+                            <Setter TargetName="ActiveSurface" Property="Opacity" Value="0.72" />
+                            <Setter TargetName="IconHalo" Property="Opacity" Value="0.24" />
+                            <Setter Property="Foreground" Value="{DynamicResource Brush.BrandCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ButtonSurface" Property="Background" Value="{DynamicResource Brush.InteractivePressed}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}" Value="True" />
+                                <Condition Binding="{Binding Source={x:Static system:SystemParameters.ClientAreaAnimation}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="ButtonSurface" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-2" />
+                                </Setter.Value>
+                            </Setter>
+                        </MultiDataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

@@ -1,0 +1,51 @@
+Replay Foundry Grounded Editorial Rephrase Policy 1.7
+
+Purpose
+
+This policy retains policy 1.6's bounded text-only polish, typed language
+recovery, literal-action recovery, retrospective grammar recovery, and direct
+source-versus-correction failure comparison. It removes a false conflict
+between creator authority and natural neutral descriptions of another or
+unidentified visible person.
+
+Neutral person recovery
+
+- Tags are descriptive metadata, not grammatical narration. First-person
+  pronoun matching for creator embodiment inspects titleBody and description
+  only; a retained tag such as The Last of Us cannot authorize or falsely
+  trigger creator embodiment.
+- Unknown or OtherPerson actor authority without CreatorActed relation permits
+  a neutral human subject such as "a person" when the typed primary visual
+  literally supports that visible subject and action.
+- Neutral permission does not permit the audience-role labels player,
+  character, streamer, creator, or camera wearer, does not invent I or we, and
+  does not transfer another person's body, weapon, dialogue, emotion, or action
+  into the creator's experience.
+- Every accepted action remains grammatically retrospective. Simple-present,
+  command, infinitive, and gerund action openings remain invalid.
+
+Rejected-copy recovery
+
+- ThirdPersonCreatorFraming and UnsupportedCreatorEmbodiment corrections use
+  the neutral-person rule only when the typed authority qualifies. Otherwise
+  policy 1.6's creator-controlled and creator-experience rules remain exact.
+- One batch-one greedy XGrammar-constrained text-only pass may rewrite only
+  titleBody and description. Tags, grounding binding IDs, and temporalVoice
+  remain equivalent as parsed JSON values.
+- The candidate must pass every strict grounding, actor, audience,
+  action-strength, language, and diversity validator. Any further semantic or
+  technical failure remains terminal.
+
+Preserved bounds
+
+- No video, perception, knowledge retrieval, unconstrained fallback, string
+  substitution, deterministic semantic repair, extra retry, new fact, changed
+  citation, changed tag, changed creator authority, or changed evidence scope.
+- Seed 0, beam count 1, offloaded KV cache, and the 768-token ceiling remain.
+
+Attestation
+
+- Current output provenance retains the source canonical JSON hash, policy
+  identity, rejection code, outcome, output hash, and exact message, prompt,
+  input-token, and output witnesses.
+- Policies 1.0 through 1.6 remain readable under their original contracts.

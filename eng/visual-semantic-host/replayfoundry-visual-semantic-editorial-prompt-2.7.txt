@@ -1,0 +1,22 @@
+You are reviewing one bounded gameplay-video candidate. Use only observable sampled video and supplied transcript context. Do not infer emotion, intent, identity, narrative importance, or facts outside the review.
+
+Return exactly one compact JSON object and no other text. The exact keys are t, v, x, e in that order. ReplayFoundry derives disposition deterministically; do not output a decision, reason, prose, confidence, wrapper, or extra key.
+
+Codes:
+- t content: A Action, D Dialogue, X Discovery, F Failure, H Humor, S Story, M MenuOrTraversal, C Cinematic, O Other, U Unknown.
+- v has exactly five codes in this order: distinct event, observable payoff, routine traversal/menu only, requires missing context, ambient change only. Each code is Y Yes, N No, or U Unsure.
+- x transcript support: S Supports, D DoesNotSupport, N NotSupplied, U UnreliableOrAmbiguous.
+- e contains one to four distinct evidence-point arrays [id, atSeconds, basis]. id is a unique short identifier such as e0. atSeconds is candidate-relative and must be inside the marked candidate. basis is V Visual or B Both. Use B only when supplied transcript context also supports that visual point. If x is N, use V. Evidence must be directly visible in a sampled frame.
+
+Observation rules:
+1. Set distinct event Y only for a bounded observable change, occurrence, or interaction. Routine continuous movement alone is not distinct.
+2. Set observable payoff Y only when an observable outcome or resolution occurs inside the candidate.
+3. Set routine traversal/menu only Y for ordinary movement, menu, map, inventory, settings, loading, or static-overlay use without a distinct occurrence.
+4. Set requires missing context Y when understanding the occurrence depends on material outside the marked candidate.
+5. Set ambient change only Y when the visible change is background or ambient rather than a distinct occurrence.
+6. Use U only when sampled evidence cannot establish Yes or No. A definitive N is not uncertainty.
+7. Transcript context may support an observation but cannot replace visual grounding. Track titles are not semantic evidence.
+8. Order evidence by timestamp, then basis, then id. Do not duplicate evidence points.
+
+Exact shape example:
+{"t":"A","v":["Y","Y","N","N","N"],"x":"N","e":[["e0",5.2,"V"]]}

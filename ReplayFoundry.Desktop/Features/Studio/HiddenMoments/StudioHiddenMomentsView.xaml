@@ -1,0 +1,236 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Studio.HiddenMoments.StudioHiddenMomentsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:preview="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Preview"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    Focusable="True">
+    <UserControl.InputBindings>
+        <KeyBinding Key="Y" Command="{Binding AcceptCommand}" />
+        <KeyBinding Key="N" Command="{Binding SkipCommand}" />
+        <KeyBinding Key="A" Command="{Binding AcceptCommand}" />
+        <KeyBinding Key="X" Command="{Binding SkipCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding CloseCommand}" />
+    </UserControl.InputBindings>
+    <Grid
+        AutomationProperties.Name="Hidden Moments review"
+        Background="{DynamicResource Brush.ModalScrim}">
+        <Border
+            Width="1180"
+            MaxWidth="1180"
+            MaxHeight="800"
+            Margin="28"
+            Padding="18"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Background="{DynamicResource Brush.SurfacePanel}"
+            BorderBrush="{DynamicResource Brush.StatusInfo}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Margin="2,0,2,14">
+                    <StackPanel>
+                        <TextBlock
+                            Style="{DynamicResource Text.WorkspaceEyebrow}"
+                            Text="HIDDEN MOMENTS / SECOND LOOK" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="20"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource Brush.TextPrimary}"
+                            Text="Review moments that almost made the cut" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{DynamicResource Text.Meta}"
+                            Text="Add a promising alternate to Studio, or skip it for this project. These choices do not change your Like, Neutral, or Dislike preference."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Right">
+                        <TextBlock
+                            HorizontalAlignment="Right"
+                            FontFamily="Consolas"
+                            Foreground="{DynamicResource Brush.StatusInfo}"
+                            Text="{Binding ProgressText}" />
+                        <Button
+                            Margin="0,8,0,0"
+                            AutomationProperties.Name="Close Hidden Moments"
+                            Command="{Binding CloseCommand}"
+                            Content="Close"
+                            Style="{DynamicResource Control.WorkspaceButton}" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="1">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsExhausted}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="360" />
+                    </Grid.ColumnDefinitions>
+                    <preview:StudioPreviewView DataContext="{Binding Preview}" />
+                    <Border
+                        Grid.Column="1"
+                        Margin="14,0,0,0"
+                        Padding="18"
+                        Background="{DynamicResource Brush.SurfaceInset}"
+                        BorderBrush="{DynamicResource Brush.BorderSubtle}"
+                        BorderThickness="1"
+                        CornerRadius="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <StackPanel>
+                                <TextBlock
+                                    Style="{DynamicResource Text.SectionTitle}"
+                                    Text="{Binding MomentTitle}"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    Margin="0,8,0,0"
+                                    Style="{DynamicResource Text.Body}"
+                                    Text="{Binding MomentDetail}"
+                                    TextWrapping="Wrap" />
+                                <Border
+                                    Margin="0,14,0,0"
+                                    Padding="12"
+                                    Background="{DynamicResource Brush.SurfaceElevated}"
+                                    CornerRadius="8">
+                                    <StackPanel>
+                                        <TextBlock
+                                            FontSize="10"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource Brush.StatusInfo}"
+                                            Text="WHY YOU MIGHT WANT IT" />
+                                        <TextBlock
+                                            Margin="0,6,0,0"
+                                            Style="{DynamicResource Text.Meta}"
+                                            Text="{Binding EvidenceText}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock
+                                    Margin="0,10,0,0"
+                                    Foreground="{DynamicResource Brush.StatusInfo}"
+                                    Style="{DynamicResource Text.Meta}"
+                                    Text="Adding this moment to Studio…"
+                                    TextWrapping="Wrap"
+                                    Visibility="{Binding IsPreparingAcceptedMoment, Converter={StaticResource BoolToVisibility}}" />
+                                <ProgressBar
+                                    Height="5"
+                                    Margin="0,8,0,0"
+                                    IsIndeterminate="True"
+                                    Visibility="{Binding IsPreparingAcceptedMoment, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock
+                                    Margin="0,10,0,0"
+                                    Foreground="{DynamicResource Brush.StatusError}"
+                                    Style="{DynamicResource Text.Meta}"
+                                    Text="{Binding Error}"
+                                    TextWrapping="Wrap"
+                                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                            <Grid Grid.Row="2" Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    Margin="0,0,6,0"
+                                    MinHeight="48"
+                                    AutomationProperties.Name="Skip hidden moment"
+                                    AutomationProperties.HelpText="Skips this moment without recording a Dislike."
+                                    Command="{Binding SkipCommand}"
+                                    Style="{DynamicResource Control.WorkspaceButton}"
+                                    ToolTip="Skip this moment (X or N)">
+                                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                                        <controls:IconPath
+                                            Width="17"
+                                            Height="17"
+                                            Margin="0,0,7,0"
+                                            IconKey="Icon.Close"
+                                            Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                            StrokeThickness="1.5"
+                                            Stretch="Uniform" />
+                                        <TextBlock VerticalAlignment="Center" Text="Skip" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Grid.Column="1"
+                                    Margin="6,0,0,0"
+                                    MinHeight="48"
+                                    AutomationProperties.Name="Add hidden moment to Studio"
+                                    AutomationProperties.HelpText="Adds this moment to the current Studio project without recording a Like."
+                                    Command="{Binding AcceptCommand}"
+                                    Style="{DynamicResource Control.PrimaryButton}"
+                                    ToolTip="Add this moment to Studio (A or Y)">
+                                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                                        <controls:IconPath
+                                            Width="18"
+                                            Height="18"
+                                            Margin="0,0,7,0"
+                                            IconKey="Icon.Heart"
+                                            Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                            StrokeThickness="1.3"
+                                            Stretch="Uniform" />
+                                        <TextBlock VerticalAlignment="Center" Text="Add to Studio" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Border
+                    Grid.Row="1"
+                    MaxWidth="620"
+                    Padding="28"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource Brush.SurfaceInset}"
+                    BorderBrush="{DynamicResource Brush.BorderSubtle}"
+                    BorderThickness="1"
+                    CornerRadius="7"
+                    Visibility="{Binding IsExhausted, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            Style="{DynamicResource Text.SectionTitle}"
+                            Text="{Binding MomentTitle}"
+                            TextAlignment="Center" />
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            Style="{DynamicResource Text.Body}"
+                            Text="{Binding MomentDetail}"
+                            TextAlignment="Center"
+                            TextWrapping="Wrap" />
+                        <Button
+                            Margin="0,18,0,0"
+                            HorizontalAlignment="Center"
+                            Command="{Binding CloseCommand}"
+                            Content="Return to Studio"
+                            Style="{DynamicResource Control.PrimaryButton}" />
+                        <Button
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Center"
+                            Command="{Binding ReviewSkippedAgainCommand}"
+                            Content="Review skipped moments again"
+                            Style="{DynamicResource Control.WorkspaceButton}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

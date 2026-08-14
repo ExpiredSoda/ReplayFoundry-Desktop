@@ -1,0 +1,153 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Library.LibraryView"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:design="clr-namespace:ReplayFoundry.Desktop.Features.Library.DesignTime"
+    xmlns:categories="clr-namespace:ReplayFoundry.Desktop.Features.Library.Sections"
+    xmlns:filters="clr-namespace:ReplayFoundry.Desktop.Features.Library.Sections"
+    xmlns:content="clr-namespace:ReplayFoundry.Desktop.Features.Library.Sections"
+    xmlns:details="clr-namespace:ReplayFoundry.Desktop.Features.Library.Sections"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DataContext="{d:DesignInstance Type=design:LibraryDesignViewModel, IsDesignTimeCreatable=True}"
+    Background="Transparent"
+    mc:Ignorable="d">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="MinHeight" Value="420" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShouldShowPlaceholder}" Value="True">
+                                <Setter Property="MinHeight" Value="350" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid
+                    x:Name="WideLayout"
+                    MaxWidth="1600"
+                    HorizontalAlignment="Stretch">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                <DataTrigger Binding="{Binding IsStandardLayout, ElementName=Root}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                <DataTrigger Binding="{Binding ShouldShowPlaceholder}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="210" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="300" />
+                    </Grid.ColumnDefinitions>
+                    <categories:LibraryCategoryRailView Grid.Column="0" Margin="0,0,12,0" />
+                    <Grid Grid.Column="1" Margin="0,0,12,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <filters:LibraryFilterBarView />
+                        <content:LibraryContentView Grid.Row="1" Margin="0,12,0,0" />
+                    </Grid>
+                    <details:LibraryDetailsView Grid.Column="2" />
+                </Grid>
+
+                <Grid
+                    x:Name="StandardLayout"
+                    MaxWidth="1600"
+                    HorizontalAlignment="Stretch">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsStandardLayout, ElementName=Root}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                                <DataTrigger Binding="{Binding ShouldShowPlaceholder}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="190" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="280" />
+                    </Grid.ColumnDefinitions>
+                    <categories:LibraryCategoryRailView Grid.Column="0" Margin="0,0,12,0" />
+                    <Grid Grid.Column="1" Margin="0,0,12,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <filters:LibraryFilterBarView />
+                        <content:LibraryContentView Grid.Row="1" Margin="0,12,0,0" />
+                    </Grid>
+                    <details:LibraryDetailsView Grid.Column="2" />
+                </Grid>
+
+                <ScrollViewer
+                    x:Name="CompactLayout"
+                    MaxWidth="1600"
+                    HorizontalAlignment="Stretch"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCompactLayout, ElementName=Root}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                                <DataTrigger Binding="{Binding ShouldShowPlaceholder}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
+                    <StackPanel>
+                        <categories:LibraryCategoryRailView />
+                        <filters:LibraryFilterBarView Margin="0,12,0,0" />
+                        <content:LibraryContentView Margin="0,12,0,0" />
+                        <details:LibraryDetailsView Margin="0,12,0,0" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border
+                    MaxWidth="1600"
+                    MinHeight="350"
+                    Padding="24"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Background="{DynamicResource Brush.SurfacePanel}"
+                    BorderBrush="{DynamicResource Brush.BorderSubtle}"
+                    BorderThickness="1"
+                    CornerRadius="7"
+                    Visibility="{Binding ShouldShowPlaceholder, Converter={StaticResource BoolToVisibility}}">
+                    <controls:IssuePanel
+                        Width="720"
+                        MaxWidth="720"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Library content status"
+                        IconKey="Icon.Project"
+                        Reference="RF-LIB-001"
+                        StageOne="Generate a source"
+                        StageTwo="Create a clip"
+                        StageThree="Organize and find"
+                        Summary="Library has no finished Studio output yet."
+                        Suggestion="Generate candidates, choose and edit them in Studio, then render the finished files to Library."
+                        Details="The durable local catalog is connected. Only completed Studio renders are added; excluded candidates remain in Studio feedback history." />
+                </Border>
+
+                <controls:UnavailableBanner
+                    Margin="12"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Title="Library content is unavailable"
+                    Description="Replay Foundry could not read the local catalog. Existing media files were not changed."
+                    Visibility="{Binding IsUnavailable, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+    </Grid>
+</UserControl>

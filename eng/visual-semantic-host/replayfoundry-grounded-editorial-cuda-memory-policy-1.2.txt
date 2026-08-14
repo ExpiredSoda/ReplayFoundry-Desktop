@@ -1,0 +1,78 @@
+ReplayFoundry Grounded Editorial CUDA Memory Policy 1.2
+
+Purpose
+
+This policy keeps grounded Qwen editorial metadata from consuming the full
+local CUDA device through PyTorch's native caching allocator and removes the
+qualified vision encoder's persistent weights from the constrained CUDA
+allocation between vision forwards. It changes no model weight, precision,
+prompt, video sampling, decoding, grounding, or semantic validation rule.
+
+Fixed configuration
+
+- Scope: grounded editorial metadata only.
+- CUDA device: 0.
+- Allocator: PyTorch native CUDA caching allocator.
+- Reserved allocator headroom: 3,221,225,472 bytes (3 GiB).
+- Allocator limit: reported free device memory at admission minus the fixed
+  headroom, expressed to PyTorch as a fraction of total device memory.
+- Startup free-memory gate: the computed allocator limit must remain greater
+  than the retained qualification peak before model loading begins.
+- Pre-generation gate: after releasing only unoccupied PyTorch cache blocks,
+  current reported free device memory must remain at least the fixed 3 GiB
+  headroom before each grounded model generation begins.
+- KV cache implementation: Transformers offloaded DynamicCache.
+- Model precision: every floating-point model parameter remains BF16.
+- Language-model placement: CUDA device 0.
+- Vision-encoder backing store: CPU, through one explicit Accelerate device
+  map and its hook-owned weights map.
+- Vision-encoder execution: CUDA device 0 only while the vision forward is
+  active; parameters return to dormant meta tensors afterward.
+- Other CPU model offload: prohibited.
+- Disk model offload: prohibited.
+- Quantization: prohibited.
+- Automatic cap relaxation or fallback: prohibited.
+
+Placement rationale
+
+The pinned Qwen model contains 830,695,424 bytes of BF16 vision parameters.
+Accelerate retains their authoritative values in CPU memory, parks the module
+parameters on the meta device between calls, materializes them on CUDA 0 for
+the bounded vision forward, then returns them to meta. This removes the vision
+weights from persistent CUDA residency during text synthesis without claiming
+that vision execution or its transient activations occur on CPU. The host
+requires the exact device map, a CUDA-0 offload hook and CPU BF16 backing value
+for every dormant visual parameter, CUDA-0 language parameters and buffers,
+and fails before inference if any part of that contract changes.
+
+Qualification reference
+
+The retained `real-qwen-metadata-v1.6.json` artifact uses schema
+`replayfoundry-editorial-metadata-real-quality-1.0`, has SHA-256
+`0EC7F4BE4DD3664091D6808176B2FEA36B7FE016B277422DACA00C4C9D28EC70`, and
+measured 11,705,485,312 peak PyTorch-allocated GPU bytes under the older,
+more demanding all-CUDA placement. That peak remains the conservative
+minimum allocator admission threshold; this policy does not use the offload
+placement as permission to shrink or relax the established CUDA cap.
+
+Limitations
+
+The fixed headroom is a limit on allocations managed by PyTorch's CUDA caching
+allocator. It does not include every CUDA-driver, library, Windows WDDM, or
+other-process allocation and therefore does not guarantee that 3 GiB remains
+globally free. The startup and pre-generation gates are contention guards, not
+reservations from other processes. If a fixed allocator or admission gate
+cannot be met, the command fails closed; it does not weaken the policy,
+quantize the model, or move additional language-model modules to CPU.
+
+Audit
+
+Every grounded metadata execution records the policy version and hash, cache
+implementation, reported total, startup-free, and externally occupied device
+bytes, required startup-free bytes, fixed allocator headroom, computed
+allocator limit, minimum viable limit, configured and observed allocator
+fractions, the retained qualification peak, pre-generation admission count
+and minimum/current free-memory observations, peak allocated and reserved
+bytes, end allocated/reserved/free bytes, runtime outcome and failure reason,
+and explicit policy flags for the required vision-only CPU backing store,
+quantization, global-free-memory guarantee, and fallback.

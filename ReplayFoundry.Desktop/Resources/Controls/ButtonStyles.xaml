@@ -1,0 +1,210 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:system="clr-namespace:System.Windows;assembly=PresentationFramework">
+    <Style x:Key="Control.ThemedButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Control.KeyboardFocus}">
+        <Setter Property="MinWidth" Value="88" />
+        <Setter Property="MinHeight" Value="{DynamicResource Dimension.ControlHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Space12}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid
+                        x:Name="MotionRoot"
+                        RenderTransformOrigin="0.5,0.5"
+                        SnapsToDevicePixels="True">
+                        <Grid.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="HoverScale" ScaleX="1" ScaleY="1" />
+                                <ScaleTransform x:Name="PressScale" ScaleX="1" ScaleY="1" />
+                                <TranslateTransform x:Name="HoverTranslate" Y="0" />
+                                <TranslateTransform x:Name="PressTranslate" Y="0" />
+                            </TransformGroup>
+                        </Grid.RenderTransform>
+                        <Grid
+                            x:Name="HoverAuraRoot"
+                            IsHitTestVisible="False"
+                            Opacity="0">
+                            <Grid x:Name="PressAuraGate" Opacity="1">
+                                <Border
+                                    x:Name="KineticAura"
+                                    Background="Transparent"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="2"
+                                    CornerRadius="7,2,7,2"
+                                    IsHitTestVisible="False"
+                                    Opacity="0.32">
+                                    <Border.Effect>
+                                        <BlurEffect Radius="7" />
+                                    </Border.Effect>
+                                </Border>
+                            </Grid>
+                        </Grid>
+                        <Border
+                            x:Name="Surface"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="7,2,7,2"
+                            Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True" />
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Surface" Property="Opacity" Value="0.98" />
+                            <Setter TargetName="HoverAuraRoot" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Surface" Property="Opacity" Value="0.86" />
+                            <Setter TargetName="PressAuraGate" Property="Opacity" Value="0.18" />
+                        </Trigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}" Value="True" />
+                                <Condition Binding="{Binding Source={x:Static system:SystemParameters.ClientAreaAnimation}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <MultiDataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleX" To="1.01" Duration="{StaticResource Motion.Hover}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleY" To="1.01" Duration="{StaticResource Motion.Hover}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverTranslate" Storyboard.TargetProperty="Y" To="-1" Duration="{StaticResource Motion.Hover}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverAuraRoot" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="{StaticResource Motion.Hover}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.EnterActions>
+                            <MultiDataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverTranslate" Storyboard.TargetProperty="Y" To="0" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="HoverAuraRoot" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.ExitActions>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource TemplatedParent}}" Value="True" />
+                                <Condition Binding="{Binding Source={x:Static system:SystemParameters.ClientAreaAnimation}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <MultiDataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX" To="0.9703" Duration="{StaticResource Motion.Press}" EasingFunction="{StaticResource Motion.EaseInOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY" To="0.9703" Duration="{StaticResource Motion.Press}" EasingFunction="{StaticResource Motion.EaseInOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="PressTranslate" Storyboard.TargetProperty="Y" To="2" Duration="{StaticResource Motion.Press}" EasingFunction="{StaticResource Motion.EaseInOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="PressAuraGate" Storyboard.TargetProperty="Opacity" To="0.18" Duration="{StaticResource Motion.Press}" EasingFunction="{StaticResource Motion.EaseInOut}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.EnterActions>
+                            <MultiDataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="PressTranslate" Storyboard.TargetProperty="Y" To="0" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        <DoubleAnimation Storyboard.TargetName="PressAuraGate" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource Motion.Release}" EasingFunction="{StaticResource Motion.EaseOut}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.ExitActions>
+                        </MultiDataTrigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.BorderFocus}" /></Trigger>
+                        <Trigger Property="Validation.HasError" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.StatusError}" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Surface" Property="Opacity" Value="0.46" />
+                            <Setter TargetName="HoverAuraRoot" Property="Visibility" Value="Collapsed" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Control.ThemedButton}" />
+    <Style x:Key="Control.IconButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Control.ThemedButton}">
+        <Setter Property="Width" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="Height" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="MinWidth" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="MinHeight" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="AutomationProperties.HelpText" Value="Unavailable until the related capability is connected." />
+    </Style>
+    <Style x:Key="Control.PrimaryButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Control.ThemedButton}">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextOnAccent}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.PrimaryAction}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BrandCyan}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Brush.TextOnAccent}" />
+                <Setter Property="Background" Value="{DynamicResource Brush.PrimaryAction}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.BrandCyan}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Brush.BrandPaper}" />
+                <Setter Property="Background" Value="{DynamicResource Brush.BrandBlueDeep}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.BrandBlueDeep}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Control.PrimaryIconButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Control.PrimaryButton}">
+        <Setter Property="Width" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="Height" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="MinWidth" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="MinHeight" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+    <Style x:Key="Control.GhostButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Control.ThemedButton}">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="9,5" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style x:Key="Control.DestructiveButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Control.ThemedButton}">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.StatusError}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusError}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusError}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Brush.WindowFallback}" />
+                <Setter Property="Background" Value="{DynamicResource Brush.StatusError}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusError}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Control.DestructiveIconButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Control.DestructiveButton}">
+        <Setter Property="Width" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="Height" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="MinWidth" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="MinHeight" Value="{DynamicResource Dimension.InteractiveTarget}" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+</ResourceDictionary>

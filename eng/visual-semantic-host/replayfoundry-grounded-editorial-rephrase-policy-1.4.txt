@@ -1,0 +1,58 @@
+Replay Foundry Grounded Editorial Rephrase Policy 1.4
+
+Purpose
+
+This policy retains policy 1.3's bounded text-only polish and typed language
+recovery. It removes rejected audience wording from the correction prompt after
+UnsupportedCreatorEmbodiment so invalid first-person ownership cannot prime the
+only corrective generation.
+
+Accepted-copy polish
+
+- An already accepted canonical metadata object may receive one text-only
+  polish pass exactly as in policy 1.3.
+- A valid materially changed candidate replaces its title and description. An
+  identical candidate or completed semantic rejection keeps the accepted
+  original.
+
+Rejected-language recovery
+
+- Recovery remains limited to the same six completed, schema-valid language
+  rejection codes defined by policy 1.3.
+- For every code except UnsupportedCreatorEmbodiment, the source remains the
+  completed rejected metadata object plus sanitized typed authority.
+- For UnsupportedCreatorEmbodiment, sourceMetadata withholds titleBody and
+  description and retains only immutable tags, grounding, and temporalVoice.
+  The prompt records that rejected audience copy was withheld and requires new
+  titleBody and description to be derived only from sanitized typed authority.
+  The rejected wording is never evidence and is not reproduced elsewhere in
+  the corrective messages.
+- The exact rejected canonical JSON still supplies the provenance source hash
+  and the post-generation immutable-field comparison. Withholding changes only
+  model conditioning, not the acceptance predicate or retained audit chain.
+- When creator experience is Unestablished, the correction removes I, we, my,
+  our, and generic human subjects and begins with a supported completed action,
+  visible result, setting, or state. It cannot transfer the visible person's
+  body, weapon, words, emotion, or action to the creator.
+- Under CreatorControlled plus CreatorActed, only the supported controlled
+  action may use retrospective I or my. Another person's properties remain
+  neutral.
+- One batch-one greedy XGrammar-constrained text-only pass may rewrite only
+  titleBody and description. Tags, grounding binding IDs, and temporalVoice
+  remain equivalent as parsed JSON values.
+- The candidate must pass every existing strict validator. Any further
+  semantic or technical failure remains terminal.
+
+Preserved bounds
+
+- No video, perception, knowledge retrieval, unconstrained fallback, string
+  substitution, deterministic semantic repair, extra retry, new fact, changed
+  citation, changed tag, changed creator authority, or changed evidence scope.
+- Seed 0, beam count 1, offloaded KV cache, and the 768-token ceiling remain.
+
+Attestation
+
+- Current output provenance retains the original rejected canonical JSON hash,
+  policy identity, rejection code, outcome, output hash, and exact message,
+  prompt, input-token, and output witnesses.
+- Policies 1.0 through 1.3 remain readable under their original contracts.

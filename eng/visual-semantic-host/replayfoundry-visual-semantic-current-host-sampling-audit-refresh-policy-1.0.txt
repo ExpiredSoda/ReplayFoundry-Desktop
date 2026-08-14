@@ -1,0 +1,83 @@
+ReplayFoundry Visual Semantic Current-Host Sampling Audit Refresh Policy 1.0
+
+Purpose
+
+A model-free sampling audit authorizes the exact video sampling and timing
+behavior used before Qwen inference. A stale audit must never authorize a
+changed sampling implementation. However, a change to unrelated host output,
+identity-binding, attempt-batch, or reporting code must not force the research
+workflow to stop merely because the monolithic host-file SHA-256 changed.
+
+Permitted refresh
+
+A current-host refresh is permitted only when all of the following are true:
+
+1. The supplied baseline sampling-audit artifact is structurally valid,
+   canonical, label-blind, model-free, generation-free, and bound to the exact
+   prepared 30-case input.
+2. The baseline audit completed all 30 cases, has zero failures, records
+   TimestampValidationDefectOnly, and satisfies Candidate Sampling Coverage
+   Policy 1.0.
+3. The current and baseline identities match for:
+   - prepared input and ordered cases;
+   - Python executable path and SHA-256;
+   - model directory and model-manifest identity;
+   - shared FFmpeg directory and loaded-library identity;
+   - video backend;
+   - runtime package/environment identity;
+   - timeout;
+   - Prompt 1.0;
+   - video and sampling policies.
+4. The only incompatible runtime provenance is the host version and/or host
+   script SHA-256 at the same explicit host path.
+5. The caller explicitly enables current-host refresh.
+6. The refresh output is a new external path and does not overwrite the
+   baseline audit.
+7. The refresh invokes only the existing model-free audit path. It must not
+   load the Qwen checkpoint, invoke generation, read proxy labels, or access a
+   future Holdout.
+
+Authorization after refresh
+
+The new current-host audit may authorize inference only when:
+
+1. It passes the normal strict current-runtime reader.
+2. It completes the same 30 ordered cases with zero failures.
+3. Its sampling policy, input-policy decision, and complete per-case sampling
+   authorization projection are exactly equal to the baseline audit after
+   excluding only:
+   - host version;
+   - host script SHA-256;
+   - artifact paths and file hashes;
+   - wrapper and host canonical hashes;
+   - created-at and elapsed/provenance-only values.
+4. Selected frame indices, inferred timestamps, actual PTS, frame durations,
+   frame-end values, tensor/frame hashes, candidate-intersection counts,
+   coverage distances, gap measurements, trim decisions, timing-source
+   decisions, case audit hashes, and sampling identity hashes are unchanged.
+5. The parity comparison and its canonical SHA-256 are retained outside Git.
+
+Prohibited behavior
+
+The workflow must not:
+
+- accept the stale audit directly;
+- ignore a host mismatch;
+- refresh after a Python, model, FFmpeg, backend, timeout, input, prompt,
+  package, video-policy, or sampling-policy mismatch;
+- refresh after a baseline audit failure or non-ready decision;
+- weaken or rewrite sampling results;
+- overwrite the baseline artifact;
+- read labels before model execution succeeds;
+- fabricate a completed provider attempt;
+- access a future Holdout;
+- continue when refreshed sampling parity differs;
+- change Prompt 1.0, model, frames, sampling, generation, normalization,
+  trusted identity, cases, labels, or research gates.
+
+Outcome
+
+A successful refresh produces a new strict VisualSemanticSamplingAuditAuthorization
+with source RefreshedCurrentHost and permits the existing exhaustive 30-case
+provider attempt to run. Any failed precondition remains EvaluationInconclusive
+and stops before model loading.

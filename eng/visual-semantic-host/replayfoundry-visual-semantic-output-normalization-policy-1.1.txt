@@ -1,0 +1,70 @@
+ReplayFoundry Visual Semantic Output Normalization Policy 1.1
+
+Purpose
+
+This policy permits the Qwen3-VL host to canonicalize three representational
+collections after strict provider-output validation. It does not permit
+semantic repair.
+
+Validation baseline
+
+- The generated text must be valid bounded UTF-8 containing exactly one bare
+  JSON object.
+- Duplicate JSON properties, non-finite values, markdown wrappers, and
+  prohibited chain-of-thought properties or content are rejected.
+- The observation must contain the exact required properties, identities,
+  enums, evidence, timestamps, and bounded text.
+- Raw array count limits apply before exact duplicate removal.
+- Evidence-interval descriptions, limitation strings, and uncertainty
+  descriptions use their existing validated string policies before
+  canonicalization.
+- Other semantic text is never trimmed or rewritten by this policy.
+
+Permitted normalization: EvidenceIntervalsCanonicalized
+
+- Validate every raw interval before normalization.
+- Each interval must contain exactly startSeconds, endSeconds, and description.
+- startSeconds and endSeconds must be finite, startSeconds must be greater than
+  or equal to zero, endSeconds must be greater than or equal to startSeconds,
+  and endSeconds must remain inside the bounded review-video duration.
+- Remove only exact duplicate (startSeconds, endSeconds, description) triples
+  after numeric parsing. Numerically equal JSON values represent the same
+  timestamp for exact-duplicate detection.
+- Sort remaining intervals by numeric startSeconds, numeric endSeconds, and
+  then .NET-compatible ordinal UTF-16 description order.
+- Preserve every distinct overlapping, touching, or point interval.
+- Never merge, clamp, snap, widen, shrink, or otherwise alter an interval.
+- Never rewrite an evidence description.
+
+Permitted normalization: LimitationsCanonicalized
+
+- Remove only exact ordinal duplicate limitation strings.
+- Sort remaining limitation strings using .NET-compatible ordinal UTF-16 code
+  unit order.
+- Preserve case variants, punctuation variants, and every surviving string
+  byte-for-byte after the validated trimming baseline.
+
+Permitted normalization: UncertaintiesCanonicalized
+
+- Remove only exact duplicate (code, description) pairs.
+- Sort remaining entries by the declared uncertainty-code order and then by
+  .NET-compatible ordinal UTF-16 description order.
+- Preserve distinct descriptions sharing one code.
+- Never change a code or rewrite a description.
+
+Prohibited normalization
+
+The host must not add a missing property, delete an unknown property, repair
+malformed JSON, extract JSON from markdown, change an enum or identity, alter
+visible state, certainty, rationale, or worth-reviewing values, change or
+clamp an evidence timestamp, merge or split distinct evidence intervals,
+truncate text, or add or remove any semantically distinct evidence interval,
+limitation, or uncertainty.
+
+Audit
+
+Every changed case records exact pre-normalization and canonical hashes,
+raw/canonical counts, exact-duplicate counts, order-change flags, ordered
+normalization kinds, this policy identity, a zero-offset normalization
+timestamp, and semanticTextChanged=false. An unchanged case records a null
+normalization audit.

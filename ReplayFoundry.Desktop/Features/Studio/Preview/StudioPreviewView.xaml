@@ -1,0 +1,284 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Studio.Preview.StudioPreviewView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Preview"
+    AllowDrop="True"
+    DragEnter="OnGraphicDragEnter"
+    Drop="OnGraphicDrop"
+    Focusable="True">
+    <UserControl.Resources>
+        <local:StudioCaptionPositionMarginConverter x:Key="StudioCaptionPositionMarginConverter" />
+    </UserControl.Resources>
+    <UserControl.InputBindings>
+        <KeyBinding Key="Space" Command="{Binding PlayCommand}" />
+        <KeyBinding Key="Left" Command="{Binding RewindPreviewCommand}" />
+        <KeyBinding Key="Right" Command="{Binding ForwardPreviewCommand}" />
+        <KeyBinding Key="J" Command="{Binding RewindPreviewCommand}" />
+        <KeyBinding Key="L" Command="{Binding ForwardPreviewCommand}" />
+        <KeyBinding Key="OemComma" Command="{Binding PreviousCommand}" />
+        <KeyBinding Key="OemPeriod" Command="{Binding NextCommand}" />
+    </UserControl.InputBindings>
+    <Border Style="{DynamicResource Control.CanvasPane}" AutomationProperties.Name="Studio preview and transport">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="PROGRAM PREVIEW" />
+                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding SequenceSummary}" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Right">
+                    <TextBlock HorizontalAlignment="Right" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource Brush.StatusInfo}" Text="{Binding ModeBadge}" />
+                    <TextBlock Margin="0,5,0,0" HorizontalAlignment="Right" Style="{DynamicResource Text.Meta}" Text="{Binding PreviewScaleText}" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" MinHeight="320" Margin="0,12,0,12" Background="{DynamicResource Brush.SurfaceInset}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Margin="12,10,12,0">
+                    <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextMuted}" Text="LOCAL PREVIEW" />
+                    <TextBlock HorizontalAlignment="Right" FontSize="10" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewFormatText}" />
+                </Grid>
+
+                <Grid Grid.Row="1" MinHeight="250" Margin="12">
+                    <Viewbox
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        Stretch="Uniform"
+                        Visibility="{Binding IsPreviewAvailable, Converter={StaticResource BoolToVisibility}}">
+                        <Border
+                            Width="{Binding PreviewCanvasWidth}"
+                            Height="{Binding PreviewCanvasHeight}"
+                            Background="Black"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            CornerRadius="{DynamicResource Radius.OrganicCard}">
+                            <Grid ClipToBounds="True">
+                                <MediaElement
+                                    x:Name="PreviewPlayer"
+                                    HorizontalAlignment="Stretch"
+                                    LoadedBehavior="Manual"
+                                    ScrubbingEnabled="True"
+                                    Stretch="Fill"
+                                    UnloadedBehavior="Manual"
+                                    VerticalAlignment="Stretch"
+                                    MediaEnded="PreviewPlayer_OnMediaEnded"
+                                    MediaFailed="PreviewPlayer_OnMediaFailed"
+                                    MediaOpened="PreviewPlayer_OnMediaOpened" />
+                                <local:StudioCaptionPreviewText
+                                    Width="{Binding LiveCaptionMaximumWidthPixels}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Top"
+                                    IsHitTestVisible="False"
+                                    AccentLength="{Binding LiveCaptionAccentLength}"
+                                    AccentProgress="{Binding LiveCaptionAccentProgress}"
+                                    AccentStartIndex="{Binding LiveCaptionAccentStartIndex}"
+                                    CaptionFontSize="{Binding LiveCaptionFontSizePixels}"
+                                    CaptionScale="{Binding LiveCaptionScale}"
+                                    CaptionStyle="{Binding LiveCaptionStyle}"
+                                    CaptionText="{Binding LiveCaptionText}"
+                                    SweepLength="{Binding LiveCaptionSweepLength}"
+                                    Visibility="{Binding HasLiveCaption, Converter={StaticResource BoolToVisibility}}">
+                                    <local:StudioCaptionPreviewText.Margin>
+                                        <MultiBinding Converter="{StaticResource StudioCaptionPositionMarginConverter}">
+                                            <Binding Path="PreviewCanvasHeight" />
+                                            <Binding Path="LiveCaptionVerticalPercent" />
+                                            <Binding RelativeSource="{RelativeSource Self}" Path="ActualHeight" />
+                                        </MultiBinding>
+                                    </local:StudioCaptionPreviewText.Margin>
+                                </local:StudioCaptionPreviewText>
+                                <ProgressBar
+                                    Width="96"
+                                    Height="4"
+                                    Margin="0,12,12,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    IsIndeterminate="True"
+                                    Visibility="{Binding IsPreviewLoading, Converter={StaticResource BoolToVisibility}}" />
+                            </Grid>
+                        </Border>
+                    </Viewbox>
+
+                    <Border
+                        Background="{DynamicResource Brush.CompositionCanvas}"
+                        Style="{DynamicResource Control.CanvasInsetCard}"
+                        Visibility="{Binding IsPreviewAvailable, Converter={StaticResource InverseBoolToVisibility}}">
+                        <StackPanel
+                            MaxWidth="460"
+                            Margin="32"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                            <Border Width="42" Height="42" HorizontalAlignment="Center" Background="{DynamicResource Brush.InteractiveSelected}" BorderBrush="{DynamicResource Brush.StatusInfo}" BorderThickness="1" CornerRadius="12">
+                                <controls:IconPath Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" IconKey="Icon.Edit" Stroke="{DynamicResource Brush.StatusInfo}" StrokeThickness="1.3" Stretch="Uniform" />
+                            </Border>
+                            <TextBlock Margin="0,12,0,0" HorizontalAlignment="Center" Style="{DynamicResource Text.SectionTitle}" Text="{Binding ProjectPromptTitle}" TextAlignment="Center" />
+                            <TextBlock Margin="0,7,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding PreviewStatus}" TextAlignment="Center" TextWrapping="Wrap" />
+                            <TextBlock
+                                Margin="0,9,0,0"
+                                MaxWidth="440"
+                                Foreground="{DynamicResource Brush.StatusError}"
+                                Style="{DynamicResource Text.Meta}"
+                                Text="{Binding PreviewError}"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap"
+                                Visibility="{Binding HasPreviewError, Converter={StaticResource BoolToVisibility}}" />
+                            <ProgressBar
+                                Width="220"
+                                Height="4"
+                                Margin="0,14,0,0"
+                                IsIndeterminate="True"
+                                Visibility="{Binding IsPreviewLoading, Converter={StaticResource BoolToVisibility}}" />
+                            <Button
+                                Margin="0,14,0,0"
+                                AutomationProperties.Name="Retry Studio preview"
+                                Command="{Binding ReloadPreviewCommand}"
+                                Content="Retry preview"
+                                Style="{DynamicResource Control.PrimaryButton}"
+                                Visibility="{Binding HasPreviewError, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Grid Grid.Row="2" Margin="12,0,12,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Grid.Column="1"
+                        MaxWidth="380"
+                        HorizontalAlignment="Center"
+                        FontSize="10"
+                        Foreground="{DynamicResource Brush.TextMuted}"
+                        Text="{Binding PreviewStatus}"
+                        TextAlignment="Center"
+                        TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Right" Orientation="Horizontal">
+                        <TextBlock FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" Text="{Binding PreviewTimecode}" />
+                        <TextBlock Margin="5,0" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" Text="/" />
+                        <TextBlock FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewDurationText}" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <Slider
+                x:Name="PreviewPositionSlider"
+                Grid.Row="2"
+                Margin="2,0,2,10"
+                AutomationProperties.Name="Studio preview position"
+                IsEnabled="{Binding IsPreviewAvailable}"
+                Minimum="{Binding PreviewPositionMinimumSeconds}"
+                Maximum="{Binding PreviewPositionMaximumSeconds}"
+                Value="{Binding PreviewPositionSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                Visibility="{Binding IsPreviewAvailable, Converter={StaticResource BoolToVisibility}}" />
+
+            <Border
+                Grid.Row="3"
+                Padding="8,6"
+                Background="{DynamicResource Brush.KineticGlowSoft}"
+                Style="{DynamicResource Control.CanvasGhostZone}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center" Orientation="Horizontal">
+                    <Button
+                        AutomationProperties.Name="Previous frame"
+                        AutomationProperties.HelpText="Moves the preview backward by one frame."
+                        Command="{Binding PreviousCommand}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="Previous frame (comma)">
+                        <controls:IconPath Width="14" Height="14" IconKey="Icon.SkipBack" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
+                    </Button>
+                    <Button
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="Rewind five seconds"
+                        Command="{Binding RewindPreviewCommand}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="Rewind five seconds (Left or J)">
+                        <controls:IconPath Width="14" Height="14" IconKey="Icon.Rewind" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
+                    </Button>
+                    <Button
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="Play or pause preview"
+                        AutomationProperties.HelpText="Plays or pauses inside the current saved clip boundaries."
+                        Command="{Binding PlayCommand}"
+                        Style="{DynamicResource Control.PrimaryIconButton}"
+                        ToolTip="{Binding PreviewPlayPauseText, StringFormat={}{0} (Space)}">
+                        <controls:IconPath Width="15" Height="15" IconKey="{Binding PreviewPlayPauseIconKey}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
+                    </Button>
+                    <Button
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="Forward five seconds"
+                        Command="{Binding ForwardPreviewCommand}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="Forward five seconds (Right or L)">
+                        <controls:IconPath Width="14" Height="14" IconKey="Icon.FastForward" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
+                    </Button>
+                    <Button
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="Next frame"
+                        AutomationProperties.HelpText="Moves the preview forward by one frame."
+                        Command="{Binding NextCommand}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="Next frame (period)">
+                        <controls:IconPath Width="14" Height="14" IconKey="Icon.SkipForward" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
+                    </Button>
+                </StackPanel>
+                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
+                    <TextBlock FontFamily="Consolas" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding PreviewTimecode}" />
+                    <TextBlock Margin="6,0" Foreground="{DynamicResource Brush.TextMuted}" Text="/" />
+                    <TextBlock FontFamily="Consolas" FontSize="12" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewDurationText}" />
+                </StackPanel>
+                <StackPanel Grid.Column="0" HorizontalAlignment="Left" Orientation="Horizontal">
+                    <Button
+                        MinWidth="72"
+                        AutomationProperties.Name="{Binding CaptionVisibilityText}"
+                        AutomationProperties.HelpText="Shows or hides the actual caption content in the Studio preview. This does not change the final render."
+                        Command="{Binding ToggleCaptionVisibilityCommand}"
+                        ToolTip="{Binding CaptionVisibilityText}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Control.IconButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsCaptionContentVisible}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <controls:IconPath Width="15" Height="15" IconKey="Icon.Caption" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
+                            <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold" Text="{Binding CaptionVisibilityShortText}" />
+                        </StackPanel>
+                    </Button>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanShowCaptionControls}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                </StackPanel>
+            </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

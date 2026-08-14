@@ -1,0 +1,41 @@
+Replay Foundry Grounded Editorial Rephrase Policy 1.8
+
+Purpose
+
+This policy retains policy 1.7's bounded text-only polish, typed language
+recovery, neutral-person recovery, literal-action recovery, retrospective
+grammar recovery, and strict validator boundary. It closes the output-language
+recovery gap exposed when every sampled candidate completed valid JSON but
+contained a stray non-Latin letter.
+
+English audience-copy recovery
+
+- OutputLanguage is a bounded rejected-language recovery rule after all four
+  immutable recovery-pool candidates completed and failed strict validation.
+- The rejected titleBody and description are withheld from the correction
+  prompt so the stray token cannot prime or authorize the rewrite.
+- The correction creates English titleBody and description only from the same
+  sanitized typed primary-visual authority. It does not translate,
+  transliterate, interpret, or reuse the withheld wording.
+- Grounding and temporalVoice remain exact. Tags remain exact and ordered,
+  except that a source tag containing a non-Latin letter may only be omitted.
+  The correction may not add, replace, rewrite, or reorder a tag, and at least
+  one valid source tag must remain.
+- The completed correction must pass every existing grounding, actor,
+  audience, action-strength, English-language, temporal, tag, and diversity
+  validator. A second failure remains terminal.
+
+Preserved bounds
+
+- One batch-one greedy XGrammar-constrained text-only correction, seed 0, beam
+  count 1, offloaded KV cache, and the 768-token ceiling remain.
+- No video, perception, knowledge retrieval, unconstrained fallback,
+  deterministic text substitution, semantic repair, extra retry, new fact,
+  changed citation, changed authority, or changed evidence scope.
+- Policies 1.0 through 1.7 remain readable under their original contracts.
+
+Attestation
+
+- Current output provenance retains the source canonical JSON hash, policy
+  identity, OutputLanguage source rejection, recovered-language outcome,
+  output hash, and exact message, prompt, input-token, and output witnesses.

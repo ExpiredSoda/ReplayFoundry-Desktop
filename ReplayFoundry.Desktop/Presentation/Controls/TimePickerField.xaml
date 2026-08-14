@@ -1,0 +1,264 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Presentation.Controls.TimePickerField"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    MinHeight="42"
+    PreviewKeyDown="Root_PreviewKeyDown">
+    <UserControl.Resources>
+        <Style x:Key="TimePickerChoice" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource Control.KeyboardFocus}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="1" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border
+                            x:Name="ChoiceSurface"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            SnapsToDevicePixels="True">
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ChoiceSurface" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+                                <Setter TargetName="ChoiceSurface" Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                                <Setter TargetName="ChoiceSurface" Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ChoiceSurface" Property="BorderBrush" Value="{DynamicResource Brush.BorderFocus}" />
+                                <Setter TargetName="ChoiceSurface" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="TimePickerList" TargetType="{x:Type ListBox}">
+            <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource TimePickerChoice}" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Hidden" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBox}">
+                        <Border
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                            <ScrollViewer
+                                CanContentScroll="True"
+                                Focusable="False"
+                                HorizontalScrollBarVisibility="Disabled"
+                                PanningMode="VerticalOnly"
+                                VerticalScrollBarVisibility="Hidden">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ToggleButton
+            x:Name="EntryButton"
+            AutomationProperties.Name="{Binding AutomationName, ElementName=Root}"
+            Checked="EntryButton_Checked"
+            HorizontalContentAlignment="Stretch"
+            ToolTip="Choose a time">
+            <ToggleButton.Style>
+                <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource Control.KeyboardFocus}">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                <Border
+                                    x:Name="EntrySurface"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="8"
+                                    SnapsToDevicePixels="True">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="40" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            Margin="12,0,8,0"
+                                            VerticalAlignment="Center"
+                                            FontWeight="SemiBold"
+                                            Text="{Binding TimeText, ElementName=Root}" />
+                                        <Border
+                                            x:Name="ClockSurface"
+                                            Grid.Column="1"
+                                            Background="{DynamicResource Brush.SurfacePanel}"
+                                            BorderBrush="{DynamicResource Brush.BorderSubtle}"
+                                            BorderThickness="1,0,0,0"
+                                            CornerRadius="0,7,7,0">
+                                            <Path
+                                                Width="18"
+                                                Height="18"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Data="M 8,2 A 6,6 0 1 1 7.99,2 M 8,4.5 L 8,8 L 10.75,9.5"
+                                                Stroke="{DynamicResource Brush.StatusInfo}"
+                                                StrokeEndLineCap="Round"
+                                                StrokeLineJoin="Round"
+                                                StrokeThickness="1.5"
+                                                Stretch="Uniform" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="EntrySurface" Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+                                        <Setter TargetName="EntrySurface" Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+                                        <Setter TargetName="ClockSurface" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" />
+                                    </Trigger>
+                                    <Trigger Property="IsKeyboardFocused" Value="True">
+                                        <Setter TargetName="EntrySurface" Property="BorderBrush" Value="{DynamicResource Brush.BorderFocus}" />
+                                        <Setter TargetName="EntrySurface" Property="BorderThickness" Value="2" />
+                                    </Trigger>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="EntrySurface" Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                                        <Setter TargetName="ClockSurface" Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.46" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ToggleButton.Style>
+        </ToggleButton>
+
+        <Popup
+            x:Name="PickerPopup"
+            AllowsTransparency="True"
+            Closed="PickerPopup_Closed"
+            Focusable="False"
+            IsOpen="{Binding IsChecked, ElementName=EntryButton, Mode=TwoWay}"
+            Placement="Bottom"
+            PlacementTarget="{Binding ElementName=EntryButton}"
+            StaysOpen="False"
+            VerticalOffset="6">
+            <Border
+                Width="280"
+                Padding="12"
+                Background="{DynamicResource Brush.SurfaceElevated}"
+                BorderBrush="{DynamicResource Brush.BorderStrong}"
+                BorderThickness="1"
+                CornerRadius="10">
+                <Border.Effect>
+                    <DropShadowEffect
+                        BlurRadius="16"
+                        Color="{DynamicResource Color.DockShadow}"
+                        Opacity="0.38"
+                        ShadowDepth="4" />
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="CHOOSE TIME" />
+                            <TextBlock
+                                Margin="0,2,0,0"
+                                Style="{DynamicResource Text.Meta}"
+                                Text="Hour, minute, and period."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TextBlock
+                            x:Name="ChosenTimeText"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            FontFamily="Consolas"
+                            FontSize="20"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource Brush.StatusInfo}"
+                            Text="6:00 PM" />
+                    </Grid>
+                    <Grid Grid.Row="1" Margin="0,10,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="76" />
+                            <ColumnDefinition Width="9" />
+                            <ColumnDefinition Width="76" />
+                            <ColumnDefinition Width="9" />
+                            <ColumnDefinition Width="76" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock HorizontalAlignment="Center" Style="{DynamicResource Text.FormLabel}" Text="HOUR" />
+                        <TextBlock Grid.Column="2" HorizontalAlignment="Center" Style="{DynamicResource Text.FormLabel}" Text="MINUTE" />
+                        <TextBlock Grid.Column="4" HorizontalAlignment="Center" Style="{DynamicResource Text.FormLabel}" Text="PERIOD" />
+                    </Grid>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="76" />
+                            <ColumnDefinition Width="9" />
+                            <ColumnDefinition Width="76" />
+                            <ColumnDefinition Width="9" />
+                            <ColumnDefinition Width="76" />
+                        </Grid.ColumnDefinitions>
+                        <ListBox
+                            x:Name="HourList"
+                            Height="104"
+                            AutomationProperties.Name="Hour"
+                            SelectionChanged="TimePart_SelectionChanged"
+                            Style="{StaticResource TimePickerList}" />
+                        <ListBox
+                            x:Name="MinuteList"
+                            Grid.Column="2"
+                            Height="104"
+                            AutomationProperties.Name="Minute"
+                            SelectionChanged="TimePart_SelectionChanged"
+                            Style="{StaticResource TimePickerList}" />
+                        <ListBox
+                            x:Name="PeriodList"
+                            Grid.Column="4"
+                            Height="104"
+                            AutomationProperties.Name="AM or PM"
+                            SelectionChanged="TimePart_SelectionChanged"
+                            Style="{StaticResource TimePickerList}" />
+                    </Grid>
+                    <Button
+                        Grid.Row="3"
+                        MinWidth="72"
+                        Height="36"
+                        Margin="0,10,0,0"
+                        HorizontalAlignment="Right"
+                        AutomationProperties.Name="Finish choosing time"
+                        Click="DoneButton_Click"
+                        Content="Done"
+                        Style="{DynamicResource Control.PrimaryButton}" />
+                </Grid>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

@@ -1,0 +1,323 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Generate.CompositionReview.CompositionRegionEditor"
+    x:Name="EditorRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Generate.CompositionReview"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="540"
+    d:DesignWidth="760"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+
+        <local:PreviewFrameImageConverter
+            x:Key="PreviewFrameImageConverter" />
+
+        <Style
+            x:Key="CompositionReview.ResizeHandle"
+            TargetType="{x:Type Thumb}">
+
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource Brush.CompositionFocus}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.CompositionCanvas}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Visibility" Value="Collapsed" />
+
+            <Style.Triggers>
+
+                <DataTrigger
+                    Binding="{Binding IsSelected}"
+                    Value="True">
+
+                    <Setter
+                        Property="Visibility"
+                        Value="Visible" />
+
+                </DataTrigger>
+
+            </Style.Triggers>
+
+        </Style>
+
+        <Style x:Key="CompositionReview.CropMark" TargetType="{x:Type Path}">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Data" Value="M 0,12 L 0,0 L 12,0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="Stroke" Value="{DynamicResource Brush.CompositionFocus}" />
+            <Setter Property="StrokeThickness" Value="1.5" />
+            <Setter Property="Opacity" Value="0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+    </UserControl.Resources>
+
+    <Border
+        Padding="10"
+        Background="{DynamicResource Brush.CompositionSurface}"
+        BorderBrush="{DynamicResource Brush.BorderSubtle}"
+        BorderThickness="1"
+        CornerRadius="12">
+
+        <Viewbox
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Stretch="Uniform">
+
+            <Grid
+                x:Name="CoordinatePlane"
+                Width="{Binding PreviewWidth}"
+                Height="{Binding PreviewHeight}"
+                Background="{DynamicResource Brush.CompositionCanvas}"
+                ClipToBounds="True">
+
+                <Image
+                    AutomationProperties.Name="Representative video preview"
+                    Source="{Binding PreviewFrame, Converter={StaticResource PreviewFrameImageConverter}}"
+                    Stretch="Fill" />
+
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource Brush.TextSecondary}"
+                    FontSize="24"
+                    Text="Load a representative frame to begin">
+
+                    <TextBlock.Style>
+
+                        <Style TargetType="{x:Type TextBlock}">
+
+                            <Setter
+                                Property="Visibility"
+                                Value="Visible" />
+
+                            <Style.Triggers>
+
+                                <DataTrigger
+                                    Binding="{Binding HasPreviewFrame}"
+                                    Value="True">
+
+                                    <Setter
+                                        Property="Visibility"
+                                        Value="Collapsed" />
+
+                                </DataTrigger>
+
+                            </Style.Triggers>
+
+                        </Style>
+
+                    </TextBlock.Style>
+
+                </TextBlock>
+
+                <ItemsControl
+                    AutomationProperties.Name="Editable composition regions"
+                    ItemsSource="{Binding Regions}">
+
+                    <ItemsControl.ItemsPanel>
+
+                        <ItemsPanelTemplate>
+
+                            <Canvas />
+
+                        </ItemsPanelTemplate>
+
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemContainerStyle>
+
+                        <Style
+                            TargetType="{x:Type ContentPresenter}">
+
+                            <Setter
+                                Property="Canvas.Left"
+                                Value="{Binding PixelX}" />
+
+                            <Setter
+                                Property="Canvas.Top"
+                                Value="{Binding PixelY}" />
+
+                            <Setter
+                                Property="Width"
+                                Value="{Binding PixelWidth}" />
+
+                            <Setter
+                                Property="Height"
+                                Value="{Binding PixelHeight}" />
+
+                            <Setter
+                                Property="Panel.ZIndex"
+                                Value="1" />
+
+                            <Style.Triggers>
+
+                                <DataTrigger
+                                    Binding="{Binding IsSelected}"
+                                    Value="True">
+
+                                    <Setter
+                                        Property="Panel.ZIndex"
+                                        Value="20" />
+
+                                </DataTrigger>
+
+                            </Style.Triggers>
+
+                        </Style>
+
+                    </ItemsControl.ItemContainerStyle>
+
+                    <ItemsControl.ItemTemplate>
+
+                        <DataTemplate>
+
+                            <Grid>
+
+                                <Border
+                                    AutomationProperties.Name="{Binding AutomationName}"
+                                    Focusable="True"
+                                    KeyDown="Region_KeyDown"
+                                    MouseLeftButtonDown="Region_MouseLeftButtonDown"
+                                    MouseLeftButtonUp="Region_MouseLeftButtonUp"
+                                    MouseMove="Region_MouseMove">
+
+                                    <Border.Style>
+
+                                        <Style TargetType="{x:Type Border}">
+
+                                            <Setter
+                                                Property="BorderBrush"
+                                                Value="{DynamicResource Brush.CompositionFocus}" />
+
+                                            <Setter
+                                                Property="Background"
+                                                Value="Transparent" />
+
+                                            <Setter
+                                                Property="BorderThickness"
+                                                Value="1" />
+
+                                            <Style.Triggers>
+
+                                                <DataTrigger
+                                                    Binding="{Binding IsSelected}"
+                                                    Value="True">
+
+                                                    <Setter
+                                                        Property="BorderBrush"
+                                                        Value="{DynamicResource Brush.CompositionFocus}" />
+
+                                                    <Setter
+                                                        Property="Background"
+                                                        Value="{DynamicResource Brush.ReferenceBadge}" />
+
+                                                    <Setter
+                                                        Property="BorderThickness"
+                                                        Value="2" />
+
+                                                </DataTrigger>
+
+                                            </Style.Triggers>
+
+                                        </Style>
+
+                                    </Border.Style>
+
+                                    <TextBlock
+                                        Margin="7,5"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        Padding="6,3"
+                                        Background="{DynamicResource Brush.SurfaceCanvas}"
+                                        Foreground="White"
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Text="{Binding DisplayName}" />
+
+                                </Border>
+
+                                <Path
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top"
+                                    Style="{StaticResource CompositionReview.CropMark}" />
+                                <Path
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Style="{StaticResource CompositionReview.CropMark}">
+                                    <Path.RenderTransform><RotateTransform Angle="90" /></Path.RenderTransform>
+                                </Path>
+                                <Path
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Style="{StaticResource CompositionReview.CropMark}">
+                                    <Path.RenderTransform><RotateTransform Angle="180" /></Path.RenderTransform>
+                                </Path>
+                                <Path
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Style="{StaticResource CompositionReview.CropMark}">
+                                    <Path.RenderTransform><RotateTransform Angle="270" /></Path.RenderTransform>
+                                </Path>
+
+                                <Thumb
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top"
+                                    AutomationProperties.Name="Resize top-left"
+                                    Cursor="SizeNWSE"
+                                    DragDelta="ResizeHandle_DragDelta"
+                                    Style="{StaticResource CompositionReview.ResizeHandle}"
+                                    Tag="TopLeft" />
+
+                                <Thumb
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    AutomationProperties.Name="Resize top-right"
+                                    Cursor="SizeNESW"
+                                    DragDelta="ResizeHandle_DragDelta"
+                                    Style="{StaticResource CompositionReview.ResizeHandle}"
+                                    Tag="TopRight" />
+
+                                <Thumb
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"
+                                    AutomationProperties.Name="Resize bottom-left"
+                                    Cursor="SizeNESW"
+                                    DragDelta="ResizeHandle_DragDelta"
+                                    Style="{StaticResource CompositionReview.ResizeHandle}"
+                                    Tag="BottomLeft" />
+
+                                <Thumb
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    AutomationProperties.Name="Resize bottom-right"
+                                    Cursor="SizeNWSE"
+                                    DragDelta="ResizeHandle_DragDelta"
+                                    Style="{StaticResource CompositionReview.ResizeHandle}"
+                                    Tag="BottomRight" />
+
+                            </Grid>
+
+                        </DataTemplate>
+
+                    </ItemsControl.ItemTemplate>
+
+                </ItemsControl>
+
+            </Grid>
+
+        </Viewbox>
+
+    </Border>
+
+</UserControl>

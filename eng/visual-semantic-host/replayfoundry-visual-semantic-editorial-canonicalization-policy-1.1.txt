@@ -1,0 +1,58 @@
+ReplayFoundry Visual Semantic Editorial Canonicalization Policy 1.1
+
+Identity
+
+visual-semantic-editorial-canonicalization-1.1
+
+Purpose
+
+This policy separates harmless representation canonicalization from semantic
+repair for Prompt 2.4. It applies only to one grammar-constrained JSON object.
+
+OuterJsonWhitespace
+
+- Before JSON parsing, remove only leading and trailing JSON whitespace:
+  U+0020, U+0009, U+000A, and U+000D.
+- Record whether outer whitespace was removed and count it as one syntactic
+  canonicalization.
+- After removal, the first and last characters must be `{` and `}`.
+- Markdown fences, prose, labels, multiple objects, and all other wrappers are
+  rejected. This rule never changes a semantic field or string value.
+
+SyntacticCanonicalization
+
+- Canonically order evidenceIntervals by numeric startSeconds, numeric
+  endSeconds, ordinal description, evidenceBasis, and ID.
+- Canonically order observedChanges by ordinal description, evidenceBasis, and
+  their ordered evidenceIntervalIds.
+- Canonically order uncertaintyReasons by the declared code order and ordinal
+  description.
+- Canonically order evidenceIntervalIds using ordinal comparison.
+- Remove exact duplicates only.
+- Record raw and canonical counts, order changes, and exact-duplicate counts.
+- Preserve every distinct overlapping, touching, and point interval.
+
+SchemaShapeCanonicalization
+
+Prompt 2.4 declares no omission or null alias for an empty collection. All
+three collections are required and must use an explicit JSON array. Therefore
+no schema-shape canonicalization is permitted by this version.
+
+SemanticRepair
+
+Semantic repair is prohibited. The parser rejects rather than changes:
+
+- editorialDisposition or rejectReason;
+- any Stage-1 enum;
+- timestamp, description, rationale, evidence basis, or evidence reference;
+- missing or unknown properties;
+- malformed JSON, markdown, code fences, or non-whitespace wrappers;
+- distinct evidence;
+- contradictory truth-table combinations.
+
+Auditing
+
+Syntactic canonicalization is descriptive and does not itself fail semantic
+readiness. SchemaShapeCanonicalization and SemanticRepair counts must remain
+zero. Trusted case/candidate identity remains host-owned outside the semantic
+object.

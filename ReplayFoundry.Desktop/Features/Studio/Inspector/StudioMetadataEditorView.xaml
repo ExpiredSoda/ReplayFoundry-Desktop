@@ -1,0 +1,179 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Studio.Inspector.StudioMetadataEditorView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border
+        Margin="0,12,0,8"
+        AutomationProperties.Name="Clip title and description editor"
+        Style="{DynamicResource Control.CanvasInsetCard}"
+        Visibility="{Binding IsMetadataEditorVisible, Converter={StaticResource BoolToVisibility}}">
+        <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Title, description &amp; tags" />
+                <Border
+                    Grid.Column="1"
+                    Padding="8,3"
+                    Background="{DynamicResource Brush.InteractiveSelected}"
+                    CornerRadius="9">
+                    <TextBlock
+                        FontSize="10"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        Text="{Binding Editorial.DraftState}" />
+                </Border>
+            </Grid>
+            <TextBlock
+                Margin="0,4,0,10"
+                Style="{DynamicResource Text.Meta}"
+                Text="These fields become the title, description, and tags used by Library and Publish. Save after editing or reviewing a working draft; unsaved typing is never sent to the render queue."
+                TextWrapping="Wrap" />
+
+            <Border
+                Margin="0,0,0,10"
+                Padding="10"
+                Background="{DynamicResource Brush.SurfaceElevated}"
+                BorderBrush="{DynamicResource Brush.StatusWarning}"
+                BorderThickness="1"
+                CornerRadius="7"
+                Visibility="{Binding Editorial.NeedsCurrentCutRefresh, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.StatusWarning}" Text="Copy may describe the earlier cut" />
+                    <TextBlock Margin="0,3,0,8" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.CurrentCutStatus}" TextWrapping="Wrap" />
+                    <Button
+                        HorizontalAlignment="Left"
+                        AutomationProperties.Name="Refresh metadata for the current Studio cut"
+                        Command="{Binding Editorial.RefreshCurrentCutCommand}"
+                        Content="{Binding Editorial.RefreshCurrentCutText}"
+                        Style="{DynamicResource Control.GhostButton}" />
+                </StackPanel>
+            </Border>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Title" />
+                <TextBlock Grid.Column="1" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.TitleCharacterCount}" />
+            </Grid>
+            <TextBox
+                Margin="0,4,0,0"
+                AutomationProperties.Name="Studio clip title"
+                IsEnabled="{Binding IsProjectDraft}"
+                MaxLength="100"
+                Style="{DynamicResource Control.FormTextBox}"
+                Text="{Binding Editorial.Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Description" />
+                <TextBlock Grid.Column="1" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.DescriptionCharacterCount}" />
+            </Grid>
+            <TextBox
+                MinHeight="92"
+                Margin="0,4,0,0"
+                AcceptsReturn="True"
+                AutomationProperties.Name="Studio clip description"
+                IsEnabled="{Binding IsProjectDraft}"
+                MaxLength="5000"
+                Style="{DynamicResource Control.FormTextBox}"
+                Text="{Binding Editorial.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                TextWrapping="Wrap" />
+
+            <TextBlock Margin="0,10,0,0" Style="{DynamicResource Text.FormLabel}" Text="Tags" />
+            <TextBox
+                Margin="0,4,0,0"
+                AutomationProperties.Name="Studio clip tags"
+                AutomationProperties.HelpText="Separate tags with commas. Hash symbols are optional."
+                IsEnabled="{Binding IsProjectDraft}"
+                Style="{DynamicResource Control.FormTextBox}"
+                Text="{Binding Editorial.Tags, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <TextBlock Margin="0,10,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.Status}" TextWrapping="Wrap" />
+            <TextBlock
+                Margin="0,5,0,0"
+                FontWeight="SemiBold"
+                Foreground="{DynamicResource Brush.TextSecondary}"
+                Text="{Binding Editorial.SaveGuidance}"
+                TextWrapping="Wrap" />
+            <ProgressBar
+                Height="4"
+                Margin="0,8,0,0"
+                IsIndeterminate="True"
+                Visibility="{Binding Editorial.IsGenerating, Converter={StaticResource BoolToVisibility}}" />
+            <Button
+                Margin="0,12,0,0"
+                HorizontalAlignment="Stretch"
+                AutomationProperties.Name="Save clip metadata for the render queue"
+                Command="{Binding Editorial.SaveCommand}"
+                Content="{Binding Editorial.SaveButtonText}"
+                Style="{DynamicResource Control.PrimaryButton}" />
+            <Button
+                Margin="0,8,0,0"
+                HorizontalAlignment="Stretch"
+                AutomationProperties.HelpText="{Binding Editorial.RerollProviderText}"
+                AutomationProperties.Name="{Binding Editorial.RerollAutomationName}"
+                Command="{Binding Editorial.RerollCommand}"
+                Content="{Binding Editorial.RerollButtonText}"
+                Style="{DynamicResource Control.GhostButton}" />
+
+            <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.RerollProviderText}" TextWrapping="Wrap" />
+
+            <Expander
+                Margin="0,12,0,0"
+                Header="Reusable metadata wording"
+                IsExpanded="False"
+                Style="{DynamicResource Control.QuietExpander}">
+                <Border Margin="0,8,0,0" Padding="10" Style="{DynamicResource Control.CanvasGhostZone}">
+                    <StackPanel>
+                        <TextBlock
+                            Style="{DynamicResource Text.Meta}"
+                            Text="These preferences guide future title and description suggestions. Default tags stay in Settings; this clip's tags are never reused. They never alter audio or this draft until you request new wording."
+                            TextWrapping="Wrap" />
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Audience address (for example, Chat)" />
+                        <TextBox
+                            Margin="0,4,0,0"
+                            AutomationProperties.Name="Editorial audience name"
+                            IsEnabled="{Binding IsProjectDraft}"
+                            MaxLength="40"
+                            Style="{DynamicResource Control.FormTextBox}"
+                            Text="{Binding Editorial.AudienceAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Preferred title wording" />
+                        <TextBox
+                            Margin="0,4,0,0"
+                            AutomationProperties.Name="Editorial naming guidance"
+                            IsEnabled="{Binding IsProjectDraft}"
+                            MaxLength="300"
+                            Style="{DynamicResource Control.FormTextBox}"
+                            Text="{Binding Editorial.NamingGuidance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Reusable description ending" />
+                        <TextBox
+                            MinHeight="64"
+                            Margin="0,4,0,0"
+                            AcceptsReturn="True"
+                            AutomationProperties.Name="Reusable description signature"
+                            IsEnabled="{Binding IsProjectDraft}"
+                            MaxLength="1500"
+                            Style="{DynamicResource Control.FormTextBox}"
+                            Text="{Binding Editorial.DescriptionSignature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            TextWrapping="Wrap" />
+                        <Button
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Left"
+                            AutomationProperties.Name="Save metadata wording preferences"
+                            Command="{Binding Editorial.SaveProfileCommand}"
+                            Content="Save wording preferences"
+                            Style="{DynamicResource Control.GhostButton}" />
+                    </StackPanel>
+                </Border>
+            </Expander>
+        </StackPanel>
+    </Border>
+</UserControl>

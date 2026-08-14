@@ -1,0 +1,35 @@
+ReplayFoundry Visual Semantic Structured Decoding Policy 1.0
+
+Identity:
+visual-semantic-editorial-structured-decoding-1.0
+
+This Development-only policy applies only to the frozen Prompt 2.3 contract
+qualification. It does not authorize semantic labels, Holdout access, Desktop
+integration, ranking, or a production model.
+
+The backend is the official XGrammar 0.2.2 CPython 3.11 Windows x64
+distribution from source tag v0.2.2 and commit
+4d145cc13d878c751ebeed36af1c013074be76bc. The exact wheel SHA-256 is
+EEFB94F9DD84B0D79885943318B0FBF3E6FD23B86AE3DFE6D0E48F090F431E6B.
+The license is Apache-2.0.
+
+The representation is frozen to JsonSchema after model-free capability
+validation. Each case builds and hashes one deterministic schema whose numeric
+review bound is serialized as an exact JSON decimal, compiles it before case
+generation, and creates one fresh stateful logits processor.
+
+XGrammar 0.2.2 automatically dispatches CUDA masking to Triton in its
+Hugging Face helper. The pinned Windows environment has no official Triton
+dependency, so ReplayFoundry uses XGrammar's documented `torch_native` CUDA
+bitmask backend through a batch-one Hugging Face-compatible logits processor.
+
+All other generation settings remain the frozen Prompt 2.3 settings:
+do_sample=false, num_beams=1, use_cache=true, and max_new_tokens=2048.
+
+There is no unconstrained fallback, grammar fallback, retry, JSON repair,
+semantic repair, timestamp clamping, evidence fabrication, disposition
+rewriting, or synthetic uncertainty insertion. The unchanged strict parser
+and truth table remain the final authority over every completed output.
+
+All schema, environment, capability, generation, and parser decisions are
+audited. Proxy labels, semantic metrics, and future Holdout data are forbidden.

@@ -1,0 +1,125 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/ReplayFoundry.Desktop;component/Features/Generate/GenerateStyles.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <SolidColorBrush x:Key="Brush.GenerationProgressPanel" Color="{DynamicResource Color.ProgressSurface}" />
+    <SolidColorBrush x:Key="Brush.GenerationProgressCard" Color="{DynamicResource Color.ProgressPanel}" />
+    <SolidColorBrush x:Key="Brush.GenerationProgressBorder" Color="{DynamicResource Color.BorderSubtle}" />
+    <SolidColorBrush x:Key="Brush.GenerationProgressError" Color="{DynamicResource Color.ProgressAccent}" />
+    <SolidColorBrush x:Key="Brush.GenerationProgressErrorBorder" Color="{DynamicResource Color.Indeterminate}" />
+
+    <RadialGradientBrush x:Key="Brush.GenerationProgressSignalGlow">
+        <GradientStop Offset="0" Color="{DynamicResource Color.BrandCyan}" />
+        <GradientStop Offset="0.48" Color="{DynamicResource Color.BrandBlue}" />
+        <GradientStop Offset="1" Color="{DynamicResource Color.ProgressSurface}" />
+    </RadialGradientBrush>
+    <LinearGradientBrush x:Key="Brush.GenerationProgressCore" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="{DynamicResource Color.SurfacePanel}" />
+        <GradientStop Offset="0.62" Color="{DynamicResource Color.SurfaceInset}" />
+        <GradientStop Offset="1" Color="{DynamicResource Color.BrandInk}" />
+    </LinearGradientBrush>
+    <RadialGradientBrush x:Key="Brush.GenerationProgressAmbient">
+        <GradientStop Offset="0" Color="{DynamicResource Color.ProgressAccent}" />
+        <GradientStop Offset="1" Color="{DynamicResource Color.SurfaceCanvas}" />
+    </RadialGradientBrush>
+
+    <Style x:Key="GenerationProgress.AmbientFrame" TargetType="{x:Type Border}">
+        <Setter Property="MaxWidth" Value="1120" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{StaticResource Brush.GenerationProgressAmbient}" />
+        <Setter Property="CornerRadius" Value="22" />
+        <Setter Property="Opacity" Value="0.28" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.MainPanel" TargetType="{x:Type Border}">
+        <Setter Property="MaxWidth" Value="980" />
+        <Setter Property="MinWidth" Value="700" />
+        <Setter Property="Margin" Value="26" />
+        <Setter Property="Padding" Value="38" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{StaticResource Brush.GenerationProgressPanel}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.GenerationProgressBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="16" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.StagePanel" TargetType="{x:Type Border}">
+        <Setter Property="Margin" Value="24,0,0,0" />
+        <Setter Property="Padding" Value="30,24" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{StaticResource Brush.GenerationProgressCard}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.LocalStatus" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.InfoCard" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="18,14" />
+        <Setter Property="Background" Value="{StaticResource Brush.GenerationProgressCard}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="9" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.MetaLabel" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.MetaValue" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.ProgressBar" TargetType="{x:Type ProgressBar}">
+        <Setter Property="Height" Value="10" />
+        <Setter Property="Minimum" Value="0" />
+        <Setter Property="Maximum" Value="100" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.BrandCyan}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.ProgressTrack}" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.ErrorPanel" TargetType="{x:Type Border}">
+        <Setter Property="Margin" Value="0,22,0,0" />
+        <Setter Property="Padding" Value="18,16" />
+        <Setter Property="Background" Value="{StaticResource Brush.GenerationProgressError}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.GenerationProgressErrorBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="9" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.CompletionCard" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="18,15" />
+        <Setter Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="9" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.PrimaryButton" BasedOn="{StaticResource Generate.PrimaryButton}" TargetType="{x:Type Button}">
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Width" Value="220" />
+    </Style>
+
+    <Style x:Key="GenerationProgress.SecondaryButton" BasedOn="{StaticResource Generate.SecondaryButton}" TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="190" />
+    </Style>
+</ResourceDictionary>

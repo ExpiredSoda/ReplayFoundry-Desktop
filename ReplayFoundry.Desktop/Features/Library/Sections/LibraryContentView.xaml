@@ -1,0 +1,372 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Library.Sections.LibraryContentView"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:data="clr-namespace:System.Windows.Data;assembly=PresentationFramework"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Library.Sections">
+    <UserControl.Resources>
+        <CollectionViewSource x:Key="OrganizedLibraryItems" Source="{Binding Items}">
+            <CollectionViewSource.GroupDescriptions>
+                <data:PropertyGroupDescription PropertyName="OrganizationGroup" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+        <Style x:Key="LibraryGridItemContainer" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource Control.KeyboardFocus}">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <ContentPresenter
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <Border Style="{DynamicResource Control.CanvasPane}" AutomationProperties.Name="Library content">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="{Binding SelectedCategoryLabel}" />
+                    <TextBlock Margin="10,2,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding ResultSummary}" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button
+                        Margin="0,0,8,0"
+                        AutomationProperties.Name="Select multiple Library videos"
+                        AutomationProperties.HelpText="Shows check marks for selecting several visible Library entries."
+                        Command="{Binding BeginSelectionCommand}"
+                        Content="Select"
+                        Style="{DynamicResource Control.GhostButton}"
+                        Visibility="{Binding IsSingleItemMode, Converter={StaticResource BoolToVisibility}}" />
+                    <Button
+                        AutomationProperties.Name="Grid view"
+                        Command="{Binding SetGridViewCommand}"
+                        Content="Icon.Grid"
+                        ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="Grid view" />
+                    <Button
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="List view"
+                        Command="{Binding SetListViewCommand}"
+                        Content="Icon.List"
+                        ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="List view" />
+                </StackPanel>
+            </Grid>
+
+            <Border
+                Grid.Row="1"
+                Margin="0,12,0,0"
+                Padding="12,10"
+                Background="{DynamicResource Brush.InteractiveSelected}"
+                BorderBrush="{DynamicResource Brush.StatusInfo}"
+                BorderThickness="1"
+                CornerRadius="9"
+                Visibility="{Binding IsSelectionMode, Converter={StaticResource BoolToVisibility}}">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <controls:IconPath Width="16" Height="16" Margin="0,0,8,0" IconKey="Icon.CheckCircle" Stroke="{DynamicResource Brush.StatusInfo}" />
+                        <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding SelectionSummary}" />
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <Button
+                            AutomationProperties.Name="Select all visible Library videos"
+                            Command="{Binding SelectAllVisibleCommand}"
+                            Content="Select all results"
+                            Style="{DynamicResource Control.GhostButton}" />
+                        <Button
+                            Margin="8,0,0,0"
+                            AutomationProperties.HelpText="Removes only Library entries; rendered files stay on disk."
+                            AutomationProperties.Name="Remove selected Library videos"
+                            Command="{Binding RemoveMarkedCommand}"
+                            Content="Remove"
+                            Style="{DynamicResource Control.DestructiveButton}" />
+                        <Button
+                            Margin="8,0,0,0"
+                            AutomationProperties.Name="Cancel Library selection"
+                            Command="{Binding CancelSelectionCommand}"
+                            Content="Cancel"
+                            Style="{DynamicResource Control.GhostButton}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ScrollViewer
+                Grid.Row="2"
+                Margin="0,12,0,0"
+                AutomationProperties.Name="Library grid scroll region"
+                CanContentScroll="False"
+                HorizontalScrollBarVisibility="Disabled"
+                PanningMode="VerticalOnly"
+                VerticalScrollBarVisibility="Auto"
+                Visibility="{Binding IsGridView, Converter={StaticResource BoolToVisibility}}">
+            <ListBox
+                AutomationProperties.Name="Library grid items"
+                ItemContainerStyle="{StaticResource LibraryGridItemContainer}"
+                ItemsSource="{Binding Source={StaticResource OrganizedLibraryItems}}"
+                SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                ScrollViewer.CanContentScroll="False"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                Style="{DynamicResource Control.TabList}">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <local:LibraryViewportWrapPanel />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="GroupItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    Margin="2,12,0,8"
+                                    Foreground="{DynamicResource Brush.TextSecondary}"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Text="{Binding Name}" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Width="240" Margin="0,0,10,10">
+                            <Border.Style>
+                                <Style TargetType="{x:Type Border}" BasedOn="{StaticResource Control.KineticMediaCard}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <Border
+                                    Height="210"
+                                    Background="{DynamicResource Brush.CompositionCanvas}"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    CornerRadius="{DynamicResource Radius.OrganicCard}">
+                                    <Grid>
+                                        <Image
+                                            Source="{Binding ThumbnailFullPath, Converter={StaticResource FileImageSourceConverter}}"
+                                            Stretch="Uniform"
+                                            Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibility}}" />
+                                        <controls:IconPath
+                                            Width="30"
+                                            Height="30"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            IconKey="{Binding Glyph}"
+                                            Stroke="{DynamicResource Brush.StatusInfo}"
+                                            Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBoolToVisibility}}" />
+                                        <Button
+                                            Width="34" Height="34" Margin="7"
+                                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                                            AutomationProperties.Name="{Binding Title, StringFormat=Select {0}}"
+                                            Command="{Binding DataContext.ToggleMarkedCommand, ElementName=Root}"
+                                            CommandParameter="{Binding}"
+                                            ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                                            Content="Icon.Check"
+                                            Visibility="{Binding DataContext.IsSelectionMode, ElementName=Root, Converter={StaticResource BoolToVisibility}}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource Control.IconButton}">
+                                                    <Setter Property="Opacity" Value="0.58" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                                            <Setter Property="Opacity" Value="1" />
+                                                            <Setter Property="Background" Value="{DynamicResource Brush.StatusInfo}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button
+                                            Width="34" Height="34" Margin="7"
+                                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            AutomationProperties.Name="{Binding Title, StringFormat=Remove {0} from Library}"
+                                            AutomationProperties.HelpText="Removes only this Library entry. The rendered file stays on disk."
+                                            Command="{Binding DataContext.RemoveItemCommand, ElementName=Root}"
+                                            CommandParameter="{Binding}"
+                                            ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                                            Content="Icon.Trash"
+                                            Style="{DynamicResource Control.DestructiveIconButton}"
+                                            ToolTip="Remove from Library"
+                                            Visibility="{Binding DataContext.IsSingleItemMode, ElementName=Root, Converter={StaticResource BoolToVisibility}}" />
+                                        <Border
+                                            Margin="7"
+                                            Padding="5,2"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Bottom"
+                                            Background="{DynamicResource Brush.ModalScrim}"
+                                            CornerRadius="4">
+                                            <TextBlock
+                                                FontSize="10"
+                                                Foreground="{DynamicResource Brush.TextPrimary}"
+                                                Text="{Binding Duration}" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <TextBlock
+                                    Margin="0,8,0,0"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource Brush.TextPrimary}"
+                                    Text="{Binding Title}"
+                                    TextWrapping="Wrap" />
+                                <Grid Margin="0,4,0,0">
+                                    <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Type}" />
+                                    <TextBlock
+                                        HorizontalAlignment="Right"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource Brush.StatusInfo}"
+                                        Text="{Binding Status}" />
+                                </Grid>
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Detail}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            </ScrollViewer>
+
+            <ListBox
+                Grid.Row="2"
+                Margin="0,12,0,0"
+                AutomationProperties.Name="Library list items"
+                ItemsSource="{Binding Source={StaticResource OrganizedLibraryItems}}"
+                SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                Style="{DynamicResource Control.SectionList}"
+                Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibility}}">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    Margin="2,12,0,8"
+                                    Foreground="{DynamicResource Brush.TextSecondary}"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Text="{Binding Name}" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40" />
+                                <ColumnDefinition Width="58" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="74" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                Grid.Column="0"
+                                Width="32"
+                                Height="32"
+                                VerticalAlignment="Center"
+                                Command="{Binding DataContext.ToggleMarkedCommand, ElementName=Root}"
+                                CommandParameter="{Binding}"
+                                Content="Icon.Check"
+                                ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                                Style="{DynamicResource Control.IconButton}"
+                                Visibility="{Binding DataContext.IsSelectionMode, ElementName=Root, Converter={StaticResource BoolToVisibility}}" />
+                            <Border
+                                Grid.Column="1"
+                                Width="52"
+                                Height="34"
+                                Background="{DynamicResource Brush.CompositionCanvas}"
+                                CornerRadius="4">
+                                <Grid>
+                                    <Image
+                                        Source="{Binding ThumbnailFullPath, Converter={StaticResource FileImageSourceConverter}}"
+                                        Stretch="Uniform"
+                                        Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibility}}" />
+                                    <controls:IconPath
+                                        Width="16"
+                                        Height="16"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        IconKey="{Binding Glyph}"
+                                        Stroke="{DynamicResource Brush.StatusInfo}"
+                                        Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBoolToVisibility}}" />
+                                </Grid>
+                            </Border>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource Brush.TextPrimary}"
+                                    Text="{Binding Title}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Type}" />
+                                    <TextBlock Style="{DynamicResource Text.Meta}" Text=" · " />
+                                    <TextBlock
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Detail}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock Grid.Column="3" Margin="10,0,0,0" VerticalAlignment="Center" Style="{DynamicResource Text.Meta}" Text="{Binding Duration}" />
+                            <TextBlock Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Center" Style="{DynamicResource Text.Meta}" Text="{Binding Modified}" />
+                            <StackPanel
+                                Grid.Column="5"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource Brush.StatusInfo}"
+                                    Text="{Binding Status}" />
+                                <Button
+                                    Width="32"
+                                    Height="32"
+                                    Margin="8,0,0,0"
+                                    AutomationProperties.Name="{Binding Title, StringFormat=Remove {0} from Library}"
+                                    AutomationProperties.HelpText="Removes only this Library entry. The rendered file stays on disk."
+                                    Command="{Binding DataContext.RemoveItemCommand, ElementName=Root}"
+                                    CommandParameter="{Binding}"
+                                    Content="Icon.Trash"
+                                    ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                                    Style="{DynamicResource Control.DestructiveIconButton}"
+                                    ToolTip="Remove from Library"
+                                    Visibility="{Binding DataContext.IsSingleItemMode, ElementName=Root, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <controls:EmptyState
+                Grid.Row="2"
+                Margin="0,20"
+                Description="{Binding EmptyDescription}"
+                IconKey="Icon.Project"
+                Title="{Binding EmptyTitle}"
+                Visibility="{Binding HasNoVisibleItems, Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
+    </Border>
+</UserControl>

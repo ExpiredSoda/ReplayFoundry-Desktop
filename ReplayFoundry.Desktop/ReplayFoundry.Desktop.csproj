@@ -1,0 +1,77 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+	<ApplicationIcon>Assets\Icons\Application\ReplayFoundry.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.28.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReplayFoundry.RuntimePacks\ReplayFoundry.RuntimePacks.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ReplayFoundryYouTubeClientId)' != ''">
+    <AssemblyMetadata Include="ReplayFoundry.YouTubeClientId" Value="$(ReplayFoundryYouTubeClientId)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ReplayFoundryYouTubeClientSecret)' != ''">
+    <AssemblyMetadata Include="ReplayFoundry.YouTubeClientSecret" Value="$(ReplayFoundryYouTubeClientSecret)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ReplayFoundryAdvancedInstallerUri)' != ''">
+    <AssemblyMetadata Include="ReplayFoundry.AdvancedInstallerUri" Value="$(ReplayFoundryAdvancedInstallerUri)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ReplayFoundryUserReportEndpoint)' != ''">
+    <AssemblyMetadata Include="ReplayFoundry.UserReportEndpoint" Value="$(ReplayFoundryUserReportEndpoint)" />
+    <AssemblyMetadata Include="ReplayFoundry.UserReportDestinationName" Value="Replay Foundry support" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\Icons\Application\ReplayFoundry.ico">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\Branding\ReplayFoundry-App-Icon-1024.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Branding\favicon.svg">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Features\Generate\GenerateResponsiveStyles.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+    <Page Update="Features\Generate\GenerateStyles.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+    <Page Update="Resources\Controls\FloatingDockStyles.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+    <Page Update="Resources\Theme\Brushes.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+    <Page Update="Resources\Theme\Colors.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+    <Page Update="Resources\Theme\Typography.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+    <Page Update="Shell\MainWindow.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+  </ItemGroup>
+
+</Project>

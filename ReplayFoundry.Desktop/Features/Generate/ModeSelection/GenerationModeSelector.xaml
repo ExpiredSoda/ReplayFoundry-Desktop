@@ -1,0 +1,214 @@
+﻿<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Generate.ModeSelection.GenerationModeSelector"
+    x:Name="ModeSelector"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Generate.ModeSelection"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="110"
+    d:DesignWidth="920"
+    Background="Transparent"
+    Focusable="False"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+
+        <ResourceDictionary>
+
+            <ResourceDictionary.MergedDictionaries>
+
+                <ResourceDictionary Source="GenerationModeStyles.xaml" />
+
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style
+                x:Key="Generate.ResponsiveModeCard"
+                BasedOn="{StaticResource Generate.ModeTabCard}"
+                TargetType="{x:Type RadioButton}">
+
+                <Style.Triggers>
+
+                    <DataTrigger
+                        Binding="{Binding IsCompact, RelativeSource={RelativeSource AncestorType={x:Type local:GenerationModeSelector}}}"
+                        Value="True">
+
+                        <Setter Property="Height" Value="76" />
+                        <Setter Property="Margin" Value="4,0" />
+                        <Setter Property="Padding" Value="14,8" />
+
+                    </DataTrigger>
+
+                </Style.Triggers>
+
+            </Style>
+
+            <Style
+                x:Key="Generate.ResponsiveModeIconTile"
+                TargetType="{x:Type Border}">
+
+                <Setter Property="Width" Value="54" />
+                <Setter Property="Height" Value="54" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="7" />
+
+                <Style.Triggers>
+
+                    <DataTrigger
+                        Binding="{Binding IsCompact, RelativeSource={RelativeSource AncestorType={x:Type local:GenerationModeSelector}}}"
+                        Value="True">
+
+                        <Setter Property="Width" Value="40" />
+                        <Setter Property="Height" Value="40" />
+
+                    </DataTrigger>
+
+                </Style.Triggers>
+
+            </Style>
+
+            <Style
+                x:Key="Generate.ResponsiveModeTitle"
+                TargetType="{x:Type TextBlock}">
+
+                <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+
+                <Style.Triggers>
+
+                    <DataTrigger
+                        Binding="{Binding IsCompact, RelativeSource={RelativeSource AncestorType={x:Type local:GenerationModeSelector}}}"
+                        Value="True">
+
+                        <Setter Property="FontSize" Value="15" />
+
+                    </DataTrigger>
+
+                </Style.Triggers>
+
+            </Style>
+
+            <Style
+                x:Key="Generate.ResponsiveModeDescription"
+                TargetType="{x:Type TextBlock}">
+
+                <Setter Property="Margin" Value="0,5,0,0" />
+                <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+
+                <Style.Triggers>
+
+                    <DataTrigger
+                        Binding="{Binding IsCompact, RelativeSource={RelativeSource AncestorType={x:Type local:GenerationModeSelector}}}"
+                        Value="True">
+
+                        <Setter Property="Visibility" Value="Collapsed" />
+
+                    </DataTrigger>
+
+                </Style.Triggers>
+
+            </Style>
+
+        </ResourceDictionary>
+
+    </UserControl.Resources>
+
+    <UniformGrid Columns="2">
+
+        <RadioButton
+            AutomationProperties.HelpText="Generate separate standalone clip candidates from the selected videos."
+            AutomationProperties.Name="Individual Clips"
+            GroupName="GenerationMode"
+            IsChecked="{Binding IsIndividualClipsSelected, Mode=TwoWay}"
+            Style="{DynamicResource Generate.ResponsiveModeCard}">
+
+            <Grid>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{DynamicResource Generate.ResponsiveModeIconTile}">
+                    <controls:IconPath
+                        Width="28"
+                        Height="28"
+                        IconKey="Icon.Media"
+                        Stroke="{DynamicResource Brush.BrandCyan}"
+                        StrokeThickness="1.35"
+                        Stretch="Uniform" />
+                </Border>
+
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="14,0,0,0"
+                    VerticalAlignment="Center">
+
+                    <TextBlock
+                        Style="{DynamicResource Generate.ResponsiveModeTitle}"
+                        Text="Individual Clips" />
+
+                    <TextBlock
+                        Style="{DynamicResource Generate.ResponsiveModeDescription}"
+                        Text="Find the strongest standalone moments as separate clip candidates." />
+
+                </StackPanel>
+
+            </Grid>
+
+        </RadioButton>
+
+        <RadioButton
+            AutomationProperties.HelpText="Find related moments that can be arranged into a montage sequence."
+            AutomationProperties.Name="Montage"
+            GroupName="GenerationMode"
+            IsChecked="{Binding IsMontageSelected, Mode=TwoWay}"
+            Style="{DynamicResource Generate.ResponsiveModeCard}">
+
+            <Grid>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{DynamicResource Generate.ResponsiveModeIconTile}">
+                    <controls:IconPath
+                        Width="28"
+                        Height="28"
+                        IconKey="Icon.Grid"
+                        Stroke="{DynamicResource Brush.BrandYellow}"
+                        StrokeThickness="1.25"
+                        Stretch="Uniform" />
+                </Border>
+
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="14,0,0,0"
+                    VerticalAlignment="Center">
+
+                    <TextBlock
+                        Style="{DynamicResource Generate.ResponsiveModeTitle}"
+                        Text="Montage" />
+
+                    <TextBlock
+                        Style="{DynamicResource Generate.ResponsiveModeDescription}"
+                        Text="Find related moments that can flow together as one montage." />
+
+                </StackPanel>
+
+            </Grid>
+
+        </RadioButton>
+
+    </UniformGrid>
+
+</UserControl>

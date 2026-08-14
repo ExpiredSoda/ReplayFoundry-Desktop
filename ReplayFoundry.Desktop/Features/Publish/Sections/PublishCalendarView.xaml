@@ -1,0 +1,225 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Publish.Sections.PublishCalendarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Publish.Sections">
+    <Border
+        AutomationProperties.Name="YouTube schedule calendar"
+        Style="{DynamicResource Control.CanvasPane}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="SCHEDULE" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="Drop a Library video onto a day. You will review its details before anything uploads."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button
+                        AutomationProperties.Name="Previous month or week"
+                        Command="{Binding PreviousCalendarCommand}"
+                        Content="Icon.ChevronLeft"
+                        ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="Previous month or week" />
+                    <Button
+                        Margin="6,0"
+                        Command="{Binding TodayCalendarCommand}"
+                        Content="Today"
+                        Style="{DynamicResource Control.GhostButton}" />
+                    <Button
+                        AutomationProperties.Name="Next month or week"
+                        Command="{Binding NextCalendarCommand}"
+                        Content="Icon.ChevronRight"
+                        ContentTemplate="{StaticResource IconButtonContentTemplate}"
+                        Style="{DynamicResource Control.IconButton}"
+                        ToolTip="Next month or week" />
+                </StackPanel>
+            </Grid>
+            <Grid Grid.Row="1" Margin="0,14,0,8">
+                <TextBlock
+                    FontSize="17"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource Brush.TextPrimary}"
+                    Text="{Binding CalendarRangeTitle}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding CalendarTimeZoneLabel}" />
+            </Grid>
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding CalendarWeekdayHeaders}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="7" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock
+                            Padding="4"
+                            HorizontalAlignment="Center"
+                            FontSize="10"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="{Binding}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ListBox
+                Grid.Row="3"
+                Height="380"
+                AutomationProperties.Name="Publishing calendar days"
+                Background="Transparent"
+                BorderBrush="Transparent"
+                BorderThickness="0"
+                ItemsSource="{Binding CalendarDays}"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                SelectedItem="{Binding SelectedCalendarDay, Mode=TwoWay}">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="7" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource Control.KeyboardFocus}">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border
+                                        Background="{TemplateBinding Background}"
+                                        Padding="{TemplateBinding Padding}"
+                                        SnapsToDevicePixels="True">
+                                        <ContentPresenter
+                                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border
+                            MinHeight="70"
+                            Margin="1"
+                            Padding="6"
+                            AllowDrop="True"
+                            CornerRadius="7"
+                            DragEnter="Day_DragEnter"
+                            DragLeave="Day_DragLeave"
+                            DragOver="Day_DragOver"
+                            Drop="Day_Drop">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{DynamicResource Brush.KineticCanvasPane}" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="1" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource Brush.KineticGlowSoft}" />
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource Brush.KineticGlowSoft}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                                        </DataTrigger>
+                                        <Trigger Property="local:PublishCalendarView.IsDropTargetActive" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                                            <Setter Property="BorderThickness" Value="1" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <StackPanel>
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource Brush.TextSecondary}"
+                                        Text="{Binding DayNumber}" />
+                                    <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding Slots}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    Margin="0,0,0,3"
+                                                    Padding="4,3"
+                                                    Background="{DynamicResource Brush.InteractiveSelected}"
+                                                    CornerRadius="4">
+                                                    <TextBlock
+                                                        FontSize="9"
+                                                        Foreground="{DynamicResource Brush.TextPrimary}"
+                                                        Text="{Binding Title}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                                <Border
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Padding="7,4"
+                                    Background="{DynamicResource Brush.SurfaceElevated}"
+                                    BorderBrush="{DynamicResource Brush.StatusInfo}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    IsHitTestVisible="False">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger
+                                                    Binding="{Binding (local:PublishCalendarView.IsDropTargetActive), RelativeSource={RelativeSource AncestorType=Border}}"
+                                                    Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock
+                                        FontSize="10"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource Brush.TextPrimary}"
+                                        Text="DROP HERE" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Grid Grid.Row="4" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource Brush.TextPrimary}"
+                        Text="{Binding SelectedCalendarDayTitle}" />
+                    <TextBlock
+                        Margin="0,3,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="{Binding SelectedCalendarDaySummary}" />
+                </StackPanel>
+                <Button
+                    HorizontalAlignment="Right"
+                    AutomationProperties.Name="Prepare selected Library video for selected date"
+                    Command="{Binding CreatePlanCommand}"
+                    Content="Schedule selected video"
+                    Style="{DynamicResource Control.PrimaryButton}" />
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

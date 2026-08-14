@@ -1,0 +1,261 @@
+<Window
+    x:Class="ReplayFoundry.Desktop.Shell.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:dock="clr-namespace:ReplayFoundry.Desktop.Shell.Dock"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+    xmlns:windowing="clr-namespace:ReplayFoundry.Desktop.Shell.Windowing"
+    Title="Replay Foundry"
+    Width="1280"
+    Height="720"
+    MinWidth="500"
+    MinHeight="420"
+    Background="{DynamicResource Brush.WindowFallback}"
+    Icon="/ReplayFoundry.Desktop;component/Assets/Icons/Application/ReplayFoundry.ico"
+    AllowsTransparency="False"
+    ResizeMode="CanResize"
+    ShowInTaskbar="True"
+    SnapsToDevicePixels="True"
+    Topmost="False"
+    UseLayoutRounding="True"
+    WindowStartupLocation="CenterScreen"
+    WindowState="Maximized"
+    WindowStyle="None"
+    shell:WindowChrome.WindowChrome="{DynamicResource ReplayFoundry.WindowChrome}"
+    windowing:WindowChromeInteraction.Attach="True"
+    mc:Ignorable="d">
+
+    <Window.InputBindings>
+        <KeyBinding Key="F1" Command="{Binding OpenGuideCommand}" />
+        <KeyBinding Key="K" Modifiers="Control" Command="{Binding OpenCommandPaletteCommand}" />
+        <KeyBinding Key="Oem2" Modifiers="Control" Command="{Binding OpenShortcutReferenceCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding CloseOverlayCommand}" />
+    </Window.InputBindings>
+
+    <Grid
+        x:Name="ShellSurface"
+        Background="{DynamicResource Brush.WindowFallback}"
+        SizeChanged="ShellSurface_SizeChanged">
+        <Rectangle
+            Panel.ZIndex="0"
+            Fill="{DynamicResource Brush.WindowGrid}"
+            IsHitTestVisible="False"
+            Opacity="0.72" />
+
+        <Border Panel.ZIndex="1" Background="{DynamicResource Brush.WindowOverlay}" IsHitTestVisible="False" />
+
+        <Grid
+            Panel.ZIndex="2"
+            Margin="15,68,15,132">
+            <ContentControl
+                x:Name="WorkspaceContent"
+                HorizontalContentAlignment="Stretch"
+                VerticalContentAlignment="Stretch"
+                Content="{Binding CurrentWorkspace}" />
+        </Grid>
+
+        <dock:FloatingDock
+            Panel.ZIndex="40"
+            Margin="15,0,15,18"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            NavigateCommand="{Binding NavigateCommand}"
+            SelectedDestination="{Binding CurrentDestination, Mode=OneWay}" />
+
+        <Border
+            x:Name="TitleBar"
+            Panel.ZIndex="100"
+            Height="56"
+            VerticalAlignment="Top"
+            Padding="14,0,0,0"
+            Background="{DynamicResource Brush.TitleBarActive}"
+            BorderBrush="{DynamicResource Brush.TitleBarBorder}"
+            BorderThickness="0,0,0,1"
+            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="{DynamicResource Brush.TitleBarActive}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsActive, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="False">
+                            <Setter Property="Background" Value="{DynamicResource Brush.TitleBarInactive}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Source={x:Static SystemParameters.HighContrast}}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Brush.HighContrastWindow}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.HighContrastBorder}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <Image
+                        Width="28"
+                        Height="28"
+                        Margin="0,0,10,0"
+                        RenderOptions.BitmapScalingMode="HighQuality"
+                        Source="{Binding Icon, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            Foreground="{DynamicResource Brush.BrandPaper}"
+                            FontSize="10"
+                            FontWeight="Bold"
+                            Text="REPLAY" />
+                        <TextBlock
+                            Margin="0,-1,0,0"
+                            Foreground="{DynamicResource Brush.BrandCyan}"
+                            FontSize="10"
+                            FontWeight="Bold"
+                            Text="FOUNDRY" />
+                    </StackPanel>
+                    <Border
+                        Margin="12,0,0,0"
+                        AutomationProperties.Name="Application connectivity status"
+                        Style="{DynamicResource Control.ChromeStatusPill}">
+                        <Border.ToolTip>
+                            <TextBlock
+                                MaxWidth="300"
+                                Text="{Binding ConnectivityStatusDetail}"
+                                TextWrapping="Wrap" />
+                        </Border.ToolTip>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse
+                                Width="7"
+                                Height="7"
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{DynamicResource Brush.StatusSuccess}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsOnlineConnectionEnabled}" Value="True">
+                                                <Setter Property="Fill" Value="{DynamicResource Brush.StatusInfo}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsYouTubeConnected}" Value="True">
+                                                <Setter Property="Fill" Value="{DynamicResource Brush.StatusSuccess}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                Style="{DynamicResource Text.TitleBarSecondary}"
+                                Text="{Binding ConnectivityStatusText}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <StackPanel
+                    Grid.Column="2"
+                    Margin="0,0,12,0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        x:Name="WorkspaceChromeEyebrow"
+                        HorizontalAlignment="Center"
+                        Foreground="{DynamicResource Brush.StatusInfo}"
+                        Style="{DynamicResource Text.TitleBarSecondary}"
+                        Text="{Binding CurrentWorkspaceChrome.WorkspaceEyebrow}"
+                        TextAlignment="Center" />
+                    <TextBlock
+                        x:Name="WorkspaceChromeDescription"
+                        Margin="0,2,0,0"
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        FontSize="10"
+                        Text="{Binding CurrentWorkspaceChrome.WorkspaceDescription}"
+                        TextAlignment="Center"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <Border
+                    Grid.Column="4"
+                    MaxWidth="190"
+                    Margin="0,0,12,0"
+                    HorizontalAlignment="Right"
+                    Style="{DynamicResource Control.ChromeStatusPill}">
+                    <TextBlock
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        FontSize="10"
+                        Text="{Binding CurrentWorkspaceChrome.StatusText}"
+                        TextAlignment="Center"
+                        TextTrimming="CharacterEllipsis" />
+                </Border>
+                <StackPanel
+                    Grid.Column="5"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <Button
+                        x:Name="CaptionHelpButton"
+                        Width="40"
+                        Height="40"
+                        MinWidth="40"
+                        Padding="0"
+                        AutomationProperties.HelpText="Open the searchable Foundry Guide."
+                        AutomationProperties.Name="Open Foundry Guide"
+                        Command="{Binding OpenGuideCommand}"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Style="{DynamicResource Control.CaptionButton}">
+                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="?" />
+                    </Button>
+                    <Button
+                        x:Name="CaptionMinimizeButton"
+                        AutomationProperties.HelpText="Minimize the Replay Foundry window."
+                        AutomationProperties.Name="Minimize window"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Style="{DynamicResource Control.CaptionButton}">
+                        <TextBlock Style="{DynamicResource Text.CaptionGlyph}" Text="{StaticResource Icon.Glyph.ChromeMinimize}" />
+                    </Button>
+                    <Button
+                        x:Name="CaptionMaximizeButton"
+                        AutomationProperties.HelpText="Maximize or restore the Replay Foundry window."
+                        AutomationProperties.Name="Maximize window"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Style="{DynamicResource Control.CaptionButton}">
+                        <TextBlock x:Name="CaptionMaximizeGlyph" Style="{DynamicResource Text.CaptionGlyph}" Text="{StaticResource Icon.Glyph.ChromeMaximize}" />
+                    </Button>
+                    <Button
+                        x:Name="CaptionCloseButton"
+                        AutomationProperties.HelpText="Close Replay Foundry."
+                        AutomationProperties.Name="Close window"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Style="{DynamicResource Control.CaptionCloseButton}">
+                        <TextBlock Style="{DynamicResource Text.CaptionGlyph}" Text="{StaticResource Icon.Glyph.ChromeClose}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border
+            Panel.ZIndex="90"
+            Margin="0,56,0,0"
+            Background="{DynamicResource Brush.ModalScrim}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActiveOverlay}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Source={x:Static SystemParameters.HighContrast}}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Brush.HighContrastWindow}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.HighContrastBorder}" />
+                            <Setter Property="BorderThickness" Value="1" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <ContentPresenter Margin="24" HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="{Binding ActiveOverlay}" />
+        </Border>
+    </Grid>
+</Window>
