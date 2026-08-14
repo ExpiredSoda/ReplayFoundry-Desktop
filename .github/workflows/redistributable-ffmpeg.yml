@@ -130,6 +130,12 @@ jobs:
           git -C ffmpeg-builds diff --check
           git -C ffmpeg-builds diff -- scripts.d/50-openh264.sh scripts.d/50-libopus.sh build.sh download.sh util/vars.sh
 
+      - name: Restore matching dependency-source cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ffmpeg-builds/.cache/downloads
+          key: replayfoundry-ffmpeg-sources-${{ env.BTBN_COMMIT }}-no-openh264-no-libopus-v1
+
       - name: Download matching dependency sources
         working-directory: ffmpeg-builds
         shell: bash
