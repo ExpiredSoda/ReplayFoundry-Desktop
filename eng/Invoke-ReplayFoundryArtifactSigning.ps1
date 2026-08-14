@@ -153,7 +153,12 @@ $targets = @($Path | ForEach-Object {
     if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
         throw "Signing target was not found: $target"
     }
-    if ([IO.Path]::GetExtension($target).ToLowerInvariant() -notin @('.exe', '.dll', '.msi', '.msix', '.cab')) {
+    $extension = [IO.Path]::GetExtension($target).ToLowerInvariant()
+    $isInnoTemporaryUninstaller =
+        $extension -eq '.tmp' -and
+        [IO.Path]::GetFileName($target).Equals('uninst.e32.tmp', [StringComparison]::OrdinalIgnoreCase)
+    if ($extension -notin @('.exe', '.dll', '.msi', '.msix', '.cab') -and
+        -not $isInnoTemporaryUninstaller) {
         throw "Unsupported Authenticode target: $target"
     }
     $target

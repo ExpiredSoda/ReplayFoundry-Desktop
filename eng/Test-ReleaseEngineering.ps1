@@ -130,6 +130,7 @@ if ($trackedSensitive.Count -ne 0) {
 $publisherScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Publish-ReplayFoundryWindows.ps1')
 $installerScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Build-ReplayFoundryInstaller.ps1')
 $brandingScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\New-ReplayFoundryInstallerBranding.ps1')
+$signerScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Invoke-ReplayFoundryArtifactSigning.ps1')
 foreach ($scriptText in @($publisherScript, $installerScript)) {
     if ($scriptText -notmatch 'status --porcelain=v1 --untracked-files=all' -or
         $scriptText -notmatch 'Production.*clean source working tree' -or
@@ -161,6 +162,11 @@ foreach ($requiredInstallerBuildPattern in @(
 }
 if (($brandingScript + $installerScript + $installer) -match 'InnoLicense(Key)?|CommercialLicense(Key)?') {
     throw 'Installer branding/build code must never accept or persist an Inno commercial license key.'
+}
+if ($signerScript -notmatch "GetFileName\(\`$target\)\.Equals\('uninst\.e32\.tmp'" -or
+    $signerScript -notmatch "\`$extension -eq '\.tmp'" -or
+    $signerScript -notmatch "\`$extension -notin @\('\.exe', '\.dll', '\.msi', '\.msix', '\.cab'\)") {
+    throw 'Artifact Signing must admit only the exact Inno temporary uninstaller in addition to final Authenticode payload types.'
 }
 
 $signTool = Get-ChildItem (Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin') `
