@@ -298,7 +298,7 @@ internal static partial class GenerationClipRenderingTests
 
     private sealed class PipelineFixture : IDisposable
     {
-        private readonly EnvironmentVariableScope _environment;
+        private readonly string _ffmpegPath;
 
         public PipelineFixture(
             string root,
@@ -310,11 +310,8 @@ internal static partial class GenerationClipRenderingTests
             GenerationRequest = generationRequest;
             MomentService = momentService;
             Moments = moments;
-            string executable = Path.Combine(root, "ffmpeg.exe");
-            File.WriteAllText(executable, "test");
-            _environment = new(
-                "REPLAYFOUNDRY_FFMPEG_PATH",
-                executable);
+            _ffmpegPath = Path.Combine(root, "ffmpeg.exe");
+            File.WriteAllText(_ffmpegPath, "test");
             FinalDirectory = Path.Combine(root, "published clips");
         }
 
@@ -337,16 +334,23 @@ internal static partial class GenerationClipRenderingTests
             IProcessRunner runner) =>
             new(
                 runner,
-                new FfmpegToolLocator());
+                new FixedFfmpegToolLocator(_ffmpegPath));
 
         public void Dispose()
         {
-            _environment.Dispose();
             if (Directory.Exists(Root))
             {
                 Directory.Delete(Root, recursive: true);
             }
         }
+    }
+
+    private sealed class FixedFfmpegToolLocator(
+        string executablePath) : IFfmpegToolLocator
+    {
+        public string LocateFfmpeg() => executablePath;
+
+        public string LocateFfprobe() => executablePath;
     }
 
     private sealed class FixedOutputPathProvider(

@@ -15,14 +15,14 @@ internal sealed class FfmpegStudioProjectRenderingService :
     IStudioProjectRenderingService
 {
     private readonly IProcessRunner _processRunner;
-    private readonly FfmpegToolLocator _toolLocator;
+    private readonly IFfmpegToolLocator _toolLocator;
     private readonly object _completedRenderLock = new();
     private readonly Dictionary<string, string> _completedRenderOwners =
         new(StringComparer.OrdinalIgnoreCase);
 
     public FfmpegStudioProjectRenderingService(
         IProcessRunner processRunner,
-        FfmpegToolLocator toolLocator)
+        IFfmpegToolLocator toolLocator)
     {
         _processRunner = processRunner ??
             throw new ArgumentNullException(nameof(processRunner));
