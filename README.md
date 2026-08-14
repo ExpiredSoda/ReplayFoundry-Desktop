@@ -13,7 +13,7 @@
 
 Replay Foundry is a Windows desktop workflow for finding strong gameplay moments, shaping vertical videos, styling captions, reviewing titles and descriptions, organizing finished work, and preparing YouTube releases. The application keeps editing and AI processing on the creator's PC; uploads happen only through explicit Publish actions.
 
-> This repository is being polished privately before its public-source launch. Installers, runtime packs, screenshots, and release notes will appear here only after the signed release candidate passes the complete production gate.
+> This repository is being polished privately before its public-source launch. Private beta installers may be explicitly marked unsigned for clean-machine testing; public installers will appear only after a signed release candidate passes the complete production gate.
 
 ## The workflow
 
@@ -63,6 +63,6 @@ Replay Foundry does not embed API secrets or private signing material. Release b
 
 ## Project status
 
-The source is under active private release preparation. The first public milestone will include a signed Windows installer, reviewed runtime catalogs, final media examples, reproducible release manifests, and public support links.
+The source is under active private release preparation. Private beta releases validate installation and core workflows without implying public-release readiness. The first public milestone will include a signed Windows installer, reviewed runtime catalogs, final media examples, reproducible release manifests, and public support links.
 
 Copyright © 2026 Expired Soda Studios LLC. Source code is available under the [MIT License](LICENSE.txt); bundled third-party components retain their own licenses and notices.
