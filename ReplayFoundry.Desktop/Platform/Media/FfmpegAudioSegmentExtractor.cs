@@ -15,7 +15,7 @@ internal sealed class FfmpegAudioSegmentExtractor :
     private const string ExtractorVersion = "0.1.0";
 
     private readonly IProcessRunner _processRunner;
-    private readonly FfmpegToolLocator _toolLocator;
+    private readonly IFfmpegToolLocator _toolLocator;
     private readonly IAudioExtractionWorkspaceFactory
         _workspaceFactory;
     private readonly object _toolInfoSync = new();
@@ -23,7 +23,7 @@ internal sealed class FfmpegAudioSegmentExtractor :
 
     public FfmpegAudioSegmentExtractor(
         IProcessRunner processRunner,
-        FfmpegToolLocator toolLocator,
+        IFfmpegToolLocator toolLocator,
         IAudioExtractionWorkspaceFactory workspaceFactory)
     {
         _processRunner =

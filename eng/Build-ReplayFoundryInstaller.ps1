@@ -59,6 +59,21 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$versionMatch = [regex]::Match(
+    $Version,
+    '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)')
+if (-not $versionMatch.Success) {
+    throw "Version '$Version' does not contain a numeric three-part file version."
+}
+$fileVersionParts = @(
+    $versionMatch.Groups['major'].Value,
+    $versionMatch.Groups['minor'].Value,
+    $versionMatch.Groups['patch'].Value,
+    '0')
+if (@($fileVersionParts | Where-Object { [uint64]$_ -gt 65535 }).Count -ne 0) {
+    throw "Version '$Version' contains a Windows file-version component above 65535."
+}
+$fileVersion = $fileVersionParts -join '.'
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if ([string]::IsNullOrWhiteSpace($ArtifactRoot)) {
     $ArtifactRoot = Join-Path $repoRoot "artifacts\installer\$Version"
@@ -211,6 +226,7 @@ New-Item -ItemType Directory -Path $installerDirectory -Force | Out-Null
 $script = Join-Path $repoRoot 'installer\ReplayFoundry.iss'
 $innoArguments = @(
     "/DMyAppVersion=$Version",
+    "/DMyAppFileVersion=$fileVersion",
     "/DPublishDir=$publishDirectory",
     "/DRepoRoot=$repoRoot",
     "/DInstallerOutputDir=$installerDirectory",

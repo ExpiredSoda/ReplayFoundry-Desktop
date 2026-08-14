@@ -28,14 +28,14 @@ internal sealed class FfmpegEvidenceAnalyzer :
 
     private readonly IProcessRunner _processRunner;
     private readonly FfmpegEvidencePassRunner _passRunner;
-    private readonly FfmpegToolLocator _toolLocator;
+    private readonly IFfmpegToolLocator _toolLocator;
     private readonly object _toolInfoSync = new();
 
     private Task<FfmpegToolInfo>? _toolInfoTask;
 
     public FfmpegEvidenceAnalyzer(
         IProcessRunner processRunner,
-        FfmpegToolLocator toolLocator)
+        IFfmpegToolLocator toolLocator)
     {
         ArgumentNullException.ThrowIfNull(processRunner);
         ArgumentNullException.ThrowIfNull(toolLocator);

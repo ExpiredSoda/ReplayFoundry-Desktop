@@ -1,6 +1,9 @@
 #ifndef MyAppVersion
   #error MyAppVersion must be supplied by Build-ReplayFoundryInstaller.ps1
 #endif
+#ifndef MyAppFileVersion
+  #error MyAppFileVersion must be supplied by Build-ReplayFoundryInstaller.ps1
+#endif
 #ifndef PublishDir
   #error PublishDir must be supplied by Build-ReplayFoundryInstaller.ps1
 #endif
@@ -75,7 +78,7 @@ RestartApplications=no
 ChangesAssociations=no
 ChangesEnvironment=no
 UsePreviousAppDir=yes
-VersionInfoVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppFileVersion}
 VersionInfoProductName={#MyAppName}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=ReplayFoundry local-first gaming clip editor

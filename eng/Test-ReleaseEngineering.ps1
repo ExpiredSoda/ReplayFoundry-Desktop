@@ -32,12 +32,14 @@ foreach ($relative in $scripts) {
 $installer = Get-Content -Raw -LiteralPath (Join-Path $root 'installer\ReplayFoundry.iss')
 foreach ($required in @(
     '#define MyAppPublisher "Expired Soda Studios LLC"',
+    '#ifndef MyAppFileVersion',
     'AppPublisherURL=https://replayfoundry.com/',
     'AppSupportURL=https://replayfoundry.com/support',
     'AppUpdatesURL=https://replayfoundry.com/download',
     'WizardStyle=modern dark windows11 hidebevels includetitlebar',
     'WizardBackImageFile={#WizardBackImagePath}',
     'WizardSmallImageFile={#WizardSmallImagePath}',
+    'VersionInfoVersion={#MyAppFileVersion}',
     'HighContrastActive',
     'SignedUninstaller=yes',
     'Type: files; Name: "{autoprograms}\Replay Foundry.lnk"',
@@ -139,6 +141,8 @@ foreach ($requiredInstallerBuildPattern in @(
     'installer-branding-manifest\.json',
     'ReplayFoundry/YouTube/\$\(\$youtubeCredentialTargetHash\.Substring\(0, 20\)\)',
     '/DYouTubeCredentialTargetName=\$youtubeCredentialTargetName',
+    '/DMyAppFileVersion=\$fileVersion',
+    '\$fileVersionParts = @\(',
     'Programs\\Inno\\ISCC\.exe',
     'Inno Setup 7\\ISCC\.exe')) {
     if ($installerScript -notmatch $requiredInstallerBuildPattern) {
