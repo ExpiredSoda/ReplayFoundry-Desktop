@@ -81,11 +81,16 @@ $env:REPLAYFOUNDRY_YOUTUBE_CLIENT_SECRET = <approved-secret-manager-value>
   -YouTubeClientId <desktop-client-id>.apps.googleusercontent.com `
   -AdvancedInstallerUri https://replayfoundry.com/download `
   -Profile Base `
-  -RuntimePackBuildRoot <base-pack-output> `
+  -RuntimePackBuildRoot <advanced-pack-output> `
   -AdvancedPayloadMode Online `
   -AdvancedCatalogPath <external-output>\advanced-runtime-catalog.json `
   -ArtifactRoot <external-installer-output>
 ```
+
+The Base installer embeds only the media-tools archive. When it also offers the
+optional online Advanced AI choice, the verified Advanced build root is required
+so setup can bind the embedded Base payload and online catalog to the same sealed
+pack set.
 
 Remove the process value immediately after the build, whether the build succeeds
 or fails:
@@ -122,7 +127,9 @@ Then supply the approved regional endpoint, account, certificate profile, and au
   -YouTubeClientId <desktop-client-id>.apps.googleusercontent.com `
   -AdvancedInstallerUri https://replayfoundry.com/download `
   -Profile Base `
-  -RuntimePackBuildRoot <base-pack-output> `
+  -RuntimePackBuildRoot <advanced-pack-output> `
+  -AdvancedPayloadMode Online `
+  -AdvancedCatalogPath <external-output>\advanced-runtime-catalog.json `
   -ArtifactRoot <external-installer-output> `
   -ReleaseChannel Production `
   -SigningMode ArtifactSigning `

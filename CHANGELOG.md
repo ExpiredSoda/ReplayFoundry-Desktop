@@ -1,14 +1,14 @@
 # Replay Foundry change log
 
 This file records user-visible product changes and the release-engineering work
-that supports them. Versions follow the public GitHub releases. Work under
-**Unreleased** is still being integrated and verified; the current downloadable
-version remains [1.0.0 Beta 2](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.2).
+that supports them. Versions follow the public GitHub releases. The current
+downloadable version is [1.0.0 Beta 3](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.3).
 
 ## Unreleased
 
-Reviewed September 1, 2026. No version, release date, installer, or public tag
-has been assigned to this work yet.
+No user-visible changes have been recorded since 1.0.0 Beta 3.
+
+## 1.0.0 Beta 3 — 2026-09-01
 
 ### Generate and moment selection
 
@@ -164,11 +164,9 @@ has been assigned to this work yet.
 - Strengthened installer, manifest, signature, runtime-pack, data-channel, payload,
   and clean-tree checks used before a production source snapshot can be published.
 
-### Known limitations and release notes
+### Known limitations
 
-- This section describes unreleased working-tree changes. It is not a download
-  announcement and has not yet passed the final signed-installer and clean-VM
-  release checklist.
+- Beta 3 remains prerelease software. Back up important work before testing it.
 - Gameplay coverage selects a strong qualifying event when one exists; it does
   not promise combat in every source or generation.
 - Exact word-level captions depend on reliable word alignment. Replay Foundry
@@ -177,8 +175,8 @@ has been assigned to this work yet.
   restart; app shutdown cancels remaining work.
 - YouTube history is stored on this PC and is not a cloud-synchronized history.
 - StrategyWiki is not an active online integration.
-- Updated Advanced AI archives and production catalog hosting must be verified
-  before the next public installer can offer those versions.
+
+Production source: [v1.0.0-beta.3](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/tree/v1.0.0-beta.3)
 
 ## 1.0.0 Beta 2 — 2026-08-14
 
