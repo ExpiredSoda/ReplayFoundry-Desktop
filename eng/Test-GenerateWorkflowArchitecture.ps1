@@ -22,7 +22,7 @@ function Get-Text {
 }
 
 $viewModelPath =
-    "ReplayFoundry.Desktop\Features\Generate\GenerateViewModel.cs"
+    "src\ReplayFoundry.Desktop\Features\Generate\GenerateViewModel.cs"
 $viewModelFullPath =
     Join-Path $repositoryRoot $viewModelPath
 $viewModelLines =
@@ -49,7 +49,7 @@ $generateViewModelFiles =
     Get-ChildItem `
         -LiteralPath (
             Join-Path $repositoryRoot `
-                "ReplayFoundry.Desktop\Features\Generate") `
+                "src\ReplayFoundry.Desktop\Features\Generate") `
         -Recurse `
         -File `
         -Filter "*GenerateViewModel*.cs"
@@ -68,7 +68,7 @@ $prohibitedViewModelPatterns = @{
     "process/media implementation access" =
         'IProcessRunner|ProcessStartInfo|IMediaProbe|IMediaEvidenceAnalyzer'
     "research/AI tooling access" =
-        'Qwen|Python|Whisper|ReplayFoundry\.DeveloperTools'
+        'Qwen|Python|Whisper'
     "raw cancellation-source ownership" =
         'CancellationTokenSource'
     "replaced selected-source fields" =
@@ -95,9 +95,9 @@ if ($viewModelText -match
 }
 
 $stateOwnerPaths = @(
-    "ReplayFoundry.Desktop\Features\Generate\SourceSelection\GenerationSourceSelectionState.cs",
-    "ReplayFoundry.Desktop\Features\Generate\Workflow\GenerationWorkflowSessionState.cs",
-    "ReplayFoundry.Desktop\Features\Generate\Workflow\GenerationOperationController.cs"
+    "src\ReplayFoundry.Desktop\Features\Generate\SourceSelection\GenerationSourceSelectionState.cs",
+    "src\ReplayFoundry.Desktop\Features\Generate\Workflow\GenerationWorkflowSessionState.cs",
+    "src\ReplayFoundry.Desktop\Features\Generate\Workflow\GenerationOperationController.cs"
 )
 
 foreach ($stateOwnerPath in $stateOwnerPaths) {
@@ -106,7 +106,7 @@ foreach ($stateOwnerPath in $stateOwnerPaths) {
     if ($text -match
         'System\.Windows|\b(Window|UserControl|MessageBox)\b|' +
         'Application\.Current|IProcessRunner|ProcessStartInfo|' +
-        'Qwen|Python|Whisper|ReplayFoundry\.DeveloperTools') {
+        'Qwen|Python|Whisper') {
         Add-Failure `
             "Focused Generate state owner contains a prohibited UI/process/research dependency: $stateOwnerPath"
     }
@@ -118,15 +118,15 @@ foreach ($stateOwnerPath in $stateOwnerPaths) {
 }
 
 $workflowCollaborators = @{
-    "ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowCoordinator.cs" =
+    "src\ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowCoordinator.cs" =
         "GenerateWorkflowCoordinator"
-    "ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowPreparationStage.cs" =
+    "src\ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowPreparationStage.cs" =
         "GenerateWorkflowPreparationStage"
-    "ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowEvidenceStage.cs" =
+    "src\ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowEvidenceStage.cs" =
         "GenerateWorkflowEvidenceStage"
-    "ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowExecutionStage.cs" =
+    "src\ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowExecutionStage.cs" =
         "GenerateWorkflowExecutionStage"
-    "ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowFailurePresentation.cs" =
+    "src\ReplayFoundry.Desktop\Features\Generate\Workflow\GenerateWorkflowFailurePresentation.cs" =
         "GenerateWorkflowFailureHandler"
 }
 
@@ -147,11 +147,11 @@ foreach ($entry in $workflowCollaborators.GetEnumerator()) {
 }
 
 $progressBoundaries = @{
-    "ReplayFoundry.Desktop\Features\Generate\Progress\GenerationProgressViewModel.cs" = @{
+    "src\ReplayFoundry.Desktop\Features\Generate\Progress\GenerationProgressViewModel.cs" = @{
         Type = "GenerationProgressViewModel"
         MaximumLines = 525
     }
-    "ReplayFoundry.Desktop\Features\Generate\Progress\GenerationProgressPresentation.cs" = @{
+    "src\ReplayFoundry.Desktop\Features\Generate\Progress\GenerationProgressPresentation.cs" = @{
         Type = "GenerationProgressPresentationFactory"
         MaximumLines = 250
     }
@@ -182,7 +182,7 @@ foreach ($entry in $progressBoundaries.GetEnumerator()) {
     if ($text -match
         'System\.Windows\.(Controls|Media)|\b(Window|UserControl|MessageBox)\b|' +
         'Application\.Current|IProcessRunner|ProcessStartInfo|' +
-        'Qwen|Python|Whisper|ReplayFoundry\.DeveloperTools') {
+        'Qwen|Python|Whisper') {
         Add-Failure (
             "Generate progress boundary contains a prohibited UI, process, " +
             "or research dependency: $($entry.Key)")
@@ -191,7 +191,7 @@ foreach ($entry in $progressBoundaries.GetEnumerator()) {
 
 $progressViewModelText =
     Get-Text (
-        "ReplayFoundry.Desktop\Features\Generate\Progress\" +
+        "src\ReplayFoundry.Desktop\Features\Generate\Progress\" +
         "GenerationProgressViewModel.cs")
 if ($progressViewModelText -notmatch
     'GenerationProgressPresentationFactory\.(BeginPreparation|BeginEvidenceAnalysis|BeginGeneration)') {
@@ -203,7 +203,7 @@ $compositionFiles =
     Get-ChildItem `
         -LiteralPath (
             Join-Path $repositoryRoot `
-                "ReplayFoundry.Desktop\Features\Generate\CompositionReview") `
+                "src\ReplayFoundry.Desktop\Features\Generate\CompositionReview") `
         -Recurse `
         -File `
         -Filter "*.cs"
@@ -222,7 +222,7 @@ foreach ($file in $compositionFiles) {
 
 $compositionWindowText =
     Get-Text (
-        "ReplayFoundry.Desktop\Features\Generate\CompositionReview\" +
+        "src\ReplayFoundry.Desktop\Features\Generate\CompositionReview\" +
         "CompositionReviewWindow.xaml.cs")
 $requiredCompositionLifecycleFragments = @(
     "CompositionReviewInitializationOutcome",
@@ -246,7 +246,7 @@ foreach ($fragment in $requiredCompositionLifecycleFragments) {
 
 $compositionViewModelText =
     Get-Text (
-        "ReplayFoundry.Desktop\Features\Generate\CompositionReview\" +
+        "src\ReplayFoundry.Desktop\Features\Generate\CompositionReview\" +
         "CompositionReviewViewModel.cs")
 
 if ($compositionViewModelText -notmatch
@@ -256,18 +256,18 @@ if ($compositionViewModelText -notmatch
 }
 
 $bindingFiles = @(
-    "ReplayFoundry.Desktop\Features\Generate\GenerateView.xaml",
-    "ReplayFoundry.Desktop\Features\Generate\GenerateStyles.xaml",
-    "ReplayFoundry.Desktop\Features\Generate\GenerateResponsiveStyles.xaml",
-    "ReplayFoundry.Desktop\Features\Generate\SourceSelection\SourceSelectionView.xaml",
-    "ReplayFoundry.Desktop\Features\Generate\ModeSelection\GenerationModeSelector.xaml"
+    "src\ReplayFoundry.Desktop\Features\Generate\GenerateView.xaml",
+    "src\ReplayFoundry.Desktop\Features\Generate\GenerateStyles.xaml",
+    "src\ReplayFoundry.Desktop\Features\Generate\GenerateResponsiveStyles.xaml",
+    "src\ReplayFoundry.Desktop\Features\Generate\SourceSelection\SourceSelectionView.xaml",
+    "src\ReplayFoundry.Desktop\Features\Generate\ModeSelection\GenerationModeSelector.xaml"
 )
 $bindingText =
     ($bindingFiles | ForEach-Object { Get-Text $_ }) -join "`n"
 
 $removedLinkIngressPaths = @(
-    "ReplayFoundry.Desktop\Features\Generate\SourceSelection\VideoLinkImport.cs",
-    "ReplayFoundry.Desktop\Platform\Media\DirectHttpsVideoLinkImportService.cs"
+    "src\ReplayFoundry.Desktop\Features\Generate\SourceSelection\VideoLinkImport.cs",
+    "src\ReplayFoundry.Desktop\Platform\Media\DirectHttpsVideoLinkImportService.cs"
 )
 
 foreach ($relativePath in $removedLinkIngressPaths) {
@@ -287,7 +287,7 @@ $removedLinkIngressNames = @(
 
 $generateProductionText =
     ((Get-ChildItem `
-        -LiteralPath (Join-Path $repositoryRoot "ReplayFoundry.Desktop\Features\Generate") `
+        -LiteralPath (Join-Path $repositoryRoot "src\ReplayFoundry.Desktop\Features\Generate") `
         -Recurse `
         -File | Where-Object { $_.Extension -in ".cs", ".xaml" }) |
         ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }) -join "`n"
@@ -339,18 +339,9 @@ foreach ($bindingName in $expectedBindingSurface) {
     }
 }
 
-$desktopProjectText =
-    Get-Text "ReplayFoundry.Desktop\ReplayFoundry.Desktop.csproj"
-
-if ($desktopProjectText -match
-    '<ProjectReference[^>]+ReplayFoundry\.DeveloperTools') {
-    Add-Failure `
-        "ReplayFoundry.Desktop must not reference ReplayFoundry.DeveloperTools."
-}
-
 $removedAggregatePaths = @(
-    "ReplayFoundry.Desktop\Features\Generate\GenerateWorkflowManager.cs",
-    "ReplayFoundry.Desktop\Features\Generate\GenerateCoordinator.cs"
+    "src\ReplayFoundry.Desktop\Features\Generate\GenerateWorkflowManager.cs",
+    "src\ReplayFoundry.Desktop\Features\Generate\GenerateCoordinator.cs"
 )
 
 foreach ($relativePath in $removedAggregatePaths) {

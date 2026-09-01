@@ -12,8 +12,6 @@ param(
     [ValidatePattern('^https://')]
     [string]$AdvancedInstallerUri,
 
-    [string]$UserReportEndpoint,
-
     [string]$Configuration = 'Release',
 
     [string]$OutputDirectory,
@@ -55,8 +53,23 @@ if ([string]::IsNullOrWhiteSpace($youTubeClientSecret)) {
 }
 $repoRoot = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot '..'))
-$project = Join-Path $repoRoot 'ReplayFoundry.Desktop\ReplayFoundry.Desktop.csproj'
+$project = Join-Path $repoRoot 'src\ReplayFoundry.Desktop\ReplayFoundry.Desktop.csproj'
+$userReportEndpointOutput = @(
+    & dotnet msbuild $project -nologo `
+        -getProperty:ReplayFoundryUserReportEndpoint)
+if ($LASTEXITCODE -ne 0) {
+    throw 'Unable to resolve the fixed Replay Foundry user-report endpoint.'
+}
+$userReportEndpoint = ($userReportEndpointOutput -join '').Trim()
+if ([string]::IsNullOrWhiteSpace($userReportEndpoint)) {
+    throw 'The desktop project does not identify its fixed official Replay Foundry user-report endpoint.'
+}
 $publisher = 'Expired Soda Studios LLC'
+$dataChannel = if ($ReleaseChannel -eq 'Production') {
+    'Production'
+} else {
+    'Development'
+}
 $sourceStatus = @(git -C $repoRoot status --porcelain=v1 --untracked-files=all)
 if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect the source working tree.' }
 $sourceTreeDirty = $sourceStatus.Count -ne 0
@@ -81,17 +94,6 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path $repoRoot "artifacts\publish\ReplayFoundry-$Version-win-x64"
 }
 $resolvedOutput = [System.IO.Path]::GetFullPath($OutputDirectory)
-if (-not [string]::IsNullOrWhiteSpace($UserReportEndpoint)) {
-    $reportUri = $null
-    if (-not [Uri]::TryCreate($UserReportEndpoint, [UriKind]::Absolute, [ref]$reportUri) -or
-        $reportUri.Scheme -ne [Uri]::UriSchemeHttps -or
-        -not [string]::IsNullOrEmpty($reportUri.UserInfo) -or
-        -not [string]::IsNullOrEmpty($reportUri.Query) -or
-        -not [string]::IsNullOrEmpty($reportUri.Fragment)) {
-        throw 'The optional user-report endpoint must be one fixed HTTPS URL without credentials, query, or fragment.'
-    }
-    $UserReportEndpoint = $reportUri.AbsoluteUri
-}
 if (Test-Path -LiteralPath $resolvedOutput) {
     $existing = @(Get-ChildItem -LiteralPath $resolvedOutput -Force)
     if ($existing.Count -gt 0) {
@@ -120,12 +122,10 @@ $arguments = @(
     '-p:DebugSymbols=false',
     '-p:DebugType=None',
     "-p:Version=$Version",
+    "-p:ReplayFoundryDataChannel=$dataChannel",
     "-p:ReplayFoundryYouTubeClientId=$YouTubeClientId",
     "-p:ReplayFoundryAdvancedInstallerUri=$AdvancedInstallerUri"
 )
-if (-not [string]::IsNullOrWhiteSpace($UserReportEndpoint)) {
-    $arguments += "-p:ReplayFoundryUserReportEndpoint=$UserReportEndpoint"
-}
 
 try {
     $previousBuildSecret = $env:ReplayFoundryYouTubeClientSecret
@@ -152,7 +152,7 @@ if (-not (Test-Path -LiteralPath $application -PathType Leaf)) {
 }
 
 $runtimeInstallerOutput = Join-Path $resolvedOutput 'Tools\RuntimeInstaller'
-& dotnet publish (Join-Path $repoRoot 'ReplayFoundry.RuntimeInstaller\ReplayFoundry.RuntimeInstaller.csproj') `
+& dotnet publish (Join-Path $repoRoot 'tools\ReplayFoundry.RuntimeInstaller\ReplayFoundry.RuntimeInstaller.csproj') `
     --configuration $Configuration `
     --runtime win-x64 `
     --self-contained true `
@@ -163,6 +163,7 @@ $runtimeInstallerOutput = Join-Path $resolvedOutput 'Tools\RuntimeInstaller'
     -p:PublishTrimmed=false `
     -p:DebugSymbols=false `
     -p:DebugType=None `
+    -p:ReplayFoundryDataChannel=$dataChannel `
     -p:Version=$Version
 if ($LASTEXITCODE -ne 0) {
     throw "Replay Foundry runtime installer publish failed with exit code $LASTEXITCODE."
@@ -221,6 +222,7 @@ $manifest = [ordered]@{
     schemaVersion = 'replayfoundry-release-manifest-1.1'
     productVersion = $Version
     releaseChannel = $ReleaseChannel
+    dataChannel = $dataChannel
     sourceCommit = $commit
     sourceTreeDirty = $sourceTreeDirty
     runtimeIdentifier = 'win-x64'
@@ -231,7 +233,7 @@ $manifest = [ordered]@{
         [Security.Cryptography.SHA256]::HashData(
             [Text.Encoding]::UTF8.GetBytes($YouTubeClientId)))
     advancedInstallerUri = $AdvancedInstallerUri
-    userReportEndpoint = if ([string]::IsNullOrWhiteSpace($UserReportEndpoint)) { $null } else { $UserReportEndpoint }
+    userReportEndpoint = $userReportEndpoint
     signing = [ordered]@{
         mode = $SigningMode
         required = $ReleaseChannel -eq 'Production'
@@ -245,6 +247,9 @@ $manifest = [ordered]@{
 $manifestPath = Join-Path $resolvedOutput 'release-manifest.json'
 $manifest | ConvertTo-Json -Depth 8 |
     Set-Content -LiteralPath $manifestPath -Encoding utf8NoBOM
+& (Join-Path $PSScriptRoot 'Test-ReleaseDataBoundary.ps1') `
+    -Profile Publish `
+    -Path $resolvedOutput
 
 Write-Host "Published Replay Foundry $Version to $resolvedOutput"
 Write-Host "Application SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $application).Hash)"

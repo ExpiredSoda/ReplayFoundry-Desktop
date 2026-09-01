@@ -31,6 +31,7 @@ foreach ($relative in $scripts) {
 
 $installer = Get-Content -Raw -LiteralPath (Join-Path $root 'installer\ReplayFoundry.iss')
 foreach ($required in @(
+    '#define MyAppName "Replay Foundry"',
     '#define MyAppPublisher "Expired Soda Studios LLC"',
     '#ifndef MyAppFileVersion',
     'AppPublisherURL=https://replayfoundry.com/',
@@ -38,12 +39,19 @@ foreach ($required in @(
     'AppUpdatesURL=https://replayfoundry.com/download',
     'WizardStyle=modern dark windows11 hidebevels includetitlebar',
     'WizardBackImageFile={#WizardBackImagePath}',
+    'WizardImageFile={#WizardImagePath}',
+    'WizardImageBackColor=#071014',
     'WizardSmallImageFile={#WizardSmallImagePath}',
+    'DisableWelcomePage=no',
+    'UsePreviousTasks=no',
+    'VersionInfoDescription=Replay Foundry local-first gaming clip editor',
     'VersionInfoVersion={#MyAppFileVersion}',
     'HighContrastActive',
     'SignedUninstaller=yes',
     'Type: files; Name: "{autoprograms}\Replay Foundry.lnk"',
     'Type: files; Name: "{autodesktop}\Replay Foundry.lnk"',
+    'Type: files; Name: "{autoprograms}\ReplayFoundry.lnk"',
+    'Type: files; Name: "{autodesktop}\ReplayFoundry.lnk"',
     'Type: filesandordirs; Name: "{localappdata}\ReplayFoundry"',
     'Type: filesandordirs; Name: "{userappdata}\ReplayFoundry"',
     'Type: filesandordirs; Name: "{%TEMP|{localappdata}\Temp}\ReplayFoundry"',
@@ -54,8 +62,8 @@ foreach ($required in @(
     "external 'CredDeleteW@advapi32.dll stdcall';",
     "CredDelete('{#YouTubeCredentialTargetName}', CredentialTypeGeneric, 0)",
     "if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-{#InstallerProfile}-Setup.exe'), False) then",
-    "RaiseException('Unable to retain the current ReplayFoundry installer for repair.');",
-    'Name: "advancedai"; Description: "Add Advanced AI (about 12.5 GB download; NVIDIA GPU recommended)"',
+    "RaiseException('Unable to retain the current Replay Foundry installer for repair.');",
+    'Name: "advancedai"; Description: "Add Advanced AI (about 12.5 GB download; NVIDIA graphics recommended)"',
     "WizardIsTaskSelected('advancedai')",
     'WizardForm.ProgressGauge.Style := npbstMarquee',
     'WizardForm.ProgressGauge.Style := npbstNormal',
@@ -131,6 +139,32 @@ $publisherScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Publish-R
 $installerScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Build-ReplayFoundryInstaller.ps1')
 $brandingScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\New-ReplayFoundryInstallerBranding.ps1')
 $signerScript = Get-Content -Raw -LiteralPath (Join-Path $root 'eng\Invoke-ReplayFoundryArtifactSigning.ps1')
+$buildProperties = Get-Content -Raw -LiteralPath (Join-Path $root 'Directory.Build.props')
+$desktopProject = Get-Content -Raw -LiteralPath `
+    (Join-Path $root 'src\ReplayFoundry.Desktop\ReplayFoundry.Desktop.csproj')
+$officialReportEndpoint = 'https://replayfoundry.com/api/v1/user-reports'
+$reportEndpointGuard = `
+    'Condition="''$(ReplayFoundryUserReportEndpoint)'' != ''{0}''"' -f `
+        $officialReportEndpoint
+if (-not $buildProperties.Contains(
+        "<ReplayFoundryUserReportEndpoint>$officialReportEndpoint</ReplayFoundryUserReportEndpoint>",
+        [StringComparison]::Ordinal) -or
+    $desktopProject -notmatch '<AssemblyMetadata Include="ReplayFoundry\.UserReportEndpoint" Value="\$\(ReplayFoundryUserReportEndpoint\)"' -or
+    -not $desktopProject.Contains(
+        $reportEndpointGuard,
+        [StringComparison]::Ordinal)) {
+    throw 'Desktop builds must embed and enforce the fixed official Replay Foundry user-report endpoint.'
+}
+foreach ($scriptText in @($publisherScript, $installerScript)) {
+    if ($scriptText -match '\[string\]\$UserReportEndpoint' -or
+        $scriptText -match '-p:ReplayFoundryUserReportEndpoint') {
+        throw 'Release scripts must not expose a user-report endpoint omission or redirect override.'
+    }
+}
+if ($publisherScript -notmatch '-getProperty:ReplayFoundryUserReportEndpoint' -or
+    $publisherScript -notmatch 'userReportEndpoint = \$userReportEndpoint') {
+    throw 'The release manifest must record the endpoint evaluated from the desktop product build.'
+}
 foreach ($scriptText in @($publisherScript, $installerScript)) {
     if ($scriptText -notmatch 'status --porcelain=v1 --untracked-files=all' -or
         $scriptText -notmatch 'Production.*clean source working tree' -or
@@ -152,6 +186,7 @@ foreach ($requiredInstallerBuildPattern in @(
     'installer-branding-manifest\.json',
     'ReplayFoundry/YouTube/\$\(\$youtubeCredentialTargetHash\.Substring\(0, 20\)\)',
     '/DYouTubeCredentialTargetName=\$youtubeCredentialTargetName',
+    '/DWizardImagePath=\$wizardImagePath',
     '/DMyAppFileVersion=\$fileVersion',
     '\$fileVersionParts = @\(',
     'Programs\\Inno\\ISCC\.exe',

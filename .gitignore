@@ -64,7 +64,9 @@ project.fragment.lock.json
 artifacts/
 /installer/Output/
 /installer/.cache/
+/outputs/
 /tmp/
+/.codex-*/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
@@ -181,8 +183,8 @@ DocProject/Help/html
 
 # Click-Once directory
 publish/
-!ReplayFoundry.Desktop/Features/Publish/
-!ReplayFoundry.Desktop/Features/Publish/**
+!src/ReplayFoundry.Desktop/Features/Publish/
+!src/ReplayFoundry.Desktop/Features/Publish/**
 
 # Publish Web Output
 *.[Pp]ublish.xml

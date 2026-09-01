@@ -1,0 +1,34 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Publish.PublishView"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:sections="clr-namespace:ReplayFoundry.Desktop.Features.Publish.Sections"
+    Background="Transparent">
+    <controls:WorkspaceScrollViewport CueText="More publishing activity below">
+        <Grid MaxWidth="1600" Margin="20" HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <sections:PublishDestinationsView />
+            <AdornerDecorator Grid.Row="1" Margin="0,12,0,0">
+                <Grid x:Name="AdaptiveLayout">
+                    <Grid.RowDefinitions>
+                        <RowDefinition x:Name="PrimaryPublishRow" Height="Auto" />
+                        <RowDefinition x:Name="SecondaryPublishRow" Height="0" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="LibraryPublishColumn" Width="0.9*" />
+                        <ColumnDefinition x:Name="CalendarPublishColumn" Width="1.1*" />
+                    </Grid.ColumnDefinitions>
+                    <sections:PublishLibraryBrowserView x:Name="LibraryBrowser" Margin="0,0,6,0" />
+                    <sections:PublishCalendarView x:Name="PublishCalendar" Grid.Column="1" Margin="6,0,0,0" />
+                </Grid>
+            </AdornerDecorator>
+            <sections:PublishQueueHistoryView Grid.Row="2" Margin="0,12,0,0" />
+        </Grid>
+    </controls:WorkspaceScrollViewport>
+</UserControl>

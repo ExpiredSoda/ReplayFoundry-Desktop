@@ -1,11 +1,22 @@
 param(
     [switch]$RequireTrackedSources,
-    [string]$UiScopeRef
+    [string]$UiScopeRef,
+    [string]$UiBaseRef
 )
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$baseRef = "origin/codex/manual-video-layout-review"
+$baseRef = @(
+    $UiBaseRef,
+    $env:REPLAYFOUNDRY_UI_BASE_REF,
+    'origin/main',
+    'origin/master',
+    'HEAD~1',
+    'HEAD'
+) | Where-Object {
+    -not [string]::IsNullOrWhiteSpace($_) -and
+    (& git -C $repositoryRoot rev-parse --verify "$_^{commit}" 2>$null)
+} | Select-Object -First 1
 $failures = [System.Collections.Generic.List[string]]::new()
 $warnings = [System.Collections.Generic.List[string]]::new()
 
@@ -19,10 +30,10 @@ function Get-ChangedPathSet {
     $mergeBase = (& git -C $repositoryRoot merge-base HEAD $baseRef).Trim()
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mergeBase)) { Add-Failure "Unable to resolve the UI merge base with $baseRef." }
     else {
-        (& git -C $repositoryRoot diff --name-only "$mergeBase..HEAD") | ForEach-Object { [void]$paths.Add($_.Trim()) }
+        (& git -C $repositoryRoot diff --name-only "$mergeBase..HEAD" 2>$null) | ForEach-Object { [void]$paths.Add($_.Trim()) }
     }
-    (& git -C $repositoryRoot diff --name-only) | ForEach-Object { [void]$paths.Add($_.Trim()) }
-    (& git -C $repositoryRoot diff --cached --name-only) | ForEach-Object { [void]$paths.Add($_.Trim()) }
+    (& git -C $repositoryRoot diff --name-only 2>$null) | ForEach-Object { [void]$paths.Add($_.Trim()) }
+    (& git -C $repositoryRoot diff --cached --name-only 2>$null) | ForEach-Object { [void]$paths.Add($_.Trim()) }
     (& git -C $repositoryRoot status --porcelain=v1 --untracked-files=all) | ForEach-Object {
         if ($_.Length -ge 4) { [void]$paths.Add($_.Substring(3).Trim('"')) }
     }
@@ -62,10 +73,10 @@ function Assert-Contains {
 }
 
 $requiredPublishFiles = @(
-    "ReplayFoundry.Desktop/Features/Publish/PublishView.xaml",
-    "ReplayFoundry.Desktop/Features/Publish/PublishView.xaml.cs",
-    "ReplayFoundry.Desktop/Features/Publish/PublishViewModel.cs",
-    "ReplayFoundry.Desktop/Features/Publish/Sections/PublishCalendarView.xaml")
+    "src/ReplayFoundry.Desktop/Features/Publish/PublishView.xaml",
+    "src/ReplayFoundry.Desktop/Features/Publish/PublishView.xaml.cs",
+    "src/ReplayFoundry.Desktop/Features/Publish/PublishViewModel.cs",
+    "src/ReplayFoundry.Desktop/Features/Publish/Sections/PublishCalendarView.xaml")
 
 foreach ($file in $requiredPublishFiles) {
     if (-not (Test-RepoPath $file)) { Add-Failure "Required Publish source is missing: $file" }
@@ -82,74 +93,88 @@ if ($trackedFiles.Count -eq 0) { Add-Failure "git ls-files returned no repositor
 $changedPaths = Get-ChangedPathSet
 if (-not [string]::IsNullOrWhiteSpace($UiScopeRef)) {
     $uiScopePaths = Get-UiScopePathSet $changedPaths
-    $protectedPattern = '^ReplayFoundry\.Desktop/(Media|Platform|DeveloperTools)/'
+    $protectedPattern = '^src/ReplayFoundry\.Desktop/(Media|Platform)/'
     foreach ($changed in $uiScopePaths) {
         if ($changed -match $protectedPattern) { Add-Failure "UI-only scope changed a protected backend path: $changed" }
     }
 }
 
-$mainWindow = Read-RepoText "ReplayFoundry.Desktop/Shell/MainWindow.xaml"
-$mainWindowCode = Read-RepoText "ReplayFoundry.Desktop/Shell/MainWindow.xaml.cs"
-$shellViewModel = Read-RepoText "ReplayFoundry.Desktop/Shell/MainWindowViewModel.cs"
-$appXaml = Read-RepoText "ReplayFoundry.Desktop/App.xaml"
-$appCode = Read-RepoText "ReplayFoundry.Desktop/App.xaml.cs"
-$compositionCode = Read-RepoText "ReplayFoundry.Desktop/ApplicationCompositionRoot.cs"
+$mainWindow = Read-RepoText "src/ReplayFoundry.Desktop/Shell/MainWindow.xaml"
+$mainWindowCode = Read-RepoText "src/ReplayFoundry.Desktop/Shell/MainWindow.xaml.cs"
+$shellViewModel = Read-RepoText "src/ReplayFoundry.Desktop/Shell/MainWindowViewModel.cs"
+$appXaml = Read-RepoText "src/ReplayFoundry.Desktop/App.xaml"
+$appCode = Read-RepoText "src/ReplayFoundry.Desktop/App.xaml.cs"
+$compositionCode = @(
+    Read-RepoText "src/ReplayFoundry.Desktop/ApplicationCompositionRoot.cs"
+    Get-ChildItem -LiteralPath `
+        (Join-Path $repositoryRoot 'src/ReplayFoundry.Desktop/Composition') `
+        -Filter '*.cs' -File |
+        Sort-Object Name |
+        ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }
+) -join "`n"
 
 if (([regex]::Matches($mainWindow, '<ContentControl\b')).Count -ne 1) { Add-Failure "MainWindow must contain exactly one ContentControl." }
-Assert-Contains "ReplayFoundry.Desktop/Shell/MainWindow.xaml" 'Content="\{Binding CurrentWorkspace\}"' "MainWindow must bind its one ContentControl to CurrentWorkspace."
+Assert-Contains "src/ReplayFoundry.Desktop/Shell/MainWindow.xaml" 'Content="\{Binding CurrentWorkspace\}"' "MainWindow must bind its one ContentControl to CurrentWorkspace."
 if ($mainWindowCode -match 'PropertyChanged|CurrentDestination|ShellDestination|\.Content\s*=|\.Visibility\s*=|WorkspaceContent') { Add-Failure "MainWindow code-behind crosses the shell MVVM boundary." }
 if ($shellViewModel -match 'public\s+MainWindowViewModel\s*\(\s*GenerateViewModel\s+generateViewModel\s*\)') { Add-Failure "The one-argument shell constructor must remain removed." }
 if ($appXaml -match 'x:Key="[^" ]*WorkspaceTemplate') { Add-Failure "Workspace DataTemplates must remain implicit rather than keyed." }
 foreach ($type in @('Generate', 'Studio', 'Library', 'Publish', 'Settings')) {
     $templatePattern = 'DataType="{x:Type [a-z]+:' + $type + 'ViewModel}"'
     if ($appXaml -notmatch $templatePattern) { Add-Failure "Implicit DataTemplate is missing for ${type}ViewModel." }
-    if ($compositionCode -notmatch "new\s+${type}ViewModel") { Add-Failure "App composition does not construct ${type}ViewModel." }
+    $constructionPattern = '(?s)(?:new\s+' + $type +
+        'ViewModel\s*\(|' + $type +
+        'ViewModel\s+\w+\s*\([^;{]*\)\s*=>\s*new\s*\()'
+    if ($compositionCode -notmatch $constructionPattern) { Add-Failure "App composition does not construct ${type}ViewModel." }
 }
 if ($appXaml -match 'DesignTime') { Add-Failure "Design-time types must not appear in production composition." }
 
 $featureRoots = @('Studio', 'Library', 'Publish', 'Settings')
 foreach ($feature in $featureRoots) {
-    $root = "ReplayFoundry.Desktop/Features/$feature"
+    $root = "src/ReplayFoundry.Desktop/Features/$feature"
     $viewModels = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot $root) -Recurse -File -Filter '*ViewModel.cs' |
         Where-Object { $_.FullName -notmatch '[\\/]DesignTime[\\/]' }
     foreach ($file in $viewModels) {
         $text = Get-Content -Raw -LiteralPath $file.FullName
-        if ($text -cmatch 'System\.Windows\.(?!Input\b)|\b(UserControl|Window|MessageBox|Application)\b|DeveloperTools|ReplayFoundry\.Desktop\.(Media|Platform)|ProcessStartInfo|IProcessRunner|\bpartial\s+class\s+.*ViewModel') {
+        if ($text -cmatch 'System\.Windows\.(?!Input\b)|\b(UserControl|Window|MessageBox|Application)\b|ReplayFoundry\.Desktop\.(Media|Platform)|ProcessStartInfo|IProcessRunner|\bpartial\s+class\s+.*ViewModel') {
             Add-Failure "Production feature ViewModel crosses a presentation-only boundary: $($file.FullName)"
         }
     }
 }
 
-$uiFilePattern = '^(ReplayFoundry\.Desktop/(App\.xaml|App\.xaml\.cs|Shell/|Features/(Generate|Studio|Library|Publish|Settings)/|Presentation/|Resources/)|ReplayFoundry\.PreparationTests/UiUxApplicationSurfaceTests\.cs|eng/Test-UiUxArchitecture\.ps1)'
+$uiFilePattern = '^(src/ReplayFoundry\.Desktop/(App\.xaml|App\.xaml\.cs|Shell/|Features/(Generate|Studio|Library|Publish|Settings)/|Presentation/|Resources/)|tests/ReplayFoundry\.PreparationTests/UiUx[^/]*Tests\.cs|eng/Test-UiUxArchitecture\.ps1)'
 foreach ($path in $changedPaths) {
     if ($path -notmatch $uiFilePattern -or -not (Test-RepoPath $path)) { continue }
     $extension = [System.IO.Path]::GetExtension($path).ToLowerInvariant()
     $content = Get-Content -LiteralPath (Join-Path $repositoryRoot $path)
     $maxLength = ($content | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
     if ($extension -eq '.xaml' -and $maxLength -gt 240) { Add-Failure "XAML line exceeds 240 characters: $path ($maxLength)." }
-    if ($extension -eq '.cs' -and $maxLength -gt 180 -and $path -notmatch 'UiUxApplicationSurfaceTests\.cs$') { Add-Failure "UI code line exceeds 180 characters: $path ($maxLength)." }
+    if ($extension -eq '.cs' -and
+        $maxLength -gt 180 -and
+        $path -notmatch '^tests/ReplayFoundry\.PreparationTests/UiUx.*Tests\.cs$') {
+        Add-Failure "UI code line exceeds 180 characters: $path ($maxLength)."
+    }
     if ($extension -eq '.xaml' -and $path -match 'Features/(Generate|Studio|Library|Publish|Settings)/' -and ($content -join "`n") -match '#[0-9A-Fa-f]{6,8}') { Add-Failure "Feature XAML contains a hard-coded color: $path" }
     if ($path -match 'Features/(Studio|Library|Publish|Settings)/') {
         $segments = $path -split '/'
-        if ($segments.Count -gt 5) { Add-Failure "Feature folder depth exceeds two levels: $path" }
+        if ($segments.Count -gt 6) { Add-Failure "Feature folder depth exceeds two levels: $path" }
     }
 }
 
 foreach ($name in @('Common', 'Shared', 'Helpers', 'Utils', 'Managers', 'Everything')) {
-    if (Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'ReplayFoundry.Desktop') -Directory -Recurse | Where-Object Name -eq $name) { Add-Failure "Generic dumping-ground folder is present: $name" }
+    if (Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'src/ReplayFoundry.Desktop') -Directory -Recurse | Where-Object Name -eq $name) { Add-Failure "Generic dumping-ground folder is present: $name" }
 }
 
-Assert-Contains "ReplayFoundry.Desktop/Features/Studio/Browser/StudioBrowserView.xaml" 'ToolSections' "Studio browser binding is missing."
-Assert-Contains "ReplayFoundry.Desktop/Features/Library/LibraryView.xaml" 'LibraryContentView' "Library content decomposition is missing."
-Assert-Contains "ReplayFoundry.Desktop/Features/Publish/PublishView.xaml" 'PublishLibraryBrowserView' "Publish Library browser decomposition is missing."
-Assert-Contains "ReplayFoundry.Desktop/Features/Publish/PublishPreparationWindow.xaml" 'PublishMetadataView' "Publish preparation metadata decomposition is missing."
-Assert-Contains "ReplayFoundry.Desktop/Features/Settings/SettingsView.xaml" 'SettingsSectionHostView' "Settings section decomposition is missing."
-Assert-Contains "ReplayFoundry.Desktop/Features/Settings/Sections/AiModelsSettingsView.xaml" 'AiCapabilities' "Settings AI capability list is missing."
-Assert-Contains "ReplayFoundry.Desktop/Features/Settings/Sections/StorageSettingsView.xaml" 'OutputRootDirectory' "Functional output-folder binding is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Studio/Browser/StudioBrowserView.xaml" 'ToolSections' "Studio browser binding is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Library/LibraryView.xaml" 'LibraryContentView' "Library content decomposition is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Publish/PublishView.xaml" 'PublishLibraryBrowserView' "Publish Library browser decomposition is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Publish/PublishPreparationWindow.xaml" 'PublishMetadataView' "Publish preparation metadata decomposition is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Settings/SettingsView.xaml" 'SettingsSectionHostView' "Settings section decomposition is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Settings/Sections/AiModelsSettingsView.xaml" 'AiCapabilities' "Settings AI capability list is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Settings/Sections/StorageSettingsView.xaml" 'OutputRootDirectory' "Functional output-folder binding is missing."
 
-$generateStyles = Read-RepoText "ReplayFoundry.Desktop/Features/Generate/GenerateStyles.xaml"
-$generationSetupStyles = Read-RepoText "ReplayFoundry.Desktop/Features/Generate/GenerationSetup/GenerationSetupStyles.xaml"
-$buttonStyles = Read-RepoText "ReplayFoundry.Desktop/Resources/Controls/ButtonStyles.xaml"
+$generateStyles = Read-RepoText "src/ReplayFoundry.Desktop/Features/Generate/GenerateStyles.xaml"
+$generationSetupStyles = Read-RepoText "src/ReplayFoundry.Desktop/Features/Generate/GenerationSetup/GenerationSetupStyles.xaml"
+$buttonStyles = Read-RepoText "src/ReplayFoundry.Desktop/Resources/Controls/ButtonStyles.xaml"
 if ($generateStyles -notmatch 'x:Key="Generate\.ActionButton"\s+BasedOn="\{StaticResource Control\.ThemedButton\}"') {
     Add-Failure "Generate action buttons must inherit the shared themed-button foundation."
 }

@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$creativePackRoot = Join-Path $repositoryRoot 'ReplayFoundry.Desktop\Features\Studio\CreativePacks'
+$creativePackRoot = Join-Path $repositoryRoot 'src\ReplayFoundry.Desktop\Features\Studio\CreativePacks'
 
 if (-not (Test-Path -LiteralPath $creativePackRoot -PathType Container)) {
     throw 'The Studio creative-pack contract boundary is missing.'
@@ -28,7 +28,7 @@ foreach ($pattern in $forbiddenSourcePatterns) {
     }
 }
 
-$generationSource = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'ReplayFoundry.Desktop\Features\Generate') -Recurse -Filter '*.cs' -File |
+$generationSource = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'src\ReplayFoundry.Desktop\Features\Generate') -Recurse -Filter '*.cs' -File |
     ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }
 if (($generationSource -join [Environment]::NewLine) -match 'StudioCreativePack') {
     throw 'Generation must not depend on optional Studio creative packs.'

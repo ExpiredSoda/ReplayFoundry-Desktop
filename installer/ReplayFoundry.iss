@@ -25,6 +25,9 @@
 #ifndef WizardSmallImagePath
   #error WizardSmallImagePath must be supplied by Build-ReplayFoundryInstaller.ps1
 #endif
+#ifndef WizardImagePath
+  #error WizardImagePath must be supplied by Build-ReplayFoundryInstaller.ps1
+#endif
 #ifndef AdvancedPayloadMode
   #define AdvancedPayloadMode "Embedded"
 #endif
@@ -38,7 +41,7 @@
   #error YouTubeCredentialTargetName must be supplied by Build-ReplayFoundryInstaller.ps1
 #endif
 
-#define MyAppName "ReplayFoundry"
+#define MyAppName "Replay Foundry"
 #define MyAppPublisher "Expired Soda Studios LLC"
 #define MyAppExeName "ReplayFoundry.Desktop.exe"
 
@@ -53,10 +56,11 @@ AppUpdatesURL=https://replayfoundry.com/download
 DefaultDirName={localappdata}\Programs\Replay Foundry
 DefaultGroupName=Replay Foundry
 DisableProgramGroupPage=yes
+DisableWelcomePage=no
 PrivilegesRequired=lowest
 OutputDir={#InstallerOutputDir}
 OutputBaseFilename=ReplayFoundry-{#MyAppVersion}-{#InstallerProfile}-win-x64-setup
-SetupIconFile={#RepoRoot}\ReplayFoundry.Desktop\Assets\Icons\Application\ReplayFoundry.ico
+SetupIconFile={#RepoRoot}\src\ReplayFoundry.Desktop\Assets\Icons\Application\ReplayFoundry.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 LicenseFile={#RepoRoot}\LICENSE.txt
 ArchitecturesAllowed=x64compatible
@@ -73,7 +77,8 @@ WizardImageStretch=yes
 WizardBackColor=#071014
 WizardBackImageFile={#WizardBackImagePath}
 WizardBackImageOpacity=255
-WizardImageFile=
+WizardImageFile={#WizardImagePath}
+WizardImageBackColor=#071014
 WizardSmallImageFile={#WizardSmallImagePath}
 WizardSmallImageBackColor=#071014
 CloseApplications=yes
@@ -81,10 +86,11 @@ RestartApplications=no
 ChangesAssociations=no
 ChangesEnvironment=no
 UsePreviousAppDir=yes
+UsePreviousTasks=no
 VersionInfoVersion={#MyAppFileVersion}
 VersionInfoProductName={#MyAppName}
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoDescription=ReplayFoundry local-first gaming clip editor
+VersionInfoDescription=Replay Foundry local-first gaming clip editor
 AppCopyright=Copyright (C) 2026 Expired Soda Studios LLC
 #ifdef ReplayFoundrySignToolName
 SignTool={#ReplayFoundrySignToolName}
@@ -98,10 +104,29 @@ SignedUninstaller=no
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Messages]
+WelcomeLabel1=Install [name]
+WelcomeLabel2=Turn gameplay recordings into clips ready to share. Replay Foundry works locally, so your source videos stay on this PC.%n%nSetup will guide you through the few choices that follow.
+WizardLicense=Review the license
+LicenseLabel=Review the license terms for Replay Foundry before continuing.
+LicenseLabel3=Review the Replay Foundry license terms. You must accept them to continue.
+WizardSelectTasks=Choose what to add
+SelectTasksDesc=Shortcuts and local AI
+SelectTasksLabel2=Choose any optional additions, then select Next.
+WizardReady=Ready to install
+ReadyLabel1=[name] is ready to install on this PC.
+ReadyLabel2a=Review your choices, then select Install.
+ReadyLabel2b=Select Install to continue.
+WizardInstalling=Installing [name]
+InstallingLabel=Keep this window open while Replay Foundry and its local tools are prepared.
+FinishedHeadingLabel=[name] is ready
+FinishedLabelNoIcons=Setup finished installing [name].
+FinishedLabel=Setup finished installing [name]. Select Finish to open it.
+
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+Name: "desktopicon"; Description: "Add a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 #if OfferAdvancedAi == "1"
-Name: "advancedai"; Description: "Add Advanced AI (about 12.5 GB download; NVIDIA GPU recommended)"; GroupDescription: "Optional local capabilities:"; Flags: unchecked
+Name: "advancedai"; Description: "Add Advanced AI (about 12.5 GB download; NVIDIA graphics recommended)"; GroupDescription: "Optional local tools:"; Flags: unchecked
 #endif
 
 [Files]
@@ -123,13 +148,15 @@ Source: "{#AdvancedCatalogPath}"; DestDir: "{tmp}\ReplayFoundryPacks"; DestName:
 #endif
 
 [Icons]
-Name: "{autoprograms}\ReplayFoundry"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\ReplayFoundry"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\Replay Foundry"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\Replay Foundry"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch Replay Foundry"; Flags: nowait postinstall skipifsilent
 
 [InstallDelete]
+Type: files; Name: "{autoprograms}\ReplayFoundry.lnk"
+Type: files; Name: "{autodesktop}\ReplayFoundry.lnk"
 Type: files; Name: "{autoprograms}\Replay Foundry.lnk"
 Type: files; Name: "{autodesktop}\Replay Foundry.lnk"
 
@@ -161,6 +188,9 @@ begin
   begin
     WizardSetBackImage([], True, True, 255);
     WizardForm.Color := clWindow;
+    WizardForm.WizardBitmapImage.Visible := False;
+    WizardForm.WizardBitmapImage2.Visible := False;
+    WizardForm.WizardSmallBitmapImage.Visible := False;
   end;
 end;
 
@@ -187,21 +217,21 @@ var
   Succeeded: Boolean;
 begin
   WizardForm.StatusLabel.Caption := LabelText;
-  WizardForm.ProgressGauge.Style := npbstMarquee;
-  try
-    Succeeded := Exec(
-      ExpandConstant('{app}\Tools\RuntimeInstaller\ReplayFoundry.RuntimeInstaller.exe'),
-      Arguments,
-      '',
-      SW_HIDE,
-      ewWaitUntilTerminated,
-      ExitCode);
-  finally
-    WizardForm.ProgressGauge.Style := npbstNormal;
-  end;
+  WizardForm.FilenameLabel.Caption := '';
+  ExitCode := -1;
+  Succeeded := Exec(
+    ExpandConstant('{app}\Tools\RuntimeInstaller\ReplayFoundry.RuntimeInstaller.exe'),
+    Arguments,
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ExitCode);
   if not Succeeded or (ExitCode <> 0) then
   begin
-    RaiseException(LabelText + ' failed. No incomplete runtime pack was activated. Exit code: ' + IntToStr(ExitCode));
+    Log(LabelText + ' failed. Runtime installer exit code: ' + IntToStr(ExitCode));
+    RaiseException(
+      'Replay Foundry could not finish preparing its local tools. ' +
+      'Nothing incomplete was kept. Run Setup again, or visit replayfoundry.com/support.');
   end;
 end;
 
@@ -210,44 +240,52 @@ var
   StoreRoot: String;
 begin
   if CurStep <> ssPostInstall then exit;
-  StoreRoot := ExpandConstant('{localappdata}\ReplayFoundry\R');
-  RequireRuntimeInstallerSuccess(
-    'install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-media-tools.zip') + '" --store-root "' + StoreRoot + '"',
-    'Installing verified Base media tools');
+  WizardForm.PageNameLabel.Caption := 'Finishing setup';
+  WizardForm.PageDescriptionLabel.Caption :=
+    'Preparing Replay Foundry''s local tools. This can take several minutes.';
+  WizardForm.ProgressGauge.Style := npbstMarquee;
+  try
+    StoreRoot := ExpandConstant('{localappdata}\ReplayFoundry\R');
+    RequireRuntimeInstallerSuccess(
+      'install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-media-tools.zip') + '" --store-root "' + StoreRoot + '"',
+      'Preparing video tools');
 #if InstallerProfile == "Advanced"
   #if AdvancedPayloadMode == "Embedded"
-  RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-silero-vad.zip') + '" --store-root "' + StoreRoot + '"', 'Installing local speech timing');
-  RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-cpp.zip') + '" --store-root "' + StoreRoot + '"', 'Installing local transcription runtime');
-  RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-small-multilingual.zip') + '" --store-root "' + StoreRoot + '"', 'Installing multilingual transcription model');
-  RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-runtime.zip') + '" --store-root "' + StoreRoot + '"', 'Installing Qwen local runtime');
-  RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-4b-instruct.zip') + '" --store-root "' + StoreRoot + '"', 'Installing Qwen3-VL model');
+    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-silero-vad.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing speech timing');
+    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-cpp.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing captions');
+    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-small-multilingual.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing language support');
+    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-runtime.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing visual analysis');
+    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-4b-instruct.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing local AI');
   #else
-  RequireRuntimeInstallerSuccess(
-    'install-catalog --catalog "' + ExpandConstant('{tmp}\ReplayFoundryPacks\advanced-runtime-catalog.json') + '" --store-root "' + StoreRoot + '"',
-    'Downloading and installing verified Advanced AI packs');
+    RequireRuntimeInstallerSuccess(
+      'install-catalog --catalog "' + ExpandConstant('{tmp}\ReplayFoundryPacks\advanced-runtime-catalog.json') + '" --store-root "' + StoreRoot + '"',
+      'Downloading and preparing Advanced AI');
   #endif
 #endif
 #if OfferAdvancedAi == "1"
-  if WizardIsTaskSelected('advancedai') then
-  begin
-    RequireRuntimeInstallerSuccess(
-      'install-catalog --catalog "' + ExpandConstant('{tmp}\ReplayFoundryPacks\advanced-runtime-catalog.json') + '" --store-root "' + StoreRoot + '"',
-      'Downloading and installing verified Advanced AI packs');
-  end;
+    if WizardIsTaskSelected('advancedai') then
+    begin
+      RequireRuntimeInstallerSuccess(
+        'install-catalog --catalog "' + ExpandConstant('{tmp}\ReplayFoundryPacks\advanced-runtime-catalog.json') + '" --store-root "' + StoreRoot + '"',
+        'Downloading and preparing Advanced AI');
+    end;
 #endif
-  RequireRuntimeInstallerSuccess(
-    'prune-inactive --store-root "' + StoreRoot + '"',
-    'Removing inactive runtime packs');
-  if not ForceDirectories(ExpandConstant('{localappdata}\ReplayFoundry\Installers')) then
-  begin
-    RaiseException('Unable to create the retained installer directory.');
-  end;
-  if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-{#InstallerProfile}-Setup.exe'), False) then
-  begin
-    RaiseException('Unable to retain the current ReplayFoundry installer for repair.');
-  end;
-  if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-Setup.exe'), False) then
-  begin
-    RaiseException('Unable to retain the current ReplayFoundry installer for maintenance.');
+    RequireRuntimeInstallerSuccess(
+      'prune-inactive --store-root "' + StoreRoot + '"',
+      'Finishing setup');
+    if not ForceDirectories(ExpandConstant('{localappdata}\ReplayFoundry\Installers')) then
+    begin
+      RaiseException('Unable to create the retained installer directory.');
+    end;
+    if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-{#InstallerProfile}-Setup.exe'), False) then
+    begin
+      RaiseException('Unable to retain the current Replay Foundry installer for repair.');
+    end;
+    if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-Setup.exe'), False) then
+    begin
+      RaiseException('Unable to retain the current Replay Foundry installer for maintenance.');
+    end;
+  finally
+    WizardForm.ProgressGauge.Style := npbstNormal;
   end;
 end;

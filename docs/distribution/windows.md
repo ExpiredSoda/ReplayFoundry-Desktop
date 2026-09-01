@@ -1,0 +1,203 @@
+# Windows distribution
+
+Replay Foundry uses one signed, per-user Windows x64 installer and never modifies `PATH`.
+
+| Setup choice | Network requirement | Installed capability |
+| --- | --- | --- |
+| **Base** | The downloaded setup works offline. | Self-contained WPF application plus the verified FFmpeg/ffprobe pack. Deterministic evidence and moment finding remain available without an AI model. |
+| **Advanced AI** | Downloads only when selected during setup or added later from Settings. | Base plus Silero VAD, whisper.cpp, the qualified multilingual Whisper model, and the qualified local Qwen3-VL CUDA runtime and model. The unchecked option states its approximate download size. |
+
+Base moment finding remains available without optional AI packs. If a selected
+AI writing workflow cannot use its qualified pack, Replay Foundry stops and
+explains the unavailable capability instead of silently substituting Simple / No
+AI or an unknown executable or model. Simple / No AI writing runs only after the
+creator explicitly selects it. Generated wording remains editable and
+reviewable.
+
+## Installed layout
+
+The application and its runtime packs are deliberately separate:
+
+- The application lives under `%LOCALAPPDATA%\Programs\Replay Foundry`.
+- Runtime packs live in compact, full-SHA-256 content-addressed directories under `%LOCALAPPDATA%\ReplayFoundry\R`.
+- The runtime-maintenance executable ships inside the application at `Tools\RuntimeInstaller\ReplayFoundry.RuntimeInstaller.exe`.
+
+The compact runtime path is intentional because deeply nested Windows paths can prevent pinned native Python modules from loading. Manifests retain full package names, versions, kinds, licenses, dependencies, file sizes, and hashes even though physical directory names are shortened.
+
+## Build runtime packs
+
+All payload roots and outputs must remain outside the repository. Generate exact Python and wheel notices first; a missing license text is a hard failure unless a reviewed, hash-pinned official override is supplied.
+
+```powershell
+.\eng\New-PythonRuntimeNotices.ps1 `
+  -PythonHome <cpython-root> `
+  -SitePackages <pinned-site-packages> `
+  -LicenseOverrideManifest <reviewed-official-overrides.json> `
+  -OutputDirectory <external-notice-output>
+```
+
+Then assemble and seal the required profile. `CreatedAtUtc` is an explicit input so identical payloads and provenance produce deterministic manifest hashes.
+
+```powershell
+.\eng\Build-ReplayFoundryRuntimePacks.ps1 `
+  -Profile Base `
+  -OutputDirectory <external-pack-output> `
+  -CreatedAtUtc <canonical-utc-timestamp> `
+  -MediaToolsRoot <pinned-lgpl-ffmpeg-root> `
+  -MediaToolsArchiveSha256 <sha256> `
+  -MediaToolsArchiveUrl <permanent-https-binary-url> `
+  -MediaToolsSourceArchiveUrl <permanent-https-source-url> `
+  -MediaToolsSourceArchiveSha256 <sha256>
+```
+
+Advanced also requires the pinned Silero models, whisper.cpp runtime and model, relocatable CPython environment, Qwen host and model, qualification lock, and corresponding license inputs. The builder copies only fixed package kinds, seals every file by length and SHA-256, verifies each pack, and launch-checks the relocated Qwen host before writing its build index.
+
+Create the online Advanced catalog from that verified index. Each entry binds an HTTPS archive URL and length to both the archive hash and installed manifest hash.
+
+```powershell
+.\eng\New-ReplayFoundryRuntimePackCatalog.ps1 `
+  -RuntimePackBuildRoot <advanced-pack-output> `
+  -BaseUri <https-runtime-pack-root> `
+  -ApprovedRedirectHosts <reviewed-cdn-hosts> `
+  -OutputPath <external-output>\advanced-runtime-catalog.json
+```
+
+## Build an installer
+
+The normal online profile keeps the signed setup small and offers Advanced AI as an unchecked download choice:
+
+Every installer build also requires the Google Desktop OAuth client secret in
+the current process environment. Load it from the approved secret manager; do
+not put it in source files, command arguments, shell profiles, or build logs.
+
+```powershell
+# Set this process-only value from the approved secret manager before building.
+$env:REPLAYFOUNDRY_YOUTUBE_CLIENT_SECRET = <approved-secret-manager-value>
+```
+
+```powershell
+.\eng\Build-ReplayFoundryInstaller.ps1 `
+  -Version <version> `
+  -YouTubeClientId <desktop-client-id>.apps.googleusercontent.com `
+  -AdvancedInstallerUri https://replayfoundry.com/download `
+  -Profile Base `
+  -RuntimePackBuildRoot <base-pack-output> `
+  -AdvancedPayloadMode Online `
+  -AdvancedCatalogPath <external-output>\advanced-runtime-catalog.json `
+  -ArtifactRoot <external-installer-output>
+```
+
+Remove the process value immediately after the build, whether the build succeeds
+or fails:
+
+```powershell
+Remove-Item Env:\REPLAYFOUNDRY_YOUTUBE_CLIENT_SECRET -ErrorAction SilentlyContinue
+```
+
+Without production signing arguments, this produces a Development installer for local and VM validation. It is intentionally ineligible for public release.
+
+Installer artwork is generated into `<ArtifactRoot>\branding` from the canonical brand assets. The build supports licensed per-user Inno Setup 6.7 installations, system installations, and side-by-side Inno 7; `-InnoCompilerPath` can select an exact compiler. Replay Foundry does not read or store an Inno license key.
+
+Before packaging, verify deterministic branding and compile a minimal setup:
+
+```powershell
+.\eng\Test-InstallerBranding.ps1
+```
+
+## Sign a production candidate
+
+Production uses Microsoft Artifact Signing Public Trust for `Expired Soda Studios LLC`. No certificate, private key, OAuth token, or Azure credential belongs in source control or script arguments.
+
+Install Microsoft's official workstation tools:
+
+```powershell
+winget install -e --id Microsoft.Azure.ArtifactSigningClientTools
+```
+
+Then supply the approved regional endpoint, account, certificate profile, and authentication mode to the installer build:
+
+```powershell
+.\eng\Build-ReplayFoundryInstaller.ps1 `
+  -Version <version> `
+  -YouTubeClientId <desktop-client-id>.apps.googleusercontent.com `
+  -AdvancedInstallerUri https://replayfoundry.com/download `
+  -Profile Base `
+  -RuntimePackBuildRoot <base-pack-output> `
+  -ArtifactRoot <external-installer-output> `
+  -ReleaseChannel Production `
+  -SigningMode ArtifactSigning `
+  -ArtifactSigningEndpoint https://<region>.codesigning.azure.net `
+  -ArtifactSigningAccountName <account> `
+  -ArtifactSigningCertificateProfileName <profile> `
+  -ArtifactSigningAuthenticationMode InteractiveBrowser `
+  -InstallerDownloadUri <public-https-installer-url>
+```
+
+The release flow signs and verifies the application and runtime-maintenance executable before sealing their hashes. Inno Setup uses the same signer for the embedded uninstaller and setup EXE. A missing signature, publisher mismatch, absent Microsoft RFC 3161 timestamp, non-Microsoft signing endpoint, dirty production source tree, or unsigned Production request is a hard failure.
+
+Each successful build writes external release records for the application payload and final installer. Run the release guard on the signing workstation before producing a candidate:
+
+```powershell
+.\eng\Test-ReleaseEngineering.ps1 -RequireArtifactSigningClient
+```
+
+## Installation guarantees
+
+- Manifests are validated before payload copying.
+- Archive traversal, absolute paths, duplicate case-insensitive paths, undefined kinds or roles, invalid UTC values, missing hashes, and dependency cycles are rejected.
+- Archives are checked for exact length and SHA-256 before extraction; declared files are checked during staging and at final install.
+- Activation changes only after a content-addressed directory is complete.
+- Versions install side by side and existing content is never overwritten in place.
+- Repair restores the previous directory when replacement fails.
+- Removal refuses to break retained dependencies; removing Advanced AI keeps Base media tools.
+- Release startup resolves only active verified packs and never falls back to `PATH`.
+- Temporary download and staging files are cleaned on success, failure, or cancellation.
+
+## Release checklist
+
+1. Finalize the version and date only after the code scope is frozen. Move the
+   reviewed entries from `Unreleased` in [CHANGELOG.md](../../CHANGELOG.md) into
+   that exact version without rewriting the historical record.
+2. Update the root README, website Updates and Download pages, GitHub release
+   notes, installer version, and artifact names from the same release record.
+   Until the signed release exists, every public surface must continue to label
+   the work as in testing and keep the previous release as the current download.
+3. Build from a reviewed, committed, clean source tree. Run the repository
+   payload, data-boundary, security, architecture, release-engineering, and full
+   `verify` gates before creating a production snapshot.
+4. Export production source from the reviewed Git index into a new empty
+   directory. The manifest is an exact allowlist: never copy the development
+   worktree, local `.codex-*` review directories, binaries, media, runtime/model
+   archives, retained evidence, credentials, signing output, or machine data.
+5. Compare the candidate with a fresh clone of the public repository. Preserve
+   reviewed public-only gallery assets intentionally, verify every relative
+   Markdown link and workflow action pin, and publish through a review branch or
+   pull request rather than replacing `main` from a mutable local checkout.
+6. Revalidate the Google OAuth production configuration and least-privilege
+   Artifact Signing role.
+7. Review the exact generated notices and every item in the
+   [third-party compliance record](third-party-compliance.md).
+8. Upload runtime archives and corresponding source to their final HTTPS
+   locations, then regenerate and verify the catalog against those URLs.
+9. Build, sign, timestamp, and verify the application, runtime-maintenance
+   executable, uninstaller, and setup executable.
+10. Run clean install, upgrade, repair, add/remove Advanced AI, uninstall,
+    YouTube connect/disconnect, generation, Studio, render, Library, and Publish
+    tests in clean supported Windows VMs.
+11. Submit the signed candidate to Defender and reputation checks without
+    bypassing Smart App Control or antivirus.
+12. Publish only the signed installer, its release manifest, reviewed production
+    source snapshot, required notices and corresponding source, release notes,
+    and support links. Re-run the website production checks after deployment and
+    verify the public download, health, and release-history URLs.
+
+## References
+
+- [.NET single-file deployment](https://learn.microsoft.com/dotnet/core/deploying/single-file/overview)
+- [Microsoft Artifact Signing integration](https://learn.microsoft.com/azure/artifact-signing/how-to-signing-integrations)
+- [Windows code-signing options](https://learn.microsoft.com/windows/apps/package-and-deploy/code-signing-options)
+- [Microsoft Smart App Control](https://learn.microsoft.com/windows/apps/develop/smart-app-control/overview)
+- [Inno Setup components](https://jrsoftware.org/ishelp/topic_componentssection.htm)
+- [Inno Setup signed files](https://jrsoftware.org/ishelp/topic_issig.htm)
+- [Inno Setup commercial licenses](https://jrsoftware.org/isorder.php)
+- [FFmpeg legal guidance](https://ffmpeg.org/legal.html)

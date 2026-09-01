@@ -1,6 +1,6 @@
 param(
-    [string]$Source = "ReplayFoundry.Desktop/Assets/Branding/ReplayFoundry-App-Icon-1024.png",
-    [string]$IconOutput = "ReplayFoundry.Desktop/Assets/Icons/Application/ReplayFoundry.ico",
+    [string]$Source = "src/ReplayFoundry.Desktop/Assets/Branding/ReplayFoundry-App-Icon-1024.png",
+    [string]$IconOutput = "src/ReplayFoundry.Desktop/Assets/Icons/Application/ReplayFoundry.ico",
     [string]$AppleTouchOutput = ""
 )
 
