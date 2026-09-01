@@ -16,17 +16,18 @@ function Require-Text(
     if ($text -notmatch $Pattern) { Fail $Description }
 }
 
-$networkMatches = Get-ChildItem -LiteralPath (Join-Path $root 'ReplayFoundry.Desktop') `
+$networkMatches = Get-ChildItem -LiteralPath (Join-Path $root 'src\ReplayFoundry.Desktop') `
     -Recurse -Filter '*.cs' |
     Select-String -Pattern '\bHttpClient\b|\bHttpRequestMessage\b' |
     ForEach-Object { $_.Path.Substring($root.Length + 1).Replace('\', '/') } |
     Sort-Object -Unique
 $approvedNetworkFiles = @(
-    'ReplayFoundry.Desktop/Platform/Diagnostics/HttpsUserReportTransport.cs',
-    'ReplayFoundry.Desktop/Platform/GameKnowledge/WikimediaGameKnowledgeProvider.cs',
-    'ReplayFoundry.Desktop/Platform/YouTube/GoogleYouTubeAuthorizationService.cs',
-    'ReplayFoundry.Desktop/Platform/YouTube/YouTubeDataApiClient.cs',
-    'ReplayFoundry.Desktop/Platform/YouTube/YouTubePublishingFactory.cs'
+    'src/ReplayFoundry.Desktop/Platform/Diagnostics/HttpsUserReportTransport.cs',
+    'src/ReplayFoundry.Desktop/Platform/GameKnowledge/WikimediaGameKnowledgeProvider.cs',
+    'src/ReplayFoundry.Desktop/Platform/GameKnowledge/WikimediaGameKnowledgeProvider.Retrieval.cs',
+    'src/ReplayFoundry.Desktop/Platform/YouTube/GoogleYouTubeAuthorizationService.cs',
+    'src/ReplayFoundry.Desktop/Platform/YouTube/YouTubeDataApiClient.cs',
+    'src/ReplayFoundry.Desktop/Platform/YouTube/YouTubePublishingFactory.cs'
 )
 $unexpected = @($networkMatches | Where-Object { $_ -notin $approvedNetworkFiles })
 if ($unexpected.Count -gt 0) {
@@ -34,33 +35,33 @@ if ($unexpected.Count -gt 0) {
 }
 
 $pythonNetwork = Get-ChildItem -LiteralPath `
-    (Join-Path $root 'eng/visual-semantic-host') -Recurse -Filter '*.py' |
+    (Join-Path $root 'src/ReplayFoundry.VisualSemanticHost') -Recurse -Filter '*.py' |
     Select-String -Pattern '^\s*(?:import|from)\s+(?:requests|httpx|aiohttp|urllib\.request|socket|websockets)\b'
 if ($pythonNetwork) {
     Fail 'the local Qwen host gained an unreviewed network dependency'
 }
 
 Require-Text `
-    'ReplayFoundry.Desktop/Platform/Diagnostics/HttpsUserReportTransport.cs' `
+    'src/ReplayFoundry.Desktop/Platform/Diagnostics/HttpsUserReportTransport.cs' `
     'SanitizeOutboundDraft' `
     'bug reports are not re-sanitized at the final HTTPS boundary'
 Require-Text `
-    'ReplayFoundry.Desktop/Features/Publish/YouTube/YouTubePublishContracts.cs' `
+    'src/ReplayFoundry.Desktop/Features/Publish/YouTube/YouTubePublishContracts.cs' `
     'ExternalTextSecurity' `
     'YouTube public fields bypass the external-text sanitizer'
 Require-Text `
-    'ReplayFoundry.Desktop/Platform/GameKnowledge/WikimediaGameKnowledgeProvider.cs' `
+    'src/ReplayFoundry.Desktop/Platform/GameKnowledge/WikimediaGameKnowledgeProvider.cs' `
     'ExternalTextSecurity\.SingleLine' `
     'Wikimedia lookup terms bypass the external-text sanitizer'
 Require-Text `
-    'ReplayFoundry.Desktop/App.xaml.cs' `
+    'src/ReplayFoundry.Desktop/App.xaml.cs' `
     'LocalCrashReportFallback' `
     'startup crashes have no pre-composition local route'
 
 $renderers = @(
-    'eng/visual-semantic-host/replayfoundry_visual_semantic/generation.py',
-    'eng/visual-semantic-host/replayfoundry_visual_semantic/editorial/inference.py',
-    'eng/visual-semantic-host/replayfoundry_visual_semantic/editorial/grounded_metadata_generation.py'
+    'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/generation.py',
+    'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/inference.py',
+    'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/grounded_metadata_generation.py'
 )
 foreach ($renderer in $renderers) {
     $text = Get-Content -Raw -LiteralPath (Join-Path $root $renderer)
@@ -68,6 +69,29 @@ foreach ($renderer in $renderers) {
         $text -notmatch '_secure_model_messages') {
         Fail "$renderer renders an AI prompt without the centralized untrusted-data boundary"
     }
+}
+
+Require-Text `
+    'src/ReplayFoundry.Desktop/Platform/Processes/WindowsProcessRunner.cs' `
+    '!request\.InheritParentEnvironment[\s\S]*Environment\.Clear\(\)' `
+    'child-process replacement mode does not clear inherited environment variables'
+
+$isolatedQwenLaunchers = @(
+    'src/ReplayFoundry.Desktop/Platform/VisualSemantic/Qwen3VlBatchProcessExecutor.cs'
+    'src/ReplayFoundry.Desktop/Platform/VisualSemantic/Qwen3VlInitializationCoordinator.cs'
+    'src/ReplayFoundry.Desktop/Platform/VisualSemantic/Editorial/Qwen3VlGroundedMetadataGeneration.cs'
+    'src/ReplayFoundry.Desktop/Platform/VisualSemantic/Editorial/Qwen3VlQualifiedEditorialProvider.cs'
+)
+$isolatedQwenLaunchers += @(Get-ChildItem -LiteralPath (Join-Path $root 'tools') `
+    -Recurse -File -Filter 'Qwen3Vl*.cs' | Where-Object {
+        (Get-Content -Raw -LiteralPath $_.FullName) -match 'WindowsProcessRunner'
+    } | ForEach-Object {
+        $_.FullName.Substring($root.Length + 1).Replace('\', '/')
+    })
+$isolatedQwenLaunchers = @($isolatedQwenLaunchers | Sort-Object -Unique)
+foreach ($launcher in $isolatedQwenLaunchers) {
+    Require-Text $launcher 'inheritParentEnvironment:\s*false' `
+        "$launcher allows unrelated parent secrets into the local AI process"
 }
 
 Write-Host 'Security boundary guard passed.'

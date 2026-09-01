@@ -3,8 +3,16 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest-minimum</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <ReplayFoundryUserReportEndpoint>https://replayfoundry.com/api/v1/user-reports</ReplayFoundryUserReportEndpoint>
+    <ReplayFoundryDataChannel Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('Tests'))">Test</ReplayFoundryDataChannel>
+    <ReplayFoundryDataChannel Condition="'$(ReplayFoundryDataChannel)' == '' and '$(Configuration)' == 'Debug'">Development</ReplayFoundryDataChannel>
+    <ReplayFoundryDataChannel Condition="'$(ReplayFoundryDataChannel)' == ''">Production</ReplayFoundryDataChannel>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="ReplayFoundry.DataChannel" Value="$(ReplayFoundryDataChannel)" />
+  </ItemGroup>
 
   <PropertyGroup Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('Tests'))">
     <!-- Framework-free validation tests intentionally construct invalid values to assert rejection. -->

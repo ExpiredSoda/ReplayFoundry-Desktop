@@ -5,9 +5,12 @@
 
 # The frozen visual-semantic prompt has a canonical UTF-8/LF hash, and the
 # external Python host is intentionally cross-checkable byte-for-byte.
-eng/visual-semantic-host/*.py text eol=lf
-eng/visual-semantic-host/*.txt text eol=lf
-eng/visual-semantic-host/*.json text eol=lf
+src/ReplayFoundry.VisualSemanticHost/*.py text eol=lf
+src/ReplayFoundry.VisualSemanticHost/**/*.py text eol=lf
+src/ReplayFoundry.VisualSemanticHost/*.txt text eol=lf
+src/ReplayFoundry.VisualSemanticHost/*.json text eol=lf
+tests/ReplayFoundry.VisualSemanticHost.Tests/*.py text eol=lf
+tests/ReplayFoundry.VisualSemanticHost.Tests/**/*.py text eol=lf
 
 ###############################################################################
 # Set default behavior for command prompt diff.

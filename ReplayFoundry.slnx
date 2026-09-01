@@ -1,9 +1,20 @@
 <Solution>
-  <Project Path="ReplayFoundry.Desktop/ReplayFoundry.Desktop.csproj" />
-  <Project Path="ReplayFoundry.InspectionTests/ReplayFoundry.InspectionTests.csproj" />
-  <Project Path="ReplayFoundry.CompositionTests/ReplayFoundry.CompositionTests.csproj" />
-  <Project Path="ReplayFoundry.PreparationTests/ReplayFoundry.PreparationTests.csproj" />
-  <Project Path="ReplayFoundry.RuntimePacks/ReplayFoundry.RuntimePacks.csproj" />
-  <Project Path="ReplayFoundry.RuntimeInstaller/ReplayFoundry.RuntimeInstaller.csproj" />
-  <Project Path="ReplayFoundry.RuntimePacks.Tests/ReplayFoundry.RuntimePacks.Tests.csproj" />
+  <Folder Name="/Product/">
+    <Project Path="src/ReplayFoundry.Desktop/ReplayFoundry.Desktop.csproj" />
+    <Project Path="src/ReplayFoundry.RuntimePacks/ReplayFoundry.RuntimePacks.csproj" />
+  </Folder>
+  <Folder Name="/Product Tools/">
+    <Project Path="tools/ReplayFoundry.RuntimeInstaller/ReplayFoundry.RuntimeInstaller.csproj" />
+  </Folder>
+  <Folder Name="/Verification/Desktop/">
+    <Project Path="tests/ReplayFoundry.CompositionTests/ReplayFoundry.CompositionTests.csproj" />
+    <Project Path="tests/ReplayFoundry.InspectionTests/ReplayFoundry.InspectionTests.csproj" />
+    <Project Path="tests/ReplayFoundry.PreparationTests/ReplayFoundry.PreparationTests.csproj" />
+  </Folder>
+  <Folder Name="/Verification/Runtime Packs/">
+    <Project Path="tests/ReplayFoundry.RuntimePacks.Tests/ReplayFoundry.RuntimePacks.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Verification/Shared/">
+    <Project Path="tests/ReplayFoundry.Testing/ReplayFoundry.Testing.csproj" />
+  </Folder>
 </Solution>

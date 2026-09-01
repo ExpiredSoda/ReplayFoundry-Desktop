@@ -1,0 +1,114 @@
+Replay Foundry Grounded Editorial Rephrase Policy 2.4
+
+Purpose
+
+This policy separates transport validity from audience-copy quality. A complete
+XGrammar-constrained metadata object is retained even when a semantic copy rule
+needs human review. One bounded rephrase may improve that draft, but rejection
+of the rephrase never discards the source metadata or generated clip.
+
+Structural rerolls
+
+- A user reroll selects a different qualified variant intent from the same
+  immutable evidence and typed authority.
+- The rephraser changes the narrative lens, title opening and syntax, clause
+  order, and description sentence plan. A synonym-only substitution is not a
+  valid reroll.
+- The new structure may use only facts supported by the same typed authority.
+  It cannot add identity, emotion, intent, cause, outcome, dialogue, interface
+  attribution, readable text, or game-specific event detail.
+- Tags, grounding, and temporalVoice remain immutable except for the existing
+  bounded non-English tag omission rule.
+
+Typed editorial framing
+
+- A host-validated StoryShapeOnly frame may change narrative organization and
+  emphasis without becoming factual authority.
+- The host derives one compact GrammaticalShapeOnly audienceFrame from the
+  validated moment kind, primary presentation kind, creator authority, and safe
+  nonhuman primary subjects that also participate in a retained primary action.
+  It adds no scene fact. Its center kind controls the title's grammatical
+  subject and the description opening.
+- The validated moment kind selects the story role. The primary presentation
+  kind selects how that role is presented. Supporting presentation kinds may
+  supply secondary chronology, but cannot replace the primary grammatical
+  center with another event or with an inventory.
+- The grammatical center of the title and the opening description clause must
+  be the supported presentation, review, decision, progress, action, discovery,
+  complication, or outcome rather than a generic actor, camera, screen, prop,
+  or displayed-content inventory.
+- Cinematic sequences and in-world recordings are framed by their supported
+  story or presentation role rather than by an inventory of visible people and
+  props. Their typed rephrase authority retains every sanitized primary action
+  for subordinate description detail and never duplicates those actions in the
+  chronological progression.
+- Candidate subjects are article-normalized, action-linked noun phrases. They
+  may organize audience copy but cannot add factual authority, and the writer
+  may omit them when none provides a useful editorial center.
+- Narrative presentations use a compositional grammar with a presentation
+  subject or locator followed by a retrospective framing predicate or literal
+  action. The participant, action, and object remain factual subordinate detail;
+  a generic actor cannot replace the presentation anchor.
+- Retrospective-voice correction is subordinate to the audienceFrame. It may
+  change the tense of a supported action but cannot replace a required cinematic
+  or recording anchor with an actor-led action opening.
+- Incidental clothing, camera inventory, display inventory, unstable readable
+  text, and generic human subject objects are omitted from typed rephrase
+  authority. Their omission does not change the complete grounding retained for
+  validation and Studio review.
+- Documents, objectives, menus, decisions, discoveries, actions,
+  complications, and outcomes retain their supported moment role across polish
+  and structural rerolls.
+- Interactive gameplay centers the supported controlled action, objective
+  progress, choice, or visible result. It never uses player, character, or a
+  generic person as a substitute for missing creator authority.
+- A rephrase produced under a useful validated frame is accepted only when the
+  deterministic frame-adherence gate confirms that it retained the supported
+  presentation and moment role.
+- Frame adherence rejects observer-led openings and camera or display
+  inventory, while permitting a subordinate neutral actor detail after a
+  supported story-led grammatical center. It never requires exact premise
+  vocabulary, so a natural synonym cannot fail merely because it paraphrased
+  the StoryShapeOnly frame.
+- Present-tense source observations and their equivalent retrospective audience
+  forms are action-entailment equivalents. Audience copy must still satisfy the
+  retrospective grammar gate.
+- Repeated readable text may provide a bounded document, objective, interface,
+  or in-world-message name. Single-window OCR remains excluded from typed
+  rephrase authority.
+- The factual title scope follows the host-validated supporting draft ordinals.
+  Drafts outside that scope may add only chronological description context and
+  cannot strengthen the title event.
+- Unselected GeneralContext passages are omitted from rephrase authority. Only
+  confirmed identity and already selected, clip-bound knowledge can influence
+  wording during this pass.
+- When otherwise equivalent drafts compete, a complete supported Latin-script
+  action is preferred over a truncated, dangling, or non-Latin action.
+- A missing or invalid premise falls back to the strongest supported literal
+  beat and never causes generation to fail.
+
+Review-required copy
+
+- A schema-valid source rejected by an audience-copy validator is labeled
+  ReviewRequiredMetadata and carries its typed review code.
+- The rephraser may correct that code. If it succeeds, the review flag clears.
+- When a source carries more than one review code, every applicable mandatory
+  correction is composed into the same bounded rephrase request.
+- Audience copy rejected for UnstableReadableTextReuse is withheld from the
+  rephrase request. Omitted readable wording is non-evidence and cannot be
+  reconstructed, corrected, translated, or paraphrased.
+- Only an exact entry in typedAuthority.stableReadableText may be reused, and it
+  remains subordinate to the supported presentation or event. When that list is
+  empty, the rephrase uses no readable wording.
+- If it fails, repeats the source, remains too similar to prior copy, or drifts
+  from a useful validated frame, Replay Foundry retains the complete source and
+  exposes its review issue in Studio and Publish. No additional automatic model
+  retry is authorized.
+
+Preserved bounds
+
+- One batch-one greedy XGrammar-constrained text-only rephrase, seed 0, beam
+  count 1, offloaded KV cache, and the 768-token ceiling remain.
+- No video rerun, perception rerun, knowledge retrieval, unconstrained
+  fallback, programmatic semantic repair, or hidden retry is introduced.
+- Policies 1.0 through 2.3 remain readable under their original contracts.

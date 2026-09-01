@@ -109,14 +109,71 @@ function Copy-Tree([string]$Source, [string]$Destination, [string[]]$ExcludedDir
         Copy-Item -LiteralPath $file.FullName -Destination $target -Force
     }
 }
+function Remove-PythonInstallationResidue([string]$RuntimeRoot) {
+    $sitePackagesRoot = Join-Path $RuntimeRoot 'site-packages'
+    foreach ($directUrl in @(Get-ChildItem -LiteralPath $sitePackagesRoot -Recurse -File -Filter 'direct_url.json')) {
+        if (-not $directUrl.Directory.Name.EndsWith('.dist-info', [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Unexpected Python direct-URL metadata location: $($directUrl.FullName)"
+        }
+        $recordPath = Join-Path $directUrl.Directory.FullName 'RECORD'
+        if (-not (Test-Path -LiteralPath $recordPath -PathType Leaf)) {
+            throw "Python direct-URL metadata has no matching RECORD: $($directUrl.FullName)"
+        }
+        $recordRelativePath = [IO.Path]::GetRelativePath(
+            $sitePackagesRoot,
+            $directUrl.FullName).Replace('\', '/')
+        $recordPattern = '^' + [regex]::Escape($recordRelativePath) + ','
+        $recordLines = @(Get-Content -LiteralPath $recordPath)
+        $matchingRecords = @($recordLines | Where-Object { $_ -match $recordPattern })
+        if ($matchingRecords.Count -ne 1) {
+            throw "Python RECORD must contain exactly one direct-URL entry: $recordRelativePath"
+        }
+        @($recordLines | Where-Object { $_ -notmatch $recordPattern }) |
+            Set-Content -LiteralPath $recordPath -Encoding utf8NoBOM
+        Remove-Item -LiteralPath $directUrl.FullName -Force
+    }
+}
+function Assert-NoPythonInstallationResidue([string]$RuntimeRoot) {
+    $sitePackagesRoot = Join-Path $RuntimeRoot 'site-packages'
+    $directUrls = @(Get-ChildItem -LiteralPath $sitePackagesRoot -Recurse -File -Filter 'direct_url.json')
+    $recordReferences = @(Get-ChildItem -LiteralPath $sitePackagesRoot -Recurse -File -Filter 'RECORD' |
+        Select-String -Pattern '(^|/)direct_url\.json,' -CaseSensitive:$false)
+    if ($directUrls.Count -ne 0 -or $recordReferences.Count -ne 0) {
+        throw 'Packaged Python retained machine-specific direct-URL installation metadata.'
+    }
+    if (Test-Path -LiteralPath (Join-Path $RuntimeRoot 'python\Lib\test')) {
+        throw 'Packaged Python retained the CPython standard-library test payload.'
+    }
+}
+function Copy-PackagedModelManifest([string]$Source, [string]$Destination) {
+    $sourceText = Get-Content -Raw -LiteralPath $Source
+    $pattern = [regex]::new(
+        '(?<prefix>"modelDirectoryPath"\s*:\s*)"(?:\\.|[^"\\])*"',
+        [Text.RegularExpressions.RegexOptions]::CultureInvariant)
+    $matches = $pattern.Matches($sourceText)
+    if ($matches.Count -ne 1) {
+        throw 'QwenModelManifestPath must contain exactly one modelDirectoryPath string.'
+    }
+    $packagedText = $pattern.Replace(
+        $sourceText,
+        [Text.RegularExpressions.MatchEvaluator]{
+            param($match)
+            return $match.Groups['prefix'].Value + '"model"'
+        })
+    Set-Content -LiteralPath $Destination -Value $packagedText.TrimEnd("`r", "`n") -Encoding utf8NoBOM
+    $packagedManifest = Get-Content -Raw -LiteralPath $Destination | ConvertFrom-Json
+    if ($packagedManifest.modelDirectoryPath -cne 'model') {
+        throw 'The packaged Qwen model manifest did not receive its portable model path.'
+    }
+}
 function Seal-Pack([string]$Id, [hashtable]$Recipe) {
     $packRoot = Join-Path $packRoots $Id
     $recipePath = Join-Path $recipeRoot "$Id.json"
     $Recipe | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $recipePath -Encoding utf8NoBOM
-    dotnet run --project (Join-Path $repoRoot 'ReplayFoundry.RuntimeInstaller\ReplayFoundry.RuntimeInstaller.csproj') -- `
+    dotnet run --project (Join-Path $repoRoot 'tools\ReplayFoundry.RuntimeInstaller\ReplayFoundry.RuntimeInstaller.csproj') -- `
         create-manifest --source $packRoot --recipe $recipePath | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) { throw "Manifest generation failed for $Id." }
-    dotnet run --project (Join-Path $repoRoot 'ReplayFoundry.RuntimeInstaller\ReplayFoundry.RuntimeInstaller.csproj') -- `
+    dotnet run --project (Join-Path $repoRoot 'tools\ReplayFoundry.RuntimeInstaller\ReplayFoundry.RuntimeInstaller.csproj') -- `
         verify --source $packRoot | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) { throw "Pack verification failed for $Id." }
     $archive = Join-Path $archiveRoot "$Id.zip"
@@ -268,20 +325,18 @@ if ($Profile -eq 'Advanced') {
         throw 'QwenHostScriptPath must belong to the complete Replay Foundry visual-semantic host tree.'
     }
     $visualRuntimePack = Join-Path $packRoots 'replayfoundry-qwen3-vl-runtime'
-    Copy-Tree $pythonRoot (Join-Path $visualRuntimePack 'python') @('site-packages','Doc','include','Tools','tcl')
+    Copy-Tree $pythonRoot (Join-Path $visualRuntimePack 'python') @('site-packages','Doc','include','Tools','tcl','test')
     Copy-Tree $sitePackages (Join-Path $visualRuntimePack 'site-packages') @('__pycache__')
     Copy-Tree $pythonNotices (Join-Path $visualRuntimePack 'notices')
+    Remove-PythonInstallationResidue $visualRuntimePack
+    Assert-NoPythonInstallationResidue $visualRuntimePack
     $packagedHostRoot = Join-Path $visualRuntimePack 'host'
-    Copy-Tree $hostRoot $packagedHostRoot @('__pycache__','tests')
-    Remove-Item -LiteralPath @(
-        (Join-Path $packagedHostRoot 'test_qwen3_vl_output_contract.py'),
-        (Join-Path $packagedHostRoot 'test_qwen3_vl_sampling_audit.py')
-    ) -Force
-    Set-Content -LiteralPath (Join-Path $packagedHostRoot 'replayfoundry-production-host.txt') `
-        -Value 'Replay Foundry packaged production host' -Encoding utf8NoBOM
+    & (Join-Path $PSScriptRoot 'Copy-ReplayFoundryProductionVisualHost.ps1') `
+        -SourceRoot $hostRoot `
+        -DestinationRoot $packagedHostRoot
     Test-QwenRuntimeHost $visualRuntimePack $mediaPack
     $visualRuntime = Seal-Pack 'replayfoundry-qwen3-vl-runtime' (Recipe-Base `
-        'replayfoundry-qwen3-vl-runtime' 'VisualRuntime' '0.8.21' 'Qwen3-VL CUDA runtime' 'Cuda' `
+        'replayfoundry-qwen3-vl-runtime' 'VisualRuntime' '0.8.22' 'Qwen3-VL CUDA runtime' 'Cuda' `
         @{PythonExecutable='python/python.exe';VisualHostScript='host/qwen3_vl_batch_host.py'} `
         @([ordered]@{componentName='CPython and pinned Qwen runtime wheels';licenseIdentifier='Multiple-see-notices';textRelativePath='notices/THIRD-PARTY-NOTICES.md';textSha256=(File-Hash (Join-Path $visualRuntimePack 'notices\THIRD-PARTY-NOTICES.md'));sourceUrl='https://www.python.org/downloads/windows/';redistributionNotes='Exact component inventory and retained license texts are included under notices/licenses.'}) `
         @([ordered]@{officialUrl='https://www.python.org/downloads/release/python-3119/';revision='3.11.9';artifactSha256=(File-Hash (Join-Path $pythonRoot 'python.exe'))},[ordered]@{officialUrl='https://pytorch.org/get-started/locally/';revision='torch-2.12.0+cu130';artifactSha256='07F0D0520196071C336391C174B9B9AB8AECA8518749B2A570D017521960F8D6'}) `
@@ -296,17 +351,19 @@ if ($Profile -eq 'Advanced') {
     $visualModelPack = Join-Path $packRoots 'replayfoundry-qwen3-vl-4b-instruct'
     Copy-Tree $modelRoot (Join-Path $visualModelPack 'model') @('.cache')
     New-Item -ItemType Directory -Path (Join-Path $visualModelPack 'config') | Out-Null
-    Copy-Item $modelManifest (Join-Path $visualModelPack 'config\model-manifest.json')
+    Copy-PackagedModelManifest `
+        $modelManifest `
+        (Join-Path $visualModelPack 'config\model-manifest.json')
     Copy-Item $promptManifest (Join-Path $visualModelPack 'config\prompt-manifest.json')
     Copy-Item $qualificationLock (Join-Path $visualModelPack 'config\qualification-lock.json')
     Copy-Item $qwenLicense (Join-Path $visualModelPack 'LICENSE-Qwen.txt')
     Assert-QwenDeploymentQualification $visualRuntimePack $qualificationLock
     $visualModel = Seal-Pack 'replayfoundry-qwen3-vl-4b-instruct' (Recipe-Base `
-        'replayfoundry-qwen3-vl-4b-instruct' 'VisualModel' '4.0.17' 'Qwen3-VL 4B Instruct' 'Cuda' `
+        'replayfoundry-qwen3-vl-4b-instruct' 'VisualModel' '4.0.18' 'Qwen3-VL 4B Instruct' 'Cuda' `
         @{QwenModelManifest='config/model-manifest.json';QwenPromptManifest='config/prompt-manifest.json';QwenQualificationLock='config/qualification-lock.json'} `
         @([ordered]@{componentName='Qwen3-VL 4B Instruct';licenseIdentifier='Apache-2.0';textRelativePath='LICENSE-Qwen.txt';textSha256=(File-Hash (Join-Path $visualModelPack 'LICENSE-Qwen.txt'));sourceUrl='https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/tree/ebb281ec70b05090aa6165b016eac8ec08e71b17';redistributionNotes='Locally qualified for the bounded Replay Foundry workflow. Generated wording remains user-reviewable and no universal semantic-accuracy claim is made.'}) `
         @([ordered]@{officialUrl='https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/tree/ebb281ec70b05090aa6165b016eac8ec08e71b17';revision='ebb281ec70b05090aa6165b016eac8ec08e71b17';artifactSha256='2018FFABE5257D8045BD565A232D82DA382679C9E71C388F6880BFF01ACF17B4'}) `
-        @([ordered]@{packageId='replayfoundry-qwen3-vl-runtime';minimumVersion='0.8.21';requiredManifestHash=$visualRuntime.manifest.manifestHash}))
+        @([ordered]@{packageId='replayfoundry-qwen3-vl-runtime';minimumVersion='0.8.22';requiredManifestHash=$visualRuntime.manifest.manifestHash}))
     $results.Add($visualModel)
 }
 
@@ -314,9 +371,12 @@ $index = [ordered]@{
     schemaVersion='replayfoundry-runtime-pack-build-1.0'
     profile=$Profile
     createdAtUtc=$CreatedAtUtc.ToString('O')
-    packs=@($results | ForEach-Object { [ordered]@{packageId=$_.packageId;archive=$_.archive;byteLength=$_.byteLength;sha256=$_.sha256;manifestHash=$_.manifest.manifestHash} })
+    packs=@($results | ForEach-Object { [ordered]@{packageId=$_.packageId;archive=([IO.Path]::GetRelativePath($outputRoot, $_.archive).Replace('\', '/'));byteLength=$_.byteLength;sha256=$_.sha256;manifestHash=$_.manifest.manifestHash} })
 }
 $indexPath = Join-Path $outputRoot 'runtime-pack-build-index.json'
 $index | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $indexPath -Encoding utf8NoBOM
+& (Join-Path $PSScriptRoot 'Test-ReleaseDataBoundary.ps1') `
+    -Profile RuntimePacks `
+    -Path $outputRoot
 Write-Host "Built $($results.Count) verified $Profile runtime packs under $outputRoot"
 Write-Host "Index: $indexPath"

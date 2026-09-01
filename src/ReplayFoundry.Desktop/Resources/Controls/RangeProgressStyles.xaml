@@ -1,0 +1,169 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
+    <Style x:Key="Control.RangeThumb" TargetType="{x:Type Thumb}">
+        <!-- Keep the painted node restrained while the transparent hit target remains accessible. -->
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <!-- Track measures the thumb as its painted 14-pixel node while the
+             transparent template still supplies a 40-pixel pointer target. -->
+        <Setter Property="Margin" Value="-13,0" />
+        <Setter Property="Background" Value="{DynamicResource Brush.StatusInfo}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Thumb}">
+                    <Grid Background="Transparent">
+                        <Ellipse
+                            x:Name="ThumbSurface"
+                            Width="14"
+                            Height="14"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Fill="{TemplateBinding Background}"
+                            Stroke="{DynamicResource Brush.TextPrimary}"
+                            StrokeThickness="1" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ThumbSurface" Property="Width" Value="17" />
+                            <Setter TargetName="ThumbSurface" Property="Height" Value="17" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ThumbSurface" Property="Width" Value="18" />
+                            <Setter TargetName="ThumbSurface" Property="Height" Value="18" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Control.RangeTrackButton" TargetType="{x:Type RepeatButton}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type RepeatButton}">
+                    <Border
+                        Height="4"
+                        VerticalAlignment="Center"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="2" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type Slider}" BasedOn="{StaticResource Control.KeyboardFocus}">
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Slider}">
+                    <Grid Height="40">
+                        <Track
+                            x:Name="PART_Track"
+                            VerticalAlignment="Center"
+                            Minimum="{TemplateBinding Minimum}"
+                            Maximum="{TemplateBinding Maximum}"
+                            Value="{TemplateBinding Value}"
+                            IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                            Orientation="{TemplateBinding Orientation}">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton
+                                    x:Name="PlayedTrack"
+                                    Command="{x:Static Slider.DecreaseLarge}"
+                                    CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                    Background="{TemplateBinding Foreground}"
+                                    Style="{StaticResource Control.RangeTrackButton}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb><Thumb Style="{StaticResource Control.RangeThumb}" /></Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton
+                                    x:Name="RemainingTrack"
+                                    Command="{x:Static Slider.IncreaseLarge}"
+                                    CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                    Background="{TemplateBinding Background}"
+                                    Style="{StaticResource Control.RangeTrackButton}" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.48" /></Trigger>
+            <Trigger Property="Validation.HasError" Value="True"><Setter Property="Foreground" Value="{DynamicResource Brush.StatusError}" /></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Control.ProgressBar" TargetType="{x:Type ProgressBar}">
+        <Setter Property="Height" Value="8" />
+        <Setter Property="MinWidth" Value="24" />
+        <Setter Property="Minimum" Value="0" />
+        <Setter Property="Maximum" Value="100" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="controls:IndeterminateProgressBehavior.IsEnabled" Value="True" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.ProgressTrack}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ProgressBar}">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{DynamicResource Brush.BorderSubtle}"
+                        BorderThickness="1"
+                        ClipToBounds="True"
+                        CornerRadius="4">
+                        <!--
+                            WPF sizes PART_Indicator from PART_Track. Keeping both
+                            parts in the shared template makes every determinate
+                            loading bar visibly follow its real 0-100 value.
+                        -->
+                        <Grid x:Name="PART_Track" ClipToBounds="True">
+                            <Border
+                                x:Name="PART_Indicator"
+                                HorizontalAlignment="Left"
+                                Background="{TemplateBinding Foreground}"
+                                CornerRadius="4" />
+                            <Border
+                                x:Name="IndeterminateSignal"
+                                HorizontalAlignment="Stretch"
+                                Background="{TemplateBinding Foreground}"
+                                CornerRadius="4"
+                                Opacity="0"
+                                RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform ScaleX="0.28" />
+                                </Border.RenderTransform>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Setter TargetName="PART_Indicator" Property="Opacity" Value="0" />
+                            <!-- The centered signal remains as active feedback when motion is disabled. -->
+                            <Setter TargetName="IndeterminateSignal" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsIndeterminate" Value="True"><Setter Property="Foreground" Value="{DynamicResource Brush.Indeterminate}" /></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.48" /></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Control.ProgressBar.Compact" BasedOn="{StaticResource Control.ProgressBar}" TargetType="{x:Type ProgressBar}">
+        <Setter Property="Height" Value="4" />
+    </Style>
+    <Style x:Key="Control.ProgressBar.Standard" BasedOn="{StaticResource Control.ProgressBar}" TargetType="{x:Type ProgressBar}">
+        <Setter Property="Height" Value="6" />
+    </Style>
+    <Style x:Key="Control.ProgressBar.Featured" BasedOn="{StaticResource Control.ProgressBar}" TargetType="{x:Type ProgressBar}">
+        <Setter Property="Height" Value="10" />
+    </Style>
+    <Style BasedOn="{StaticResource Control.ProgressBar}" TargetType="{x:Type ProgressBar}" />
+</ResourceDictionary>

@@ -1,0 +1,439 @@
+<UserControl
+    x:Class="ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.GameContext.GameContextStepView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="420"
+    d:DesignWidth="900"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <Geometry x:Key="GameContext.Icon.PublicLookup">M 7,1 A 6,6 0 1 0 7,13 A 6,6 0 1 0 7,1 M 1,7 L 13,7 M 7,1 C 4.5,4 4.5,10 7,13 M 7,1 C 9.5,4 9.5,10 7,13</Geometry>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280" />
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0">
+            <TextBlock
+                Foreground="{DynamicResource Brush.TextPrimary}"
+                FontSize="26"
+                FontWeight="SemiBold"
+                Text="Game details" />
+            <TextBlock
+                Margin="0,7,0,20"
+                Foreground="{DynamicResource Brush.TextSecondary}"
+                FontSize="14"
+                Text="Optional. Confirm the game only when you want its name and details used in titles, descriptions, and tags."
+                TextWrapping="Wrap" />
+            <ListBox
+                AutomationProperties.Name="Videos with game details"
+                ItemsSource="{Binding Sources}"
+                SelectedItem="{Binding SelectedSource, Mode=TwoWay}"
+                Style="{DynamicResource GenerationSetup.OptionList}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="4">
+                            <TextBlock
+                                Foreground="{DynamicResource Brush.TextPrimary}"
+                                FontWeight="SemiBold"
+                                Text="{Binding SourceName}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Margin="0,3,0,0"
+                                Foreground="{DynamicResource Brush.TextSecondary}"
+                                FontSize="11"
+                                Text="{Binding DisplayGameName}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+
+        <Border
+            Grid.Column="2"
+            Style="{DynamicResource GenerationSetup.SectionCard}">
+            <StackPanel>
+                <TextBlock
+                    Foreground="{DynamicResource Brush.TextPrimary}"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Text="{Binding SelectedSource.SourceName}" />
+                <TextBlock
+                    Margin="0,4,0,20"
+                    Foreground="{DynamicResource Brush.TextSecondary}"
+                    FontSize="12"
+                    Text="{Binding SelectedSource.OriginText}" />
+
+                <TextBlock
+                    Style="{DynamicResource GenerationSetup.FieldLabel}"
+                    Text="Game name (optional)" />
+                <TextBox
+                    AutomationProperties.Name="Confirmed game name"
+                    MaxLength="120"
+                    Style="{DynamicResource Control.FormTextBox}"
+                    Text="{Binding SelectedSource.GameName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Button
+                    Margin="0,10,0,0"
+                    HorizontalAlignment="Left"
+                    AutomationProperties.Name="Confirm suggested game name"
+                    Command="{Binding SelectedSource.ConfirmGameCommand}"
+                    Content="Confirm game"
+                    Style="{DynamicResource GenerationSetup.PrimaryButton}" />
+
+                <TextBlock
+                    Margin="0,18,0,0"
+                    Style="{DynamicResource GenerationSetup.FieldLabel}"
+                    Text="Extra details (optional)" />
+                <TextBlock
+                    Margin="0,0,0,8"
+                    Foreground="{DynamicResource Brush.TextSecondary}"
+                    FontSize="12"
+                    Text="Add a character, mission, mode, or preferred wording only when you are sure. Replay Foundry will not add facts you did not provide or confirm."
+                    TextWrapping="Wrap" />
+                <TextBox
+                    AutomationProperties.Name="Extra game details"
+                    AcceptsReturn="True"
+                    Height="110"
+                    MaxLength="1500"
+                    Style="{DynamicResource Control.FormTextBox}"
+                    Text="{Binding SelectedSource.ContextNotes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    TextWrapping="Wrap"
+                    VerticalScrollBarVisibility="Auto" />
+
+                <Border
+                    x:Name="PublicLookupStateRow"
+                    Margin="0,16,0,0"
+                    Padding="10,7"
+                    AutomationProperties.HelpText="{Binding SelectedSource.PublicLookupStatusDetail}"
+                    AutomationProperties.ItemStatus="{Binding SelectedSource.PublicLookupStatusText}"
+                    AutomationProperties.Name="Public game lookup availability"
+                    CornerRadius="7"
+                    ToolTip="{Binding SelectedSource.PublicLookupStatusDetail}">
+                    <Border.Style>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusWarning}" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSource.IsPublicLookupAvailable}" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusSuccess}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Source={x:Static SystemParameters.HighContrast}}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource Brush.HighContrastWindow}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource Brush.HighContrastBorder}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <controls:IconPath
+                            Width="14"
+                            Height="14"
+                            VerticalAlignment="Center"
+                            IconKey="GameContext.Icon.PublicLookup"
+                            Stroke="{Binding BorderBrush, ElementName=PublicLookupStateRow}"
+                            StrokeThickness="1.2"
+                            Stretch="Uniform" />
+                        <TextBlock
+                            Grid.Column="1"
+                            Margin="8,0,12,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource Brush.TextPrimary}"
+                            FontWeight="SemiBold"
+                            Text="Public game lookup" />
+                        <TextBlock
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Foreground="{Binding BorderBrush, ElementName=PublicLookupStateRow}"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Text="{Binding SelectedSource.PublicLookupStatusText}" />
+                    </Grid>
+                </Border>
+
+                <CheckBox
+                    Margin="0,16,0,0"
+                    AutomationProperties.Name="Use open game knowledge"
+                    Content="Use public game information for more specific titles"
+                    Foreground="{DynamicResource Brush.TextPrimary}"
+                    FontWeight="SemiBold"
+                    IsEnabled="{Binding SelectedSource.CanUsePublicLookup}"
+                    IsChecked="{Binding SelectedSource.UseOpenGameKnowledge, Mode=TwoWay}" />
+                <TextBlock
+                    Margin="24,5,0,0"
+                    Foreground="{DynamicResource Brush.TextSecondary}"
+                    FontSize="12"
+                    Text="Optional. Replay Foundry sends only the game name you confirmed to Wikimedia. It never chooses a match for you. Your video, file path, captions, and notes stay on this computer."
+                    TextWrapping="Wrap" />
+
+                <StackPanel Margin="24,12,0,0">
+                    <Button
+                        HorizontalAlignment="Left"
+                        AutomationProperties.Name="Find exact Wikimedia game match"
+                        Command="{Binding SelectedSource.DiscoverCandidatesCommand}"
+                        Content="Find exact game match"
+                        Style="{DynamicResource GenerationSetup.PrimaryButton}" />
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        AutomationProperties.LiveSetting="Polite"
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        FontSize="12"
+                        Text="{Binding SelectedSource.CandidateStatus}"
+                        TextWrapping="Wrap" />
+                    <Button
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Left"
+                        AutomationProperties.HelpText="Refresh public information for the game you selected. This does not scan your video again."
+                        AutomationProperties.Name="Refresh selected public game information"
+                        Command="{Binding SelectedSource.RefreshConfirmedContextCommand}"
+                        Content="Refresh selected context"
+                        Style="{DynamicResource GenerationSetup.SecondaryButton}"
+                        Visibility="{Binding SelectedSource.HasConfirmedIdentity, Converter={StaticResource BoolToVisibility}}" />
+                    <Grid
+                        Margin="0,14,0,8"
+                        Visibility="{Binding SelectedSource.HasCandidateChoices, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource Brush.TextPrimary}"
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Text="Choose the exact game match" />
+                        <Border
+                            Grid.Column="1"
+                            Padding="8,3"
+                            Background="{DynamicResource Brush.SurfaceInset}"
+                            BorderBrush="{DynamicResource Brush.StatusInfo}"
+                            BorderThickness="1"
+                            CornerRadius="10">
+                            <TextBlock
+                                Foreground="{DynamicResource Brush.StatusInfo}"
+                                FontSize="10"
+                                FontWeight="SemiBold"
+                                Text="REQUIRED" />
+                        </Border>
+                    </Grid>
+                    <ListBox
+                        Margin="0,8,0,0"
+                        AutomationProperties.HelpText="Choose the matching Wikimedia game. This video is ready after you choose."
+                        AutomationProperties.Name="Matching Wikimedia games"
+                        ItemsSource="{Binding SelectedSource.Candidates}"
+                        ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                        SelectionMode="Single"
+                        Style="{DynamicResource GenerationSetup.OptionList}">
+                        <ListBox.SelectedItem>
+                            <Binding
+                                Mode="TwoWay"
+                                Path="SelectedSource.SelectedCandidate" />
+                        </ListBox.SelectedItem>
+                        <ListBox.ItemContainerStyle>
+                            <Style
+                                BasedOn="{StaticResource Control.KeyboardFocus}"
+                                TargetType="{x:Type ListBoxItem}">
+                                <Setter Property="Margin" Value="0,0,0,8" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
+                                <Setter Property="AutomationProperties.HelpText" Value="{Binding SelectionHelpText}" />
+                                <Setter Property="ToolTip" Value="{Binding SelectionHelpText}" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                                            <Grid>
+                                            <Border
+                                                x:Name="CandidateSurface"
+                                                Padding="12"
+                                                Background="{DynamicResource Brush.SurfaceInset}"
+                                                BorderBrush="Transparent"
+                                                BorderThickness="0"
+                                                CornerRadius="10">
+                                                <ContentPresenter
+                                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                    VerticalAlignment="Center" />
+                                            </Border>
+                                            <Border
+                                                x:Name="SelectionRail"
+                                                Width="4"
+                                                Margin="5,8,0,8"
+                                                HorizontalAlignment="Left"
+                                                Background="{DynamicResource Brush.StatusSuccess}"
+                                                CornerRadius="2"
+                                                IsHitTestVisible="False"
+                                                Opacity="0" />
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter
+                                                        TargetName="CandidateSurface"
+                                                        Property="Background"
+                                                        Value="{DynamicResource Brush.SurfaceElevated}" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter
+                                                        Property="AutomationProperties.HelpText"
+                                                        Value="Selected. This video's game is confirmed." />
+                                                    <Setter
+                                                        Property="ToolTip"
+                                                        Value="Selected. This video's game is confirmed." />
+                                                    <Setter
+                                                        TargetName="CandidateSurface"
+                                                        Property="Background"
+                                                        Value="{DynamicResource Brush.InteractiveSelected}" />
+                                                    <Setter
+                                                        TargetName="SelectionRail"
+                                                        Property="Opacity"
+                                                        Value="1" />
+                                                </Trigger>
+                                                <Trigger Property="IsEnabled" Value="False">
+                                                    <Setter
+                                                        TargetName="CandidateSurface"
+                                                        Property="Opacity"
+                                                        Value="0.48" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        x:Name="SelectionRing"
+                                        Width="24"
+                                        Height="24"
+                                        Margin="0,0,12,0"
+                                        VerticalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderBrush="{DynamicResource Brush.BorderStrong}"
+                                        BorderThickness="1"
+                                        CornerRadius="12">
+                                        <Path
+                                            x:Name="SelectionCheck"
+                                            Width="13"
+                                            Height="13"
+                                            Data="{DynamicResource Icon.Check}"
+                                            Stretch="Uniform"
+                                            Stroke="{DynamicResource Brush.StatusSuccess}"
+                                            StrokeEndLineCap="Round"
+                                            StrokeLineJoin="Round"
+                                            StrokeStartLineCap="Round"
+                                            StrokeThickness="2"
+                                            Visibility="Collapsed" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock
+                                            Foreground="{DynamicResource Brush.TextPrimary}"
+                                            FontWeight="SemiBold"
+                                            Text="{Binding Title}" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            Foreground="{DynamicResource Brush.TextSecondary}"
+                                            FontSize="11"
+                                            Text="{Binding Details}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border
+                                        x:Name="SelectionBadge"
+                                        Grid.Column="2"
+                                        Margin="12,0,0,0"
+                                        Padding="12,6"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource Brush.SurfaceElevated}"
+                                        BorderBrush="Transparent"
+                                        BorderThickness="0"
+                                        CornerRadius="10">
+                                        <TextBlock
+                                            x:Name="SelectionLabel"
+                                            Foreground="{DynamicResource Brush.TextPrimary}"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Text="Select" />
+                                    </Border>
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger
+                                        Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}"
+                                        Value="True">
+                                        <Setter
+                                            TargetName="SelectionRing"
+                                            Property="Background"
+                                            Value="{DynamicResource Brush.InteractiveSelected}" />
+                                        <Setter
+                                            TargetName="SelectionRing"
+                                            Property="BorderBrush"
+                                            Value="{DynamicResource Brush.StatusSuccess}" />
+                                        <Setter
+                                            TargetName="SelectionRing"
+                                            Property="BorderThickness"
+                                            Value="2" />
+                                        <Setter
+                                            TargetName="SelectionCheck"
+                                            Property="Visibility"
+                                            Value="Visible" />
+                                        <Setter
+                                            TargetName="SelectionBadge"
+                                            Property="Background"
+                                            Value="{DynamicResource Brush.InteractiveSelected}" />
+                                        <Setter
+                                            TargetName="SelectionLabel"
+                                            Property="Foreground"
+                                            Value="{DynamicResource Brush.StatusSuccess}" />
+                                        <Setter
+                                            TargetName="SelectionLabel"
+                                            Property="Text"
+                                            Value="Selected" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Button
+                        Margin="0,2,0,0"
+                        HorizontalAlignment="Left"
+                        AutomationProperties.Name="Continue without public game information"
+                        Command="{Binding SelectedSource.ChooseNoneCommand}"
+                        Content="Don't use public game information"
+                        Style="{DynamicResource GenerationSetup.SecondaryButton}" />
+                </StackPanel>
+
+                <Border
+                    Margin="0,20,0,0"
+                    Padding="12"
+                    Background="{DynamicResource Brush.GenerateDropHighlight}"
+                    CornerRadius="10">
+                    <TextBlock
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        FontSize="12"
+                        TextWrapping="Wrap">
+                        <Run Text="Names are used only after you confirm them.&#x20;" />
+                        <Run Text="Replay Foundry remembers your choice for this game folder.&#x20;" />
+                        <Run Text="Public information keeps its source and license details." />
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

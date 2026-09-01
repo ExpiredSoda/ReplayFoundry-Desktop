@@ -4,7 +4,7 @@
 
 Please do not open a public issue for a suspected vulnerability or include credentials, private media, transcripts, access tokens, personal information, or exploit details in a public discussion.
 
-While this repository is private, contact the repository owner through the associated GitHub account. Before the repository becomes public, GitHub private vulnerability reporting and the support address on `replayfoundry.com` will be enabled and this file will be updated with the exact route.
+Use the private contact route on the [Replay Foundry support page](https://replayfoundry.com/support). If GitHub private vulnerability reporting is available for the repository, that is also an appropriate route. Do not disclose the report through a public issue or discussion.
 
 Include the affected Replay Foundry version, Windows version, a concise reproduction, and the least-sensitive diagnostics that demonstrate the problem. Replace personal paths and account identifiers. Do not attach source videos unless an encrypted transfer has been explicitly arranged.
 
@@ -14,4 +14,4 @@ Replay Foundry keeps crash and diagnostic reports local by default. A report is 
 
 ## Supported versions
 
-Only the latest signed production release will receive security updates once public distribution begins. Development and unsigned builds are unsupported outside the private test program.
+During public beta, only the latest published beta receives security fixes. Development and locally generated unsigned builds are unsupported outside their explicit test scope.

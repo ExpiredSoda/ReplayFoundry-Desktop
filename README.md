@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="ReplayFoundry.Desktop/Assets/Branding/favicon.svg" width="88" alt="Replay Foundry logo" />
+  <img src="src/ReplayFoundry.Desktop/Assets/Branding/favicon.svg" width="88" alt="Replay Foundry logo" />
   <h1>Replay Foundry</h1>
   <p><strong>Turn long gameplay recordings into polished vertical clips—locally, deliberately, and under your control.</strong></p>
   <p>
@@ -12,19 +12,33 @@
   <p>
     <a href="https://replayfoundry.com">Website</a> ·
     <a href="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.2">Download Beta 2</a> ·
-    <a href="https://buymeacoffee.com/expiredsoda">Support development</a>
+    <a href="CHANGELOG.md">Change log</a> ·
+    <a href="docs/README.md">Documentation</a> ·
+    <a href="https://replayfoundry.com/support">Support</a>
   </p>
 </div>
 
 ![Replay Foundry workflow](.github/assets/replayfoundry-workflow-hero.gif)
 
-Replay Foundry is a Windows desktop workflow for finding strong gameplay moments, shaping vertical videos, styling captions, reviewing titles and descriptions, organizing finished work, and preparing YouTube releases. Editing and optional AI processing stay on the creator's PC; uploads happen only through explicit Publish actions.
+Replay Foundry is a Windows desktop workflow for finding strong gameplay
+moments, shaping vertical videos, styling captions, reviewing titles and
+descriptions, organizing finished work, and preparing YouTube releases. Editing
+and optional AI processing stay on the creator's PC; uploads happen only through
+explicit Publish actions.
+
+The current download is **Replay Foundry 1.0.0 Beta 2**, published August 14,
+2026. The [Unreleased change log](CHANGELOG.md#unreleased) records work being
+tested for the next update; it is deliberately kept separate from what is
+available today.
 
 ## Watch the complete workflow
 
 [![Watch the Replay Foundry start-to-finish demo](.github/assets/replayfoundry-demo-poster.jpg)](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.2/ReplayFoundry-3-Minute-Workflow-Demo-1080p.mp4)
 
-The 2 minute 37 second demo follows the real product from installer choices through Generate, Studio, Library, and a scheduled YouTube release. Long local-analysis intervals are condensed and clearly labeled; the product interactions themselves are shown directly.
+The 2 minute 37 second demo follows the released product from installer choices
+through Generate, Studio, Library, and a scheduled YouTube release. Long local
+analysis intervals are condensed and clearly labeled; the product interactions
+themselves are shown directly.
 
 ## The workflow
 
@@ -38,25 +52,44 @@ The 2 minute 37 second demo follows the real product from installer choices thro
 | ![Library organizes finished Replay Foundry videos](.github/assets/workflow-03-library.gif) | ![Publish reviews and schedules a YouTube release](.github/assets/workflow-04-publish.gif) |
 | Keep finished videos and project context organized on the PC. | Review every field, connect YouTube deliberately, and upload now or schedule a release. |
 
-## Install the beta
+## Install the current beta
 
 Download the Microsoft-signed [Replay Foundry Beta 2 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.2/ReplayFoundry-1.0.0-beta.2-Base-win-x64-setup.exe).
 
+### Preview of the next installer
+
+The image below shows the redesigned **Unreleased** installer presentation now
+being tested. It is not a screenshot of the current Beta 2 download.
+
 ![Base and Advanced AI installer choices](.github/assets/setup-base-advanced.png)
 
-- **Base** installs the core local editing, rendering, transcription, Library, and Publish workflow.
-- **Advanced AI** is optional. Setup downloads the pinned local visual-analysis runtime and model from Replay Foundry hosting after you choose it. The current package is about 12.5 GB and is intended for compatible NVIDIA systems.
-- The installer and runtime catalogs verify signed or hashed release artifacts before use. Large model weights, native runtimes, signing material, and credentials are never stored in this source repository.
+- **Base** installs the core local moment-finding, editing, rendering, Library,
+  and Publish workflow together with verified media tools.
+- **Advanced AI** is optional and starts unchecked. When selected, setup adds
+  the qualified local speech, transcription, visual-analysis, and editorial
+  packs. The optional Advanced AI download is about 12.5 GB and is intended for
+  compatible NVIDIA systems.
+- Setup verifies signed or hash-pinned release artifacts before using them.
+  Model weights, native runtime archives, signing material, credentials, and
+  local media are never stored in this source repository.
 
-This is a prerelease. Back up important work and use the in-app reviewed diagnostics flow when reporting a problem.
+This is a prerelease. Back up important work and use the in-app reviewed
+diagnostics flow when reporting a problem.
 
 ## Product principles
 
-- **Local first:** source media, transcripts, project state, and optional local AI stay on the PC unless the user starts an upload or explicitly sends a reviewed report.
-- **Review before action:** generated clips and metadata remain editable; publishing requires deliberate confirmation.
-- **No silent substitutions:** qualified runtimes and models are verified by manifest and hash. Missing or incompatible capabilities are explained instead of replaced with an unknown tool.
-- **Recoverable workflows:** projects, renders, and publish drafts are durable, while rebuildable caches can be cleared independently.
-- **Accessible motion:** interaction and caption effects respect reduced-motion and high-contrast settings.
+- **Local first:** source media, transcripts, project state, and optional local
+  AI stay on the PC unless the user starts an upload or explicitly sends a
+  reviewed report.
+- **Review before action:** generated clips and metadata remain editable;
+  publishing requires deliberate confirmation.
+- **No silent substitutions:** qualified runtimes and models are verified by
+  manifest and hash. Missing or incompatible capabilities are explained instead
+  of replaced with an unknown tool or an unrequested no-AI workflow.
+- **Recoverable workflows:** projects, renders, and publish drafts are durable,
+  while rebuildable caches can be cleared independently.
+- **Accessible motion:** interaction and caption effects respect reduced-motion,
+  keyboard, and high-contrast settings.
 
 ## Build from source
 
@@ -67,21 +100,41 @@ Requirements:
 - PowerShell 7
 - Visual Studio 2026 or another Windows desktop build environment
 
+Those requirements are enough for a normal application build. The complete
+`verify` gate additionally requires a Git checkout (not a GitHub source ZIP),
+Python 3.11, current Inno Setup 6.7 or 7, and an x64 Windows SDK SignTool at
+version 10.0.2261.755 or newer.
+
+Use the repository console for both the normal build and the complete local
+verification gate:
+
 ```powershell
-dotnet build .\ReplayFoundry.slnx -c Debug
-dotnet run --project .\ReplayFoundry.InspectionTests\ReplayFoundry.InspectionTests.csproj --no-build -c Debug
-dotnet run --project .\ReplayFoundry.CompositionTests\ReplayFoundry.CompositionTests.csproj --no-build -c Debug
-dotnet run --project .\ReplayFoundry.PreparationTests\ReplayFoundry.PreparationTests.csproj --no-build -c Debug
-dotnet run --project .\ReplayFoundry.RuntimePacks.Tests\ReplayFoundry.RuntimePacks.Tests.csproj --no-build -c Debug
+.\eng\ReplayFoundry.ps1 build
+.\eng\ReplayFoundry.ps1 verify -Configuration Release -PythonExecutable <python.exe>
 ```
 
-See [installer/README.md](installer/README.md) for the verified external-payload release flow and [installer/THIRD-PARTY-COMPLIANCE.md](installer/THIRD-PARTY-COMPLIANCE.md) for third-party distribution details.
+`verify` builds once, runs the .NET and visual-semantic test suites in the
+current public repository profile, then applies the architecture, security,
+UI/UX, runtime, installer, data-boundary, and release guards. Run
+`.\eng\ReplayFoundry.ps1 help` for the commands supported by the snapshot.
+
+Start with the [documentation index](docs/README.md), then see the
+[Windows distribution guide](docs/distribution/windows.md) and
+[third-party compliance record](docs/distribution/third-party-compliance.md).
 
 ## Trust, privacy, and support
 
-Replay Foundry does not embed API secrets or private signing material. Release builds resolve only verified active runtime packs. User reports are sanitized, remain local by default, and are sent only after explicit review and consent. Please report security concerns through [SECURITY.md](SECURITY.md).
+No signing keys, user access tokens, or release credentials are committed to
+this repository. The signed app's Google Desktop OAuth configuration is supplied
+by the protected release environment, while each user's tokens remain in Windows
+Credential Manager. Release builds resolve only verified active runtime packs.
+User reports are sanitized, remain local by default, and are sent only after
+explicit review and consent. Please report security concerns through
+[SECURITY.md](SECURITY.md).
 
-Replay Foundry is free to download. If it saves you time and you want to help fund continued development, [support Expired Soda on Buy Me a Coffee](https://buymeacoffee.com/expiredsoda). Support is optional and never changes product access.
+Replay Foundry is free to download. If it saves you time and you want to help
+fund continued development, [support Expired Soda on Buy Me a Coffee](https://buymeacoffee.com/expiredsoda).
+Support is optional and never changes product access.
 
 <div align="center">
   <a href="https://buymeacoffee.com/expiredsoda">
@@ -91,4 +144,6 @@ Replay Foundry is free to download. If it saves you time and you want to help fu
   <sub>Scan the code or click it to open the optional support page.</sub>
 </div>
 
-Copyright © 2026 Expired Soda Studios LLC. Source code is available under the [MIT License](LICENSE.txt); bundled third-party components retain their own licenses and notices.
+Copyright © 2026 Expired Soda Studios LLC. Source code is available under the
+[MIT License](LICENSE.txt); bundled third-party components retain their own
+licenses and notices.

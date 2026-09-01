@@ -12,8 +12,6 @@ param(
     [ValidatePattern('^https://')]
     [string]$AdvancedInstallerUri,
 
-    [string]$UserReportEndpoint,
-
     [Parameter(Mandatory = $true)]
     [ValidateSet('Base', 'Advanced')]
     [string]$Profile,
@@ -133,11 +131,24 @@ if ($packIndex.profile -ne $Profile -and -not ($offerAdvancedAi -and $packIndex.
     throw "Runtime pack profile '$($packIndex.profile)' does not match installer profile '$Profile'."
 }
 foreach ($pack in $packIndex.packs) {
-    if (-not (Test-Path -LiteralPath $pack.archive -PathType Leaf) -or
-        (Get-FileHash -Algorithm SHA256 -LiteralPath $pack.archive).Hash -ne $pack.sha256) {
+    $archiveRelative = ([string]$pack.archive).Replace('/', '\')
+    if ([IO.Path]::IsPathFullyQualified($archiveRelative) -or
+        $archiveRelative.Split([IO.Path]::DirectorySeparatorChar) -contains '..') {
+        throw "Runtime pack index contains an unsafe archive path: $($pack.packageId)"
+    }
+    $archive = [IO.Path]::GetFullPath((Join-Path $runtimePackRoot $archiveRelative))
+    if (-not $archive.StartsWith(
+            $runtimePackRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar,
+            [StringComparison]::OrdinalIgnoreCase) -or
+        -not (Test-Path -LiteralPath $archive -PathType Leaf) -or
+        (Get-Item -LiteralPath $archive).Length -ne [long]$pack.byteLength -or
+        (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash -ne $pack.sha256) {
         throw "Runtime pack archive failed index verification: $($pack.packageId)"
     }
 }
+& (Join-Path $PSScriptRoot 'Test-ReleaseDataBoundary.ps1') `
+    -Profile RuntimePacks `
+    -Path $runtimePackRoot
 if ($Profile -eq 'Advanced' -and $AdvancedPayloadMode -eq 'Embedded') {
     # Inno Setup requires disk spanning above 4.2 GB, which produces an EXE plus
     # external BIN slices rather than the promised one-file installer.
@@ -153,6 +164,12 @@ if (($Profile -eq 'Advanced' -and $AdvancedPayloadMode -eq 'Online') -or $offerA
         throw 'An online Advanced AI offer requires -AdvancedCatalogPath.'
     }
     $AdvancedCatalogPath = [System.IO.Path]::GetFullPath($AdvancedCatalogPath)
+    & (Join-Path $PSScriptRoot 'Assert-ReplayFoundryRuntimePackCatalogBinding.ps1') `
+        -RuntimePackBuildRoot $runtimePackRoot `
+        -CatalogPath $AdvancedCatalogPath
+    & (Join-Path $PSScriptRoot 'Test-ReleaseDataBoundary.ps1') `
+        -Profile DistributionAssets `
+        -Path $AdvancedCatalogPath
 }
 
 $sourceCommit = (git -C $repoRoot rev-parse HEAD).Trim()
@@ -170,7 +187,6 @@ $publishArguments = @{
     ArtifactSigningAuthenticationMode = $ArtifactSigningAuthenticationMode
     SigningReportPath = (Join-Path $reportsDirectory 'application-signing-report.json')
 }
-if (-not [string]::IsNullOrWhiteSpace($UserReportEndpoint)) { $publishArguments.UserReportEndpoint = $UserReportEndpoint }
 if (-not [string]::IsNullOrWhiteSpace($ArtifactSigningEndpoint)) { $publishArguments.ArtifactSigningEndpoint = $ArtifactSigningEndpoint }
 if (-not [string]::IsNullOrWhiteSpace($ArtifactSigningAccountName)) { $publishArguments.ArtifactSigningAccountName = $ArtifactSigningAccountName }
 if (-not [string]::IsNullOrWhiteSpace($ArtifactSigningCertificateProfileName)) { $publishArguments.ArtifactSigningCertificateProfileName = $ArtifactSigningCertificateProfileName }
@@ -196,6 +212,7 @@ if (-not [string]::IsNullOrWhiteSpace($AdvancedCatalogPath)) {
 $brandingManifestPath = Join-Path $brandingDirectory 'installer-branding-manifest.json'
 $brandingManifest = Get-Content -Raw -LiteralPath $brandingManifestPath | ConvertFrom-Json
 $wizardBackImagePath = Join-Path $brandingDirectory 'installer-wizard-background.png'
+$wizardImagePath = Join-Path $brandingDirectory 'installer-wizard-hero.png'
 $wizardSmallImagePath = Join-Path $brandingDirectory 'installer-wizard-small.png'
 foreach ($brandingOutput in $brandingManifest.outputs) {
     $brandingPath = Join-Path $brandingDirectory $brandingOutput.fileName
@@ -249,6 +266,7 @@ $innoArguments = @(
     "/DAdvancedCatalogPath=$AdvancedCatalogPath",
     "/DOfferAdvancedAi=$([int]$offerAdvancedAi)",
     "/DWizardBackImagePath=$wizardBackImagePath",
+    "/DWizardImagePath=$wizardImagePath",
     "/DWizardSmallImagePath=$wizardSmallImagePath",
     "/DYouTubeCredentialTargetName=$youtubeCredentialTargetName"
 )
@@ -352,6 +370,11 @@ $installerManifest = [ordered]@{
 }
 $installerManifestPath = Join-Path $resolvedArtifacts 'installer-release-manifest.json'
 $installerManifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $installerManifestPath -Encoding utf8NoBOM
+& (Join-Path $PSScriptRoot 'Test-ReleaseDataBoundary.ps1') `
+    -Profile Installer `
+    -Path $resolvedArtifacts `
+    -RuntimePackBuildRoot $runtimePackRoot `
+    -AdvancedCatalogPath $AdvancedCatalogPath
 Write-Host "Installer: $($installer.FullName)"
 Write-Host "Installer SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $installer.FullName).Hash)"
 Write-Host "Release manifest: $installerManifestPath"

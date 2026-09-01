@@ -14,23 +14,23 @@ function Add-Failure {
 }
 
 $boundaries = @{
-    "ReplayFoundry.Desktop\Media\Moments\MomentScoreCalculator.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\MomentScoreCalculator.cs" = @(
         "MomentScoreCalculator", 120)
-    "ReplayFoundry.Desktop\Media\Moments\MomentScoreMeasurementCalculator.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\MomentScoreMeasurementCalculator.cs" = @(
         "MomentScoreMeasurementCalculator", 380)
-    "ReplayFoundry.Desktop\Media\Moments\MomentScoreSupport.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\MomentScoreSupport.cs" = @(
         "MomentScoreSupport", 400)
-    "ReplayFoundry.Desktop\Media\Moments\MomentSignalScoreComponentBuilder.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\MomentSignalScoreComponentBuilder.cs" = @(
         "MomentSignalScoreComponentBuilder", 220)
-    "ReplayFoundry.Desktop\Media\Moments\MomentEpisodeScoreComponentBuilder.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\MomentEpisodeScoreComponentBuilder.cs" = @(
         "MomentEpisodeScoreComponentBuilder", 180)
-    "ReplayFoundry.Desktop\Media\Moments\DeterministicMediaMomentFinder.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\DeterministicMediaMomentFinder.cs" = @(
         "DeterministicMediaMomentFinder", 240)
-    "ReplayFoundry.Desktop\Media\Moments\DeterministicMomentManifestBuilder.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\DeterministicMomentManifestBuilder.cs" = @(
         "DeterministicMomentManifestBuilder", 110)
-    "ReplayFoundry.Desktop\Media\Moments\DeterministicMomentSelection.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\DeterministicMomentSelection.cs" = @(
         "DeterministicMomentSelection", 280)
-    "ReplayFoundry.Desktop\Media\Moments\DeterministicMomentWarnings.cs" = @(
+    "src\ReplayFoundry.Desktop\Media\Moments\DeterministicMomentWarnings.cs" = @(
         "DeterministicMomentWarnings", 180)
 }
 
@@ -66,8 +66,8 @@ foreach ($entry in $boundaries.GetEnumerator()) {
 }
 
 $removedFragments = @(
-    "ReplayFoundry.Desktop\Media\Moments\MomentScoreMeasurements.cs",
-    "ReplayFoundry.Desktop\Media\Moments\MomentScoreCalculationHelpers.cs"
+    "src\ReplayFoundry.Desktop\Media\Moments\MomentScoreMeasurements.cs",
+    "src\ReplayFoundry.Desktop\Media\Moments\MomentScoreCalculationHelpers.cs"
 )
 
 foreach ($relativePath in $removedFragments) {
@@ -79,7 +79,7 @@ foreach ($relativePath in $removedFragments) {
 $facade =
     Get-Content -Raw -LiteralPath (
         Join-Path $repositoryRoot `
-            "ReplayFoundry.Desktop\Media\Moments\MomentScoreCalculator.cs")
+            "src\ReplayFoundry.Desktop\Media\Moments\MomentScoreCalculator.cs")
 $requiredDelegations = @(
     "MomentScoreMeasurementCalculator.MeasureSignals",
     "MomentScoreMeasurementCalculator.MeasureIntegrity",
@@ -97,7 +97,7 @@ foreach ($delegation in $requiredDelegations) {
 $finderFacade =
     Get-Content -Raw -LiteralPath (
         Join-Path $repositoryRoot `
-            "ReplayFoundry.Desktop\Media\Moments\DeterministicMediaMomentFinder.cs")
+            "src\ReplayFoundry.Desktop\Media\Moments\DeterministicMediaMomentFinder.cs")
 $requiredFinderDelegations = @(
     "DeterministicMomentWarnings.BuildInputWarnings",
     "DeterministicMomentWarnings.GetInitialDisposition",

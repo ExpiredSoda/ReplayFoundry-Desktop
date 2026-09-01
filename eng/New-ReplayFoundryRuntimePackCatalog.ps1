@@ -37,7 +37,12 @@ if ($hosts | Where-Object { $_ -notmatch '^[a-z0-9.-]+$' }) {
 }
 
 $catalogPacks = foreach ($pack in $index.packs) {
-    $archive = [IO.Path]::GetFullPath($pack.archive)
+    $archiveRelative = ([string]$pack.archive).Replace('/', '\')
+    if ([IO.Path]::IsPathFullyQualified($archiveRelative) -or
+        $archiveRelative.Split([IO.Path]::DirectorySeparatorChar) -contains '..') {
+        throw "Pack archive path is unsafe: $($pack.packageId)"
+    }
+    $archive = [IO.Path]::GetFullPath((Join-Path $buildRoot $archiveRelative))
     if (-not $archive.StartsWith($buildRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
         -not (Test-Path -LiteralPath $archive -PathType Leaf)) {
         throw "Pack archive is missing or outside the build root: $($pack.packageId)"
