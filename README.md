@@ -11,7 +11,7 @@
   </p>
   <p>
     <a href="https://replayfoundry.com">Website</a> ·
-    <a href="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.2">Download Beta 2</a> ·
+    <a href="https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.3">Download Beta 3</a> ·
     <a href="CHANGELOG.md">Change log</a> ·
     <a href="docs/README.md">Documentation</a> ·
     <a href="https://replayfoundry.com/support">Support</a>
@@ -26,14 +26,13 @@ descriptions, organizing finished work, and preparing YouTube releases. Editing
 and optional AI processing stay on the creator's PC; uploads happen only through
 explicit Publish actions.
 
-The current download is **Replay Foundry 1.0.0 Beta 2**, published August 14,
-2026. The [Unreleased change log](CHANGELOG.md#unreleased) records work being
-tested for the next update; it is deliberately kept separate from what is
-available today.
+The current download is **Replay Foundry 1.0.0 Beta 3**, published September 1,
+2026. Its [change log](CHANGELOG.md#100-beta-3--2026-09-01) records the complete
+set of user-visible changes and known limitations.
 
 ## Watch the complete workflow
 
-[![Watch the Replay Foundry start-to-finish demo](.github/assets/replayfoundry-demo-poster.jpg)](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.2/ReplayFoundry-3-Minute-Workflow-Demo-1080p.mp4)
+[![Watch the Replay Foundry start-to-finish demo](.github/assets/replayfoundry-demo-poster.jpg)](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.3/ReplayFoundry-3-Minute-Workflow-Demo-1080p.mp4)
 
 The 2 minute 37 second demo follows the released product from installer choices
 through Generate, Studio, Library, and a scheduled YouTube release. Long local
@@ -54,12 +53,12 @@ themselves are shown directly.
 
 ## Install the current beta
 
-Download the Microsoft-signed [Replay Foundry Beta 2 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.2/ReplayFoundry-1.0.0-beta.2-Base-win-x64-setup.exe).
+Download the Microsoft-signed [Replay Foundry Beta 3 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.3/ReplayFoundry-1.0.0-beta.3-Base-win-x64-setup.exe).
 
-### Preview of the next installer
+### Installer choices
 
-The image below shows the redesigned **Unreleased** installer presentation now
-being tested. It is not a screenshot of the current Beta 2 download.
+Beta 3 includes the redesigned setup presentation shown below. Advanced AI is
+an optional, unchecked choice in the same signed installer.
 
 ![Base and Advanced AI installer choices](.github/assets/setup-base-advanced.png)
 
