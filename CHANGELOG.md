@@ -167,6 +167,8 @@ No user-visible changes have been recorded since 1.0.0 Beta 3.
   without repeatedly comparing every manifest record with every ZIP entry.
 - Corrected the public release-boundary scanner so valid zero-byte text files are
   treated as empty content instead of stopping release verification.
+- Stabilized preview-cache release verification when Windows briefly retains a
+  completed temporary media file during test cleanup.
 
 ### Known limitations
 

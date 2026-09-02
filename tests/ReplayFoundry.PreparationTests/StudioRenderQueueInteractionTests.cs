@@ -2605,7 +2605,9 @@ internal static partial class UiUxApplicationSurfaceTests
             {
                 return;
             }
-            catch (IOException) when (DateTime.UtcNow < deadline)
+            catch (Exception exception) when (
+                (exception is IOException or UnauthorizedAccessException) &&
+                DateTime.UtcNow < deadline)
             {
                 await Task.Delay(20);
             }
