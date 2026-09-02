@@ -88,7 +88,7 @@ function Test-PayloadFile([string]$FullPath, [string]$Container, [string]$Relati
     }
     if ($extension -notin $textExtensions -or
         (Get-Item -LiteralPath $FullPath).Length -gt 16MB) { return }
-    $text = Get-Content -Raw -LiteralPath $FullPath
+    $text = [IO.File]::ReadAllText($FullPath)
     $userRoots = @(
         [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile),
         $env:USERPROFILE
@@ -195,8 +195,13 @@ function Assert-RuntimePackIndex([string]$Root) {
         }
         $archive = [IO.Compression.ZipFile]::OpenRead($archivePath)
         try {
-            $manifestEntry = @($archive.Entries | Where-Object {
-                (ConvertTo-PortablePath $_.FullName) -ceq 'runtime-pack-manifest.json'
+            $entries = @($archive.Entries | Where-Object {
+                -not [string]::IsNullOrEmpty($_.Name)
+            })
+            $manifestEntry = @($entries | Where-Object {
+                [StringComparer]::OrdinalIgnoreCase.Equals(
+                    (ConvertTo-PortablePath $_.FullName),
+                    'runtime-pack-manifest.json')
             })
             if ($manifestEntry.Count -ne 1) {
                 throw "Runtime archive has no unique manifest: $packageId"
@@ -207,27 +212,47 @@ function Assert-RuntimePackIndex([string]$Root) {
                 -not (Test-Sha256Equal ([string]$packManifest.manifestHash) ([string]$pack.manifestHash))) {
                 throw "Runtime archive identity differs from its build index: $packageId"
             }
-            $records = @($packManifest.files)
-            $payloadEntries = @($archive.Entries | Where-Object {
-                -not [string]::IsNullOrEmpty($_.Name) -and
-                (ConvertTo-PortablePath $_.FullName) -cne 'runtime-pack-manifest.json'
+            $recordMap = [Collections.Generic.Dictionary[string, object]]::new(
+                [StringComparer]::OrdinalIgnoreCase)
+            foreach ($record in @($packManifest.files)) {
+                $relative = ConvertTo-PortablePath ([string]$record.relativePath)
+                if ([string]::IsNullOrWhiteSpace($relative) -or
+                    [IO.Path]::IsPathFullyQualified($relative) -or
+                    $relative.Split('/') -contains '..' -or
+                    -not $recordMap.TryAdd($relative, $record)) {
+                    throw "Runtime manifest contains an unsafe or duplicate path: $packageId::$relative"
+                }
+            }
+            $payloadEntries = @($entries | Where-Object {
+                -not [StringComparer]::OrdinalIgnoreCase.Equals(
+                    (ConvertTo-PortablePath $_.FullName),
+                    'runtime-pack-manifest.json')
             })
-            if ($records.Count -ne $payloadEntries.Count) {
+            $entryMap = [Collections.Generic.Dictionary[string, object]]::new(
+                [StringComparer]::OrdinalIgnoreCase)
+            foreach ($entry in $payloadEntries) {
+                $relative = ConvertTo-PortablePath $entry.FullName
+                if (-not $entryMap.TryAdd($relative, $entry) -or
+                    -not $recordMap.ContainsKey($relative)) {
+                    throw "Runtime archive differs from its internal manifest: $packageId::$relative"
+                }
+            }
+            if ($recordMap.Count -ne $entryMap.Count) {
                 throw "Runtime archive differs from its internal manifest: $packageId"
             }
-            foreach ($record in $records) {
-                $entry = @($payloadEntries | Where-Object {
-                    (ConvertTo-PortablePath $_.FullName) -ceq (ConvertTo-PortablePath ([string]$record.relativePath))
-                })
-                if ($entry.Count -ne 1 -or $entry[0].Length -ne [long]$record.byteLength) {
-                    throw "Runtime archive file differs from its manifest: $packageId::$($record.relativePath)"
+            foreach ($pair in $recordMap.GetEnumerator()) {
+                $relative = $pair.Key
+                $record = $pair.Value
+                $entry = $entryMap[$relative]
+                if ($entry.Length -ne [long]$record.byteLength) {
+                    throw "Runtime archive file differs from its manifest: $packageId::$relative"
                 }
-                $stream = $entry[0].Open()
+                $stream = $entry.Open()
                 try {
                     $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)).ToLowerInvariant()
                 } finally { $stream.Dispose() }
                 if (-not (Test-Sha256Equal $hash ([string]$record.sha256))) {
-                    throw "Runtime archive content hash differs from its manifest: $packageId::$($record.relativePath)"
+                    throw "Runtime archive content hash differs from its manifest: $packageId::$relative"
                 }
             }
         } finally { $archive.Dispose() }

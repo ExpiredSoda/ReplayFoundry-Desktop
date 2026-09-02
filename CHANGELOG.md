@@ -162,7 +162,11 @@ No user-visible changes have been recorded since 1.0.0 Beta 3.
   retained evidence, models, native runtimes, media, binaries, machine-local
   data, credentials, signing output, and local review artifacts.
 - Strengthened installer, manifest, signature, runtime-pack, data-channel, payload,
-  and clean-tree checks used before a production source snapshot can be published.
+  and clean-tree checks used before a production source snapshot can be published,
+  including indexed archive verification that keeps large runtime packs practical
+  without repeatedly comparing every manifest record with every ZIP entry.
+- Corrected the public release-boundary scanner so valid zero-byte text files are
+  treated as empty content instead of stopping release verification.
 
 ### Known limitations
 
