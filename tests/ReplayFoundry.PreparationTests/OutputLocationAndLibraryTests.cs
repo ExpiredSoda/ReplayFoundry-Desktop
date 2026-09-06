@@ -776,8 +776,21 @@ internal static class OutputLocationAndLibraryTests
         return Task.CompletedTask;
     }
 
-    private static async Task LibraryRebuildsThumbnailWhenOnlyVideoReturns()
+    private static Task LibraryRebuildsThumbnailWhenOnlyVideoReturns()
     {
+        Task? verification = null;
+        UiUxApplicationSurfaceTests.RunOnSta(() =>
+            verification = LibraryRebuildsThumbnailOnDispatcherAsync());
+        return verification!;
+    }
+
+    private static async Task LibraryRebuildsThumbnailOnDispatcherAsync()
+    {
+        TestAssert.True(
+            SynchronizationContext.Current is
+                System.Windows.Threading.DispatcherSynchronizationContext,
+            "Thumbnail notifications must be observed on a pumping UI dispatcher.");
+        int ownerThreadId = Environment.CurrentManagedThreadId;
         using var directory = new TemporaryDirectory();
         string media = Path.Combine(directory.Root, "returned.mp4");
         string thumbnail = Path.Combine(
@@ -810,6 +823,17 @@ internal static class OutputLocationAndLibraryTests
             recovery);
         LibraryItem selected = library.SelectedItem!;
         int missingRevision = selected.ThumbnailRevision;
+        var thumbnailRestored = new TaskCompletionSource<int>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        selected.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(LibraryItem.HasThumbnail) &&
+                selected.HasThumbnail)
+            {
+                thumbnailRestored.TrySetResult(
+                    Environment.CurrentManagedThreadId);
+            }
+        };
 
         File.WriteAllBytes(media, [0, 1, 2, 3]);
         monitor.ReportChanged(media);
@@ -823,12 +847,13 @@ internal static class OutputLocationAndLibraryTests
             selected.HasThumbnail,
             "Library should keep its placeholder until the repaired image is complete.");
         recovery.Release();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        while (!selected.HasThumbnail)
-        {
-            await Task.Delay(10, timeout.Token);
-        }
+        int notificationThreadId = await thumbnailRestored.Task.WaitAsync(
+            TimeSpan.FromSeconds(2));
 
+        TestAssert.Equal(
+            ownerThreadId,
+            notificationThreadId,
+            "Background thumbnail repair must notify the owning UI thread.");
         TestAssert.Equal(
             1,
             recovery.CallCount,
@@ -1053,7 +1078,8 @@ internal static class OutputLocationAndLibraryTests
     private sealed class ControlledLibraryThumbnailRecovery :
         ILibraryThumbnailRecoveryService
     {
-        private readonly TaskCompletionSource _release = new();
+        private readonly TaskCompletionSource _release = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource Started { get; } = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
