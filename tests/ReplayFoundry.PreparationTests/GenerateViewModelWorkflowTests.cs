@@ -24,6 +24,15 @@ internal static partial class GenerateViewModelWorkflowTests
             "Generate multi-file picker preserves selected source order",
             MultipleFilePickerPreservesOrder),
         new(
+            "Folder import excludes concurrent edits and restores source commands on completion",
+            FolderImportRestoresEditingAfterCompletion),
+        new(
+            "Failed folder import restores source editing",
+            FolderImportFailureRestoresEditing),
+        new(
+            "Generate stop and disposal cancel folder import and drain final notifications",
+            FolderImportShutdownDrainsFinalNotifications),
+        new(
             "Generate source selection raises the live projection notifications",
             SourceSelectionRaisesProjectionNotifications),
         new(

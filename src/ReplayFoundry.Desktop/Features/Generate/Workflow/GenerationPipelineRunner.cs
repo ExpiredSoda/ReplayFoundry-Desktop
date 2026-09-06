@@ -22,6 +22,8 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
     private readonly IGenerationSpeechActivityService? _speechActivity;
     private readonly IGenerationCandidateRefinementService? _candidateRefinement;
     private readonly IGenerationVisualSemanticAnalysisService? _visualSemantic;
+    private readonly IGenerationTranscriptAnalysisService? _transcriptAnalysis;
+    private readonly IGenerationCaptureContextScreeningService? _captureScreening;
 
     public GenerationPipelineRunner(
         GenerationPreflightRunner preflight,
@@ -32,7 +34,9 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
         IGenerationCaptionPreparationService? captionPreparation = null,
         IGenerationSpeechActivityService? speechActivity = null,
         IGenerationCandidateRefinementService? candidateRefinement = null,
-        IGenerationVisualSemanticAnalysisService? visualSemantic = null)
+        IGenerationVisualSemanticAnalysisService? visualSemantic = null,
+        IGenerationTranscriptAnalysisService? transcriptAnalysis = null,
+        IGenerationCaptureContextScreeningService? captureScreening = null)
     {
         ArgumentNullException.ThrowIfNull(preflight);
         ArgumentNullException.ThrowIfNull(momentFinder);
@@ -47,6 +51,8 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
         _speechActivity = speechActivity;
         _candidateRefinement = candidateRefinement;
         _visualSemantic = visualSemantic;
+        _transcriptAnalysis = transcriptAnalysis;
+        _captureScreening = captureScreening;
     }
 
     public async Task<GenerationResult> RunAsync(
@@ -78,6 +84,13 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                     cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             GenerationCandidateIntelligenceResult? candidateIntelligence = null;
+            if (request.SetupOptions.DiscoveryIntent.UsesSemanticRetrieval &&
+                (request.SetupOptions.AnalysisDepth != GenerationAnalysisDepth.Thorough || _transcriptAnalysis is null))
+                throw new GenerationEngineUnavailableException("Semantic creator search requires Thorough analysis and the local transcript service.");
+            if (request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Thorough)
+            {
+                moments = GenerationSemanticExplorationPlanner.Expand(moments, cancellationToken);
+            }
             if (request.SetupOptions.AnalysisDepth is not GenerationAnalysisDepth.Fast)
             {
                 if (_speechActivity is null || _candidateRefinement is null)
@@ -101,6 +114,15 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         speechProgress,
                         cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
+                GenerationTranscriptAnalysisResult? transcripts = null;
+                if (request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Thorough &&
+                    _transcriptAnalysis is not null)
+                {
+                    transcripts = await _transcriptAnalysis.AnalyzeAsync(moments, speech,
+                        new SynchronousProgress<string>(detail => progress.Report(new GenerationProgressUpdate(
+                            "Understanding spoken moments", detail, isIndeterminate: true))), cancellationToken);
+                    moments = transcripts.ExpandedMoments;
+                }
                 progress.Report(new GenerationProgressUpdate(
                     "Finding the strongest moments",
                     "Balancing spoken moments with the kind of clips you asked Replay Foundry to create.",
@@ -109,8 +131,15 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                     () => _candidateRefinement.Refine(
                         moments,
                         speech,
+                        transcripts,
                         cancellationToken),
                     cancellationToken);
+                if (_captureScreening is not null)
+                {
+                    candidateIntelligence = await _captureScreening.ScreenAsync(candidateIntelligence,
+                        new SynchronousProgress<string>(detail => progress.Report(new GenerationProgressUpdate(
+                            "Checking recording context", detail, isIndeterminate: true))), cancellationToken);
+                }
                 moments = candidateIntelligence.RefinedMoments;
 
                 if (request.SetupOptions.AnalysisDepth ==
@@ -131,6 +160,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                                 update.OverallPercentage is null
                                     ? null
                                     : 45 + update.OverallPercentage.Value * 0.05)));
+                    GenerationCandidateIntelligenceResult preVisualIntelligence = candidateIntelligence;
                     GenerationVisualSemanticAnalysisResult visual =
                         await _visualSemantic.AnalyzeAsync(
                             candidateIntelligence,
@@ -148,12 +178,26 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                             visual,
                             cancellationToken),
                         cancellationToken);
+                    if (visual.Outcome == GenerationVisualSemanticOutcome.Completed)
+                    {
+                        visual = await _visualSemantic.ReviewPromotedAsync(preVisualIntelligence,
+                            candidateIntelligence.RefinedMoments.SelectedCandidates, visual, visualProgress, cancellationToken);
+                        retainedReviewMedia = visual;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        candidateIntelligence = await Task.Run(() => _candidateRefinement.ApplyVisualSemantic(
+                            preVisualIntelligence, visual, cancellationToken), cancellationToken);
+                        candidateIntelligence = GenerationReviewedSelectionPolicy.Apply(candidateIntelligence, cancellationToken);
+                    }
                     moments = candidateIntelligence.RefinedMoments;
                 }
             }
             cancellationToken.ThrowIfCancellationRequested();
             if (moments.SelectedCandidates.Count == 0)
             {
+                if (candidateIntelligence?.VisualSemantic?.Outcome == GenerationVisualSemanticOutcome.Completed)
+                    throw new GenerationSourceException(
+                        "The bounded picture check found no eligible moments for automatic selection. " +
+                        "Choose Balanced to inspect deterministic candidates manually, or try another source.");
                 throw new GenerationSourceException(
                     request.SetupOptions.ClipFulfillmentPreference ==
                         ClipFulfillmentPreference.QualityFirst

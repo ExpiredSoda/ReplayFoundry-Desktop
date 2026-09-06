@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using ReplayFoundry.Desktop.Features.Generate.Evidence;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
+using ReplayFoundry.Desktop.Features.Generate.Intelligence;
 using ReplayFoundry.Desktop.Media.Moments;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Moments;
@@ -25,7 +26,9 @@ public sealed class GenerationMomentFindingResult
     public GenerationMomentFindingResult(
         GenerationMomentFindingRequest request,
         IEnumerable<GenerationSourceMomentResult> sources,
-        IEnumerable<GenerationMomentCandidate> selectedCandidates)
+        IEnumerable<GenerationMomentCandidate> selectedCandidates,
+        IReadOnlyDictionary<MomentCandidate, GenerationCandidateRefinement>? refinements = null,
+        IReadOnlySet<MomentCandidate>? eligibleCandidates = null, string? selectionReviewNote = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(sources);
@@ -64,7 +67,8 @@ public sealed class GenerationMomentFindingResult
             }
         }
 
-        if (selectedSnapshot.Length >
+        if (selectedSnapshot.Any(item => eligibleCandidates is not null && !eligibleCandidates.Contains(item.Candidate)) ||
+            selectedSnapshot.Length >
                 request.Setup.DesiredResultCount ||
             selectedSnapshot
                 .Select(static item => item.GlobalRank)
@@ -123,12 +127,11 @@ public sealed class GenerationMomentFindingResult
 
         int safeCandidateCount =
             sourceSnapshot.Sum(
-                static source =>
+                source =>
                     source.Moments.Proposals.Count(
-                        static candidate =>
-                            candidate.Disposition is not
-                                (MomentCandidateDisposition.RejectedBlack or
-                                 MomentCandidateDisposition.RejectedFreeze)));
+                        candidate => (eligibleCandidates is null || eligibleCandidates.Contains(candidate)) && GenerationAutomaticCandidateEligibility.IsEligible(
+                            candidate, refinements is not null && refinements.TryGetValue(candidate, out var refinement)
+                                ? refinement : null)));
         if (request.Setup.ClipFulfillmentPreference ==
                 ClipFulfillmentPreference.FillRequestedCount &&
             safeCandidateCount >=
@@ -142,6 +145,7 @@ public sealed class GenerationMomentFindingResult
         }
 
         Request = request;
+        SelectionReviewNote = selectionReviewNote;
         _sources = Array.AsReadOnly(sourceSnapshot);
         _selectedCandidates =
             Array.AsReadOnly(selectedSnapshot);
@@ -181,8 +185,11 @@ public sealed class GenerationMomentFindingResult
         IsAutomaticResultCount ||
         SelectedCount == RequestedCount;
     public GenerationClipFulfillmentOutcome FulfillmentOutcome { get; }
+    public string? SelectionReviewNote { get; }
 
-    public string FulfillmentMessage =>
+    public string FulfillmentMessage => FulfillmentSummary + (SelectionReviewNote is null ? "" : " " + SelectionReviewNote);
+
+    private string FulfillmentSummary =>
         FulfillmentOutcome switch
         {
             GenerationClipFulfillmentOutcome

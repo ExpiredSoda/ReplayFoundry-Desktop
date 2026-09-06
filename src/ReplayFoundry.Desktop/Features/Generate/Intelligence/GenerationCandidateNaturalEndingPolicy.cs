@@ -64,7 +64,9 @@ internal static class GenerationCandidateNaturalEndingPolicy
     public static GenerationCandidateNaturalEndingAdjustment Adjust(
         MomentCandidate candidate,
         IEnumerable<SpeechActivityInterval> creatorSpeechIntervals,
-        TimeSpan maximumDuration)
+        TimeSpan maximumDuration,
+        GenerationSourceTranscript? transcript = null,
+        TimeSpan? minimumDuration = null)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(creatorSpeechIntervals);
@@ -85,6 +87,12 @@ internal static class GenerationCandidateNaturalEndingPolicy
             .OrderBy(static interval => interval.AbsoluteStart)
             .ThenBy(static interval => interval.AbsoluteEnd)
             .ToArray();
+
+        if (transcript is not null && GenerationTranscriptSentenceEndingPolicy.Adjust(
+                candidate, intervals, minimumDuration ?? TimeSpan.Zero, maximumDuration, transcript) is { } sentence)
+        {
+            return sentence;
+        }
 
         TimeSpan originalEnd = candidate.Window.End;
         bool hasCreatorSpeechAtTheEnding = intervals.Any(interval =>

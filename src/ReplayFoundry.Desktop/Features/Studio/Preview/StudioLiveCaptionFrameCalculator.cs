@@ -10,12 +10,18 @@ internal sealed class StudioLiveCaptionFrameCalculator
     private GenerationCandidateCaptionTrack? _projectedTrack;
     private StudioCaptionWordLimitPreset? _projectedWordLimit;
     private IReadOnlyList<StudioCaptionCue> _projectedCues = [];
+    private GenerationCandidateCaptionTrack? _sourceTrack;
+    private GenerationCandidateCaptionTrack? _cutTrack;
+    private TimeSpan _cutStart;
+    private TimeSpan _cutEnd;
 
     public void Reset()
     {
         _projectedTrack = null;
         _projectedWordLimit = null;
         _projectedCues = [];
+        _sourceTrack = null;
+        _cutTrack = null;
     }
 
     public LiveCaptionFrameState Calculate(
@@ -26,6 +32,17 @@ internal sealed class StudioLiveCaptionFrameCalculator
         TimeSpan rangeStart,
         TimeSpan rangeEnd)
     {
+        if (!ReferenceEquals(_sourceTrack, captions) || _cutStart != rangeStart || _cutEnd != rangeEnd)
+        {
+            _sourceTrack = captions;
+            _cutStart = rangeStart;
+            _cutEnd = rangeEnd;
+            _cutTrack = captions is null ? null : StudioCaptionCutProjection.Project(captions, rangeStart, rangeEnd).Track;
+        }
+        captions = _cutTrack;
+        string? secondary = captions?.Segments.FirstOrDefault(s =>
+            Quantize(s.AbsoluteSourceStart.TotalSeconds, rangeStart) <= position &&
+            Quantize(s.AbsoluteSourceEnd.TotalSeconds, rangeStart) > position)?.SecondaryText;
         StudioCaptionCue? cue = FindCue(
             captions,
             wordLimit,
@@ -34,7 +51,7 @@ internal sealed class StudioLiveCaptionFrameCalculator
             rangeStart);
         if (cue is null)
         {
-            return LiveCaptionFrameState.Empty;
+            return LiveCaptionFrameState.Empty with { SecondaryText = secondary };
         }
 
         StudioCaptionWordSpan? active =
@@ -47,7 +64,8 @@ internal sealed class StudioLiveCaptionFrameCalculator
                     cue,
                     position,
                     rangeStart);
-        string? activeWord = active?.Word.Text;
+        string? activeWord = active is null ? null : style == GenerationCaptionStylePreset.Pop
+            ? StudioCaptionDisplayText.SliceWordText(cue, active) : active.Word.Text;
         (int start, int length, int sweep, double progress) = FindAccent(
             cue,
             style,
@@ -67,7 +85,10 @@ internal sealed class StudioLiveCaptionFrameCalculator
             length,
             sweep,
             progress,
-            FindScale(cue, style, active, position, rangeStart));
+            FindScale(cue, style, active, position, rangeStart),
+            style == GenerationCaptionStylePreset.Pop
+                ? active?.Word.IsEmphasized == true ? [new StudioCaptionWordSpan(active.Word, 0, activeWord!.Length)] : []
+                : cue.WordSpans.Where(s => s.Word.IsEmphasized).ToArray(), secondary);
     }
 
     private StudioCaptionCue? FindCue(
@@ -271,7 +292,9 @@ internal readonly record struct LiveCaptionFrameState(
     int AccentLength,
     int SweepLength,
     double AccentProgress,
-    double Scale)
+    double Scale,
+    IReadOnlyList<StudioCaptionWordSpan>? EmphasisSpans = null,
+    string? SecondaryText = null)
 {
     internal static LiveCaptionFrameState Empty { get; } = new(
         null,

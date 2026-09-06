@@ -53,7 +53,8 @@ public sealed class ClipEditorialProfileSession :
             namingGuidance,
             descriptionSignature,
             defaultTags,
-            Current.VoicePerspective);
+            Current.VoicePerspective,
+            Current.CopyObjective);
         Update(profile);
         return CreatorVoiceSettings.FromProfile(profile);
     }

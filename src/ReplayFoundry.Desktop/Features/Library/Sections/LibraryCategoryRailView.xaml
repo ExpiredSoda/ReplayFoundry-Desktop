@@ -7,7 +7,7 @@
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
     <Border Style="{DynamicResource Control.CanvasPane}" AutomationProperties.Name="Library categories">
         <Grid>
-            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="CATEGORIES" />
+            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Categories" />
             <ListBox
                 Margin="0,34,0,0"
                 AutomationProperties.Name="Library category selector"

@@ -7,7 +7,7 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 internal static class Qwen3VlGroundedMetadataPrompt
 {
     private const string FileName =
-        "replayfoundry-editorial-metadata-prompt-1.40.txt";
+        "replayfoundry-editorial-metadata-prompt-1.46.txt";
 
     internal static string Load(
         string hostScriptPath,

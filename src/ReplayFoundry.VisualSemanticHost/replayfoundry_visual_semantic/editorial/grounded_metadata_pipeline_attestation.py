@@ -165,3 +165,17 @@ def _finish_synthesis_attestation(
 def _requires_primary_only_synthesis_evidence(code: str) -> bool:
     """Return the sole validation failure that narrows retry evidence."""
     return code == "CrossDraftTitleContamination"
+
+
+def _require_completed_failure_attestation(
+    error: Exception, attestation_context: dict[str, Any],
+) -> dict[str, Any]:
+    """Preserve the failed completed-pass witness, or rethrow the same failure."""
+    raw_error_attestation = getattr(error, "synthesis_attestation", None)
+    if raw_error_attestation is None:
+        _add_failure_diagnostic(
+            "Grounded synthesis terminated before a completed output attestation "
+            + json.dumps(attestation_context, sort_keys=True, separators=(",", ":"))
+        )
+        raise
+    return _require_synthesis_attestation(raw_error_attestation, attestation_context)

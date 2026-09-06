@@ -7,6 +7,13 @@ internal static class Qwen3VlGroundedMetadataSchemaCapabilities
     private static readonly string[] NewestToOldest =
     [
         OutputSchema,
+        PreviousResponsibilitySplitOutputSchema,
+        PreviousCompactIsolatedFieldAuthoringOutputSchema,
+        PreviousIsolatedFieldAuthoringOutputSchema,
+        PreviousSchemaEnforcedBalancedCopyOutputSchema,
+        PreviousCompactBalancedCopyOutputSchema,
+        PreviousBalancedCopyOutputSchema,
+        PreviousCommentaryTimingOutputSchema,
         PreviousCreatorVoiceOutputSchema,
         PreviousEditorialFrameAdherenceOutputSchema,
         PreviousEditorialFramingOutputSchema,
@@ -113,7 +120,7 @@ internal static class Qwen3VlGroundedMetadataSchemaCapabilities
 
     internal static bool SupportsRecoveryCandidateSelectionModule(
         string schema) =>
-        schema.Equals(OutputSchema, StringComparison.Ordinal);
+        IsNewerThan(schema, PreviousCreatorVoiceOutputSchema);
 
     internal static bool SupportsEditorialRephraseEligibilitySkip(
         string schema) =>
@@ -123,5 +130,26 @@ internal static class Qwen3VlGroundedMetadataSchemaCapabilities
         IsNewerThan(schema, PreviousEditorialFrameAdherenceOutputSchema);
 
     internal static bool SupportsSeparatedTitleTags(string schema) =>
+        IsNewerThan(schema, PreviousCreatorVoiceOutputSchema);
+
+    internal static bool SupportsCommentaryTiming(string schema) =>
+        IsNewerThan(schema, PreviousCommentaryTimingOutputSchema);
+
+    internal static bool SupportsBalancedCopy(string schema) =>
+        IsNewerThan(schema, PreviousBalancedCopyOutputSchema);
+
+    internal static bool SupportsCompactBalancedCopy(string schema) =>
+        IsNewerThan(schema, PreviousCompactBalancedCopyOutputSchema);
+
+    internal static bool SupportsSchemaEnforcedBalancedCopy(string schema) =>
+        IsNewerThan(schema, PreviousSchemaEnforcedBalancedCopyOutputSchema);
+
+    internal static bool SupportsIsolatedFieldAuthoring(string schema) =>
+        IsNewerThan(schema, PreviousIsolatedFieldAuthoringOutputSchema);
+
+    internal static bool SupportsCompactIsolatedFieldAuthoring(string schema) =>
+        IsNewerThan(schema, PreviousCompactIsolatedFieldAuthoringOutputSchema);
+
+    internal static bool SupportsEditorialResponsibilityModules(string schema) =>
         schema.Equals(OutputSchema, StringComparison.Ordinal);
 }

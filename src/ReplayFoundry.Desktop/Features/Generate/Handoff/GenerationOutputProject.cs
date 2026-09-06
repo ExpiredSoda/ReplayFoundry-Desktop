@@ -15,7 +15,7 @@ using ReplayFoundry.Desktop.Media.Intelligence.Preferences;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Handoff;
 
-public sealed class GenerationOutputProject
+public sealed partial class GenerationOutputProject
 {
     private readonly ReadOnlyCollection<GenerationOutputAsset> _assets;
     private readonly ReadOnlyCollection<GenerationHiddenMoment> _hiddenMoments;
@@ -33,7 +33,8 @@ public sealed class GenerationOutputProject
         GenerationResultCountMode resultCountMode =
             GenerationResultCountMode.Exact,
         IEnumerable<GenerationHiddenMoment>? hiddenMoments = null,
-        string? candidateSetFingerprint = null)
+        string? candidateSetFingerprint = null,
+        IEnumerable<MediaProbeResult>? sourceMedia = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -110,6 +111,12 @@ public sealed class GenerationOutputProject
         FulfillmentOutcome = fulfillmentOutcome;
         _assets = Array.AsReadOnly(snapshot);
         _hiddenMoments = Array.AsReadOnly(hiddenSnapshot);
+        MediaProbeResult[] allSources = (sourceMedia ?? []).Concat(snapshot.Select(static asset => asset.SourceMedia))
+            .Concat(hiddenSnapshot.Select(static hidden => hidden.SourceMedia)).ToArray();
+        if (allSources.Any(static source => source is null))
+            throw new ArgumentException("Studio source media cannot contain null entries.", nameof(sourceMedia));
+        SourceMedia = Array.AsReadOnly(allSources.DistinctBy(static source => source.FullPath,
+            StringComparer.OrdinalIgnoreCase).ToArray());
         CaptionLook = ResolveCaptionLook(snapshot);
         CreatedAtUtc = createdAtUtc;
         FinalizedAtUtc = finalizedAtUtc;
@@ -132,6 +139,7 @@ public sealed class GenerationOutputProject
     public ClipFulfillmentPreference FulfillmentPreference { get; }
     public GenerationClipFulfillmentOutcome FulfillmentOutcome { get; }
     public IReadOnlyList<GenerationOutputAsset> Assets => _assets;
+    public IReadOnlyList<MediaProbeResult> SourceMedia { get; }
     public StudioCaptionLook? CaptionLook { get; }
     public IReadOnlyList<GenerationHiddenMoment> HiddenMoments =>
         _hiddenMoments;
@@ -178,7 +186,8 @@ public sealed class GenerationOutputProject
             CreatedAtUtc,
             resultCountMode: ResultCountMode,
             hiddenMoments: HiddenMoments,
-            candidateSetFingerprint: CandidateSetFingerprint);
+            candidateSetFingerprint: CandidateSetFingerprint,
+            sourceMedia: SourceMedia);
     }
 
     internal GenerationOutputProject CreateRenderBatch(string renderToken)
@@ -210,7 +219,8 @@ public sealed class GenerationOutputProject
             CreatedAtUtc,
             resultCountMode: ResultCountMode,
             hiddenMoments: HiddenMoments,
-            candidateSetFingerprint: CandidateSetFingerprint);
+            candidateSetFingerprint: CandidateSetFingerprint,
+            sourceMedia: SourceMedia);
     }
 
     private string FindAvailableRevisionOutputDirectory(
@@ -305,7 +315,8 @@ public sealed class GenerationOutputProject
             CreatedAtUtc,
             resultCountMode: ResultCountMode,
             hiddenMoments: HiddenMoments,
-            candidateSetFingerprint: CandidateSetFingerprint);
+            candidateSetFingerprint: CandidateSetFingerprint,
+            sourceMedia: SourceMedia);
     }
 
     internal GenerationOutputProject ReplaceAssets(
@@ -413,7 +424,12 @@ public sealed class GenerationOutputProject
             acceptedAppearance,
             editorialContext: acceptedEditorialContext,
             editorialMetadata: acceptedEditorialMetadata,
-            preferenceFeatures: hidden.PreferenceFeatures);
+            preferenceFeatures: hidden.PreferenceFeatures,
+            renderSettings: _assets.FirstOrDefault(asset => asset.SourceFullPath.Equals(hidden.SourceFullPath,
+                StringComparison.OrdinalIgnoreCase))?.RenderSettings.WithFrameEdits([], []) ?? new StudioRenderSettings(
+                    PrimaryAsset.RenderSettings.Canvas, resolution: PrimaryAsset.RenderSettings.Resolution));
+        if (editorialContext is not null && editorialMetadata is not null)
+            accepted = accepted.WithCurrentCutEditorialMetadata(editorialContext, editorialMetadata);
 
         return new GenerationOutputProject(
             Id,
@@ -427,8 +443,45 @@ public sealed class GenerationOutputProject
             resultCountMode: ResultCountMode,
             hiddenMoments: _hiddenMoments.Where(value =>
                 !value.Id.Equals(hiddenMomentId, StringComparison.Ordinal)),
-            candidateSetFingerprint: CandidateSetFingerprint);
+            candidateSetFingerprint: CandidateSetFingerprint,
+            sourceMedia: SourceMedia);
     }
+
+    internal GenerationOutputAsset CreateManualSourceAsset(string sourceFullPath, TimeSpan start, TimeSpan end)
+    {
+        if (IsFinalized)
+            throw new InvalidOperationException("Reopen the project before adding a clip.");
+        MediaProbeResult source = SourceMedia.SingleOrDefault(media => media.FullPath.Equals(sourceFullPath,
+            StringComparison.OrdinalIgnoreCase)) ?? throw new ArgumentException("Choose a source from this project.", nameof(sourceFullPath));
+        if (start < TimeSpan.Zero || end <= start || end > source.Duration || end - start > TimeSpan.FromMinutes(3))
+            throw new ArgumentException("Choose up to three minutes anywhere inside the source recording.");
+        string id = "manual-" + Guid.NewGuid().ToString("N");
+        GenerationOutputAsset? sameSource = _assets.FirstOrDefault(asset => asset.SourceFullPath.Equals(source.FullPath,
+            StringComparison.OrdinalIgnoreCase));
+        StudioRenderSettings template = sameSource?.RenderSettings ?? PrimaryAsset.RenderSettings;
+        var settings = new StudioRenderSettings(template.Canvas, StudioCompositionLayout.Fit,
+            audioTracks: sameSource?.RenderSettings.AudioTracks.ToArray() ?? [],
+            voiceAudioStreamIndex: sameSource is not null && source.AudioStreams.Any(stream => stream.Index == template.VoiceAudioStreamIndex)
+                ? template.VoiceAudioStreamIndex : null,
+            quality: template.Quality, colorOutput: template.ColorOutput, platformPreset: template.PlatformPreset,
+            audioMastering: template.AudioMastering, burnCaptions: template.BurnCaptions, resolution: template.Resolution);
+        const string explanation = "The creator chose this source interval manually; no automatic event score was assigned.";
+        var context = new ClipEditorialContext(id, source.FullPath, Path.GetFileNameWithoutExtension(source.FullPath),
+            start, end, source.Duration, 0, explanation);
+        var metadata = new ClipEditorialMetadataDraft($"Manual clip {_assets.Count + 1}",
+            "A selected section from this recording. Add a title and description that match the clip.", [],
+            ClipEditorialMetadataOrigin.Heuristic, new ClipEditorialMetadataGeneratorIdentity("studio-manual", "1.0"), 0);
+        return new(id, _assets.Count + 1, source, null, start, end, 0, PrimaryAsset.QualityTarget,
+            GenerationCandidateSelectionReason.ManualSourceCut, explanation,
+            appearance: CaptionLook?.CreateAppearance(), editorialContext: context,
+            editorialMetadata: metadata, renderSettings: settings);
+    }
+
+    internal GenerationOutputProject AddManualSourceClip(string sourceFullPath, TimeSpan start, TimeSpan end) =>
+        new(Id, Mode, OutputDirectory, RequestedCount, FulfillmentPreference, FulfillmentOutcome,
+            [.. _assets, CreateManualSourceAsset(sourceFullPath, start, end)], CreatedAtUtc,
+            resultCountMode: ResultCountMode, hiddenMoments: HiddenMoments,
+            candidateSetFingerprint: CandidateSetFingerprint, sourceMedia: SourceMedia);
 
     private static StudioCaptionLook? ResolveCaptionLook(
         IReadOnlyList<GenerationOutputAsset> assets) => assets
@@ -508,7 +561,8 @@ public sealed class GenerationOutputProject
             finalizedAtUtc,
             ResultCountMode,
             HiddenMoments,
-            CandidateSetFingerprint);
+            CandidateSetFingerprint,
+            sourceMedia: SourceMedia);
     }
 
     public static GenerationOutputProject FromResult(
@@ -522,16 +576,16 @@ public sealed class GenerationOutputProject
                 {
                     GenerationCandidateCaptionTrack? captions =
                         result.Captions?.FindTrack(candidate.Id);
-                    return new GenerationOutputAsset(
+                    var source = result.Moments.Sources.Single(source =>
+                        source.AnalyzedSource.PreparedSource.Media.FullPath.Equals(candidate.SourceFullPath,
+                            StringComparison.OrdinalIgnoreCase));
+                    StudioRenderSettings renderSettings = StudioRenderSettings.FromComposition(
+                        source.AnalyzedSource.CompositionPlan.Plan, candidate.Start,
+                        source.AnalyzedSource.PreparedSource.Media.PrimaryVideoStream);
+                    var asset = new GenerationOutputAsset(
                             candidate.Id,
                             candidate.GlobalRank,
-                            result.Moments.Sources
-                                .Single(
-                                    source =>
-                                        source.AnalyzedSource.PreparedSource.Media.FullPath.Equals(
-                                            candidate.SourceFullPath,
-                                            StringComparison.OrdinalIgnoreCase))
-                                .AnalyzedSource.PreparedSource.Media,
+                            source.AnalyzedSource.PreparedSource.Media,
                             outputFullPath: null,
                             candidate.Start,
                             candidate.End,
@@ -542,12 +596,19 @@ public sealed class GenerationOutputProject
                             captions?.HasRenderableSegments == true
                                 ? captions.ToStudioHandoff()
                                 : null,
+                            appearance: StudioInitialCaptionPlacement.Create(captions?.RequestedStyle ?? result.Request.SetupOptions.CaptionSettings.Style,
+                                source.AnalyzedSource.CompositionPlan.Plan, candidate.Start, candidate.End,
+                                source.AnalyzedSource.PreparedSource.Media.PrimaryVideoStream, renderSettings,
+                                result.Request.SetupOptions.CaptionSettings.SavedLook),
                             editorialContext: result.EditorialMetadata?
                                 .Find(candidate.Id).Context,
                             editorialMetadata: result.EditorialMetadata?
                                 .Find(candidate.Id).Draft,
                             preferenceFeatures:
-                                candidate.PreferenceFeatures);
+                                candidate.PreferenceFeatures,
+                            renderSettings: renderSettings);
+                    return asset.EditorialContext is { } context && asset.EditorialMetadata is { } metadata
+                        ? asset.WithCurrentCutEditorialMetadata(context, metadata) : asset;
                 })
                 .ToArray();
         string canonical =
@@ -577,7 +638,8 @@ public sealed class GenerationOutputProject
             hiddenMoments: result.HiddenMoments.Moments.Select(
                 static hidden => hidden.ToStudioHandoff()),
             candidateSetFingerprint:
-                $"candidates-{candidateSetFingerprint[..20].ToLowerInvariant()}");
+                $"candidates-{candidateSetFingerprint[..20].ToLowerInvariant()}",
+            sourceMedia: result.Request.PreparedSources.Select(static source => source.Media));
     }
 
     private static string CreateCandidateSetFingerprint(

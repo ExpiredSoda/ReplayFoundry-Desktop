@@ -129,12 +129,23 @@ foreach ($type in @('Generate', 'Studio', 'Library', 'Publish', 'Settings')) {
 if ($appXaml -match 'DesignTime') { Add-Failure "Design-time types must not appear in production composition." }
 
 $featureRoots = @('Studio', 'Library', 'Publish', 'Settings')
+# These immutable shared values carry geometry, format or saved wording only. Keep each
+# exact alias scoped to its reviewed consumer; implementation imports still fail.
+$reviewedValueAliases = @{
+    'StudioOutputEditorViewModel.cs' = 'using NormalizedRectangle = ReplayFoundry.Desktop.Media.Composition.NormalizedRectangle;'
+    'StudioCaptionTrackEditorViewModel.cs' = 'using SubtitleSidecarFormat = ReplayFoundry.Desktop.Media.Subtitles.SubtitleSidecarFormat;'
+    'StudioEditorialMetadataViewModel.cs' = 'using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialCopyVersion;'
+}
 foreach ($feature in $featureRoots) {
     $root = "src/ReplayFoundry.Desktop/Features/$feature"
     $viewModels = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot $root) -Recurse -File -Filter '*ViewModel.cs' |
         Where-Object { $_.FullName -notmatch '[\\/]DesignTime[\\/]' }
     foreach ($file in $viewModels) {
         $text = Get-Content -Raw -LiteralPath $file.FullName
+        if ($feature -eq 'Studio' -and $reviewedValueAliases.ContainsKey($file.Name)) {
+            $alias = [regex]::Escape($reviewedValueAliases[$file.Name])
+            $text = [regex]::Replace($text, "(?m)^$alias\r?`$", '')
+        }
         if ($text -cmatch 'System\.Windows\.(?!Input\b)|\b(UserControl|Window|MessageBox|Application)\b|ReplayFoundry\.Desktop\.(Media|Platform)|ProcessStartInfo|IProcessRunner|\bpartial\s+class\s+.*ViewModel') {
             Add-Failure "Production feature ViewModel crosses a presentation-only boundary: $($file.FullName)"
         }
@@ -175,11 +186,11 @@ Assert-Contains "src/ReplayFoundry.Desktop/Features/Settings/Sections/StorageSet
 $generateStyles = Read-RepoText "src/ReplayFoundry.Desktop/Features/Generate/GenerateStyles.xaml"
 $generationSetupStyles = Read-RepoText "src/ReplayFoundry.Desktop/Features/Generate/GenerationSetup/GenerationSetupStyles.xaml"
 $buttonStyles = Read-RepoText "src/ReplayFoundry.Desktop/Resources/Controls/ButtonStyles.xaml"
-if ($generateStyles -notmatch 'x:Key="Generate\.ActionButton"\s+BasedOn="\{StaticResource Control\.ThemedButton\}"') {
+if ($generateStyles -notmatch '<Style\b(?=[^>]*x:Key="Generate\.ActionButton")(?=[^>]*BasedOn="\{StaticResource Control\.ThemedButton\}")[^>]*>') {
     Add-Failure "Generate action buttons must inherit the shared themed-button foundation."
 }
 foreach ($styleName in @('StepButton', 'SecondaryButton')) {
-    $pattern = 'x:Key="GenerationSetup\.' + $styleName + '"\s+BasedOn="\{StaticResource Control\.ThemedButton\}"'
+    $pattern = '<Style\b(?=[^>]*x:Key="GenerationSetup\.' + $styleName + '")(?=[^>]*BasedOn="\{StaticResource Control\.ThemedButton\}")[^>]*>'
     if ($generationSetupStyles -notmatch $pattern) {
         Add-Failure "Generation Setup $styleName must inherit the shared themed-button foundation."
     }

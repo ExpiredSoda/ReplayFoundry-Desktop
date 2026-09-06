@@ -64,6 +64,23 @@ internal static class GenerationPreflightValidator
         }
 
         ValidateCaptions(preparation, setupOptions.CaptionSettings);
+        if (setupOptions.DiscoveryIntent.UsesSemanticRetrieval &&
+            (setupOptions.AnalysisDepth != GenerationAnalysisDepth.Thorough ||
+             runtimeCapabilities?.IsCaptionTranscriptionAvailable == false))
+            throw new GenerationEngineUnavailableException(
+                "Semantic search needs a Thorough scan and a recognized speech-to-text model from Advanced AI.");
+        if (setupOptions.CaptionSettings.IsEnabled && runtimeCapabilities?.CaptionLanguageCapabilities is { } languages)
+        {
+            foreach (GenerationCaptionSourceSelection selection in setupOptions.CaptionSettings.SourceSelections)
+            {
+                if (GenerationCaptionLanguageCatalog.GetUnavailableReason(selection.LanguagePolicy, languages) is string reason)
+                    throw new GenerationEngineUnavailableException(reason);
+            }
+        }
+        if (setupOptions.MetadataAuthoringMode == GenerationMetadataAuthoringMode.AiRequired &&
+            runtimeCapabilities?.IsEditorialAiAvailable == true &&
+            runtimeCapabilities.EditorialGpuAdmissionCheck?.Invoke() is string gpuReason)
+            throw new GenerationEngineUnavailableException(gpuReason);
         if (setupOptions.MetadataAuthoringMode ==
                 GenerationMetadataAuthoringMode.AiRequired &&
             runtimeCapabilities is not null &&

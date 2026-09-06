@@ -17,12 +17,15 @@ internal static class Qwen3VlGroundedMetadataGenerationParser
             Qwen3VlGroundedMetadataGenerationSchemaParser.Parse(
                 result,
                 outputSchema);
+        string? isolatedMergedJsonSha256 = Qwen3VlGroundedMetadataIsolatedFieldAuthoringParser.Validate(
+            result, generation, request, outputSchema);
         Qwen3VlGroundedMetadataRecoveryValidation recovery =
             Qwen3VlGroundedMetadataRecoveryParser.Parse(
                 generation,
                 request,
                 outputSchema,
-                profile);
+                profile,
+                isolatedFieldAuthoringVerified: isolatedMergedJsonSha256 is not null);
         Qwen3VlGroundedMetadataVisualValidation visual =
             Qwen3VlGroundedMetadataVisualParser.Parse(
                 generation,
@@ -35,10 +38,14 @@ internal static class Qwen3VlGroundedMetadataGenerationParser
                 request,
                 outputSchema,
                 profile,
-                recovery);
-        ValidatePassProvenance(profile, recovery, visual, evidence);
+                recovery,
+                isolatedFieldAuthoring: isolatedMergedJsonSha256 is not null);
+        if (isolatedMergedJsonSha256 is not null)
+            Qwen3VlGroundedMetadataIsolatedFieldAuthoringParser.ValidatePassProvenance(recovery, visual, evidence, outputSchema);
+        else
+            ValidatePassProvenance(profile, recovery, visual, evidence, outputSchema);
         _ = Seconds(result, "elapsedSeconds");
-        return BuildValidation(recovery, visual, evidence);
+        return BuildValidation(recovery, visual, evidence) with { IsolatedFieldMergedJsonSha256 = isolatedMergedJsonSha256 };
     }
 
     internal static bool IncludesClipLinkedKnowledgeSelection(
@@ -50,7 +57,8 @@ internal static class Qwen3VlGroundedMetadataGenerationParser
         Qwen3VlGroundedMetadataGenerationSchemaProfile profile,
         Qwen3VlGroundedMetadataRecoveryValidation recovery,
         Qwen3VlGroundedMetadataVisualValidation visual,
-        Qwen3VlGroundedMetadataEvidenceValidation evidence)
+        Qwen3VlGroundedMetadataEvidenceValidation evidence,
+        string outputSchema)
     {
         bool visualEventSelectionApplied = visual.VisualDrafts.Count > 1;
         Qwen3VlGroundedMetadataSelection.ValidateGenerationPassProvenance(
@@ -136,7 +144,9 @@ internal static class Qwen3VlGroundedMetadataGenerationParser
                 profile.SynthesisSanitizationModule,
                 profile.EditorialRephrase,
                 profile.RetrospectiveGrammarRecovery,
-                recovery.EditorialRephrase);
+                recovery.EditorialRephrase,
+                profile.IsolatedFieldAuthoring,
+                Qwen3VlGroundedMetadataSchemaCapabilities.SupportsEditorialResponsibilityModules(outputSchema));
     }
 
     private static Qwen3VlGroundedMetadataGenerationValidation BuildValidation(

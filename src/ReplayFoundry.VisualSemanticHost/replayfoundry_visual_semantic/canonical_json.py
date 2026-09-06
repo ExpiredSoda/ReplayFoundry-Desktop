@@ -176,17 +176,6 @@ def _require_string(
     return value
 
 
-def _require_optional_string(
-    value: Any,
-    location: str,
-    *,
-    maximum: int,
-) -> str | None:
-    if value is None:
-        return None
-    return _require_string(value, location, allow_empty=False, maximum=maximum)
-
-
 def _require_collection_output_string(
     value: Any,
     location: str,

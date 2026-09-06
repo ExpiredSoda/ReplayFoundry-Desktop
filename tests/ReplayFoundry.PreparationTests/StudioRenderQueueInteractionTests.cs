@@ -2401,7 +2401,8 @@ internal static partial class UiUxApplicationSurfaceTests
                             0.85),
                     ]),
                     editorialContext: context,
-                    editorialMetadata: metadata);
+                    editorialMetadata: metadata)
+                    .WithCurrentCutEditorialMetadata(context, metadata);
             })
             .ToArray();
         return new GenerationOutputProject(

@@ -99,7 +99,7 @@ public static class StudioCaptionPresentationPolicy
         StudioClipAppearance appearance)
     {
         ArgumentNullException.ThrowIfNull(appearance);
-        if (track is null || HasCompleteTimedWordCoverage(track))
+        if (track is null)
         {
             return null;
         }
@@ -115,9 +115,11 @@ public static class StudioCaptionPresentationPolicy
             return null;
         }
 
-        return "Word timing could not be aligned reliably for every caption " +
-            "in this clip. Your selected effect will use each whole phrase " +
-            "instead of following individual spoken words.";
+        var coverage = GetTimingCoverage(track, effectiveWordLimit);
+        if (coverage.PhrasePages == 0) return null;
+        return coverage.TimedPages > 0
+            ? $"{coverage.TimedPages} caption pages follow measured words; {coverage.PhrasePages} use the whole phrase where individual word timing could not be aligned reliably."
+            : $"{coverage.PhrasePages} caption pages use the whole phrase because individual word timing could not be aligned reliably.";
     }
 
     public static bool HasCompleteTimedWordCoverage(
@@ -203,6 +205,8 @@ public static class StudioCaptionPresentationPolicy
         }
 
         var cues = new List<StudioCaptionCue>();
+        var sourceCue = new StudioCaptionCue(segment.Text, segment.RelativeStart, segment.RelativeEnd,
+            segment.AbsoluteSourceStart, segment.AbsoluteSourceEnd, sourceSpans);
         foreach (CaptionSpeechRun run in runs)
         {
             foreach (CaptionPresentationFragment fragment in
@@ -212,16 +216,8 @@ public static class StudioCaptionPresentationPolicy
                     .Skip(fragment.StartIndex)
                     .Take(fragment.WordCount)
                     .ToArray();
-                int nextIndex = fragment.StartIndex +
-                    fragment.WordCount;
-                int textStart = fragment.StartIndex == 0
-                    ? 0
-                    : sourceSpans[fragment.StartIndex].StartIndex;
-                int textEnd = nextIndex < words.Count
-                    ? sourceSpans[nextIndex].StartIndex
-                    : segment.Text.Length;
-                string fragmentText = segment.Text[textStart..textEnd]
-                    .Trim();
+                string fragmentText = StudioCaptionDisplayText.SliceWordRangeText(sourceCue,
+                    fragment.StartIndex, fragment.WordCount);
                 if (!fragment.RequiresPhraseFallback)
                 {
                     cues.AddRange(ProjectTimedWords(
@@ -255,6 +251,14 @@ public static class StudioCaptionPresentationPolicy
             track.Segments
                 .SelectMany(segment => ProjectCues(segment, preset))
                 .ToArray());
+    }
+
+    public static (int TimedPages, int PhrasePages) GetTimingCoverage(GenerationCandidateCaptionTrack track,
+        StudioCaptionWordLimitPreset preset)
+    {
+        var cues = ProjectCues(track, preset);
+        int timed = cues.Count(static cue => cue.WordSpans.Count > 0);
+        return (timed, cues.Count - timed);
     }
 
     public static StudioCaptionCue? FindActiveCue(
@@ -343,31 +347,38 @@ public static class StudioCaptionPresentationPolicy
     {
         IReadOnlyList<StudioCaptionWordSpan> sourceSpans =
             CreateRequiredWordSpans(text, words);
+        var sourceCue = new StudioCaptionCue(text, segment.RelativeStart, segment.RelativeEnd,
+            segment.AbsoluteSourceStart, segment.AbsoluteSourceEnd, sourceSpans);
 
         var cues = new List<StudioCaptionCue>();
-        int groupCount = checked(
-            1 + (words.Count - 1) / maximumWords);
-        int baseGroupSize = words.Count / groupCount;
-        int largerGroupCount = words.Count % groupCount;
         int startIndex = 0;
-        for (int groupIndex = 0;
-             groupIndex < groupCount;
-             groupIndex++)
+        while (startIndex < words.Count)
         {
-            int count = baseGroupSize +
-                (groupIndex < largerGroupCount ? 1 : 0);
+            int remaining = words.Count - startIndex;
+            int groups = 1 + (remaining - 1) / maximumWords;
+            int count = (int)Math.Ceiling(remaining / (double)groups);
+            if (remaining > count)
+            {
+                // Prefer a nearby sentence/clause boundary without dropping words,
+                // changing measured timing, or making a tiny one-word page.
+                for (int boundary = startIndex + count; boundary >= startIndex + Math.Max(2, count / 2); boundary--)
+                {
+                    int proposedCount = boundary - startIndex;
+                    int laterPages = (int)Math.Ceiling((remaining - proposedCount) / (double)maximumWords);
+                    if (1 + laterPages > groups) continue;
+                    var span = sourceSpans[boundary - 1];
+                    string between = text[(span.StartIndex + span.Length)..sourceSpans[boundary].StartIndex];
+                    if (between.IndexOfAny(['.', '!', '?', ';', ':', '\n']) < 0) continue;
+                    count = boundary - startIndex;
+                    break;
+                }
+            }
             int nextIndex = startIndex + count;
             AudioTranscriptionWord[] cueWords = words
                 .Skip(startIndex)
                 .Take(count)
                 .ToArray();
-            int textStart = startIndex == 0
-                ? 0
-                : sourceSpans[startIndex].StartIndex;
-            int textEnd = nextIndex < words.Count
-                ? sourceSpans[nextIndex].StartIndex
-                : text.Length;
-            string groupText = text[textStart..textEnd].Trim();
+            string groupText = StudioCaptionDisplayText.SliceWordRangeText(sourceCue, startIndex, count);
             cues.Add(CreateTimedCue(
                 segment,
                 groupText,
@@ -649,7 +660,7 @@ public static class StudioCaptionPresentationPolicy
             spans);
     }
 
-    private static IReadOnlyList<StudioCaptionWordSpan>
+    internal static IReadOnlyList<StudioCaptionWordSpan>
         CreateRequiredWordSpans(
             string text,
             IReadOnlyList<AudioTranscriptionWord> words)

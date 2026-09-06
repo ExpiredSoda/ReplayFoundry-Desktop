@@ -39,6 +39,15 @@ public sealed class JsonClipPreferenceFeedbackStore :
 
     public ClipPreferenceProfile Current { get; private set; }
 
+    public ClipPreferenceProfile ForContext(ClipPreferenceContext? context)
+    {
+        lock (_gate)
+        {
+            return context is null ? Current : _store.Contexts.TryGetValue(context.Key, out MutableStore? profile)
+                ? BuildProfile(profile) : ClipPreferenceProfile.Empty;
+        }
+    }
+
     public ClipPreferenceProfile Update(
         ClipPreferenceFeatureVector features,
         ClipPreferenceRating? previous,
@@ -63,6 +72,18 @@ public sealed class JsonClipPreferenceFeedbackStore :
                 Adjust(updated, features, oldRating, -1);
             }
             Adjust(updated, features, current, 1);
+            if (features.Context is { } context)
+            {
+                if (!updated.Contexts.TryGetValue(context.Key, out MutableStore? scoped))
+                {
+                    scoped = new MutableStore();
+                    updated.Contexts.Add(context.Key, scoped);
+                }
+                if (previous is ClipPreferenceRating scopedPrevious)
+                    Adjust(scoped, features, scopedPrevious, -1);
+                Adjust(scoped, features, current, 1);
+                Validate(scoped);
+            }
             Validate(updated);
             WriteAtomic(updated);
             _store = updated;
@@ -185,6 +206,28 @@ public sealed class JsonClipPreferenceFeedbackStore :
                     });
             }
             Validate(result);
+            foreach ((string key, StoreDocument context) in document.Contexts ?? [])
+            {
+                if (key.Length != 64 || !key.All(Uri.IsHexDigit) || context.Contexts?.Count > 0)
+                    throw new InvalidDataException("The local preference context is invalid.");
+                var scoped = new MutableStore
+                {
+                    LikeCount = context.LikeCount, NeutralCount = context.NeutralCount,
+                    DislikeCount = context.DislikeCount,
+                };
+                foreach (FeatureDocument feature in context.Features ?? [])
+                {
+                    if (!Enum.TryParse(feature.Code, out ClipPreferenceFeatureCode code) || scoped.Features.ContainsKey(code))
+                        throw new InvalidDataException("The local preference context feature is invalid.");
+                    scoped.Features.Add(code, new MutableFeature
+                    {
+                        LikeCount = feature.LikeCount, LikeSum = feature.LikeSum,
+                        DislikeCount = feature.DislikeCount, DislikeSum = feature.DislikeSum,
+                    });
+                }
+                Validate(scoped);
+                result.Contexts.Add(key, scoped);
+            }
             return result;
         }
         catch (JsonException exception)
@@ -197,7 +240,10 @@ public sealed class JsonClipPreferenceFeedbackStore :
 
     private void WriteAtomic(MutableStore value)
     {
-        var document = new StoreDocument
+        AtomicJsonFile.Write(_path, ToDocument(value), JsonOptions);
+    }
+
+    private static StoreDocument ToDocument(MutableStore value) => new()
         {
             SchemaVersion = SchemaVersion,
             FeatureSchemaVersion =
@@ -206,6 +252,8 @@ public sealed class JsonClipPreferenceFeedbackStore :
             LikeCount = value.LikeCount,
             NeutralCount = value.NeutralCount,
             DislikeCount = value.DislikeCount,
+            Contexts = value.Contexts.Count == 0 ? null : value.Contexts.ToDictionary(
+                static pair => pair.Key, static pair => ToDocument(pair.Value), StringComparer.Ordinal),
             Features = value.Features
                 .OrderBy(static pair => pair.Key)
                 .Select(pair => new FeatureDocument
@@ -218,8 +266,6 @@ public sealed class JsonClipPreferenceFeedbackStore :
                 })
                 .ToArray(),
         };
-        AtomicJsonFile.Write(_path, document, JsonOptions);
-    }
 
     private static void Validate(MutableStore value)
     {
@@ -267,6 +313,7 @@ public sealed class JsonClipPreferenceFeedbackStore :
         public int DislikeCount { get; set; }
         public Dictionary<ClipPreferenceFeatureCode, MutableFeature> Features
         { get; } = [];
+        public Dictionary<string, MutableStore> Contexts { get; } = new(StringComparer.Ordinal);
 
         public MutableStore Clone()
         {
@@ -281,6 +328,8 @@ public sealed class JsonClipPreferenceFeedbackStore :
             {
                 clone.Features.Add(code, value.Clone());
             }
+            foreach ((string key, MutableStore value) in Contexts)
+                clone.Contexts.Add(key, value.Clone());
             return clone;
         }
     }
@@ -310,6 +359,7 @@ public sealed class JsonClipPreferenceFeedbackStore :
         public int NeutralCount { get; set; }
         public int DislikeCount { get; set; }
         public FeatureDocument[]? Features { get; set; }
+        public Dictionary<string, StoreDocument>? Contexts { get; set; }
     }
 
     private sealed class FeatureDocument

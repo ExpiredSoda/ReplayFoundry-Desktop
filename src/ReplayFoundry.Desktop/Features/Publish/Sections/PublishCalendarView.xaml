@@ -17,7 +17,7 @@
             </Grid.RowDefinitions>
             <Grid>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="SCHEDULE" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Schedule" />
                     <TextBlock
                         Margin="0,4,0,0"
                         Style="{DynamicResource Text.Meta}"

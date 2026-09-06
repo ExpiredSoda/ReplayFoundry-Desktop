@@ -5,6 +5,8 @@ using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic;
 using ReplayFoundry.Desktop.Platform.Processes;
 
+using ReplayFoundry.Desktop.Platform.Media;
+
 namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal sealed class Qwen3VlGroundedMetadataExecutor
@@ -18,12 +20,14 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
     private readonly IQwen3VlGroundedFailureArchive _failureArchive;
     private readonly Qwen3VlVerifiedModelLease _modelIntegrity;
     private readonly string _promptText;
+    private readonly Func<string?>? _gpuAdmissionCheck;
 
     internal Qwen3VlGroundedMetadataExecutor(
         Qwen3VlQualifiedEditorialRuntime runtime,
         IProcessRunner processRunner,
         IQwen3VlBatchWorkspaceFactory workspaceFactory,
-        IQwen3VlGroundedFailureArchive failureArchive)
+        IQwen3VlGroundedFailureArchive failureArchive,
+        Func<string?>? gpuAdmissionCheck = null)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _processRunner = processRunner ??
@@ -33,16 +37,24 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
         _failureArchive = failureArchive ??
             throw new ArgumentNullException(nameof(failureArchive));
         _modelIntegrity = _runtime.ModelIntegrity;
+        _gpuAdmissionCheck = gpuAdmissionCheck;
 
         _promptText = Qwen3VlGroundedMetadataPrompt.Load(
             _runtime.Host.HostScriptPath,
             nameof(runtime));
     }
 
-    internal async Task<TResult> GenerateBatchAsync<TResult>(
+    internal Task<TResult> GenerateBatchAsync<TResult>(
         IReadOnlyList<ClipEditorialMetadataRequest> requests,
         Func<string, IReadOnlyList<ClipEditorialMetadataRequest>,
             TResult> parse,
+        CancellationToken cancellationToken) =>
+        GenerateBatchAsync(requests, parse, null, cancellationToken);
+
+    internal async Task<TResult> GenerateBatchAsync<TResult>(
+        IReadOnlyList<ClipEditorialMetadataRequest> requests,
+        Func<string, IReadOnlyList<ClipEditorialMetadataRequest>, TResult> parse,
+        Qwen3VlGroundingPacketHandoff? handoff,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(requests);
@@ -59,6 +71,8 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (_gpuAdmissionCheck?.Invoke() is string gpuReason)
+            throw new InvalidOperationException(gpuReason);
         // The model manifest can cover several gigabytes. Keep the first
         // integrity pass off the WPF dispatcher while retaining exact,
         // cancellation-aware verification before any model process starts.
@@ -89,7 +103,11 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
                     _runtime.Host,
                     workspace,
                     _runtime.QualificationLockPath);
-            ProcessRunResult process = await _processRunner.RunAsync(
+            IReadOnlyDictionary<string, string> environment =
+                QwenEditorialPassDiagnostics.ProcessEnvironment(_runtime.Host.EnvironmentVariables);
+            if (handoff is not null)
+                environment = handoff.Prepare(workspace.DirectoryPath, environment);
+            ProcessRunResult process = await MediaWorkBudget.RunAsync(_processRunner,
                 new ProcessRunRequest(
                     _runtime.Host.PythonExecutablePath,
                     command.Arguments,
@@ -97,9 +115,12 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
                     workspace.DirectoryPath,
                     _runtime.Host.MaximumStandardOutputCharacters,
                     _runtime.Host.MaximumStandardErrorCharacters,
-                    _runtime.Host.EnvironmentVariables,
+                    environment,
                     inheritParentEnvironment: false),
-                cancellationToken);
+                MediaWorkPriority.FinalOutput, MediaWorkKind.HeavyAi, cancellationToken);
+            QwenModelLoadDiagnostics.Report(process.StandardError);
+            QwenEditorialPassDiagnostics.Report(process.StandardError,
+                requests.Select(static request => (request.Context.CandidateId, request.Attempt)));
             if (!process.Succeeded)
             {
                 Qwen3VlHostFailureEnvelope? hostFailure = null;
@@ -159,6 +180,11 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
             await Task.Run(
                 () => _modelIntegrity.Verify(cancellationToken),
                 cancellationToken).ConfigureAwait(false);
+            foreach (ClipEditorialMetadataRequest request in requests)
+                await request.ReviewVideo!.VerifyIntegrityAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (handoff is not null)
+                await handoff.RetainExportAsync(workspace.DirectoryPath, cancellationToken);
             return result;
         }
         catch (Exception exception)
@@ -295,6 +321,7 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
                 request.Profile.DefaultTags,
                 voicePerspective =
                     request.Profile.VoicePerspective.ToString(),
+                copyObjective = request.Profile.CopyObjective.ToString(),
                 variantIntent = request.VariantIntent.ToString(),
             },
         };

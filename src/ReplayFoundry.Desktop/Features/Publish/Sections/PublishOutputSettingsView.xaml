@@ -8,7 +8,7 @@
         <StackPanel>
             <Grid>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="RELEASE" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Release" />
                     <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Choose who can watch, when it goes public, and where it belongs." TextWrapping="Wrap" />
                 </StackPanel>
                 <TextBlock MaxWidth="360" HorizontalAlignment="Right" Foreground="{DynamicResource Brush.StatusInfo}" FontSize="11" Text="{Binding ScheduleSummary}" TextAlignment="Right" TextWrapping="Wrap" />
@@ -21,7 +21,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="WHEN" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="When" />
                     <ComboBox
                         AutomationProperties.Name="YouTube release timing"
                         DisplayMemberPath="Label"
@@ -31,7 +31,7 @@
                         Style="{DynamicResource Control.FormComboBox}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="VISIBILITY" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Visibility" />
                     <ComboBox
                         AutomationProperties.Name="YouTube video visibility"
                         DisplayMemberPath="Label"
@@ -54,14 +54,14 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="DATE" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Date" />
                         <DatePicker
                             AutomationProperties.Name="Scheduled YouTube release date"
                             SelectedDate="{Binding ScheduledDate, Mode=TwoWay}"
                             Style="{DynamicResource Control.FormDatePicker}" />
                     </StackPanel>
                     <StackPanel Grid.Column="2">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="LOCAL TIME" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Local time" />
                         <controls:TimePickerField
                             AutomationName="Scheduled release time"
                             TimeText="{Binding ScheduledTimeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -80,7 +80,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="CATEGORY" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Category" />
                     <ComboBox
                         AutomationProperties.Name="YouTube category"
                         DisplayMemberPath="Title"
@@ -110,7 +110,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="AUDIENCE" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Audience" />
                     <ComboBox
                         AutomationProperties.Name="Made for kids audience"
                         DisplayMemberPath="Label"
@@ -139,11 +139,11 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="PREFERRED RELEASE DAY" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Preferred release day" />
                         <ComboBox ItemsSource="{Binding PreferredDays}" SelectedItem="{Binding PreferredDay, Mode=TwoWay}" Style="{DynamicResource Control.FormComboBox}" />
                     </StackPanel>
                     <StackPanel Grid.Column="2">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="TIME" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Time" />
                         <controls:TimePickerField
                             AutomationName="Preferred release time"
                             TimeText="{Binding PreferredTimeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />

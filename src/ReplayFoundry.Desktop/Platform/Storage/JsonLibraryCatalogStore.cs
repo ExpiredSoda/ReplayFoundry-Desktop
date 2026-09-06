@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
 using ReplayFoundry.Desktop.Features.Library;
+using ReplayFoundry.Desktop.Features.Publish.YouTube;
 
 namespace ReplayFoundry.Desktop.Platform.Storage;
 
@@ -96,7 +97,8 @@ public sealed class JsonLibraryCatalogStore : ILibraryCatalogStore
                     : null,
                 requiresMigration
                     ? DeriveLegacyLibraryLabel(item)
-                    : item.LibraryLabel)).ToArray();
+                    : item.LibraryLabel,
+                item.SourceProvenance)).ToArray();
             return new(assets, requiresMigration);
         }
         catch (Exception exception) when (
@@ -129,6 +131,7 @@ public sealed class JsonLibraryCatalogStore : ILibraryCatalogStore
                 AddedAtUtc = value.AddedAtUtc,
                 ContributingCandidateCount = value.ContributingCandidateCount,
                 SourceCandidateIds = value.SourceCandidateIds.ToArray(),
+                SourceProvenance = value.SourceProvenance,
             }).ToArray(),
         };
         AtomicJsonFile.Write(_path, document, JsonOptions);
@@ -166,5 +169,6 @@ public sealed class JsonLibraryCatalogStore : ILibraryCatalogStore
         public DateTimeOffset AddedAtUtc { get; set; }
         public int ContributingCandidateCount { get; set; }
         public string[]? SourceCandidateIds { get; set; }
+        public YouTubePublishProvenance? SourceProvenance { get; set; }
     }
 }

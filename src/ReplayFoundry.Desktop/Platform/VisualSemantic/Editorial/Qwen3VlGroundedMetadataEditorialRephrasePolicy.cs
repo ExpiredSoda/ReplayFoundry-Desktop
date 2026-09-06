@@ -5,8 +5,24 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
 {
-    internal const string Version = "grounded-editorial-rephrase-2.4";
+    internal const string Version = "grounded-editorial-rephrase-2.9";
     internal const string Sha256 =
+        "F8C050C701DAFCDC6B2FEA4F87868CAED21DEB7732B1308612F409626E787F25";
+    internal const string PreviousIsolatedFieldAuthoringVersion = "grounded-editorial-rephrase-2.8";
+    internal const string PreviousIsolatedFieldAuthoringSha256 =
+        "D62EF6A57F0EAC28213A9AFBA641FE1465D340B69713AD9A85E43430BF7AC50A";
+    internal const string PreviousSchemaEnforcedBalancedCopyVersion = "grounded-editorial-rephrase-2.7";
+    internal const string PreviousSchemaEnforcedBalancedCopySha256 =
+        "322DBAD6D798E33C636D247D686BC2BA8404DC1A97CAD971F5AD6D1BE7ECEBE8";
+    internal const string PreviousCompactBalancedCopyVersion = "grounded-editorial-rephrase-2.6";
+    internal const string PreviousCompactBalancedCopySha256 =
+        "C3AB7339E9322332093D23F37599F2C96E1575769892C3C90D4AF76455250A4E";
+    internal const string PreviousBalancedCopyVersion = "grounded-editorial-rephrase-2.5";
+    internal const string PreviousBalancedCopySha256 =
+        "7FBE117C5865E1BA209D11E48E4FE421AFEA815F3A91492252B6FBC81C3E0C7D";
+    internal const string PreviousCommentaryTimingVersion =
+        "grounded-editorial-rephrase-2.4";
+    internal const string PreviousCommentaryTimingSha256 =
         "8682A789FDAC6EF51963996CFE13F084DD85E8432D7098080875FBAAC1E97CA7";
     internal const string PreviousAudienceFrameVersion =
         "grounded-editorial-rephrase-2.3";
@@ -78,12 +94,26 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
         bool reviewableAudienceCopySupported = true,
         bool editorialFramingSupported = true,
         bool editorialFrameAdherenceSupported = true,
-        bool eligibilitySkipSupported = false)
+        bool eligibilitySkipSupported = false,
+        bool commentaryTimingSupported = true,
+        bool balancedCopySupported = true,
+        bool compactBalancedCopySupported = true,
+        bool schemaEnforcedBalancedCopySupported = true,
+        bool isolatedFieldAuthoringSupported = true,
+        bool isolatedFieldAuthoringVerified = false)
     {
         bool currentContract = editorialFrameAdherenceSupported &&
             editorialFramingSupported && reviewableAudienceCopySupported;
         string expectedVersion = currentContract
-            ? Version
+            ? (commentaryTimingSupported
+                ? (balancedCopySupported
+                    ? (compactBalancedCopySupported
+                        ? (schemaEnforcedBalancedCopySupported
+                            ? (isolatedFieldAuthoringSupported ? Version : PreviousIsolatedFieldAuthoringVersion)
+                            : PreviousSchemaEnforcedBalancedCopyVersion)
+                        : PreviousCompactBalancedCopyVersion)
+                    : PreviousBalancedCopyVersion)
+                : PreviousCommentaryTimingVersion)
             : editorialFramingSupported && reviewableAudienceCopySupported
                 ? PreviousEditorialFrameAdherenceVersion
             : reviewableAudienceCopySupported
@@ -108,7 +138,15 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
                         ? PreviousLanguageRecoveryVersion
                         : PreviousVersion;
         string expectedSha256 = currentContract
-            ? Sha256
+            ? (commentaryTimingSupported
+                ? (balancedCopySupported
+                    ? (compactBalancedCopySupported
+                        ? (schemaEnforcedBalancedCopySupported
+                            ? (isolatedFieldAuthoringSupported ? Sha256 : PreviousIsolatedFieldAuthoringSha256)
+                            : PreviousSchemaEnforcedBalancedCopySha256)
+                        : PreviousCompactBalancedCopySha256)
+                    : PreviousBalancedCopySha256)
+                : PreviousCommentaryTimingSha256)
             : editorialFramingSupported && reviewableAudienceCopySupported
                 ? PreviousEditorialFrameAdherenceSha256
             : reviewableAudienceCopySupported
@@ -144,7 +182,7 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
             actualSha256.Equals(
                 expectedSha256,
                 StringComparison.OrdinalIgnoreCase);
-        bool compatibleHistoricalIdentity = currentContract &&
+        bool compatibleHistoricalIdentity = currentContract && !commentaryTimingSupported &&
             ((actualVersion.Equals(
                     PreviousAudienceFrameVersion,
                     StringComparison.OrdinalIgnoreCase) &&
@@ -250,7 +288,12 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
                     ? rejectionCode is null &&
                         source.Equals(output, StringComparison.OrdinalIgnoreCase)
                     : semanticRejection && knownRejection);
-        if (!validSkip && !validGeneration)
+        bool validIsolatedNonAttempt = isolatedFieldAuthoringSupported && isolatedFieldAuthoringVerified &&
+            !attempted && !applied && outcome.Equals("NotAttempted", StringComparison.Ordinal) &&
+            source is null && output is null && rejectionCode is null &&
+            canonicalMessages is null && renderedPrompt is null && inputTokenIds is null &&
+            rawOutput is null && promptBytes is null && inputTokens is null;
+        if (!validSkip && !validGeneration && !validIsolatedNonAttempt)
         {
             throw new Qwen3VlOutputParseException(
                 "Grounded Qwen editorial-rephrase provenance is invalid.");
@@ -282,7 +325,12 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
         bool reviewableAudienceCopySupported = true,
         bool editorialFramingSupported = true,
         bool editorialFrameAdherenceSupported = true,
-        bool eligibilitySkipSupported = true) =>
+        bool eligibilitySkipSupported = true,
+        bool commentaryTimingSupported = true,
+        bool balancedCopySupported = true,
+        bool compactBalancedCopySupported = true,
+        bool schemaEnforcedBalancedCopySupported = true,
+        bool isolatedFieldAuthoringSupported = true) =>
         Parse(
             generation,
             rejectedLanguageRecoverySupported,
@@ -297,5 +345,10 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
             reviewableAudienceCopySupported,
             editorialFramingSupported,
             editorialFrameAdherenceSupported,
-            eligibilitySkipSupported);
+            eligibilitySkipSupported,
+            commentaryTimingSupported,
+            balancedCopySupported,
+            compactBalancedCopySupported,
+            schemaEnforcedBalancedCopySupported,
+            isolatedFieldAuthoringSupported);
 }

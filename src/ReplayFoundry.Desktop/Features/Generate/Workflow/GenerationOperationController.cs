@@ -5,6 +5,7 @@ internal enum GenerationOperationKind
     SourcePreparation,
     EvidenceAnalysis,
     Generation,
+    FolderImport,
 }
 
 internal sealed class GenerationOperationController :

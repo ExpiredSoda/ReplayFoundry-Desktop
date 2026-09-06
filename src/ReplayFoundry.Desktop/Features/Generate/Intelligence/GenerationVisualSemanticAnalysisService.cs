@@ -33,17 +33,69 @@ public sealed class GenerationVisualSemanticAnalysisService :
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
     }
 
-    public async Task<GenerationVisualSemanticAnalysisResult> AnalyzeAsync(
+    public Task<GenerationVisualSemanticAnalysisResult> AnalyzeAsync(
         GenerationCandidateIntelligenceResult candidateIntelligence,
         IProgress<GenerationVisualSemanticProgress>? progress,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(candidateIntelligence);
         cancellationToken.ThrowIfCancellationRequested();
-        var elapsed = Stopwatch.StartNew();
         IReadOnlyList<CandidateSource> shortlist = CreateShortlist(
             candidateIntelligence,
-            _settings.MaximumCandidateCount);
+            GenerationSemanticReviewBudgetPolicy.Resolve(
+                candidateIntelligence.BaseMoments, _settings.MaximumCandidateCount));
+        return AnalyzeShortlistAsync(candidateIntelligence, shortlist, progress, false, cancellationToken);
+    }
+
+    public async Task<GenerationVisualSemanticAnalysisResult> ReviewPromotedAsync(
+        GenerationCandidateIntelligenceResult baseline,
+        IReadOnlyList<GenerationMomentCandidate> selected,
+        GenerationVisualSemanticAnalysisResult previous,
+        IProgress<GenerationVisualSemanticProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(baseline);
+        ArgumentNullException.ThrowIfNull(selected);
+        ArgumentNullException.ThrowIfNull(previous);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!ReferenceEquals(previous.CandidateIntelligence, baseline))
+            throw new ArgumentException("Promoted review requires the original pre-visual intelligence.", nameof(baseline));
+        if (previous.Outcome != GenerationVisualSemanticOutcome.Completed || previous.SupplementalReviewAttempted)
+            return previous;
+        var owners = baseline.BaseMoments.Sources.SelectMany(source => source.Moments.Proposals.Select(candidate =>
+            new { Candidate = candidate, source.AnalyzedSource })).ToDictionary(item => item.Candidate, item => item.AnalyzedSource);
+        if (selected.Any(item => item is null || !owners.TryGetValue(item.Candidate, out var owner) ||
+                !ReferenceEquals(owner, item.AnalyzedSource)))
+            throw new ArgumentException("Promoted candidates must preserve the retained candidate and source identity.", nameof(selected));
+        int remaining = Math.Max(0, _settings.MaximumCandidateCount - previous.Observations.Count);
+        CandidateSource[] promoted = selected.Where(item => !previous.Observations.Any(observation =>
+                ReferenceEquals(observation.Candidate, item.Candidate)))
+            .DistinctBy(item => item.Candidate, ReferenceEqualityComparer.Instance)
+            .Take(Math.Min(GenerationSemanticReviewBudgetPolicy.MaximumBatchSize, remaining))
+            .Select(item => new CandidateSource(item.Candidate, owners[item.Candidate],
+                item.Refinement?.RankingScore ?? item.Candidate.Score.RawComponentTotal, item.IsHumanPriority, true)).ToArray();
+        if (promoted.Length == 0) return previous;
+        GenerationVisualSemanticAnalysisResult supplemental = await AnalyzeShortlistAsync(baseline, promoted, progress, true, cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return GenerationVisualSemanticAnalysisResult.Combine(previous, supplemental);
+        }
+        catch
+        {
+            supplemental.Dispose();
+            throw;
+        }
+    }
+
+    private async Task<GenerationVisualSemanticAnalysisResult> AnalyzeShortlistAsync(
+        GenerationCandidateIntelligenceResult candidateIntelligence,
+        IReadOnlyList<CandidateSource> shortlist,
+        IProgress<GenerationVisualSemanticProgress>? progress,
+        bool supplemental,
+        CancellationToken cancellationToken)
+    {
+        var elapsed = Stopwatch.StartNew();
         if (shortlist.Count == 0)
         {
             return CreateFallbackResult(
@@ -67,7 +119,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
                     _settings.VideoPolicy.MaximumReviewDuration);
                 progress?.Report(new GenerationVisualSemanticProgress(
                     GenerationVisualSemanticPhase.PreparingReviewVideo,
-                    "Framing the best moments",
+                    supplemental ? "Framing newly selected moments" : "Framing the best moments",
                     $"Preparing moment {index + 1} of {shortlist.Count} for a close visual read.",
                     index,
                     shortlist.Count,
@@ -86,36 +138,44 @@ public sealed class GenerationVisualSemanticAnalysisService :
                 .Select((video, index) => CreateRequest(
                     shortlist[index],
                     video,
-                    candidateIntelligence.BaseMoments.Request.Settings.Options.OutputKind))
+                    candidateIntelligence.BaseMoments.Request.Settings.Options.OutputKind,
+                    candidateIntelligence.Transcripts?.Sources.SingleOrDefault(source =>
+                        source.SourceFullPath.Equals(shortlist[index].Source.PreparedSource.Media.FullPath,
+                            StringComparison.OrdinalIgnoreCase))))
                 .ToArray();
-            var batch = new VisualSemanticBatchRequest(
-                requests,
-                _settings.VideoPolicy);
-            progress?.Report(new GenerationVisualSemanticProgress(
-                GenerationVisualSemanticPhase.ReviewingCandidates,
-                "Reading the strongest moments",
-                $"Comparing {shortlist.Count} promising moments to understand what visibly happened.",
-                0,
-                shortlist.Count,
-                isIndeterminate: true));
-            VisualSemanticEditorialBatchResult providerResult =
-                await _provider.ObserveAsync(batch, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            GenerationVisualSemanticCandidateObservation[] observations =
-                providerResult.Results.Select((result, index) =>
+            var observed = new List<GenerationVisualSemanticCandidateObservation>();
+            long? peakGpuBytes = null;
+            foreach (VisualSemanticRequest[] chunk in requests.Chunk(
+                         GenerationSemanticReviewBudgetPolicy.MaximumBatchSize))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var batch = new VisualSemanticBatchRequest(chunk, _settings.VideoPolicy);
+                progress?.Report(new GenerationVisualSemanticProgress(
+                    GenerationVisualSemanticPhase.ReviewingCandidates,
+                    supplemental ? "Checking newly selected moments" : "Reading moments across your videos",
+                    $"Checking moments {observed.Count + 1}–{observed.Count + chunk.Length} of {shortlist.Count}, including alternatives outside the initial selection.",
+                    observed.Count, shortlist.Count, isIndeterminate: true));
+                VisualSemanticEditorialBatchResult providerResult =
+                    await _provider.ObserveAsync(batch, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (providerResult.PeakAllocatedGpuBytes is long peak)
+                {
+                    peakGpuBytes = Math.Max(peakGpuBytes ?? 0, peak);
+                }
+                int offset = observed.Count;
+                observed.AddRange(providerResult.Results.Select((result, index) =>
                     new GenerationVisualSemanticCandidateObservation(
-                        shortlist[index].Candidate,
-                        shortlist[index].Source,
-                        materialized[index].Request.SourceStart,
-                        materialized[index].Request.SourceEnd,
-                        materialized[index].Input.ReviewVideoSha256,
-                        result.Observation,
-                        result.CanonicalizationAudit,
-                        result.Elapsed)).ToArray();
+                        shortlist[offset + index].Candidate,
+                        shortlist[offset + index].Source,
+                        materialized[offset + index].Request.SourceStart,
+                        materialized[offset + index].Request.SourceEnd,
+                        materialized[offset + index].Input.ReviewVideoSha256,
+                        result.Observation, result.CanonicalizationAudit, result.Elapsed)));
+            }
+            GenerationVisualSemanticCandidateObservation[] observations = observed.ToArray();
             progress?.Report(new GenerationVisualSemanticProgress(
                 GenerationVisualSemanticPhase.Completed,
-                "Picture check complete",
+                supplemental ? "Newly selected moments checked" : "Picture check complete",
                 $"Checked {observations.Length} promising moments without rereading the full videos.",
                 observations.Length,
                 observations.Length,
@@ -125,8 +185,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
                 candidateIntelligence,
                 _provider.Identity,
                 observations,
-                providerResult.Elapsed,
-                providerResult.PeakAllocatedGpuBytes,
+                elapsed.Elapsed,
+                peakGpuBytes,
                 materialized);
             ownershipTransferred = true;
             return result;
@@ -140,8 +200,9 @@ public sealed class GenerationVisualSemanticAnalysisService :
             string diagnostics = SafeDiagnostics(exception);
             progress?.Report(new GenerationVisualSemanticProgress(
                 GenerationVisualSemanticPhase.Completed,
-                "Moment selection kept for review",
-                "The closer picture check was unavailable, so Replay Foundry kept the original moments and continued.",
+                supplemental ? "Keeping previously reviewed moments" : "Moment selection kept for review",
+                supplemental ? "The added picture check was unavailable. Automatic selection will use the earlier successful review."
+                    : "The closer picture check was unavailable, so Replay Foundry kept the original moments and continued.",
                 shortlist.Count,
                 shortlist.Count,
                 isIndeterminate: false,
@@ -201,6 +262,10 @@ public sealed class GenerationVisualSemanticAnalysisService :
         GenerationCandidateIntelligenceResult candidateIntelligence,
         int maximumCandidateCount)
     {
+        if (maximumCandidateCount is < 1 or > GenerationSemanticReviewBudgetPolicy.MaximumCandidates)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximumCandidateCount));
+        }
         var candidates = new List<CandidateSource>();
         foreach (GenerationMomentCandidate selected in
                  candidateIntelligence.RefinedMoments.SelectedCandidates)
@@ -220,7 +285,9 @@ public sealed class GenerationVisualSemanticAnalysisService :
                      .ThenBy(static value => value.Candidate.Window.Start)
                      .ThenBy(static value => value.Candidate.Id, StringComparer.Ordinal))
         {
-            if (candidates.Any(value =>
+            if (refinement.Candidate.Disposition is MomentCandidateDisposition.RejectedBlack or
+                    MomentCandidateDisposition.RejectedFreeze ||
+                candidates.Any(value =>
                     ReferenceEquals(value.Candidate, refinement.Candidate)))
             {
                 continue;
@@ -295,6 +362,43 @@ public sealed class GenerationVisualSemanticAnalysisService :
             }
         }
 
+        // Represent each source before spending the remaining budget on a
+        // dense cluster of high scores from just one recording.
+        var reserved = new HashSet<CandidateSource>();
+        foreach (CandidateSource representative in ordered
+                     .GroupBy(static value => value.Source)
+                     .Select(static group => group.First()))
+        {
+            Reserve(representative);
+        }
+        // Review unseen parts of a recording even if their motion/audio score
+        // is low. These windows cannot be selected without qualified evidence.
+        CandidateSource[][] explorationBySource = ordered
+            .Where(value => value.Candidate.ConstructionReason ==
+                MomentCandidateConstructionReason.SemanticExploration ||
+                GenerationSemanticRetrieval.Priority(candidateIntelligence.Transcripts?.SemanticRetrieval,
+                    value.Source.PreparedSource.Media.FullPath, value.Candidate) > 0)
+            .GroupBy(static value => value.Source)
+            .Select(group => group.OrderByDescending(value =>
+                GenerationSemanticRetrieval.Priority(candidateIntelligence.Transcripts?.SemanticRetrieval,
+                    value.Source.PreparedSource.Media.FullPath, value.Candidate))
+                .ThenBy(static value =>
+                value.Candidate.Window.Start).ToArray())
+            .ToArray();
+        int explorationBudget = Math.Max(1, maximumCandidateCount / 3);
+        int explored = 0;
+        for (int pass = 0; explored < explorationBudget &&
+             explorationBySource.Any(group => pass < group.Length); pass++)
+        {
+            foreach (CandidateSource[] source in explorationBySource)
+            {
+                if (pass < source.Length && explored < explorationBudget && Reserve(source[pass]))
+                {
+                    explored++;
+                }
+            }
+        }
+
         foreach (CandidateSource candidate in ordered)
         {
             if (shortlist.Count >= maximumCandidateCount)
@@ -308,6 +412,31 @@ public sealed class GenerationVisualSemanticAnalysisService :
         }
 
         return shortlist;
+
+        bool Reserve(CandidateSource candidate)
+        {
+            if (shortlist.Contains(candidate))
+            {
+                reserved.Add(candidate);
+                return true;
+            }
+            if (shortlist.Count < maximumCandidateCount)
+            {
+                shortlist.Add(candidate);
+                reserved.Add(candidate);
+                return true;
+            }
+            int replacement = shortlist.FindLastIndex(value =>
+                !value.IsHumanPriority && !reserved.Contains(value) &&
+                !GenerationGameplayEventCoveragePolicy.IsDeterministicGameplayEvent(value.Candidate));
+            if (replacement < 0)
+            {
+                return false;
+            }
+            shortlist[replacement] = candidate;
+            reserved.Add(candidate);
+            return true;
+        }
     }
 
     internal static (TimeSpan Start, TimeSpan End) ReviewBounds(
@@ -346,15 +475,20 @@ public sealed class GenerationVisualSemanticAnalysisService :
     private VisualSemanticRequest CreateRequest(
         CandidateSource item,
         MaterializedVisualSemanticReviewVideo video,
-        MomentOutputKind outputKind)
+        MomentOutputKind outputKind,
+        GenerationSourceTranscript? sourceTranscript)
     {
         TimeSpan duration = video.Request.Duration;
+        VisualSemanticTranscriptContext transcript = GenerationVisualTranscriptContextBuilder.Build(
+            sourceTranscript, video.Request.SourceStart, video.Request.SourceEnd);
         string caseHash = Hash(
             item.Source.PreparedSource.Media.FullPath.ToUpperInvariant(),
             item.Candidate.Id,
             video.Request.SourceStart.Ticks.ToString(CultureInfo.InvariantCulture),
             video.Request.SourceEnd.Ticks.ToString(CultureInfo.InvariantCulture),
             video.Input.ReviewVideoSha256,
+            Hash(string.Join("|", transcript.Spans.Select(static span =>
+                $"{span.Id}:{span.ReviewRelativeStart.Ticks}:{span.ReviewRelativeEnd.Ticks}:{span.Text}"))),
             _settings.Prompt.Sha256,
             _settings.Model.ManifestSha256);
         return new VisualSemanticRequest(
@@ -371,12 +505,24 @@ public sealed class GenerationVisualSemanticAnalysisService :
             // retained by GenerationVisualSemanticCandidateObservation.
             TimeSpan.Zero,
             Composition(item.Source, video.Request.SourceStart, video.Request.SourceEnd),
-            new VisualSemanticTranscriptContext(
-                VisualSemanticTranscriptContextPolicy.VisualOnlyV1,
-                null,
-                [],
-                "Transcript context was not supplied for candidate ranking; visual observations remain bounded to sampled frames."),
-            null,
+            transcript,
+            transcript.TranscriptSupplied
+                ? VisualSemanticDeterministicSummaryBuilder.Build(new(
+                    duration,
+                    item.Candidate.Anchors.Count(static anchor => anchor.Kind is MomentAnchorKind.GameplaySceneBoundary or MomentAnchorKind.GameplaySceneCluster),
+                    item.Candidate.Anchors.Count(static anchor => anchor.Kind == MomentAnchorKind.GameplayActivityBurst),
+                    item.Candidate.Anchors.Count(static anchor => anchor.Kind is MomentAnchorKind.AudioNovelty or MomentAnchorKind.AudioReentry),
+                    item.Candidate.Anchors.Count(static anchor => anchor.Kind is MomentAnchorKind.PresenterAudioAgreement or MomentAnchorKind.PresenterGatedSupport),
+                    item.Candidate.FullFrameBlackOverlapRatio > 0
+                        ? item.Candidate.FullFrameFreezeOverlapRatio > 0
+                            ? VisualSemanticIntegrityStatus.FullFrameBlackAndFrozen : VisualSemanticIntegrityStatus.FullFrameBlack
+                        : item.Candidate.FullFrameFreezeOverlapRatio > 0
+                            ? VisualSemanticIntegrityStatus.FullFrameFrozen : VisualSemanticIntegrityStatus.Clear,
+                    null, null, null, outputKind,
+                    Composition(item.Source, video.Request.SourceStart, video.Request.SourceEnd).Regions
+                        .Where(static region => region.RoleSource == CompositionValueSource.UserConfirmed)
+                        .Select(static region => region.Role).ToArray()))
+                : null,
             _settings.Prompt,
             _settings.Model);
     }

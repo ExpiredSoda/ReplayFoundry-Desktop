@@ -6,7 +6,18 @@ downloadable version is [1.0.0 Beta 3](https://github.com/ExpiredSoda/ReplayFoun
 
 ## Unreleased
 
-No user-visible changes have been recorded since 1.0.0 Beta 3.
+- Refined the workspace with calmer surfaces, compact labeled navigation, clearer Generate steps, and Studio caption controls grouped into expandable sections. Short windows retain usable previews and full-size controls; setup navigation opens each step at its beginning, and compact layout review scrolls vertically.
+- Added saved portrait, square, and landscape output composition, gameplay/facecam regions, manual HUD placement, reusable game layouts, per-track gain/mute and voice ducking, optional loudness/true-peak controls and before/after audition. Preview and export share framing and audio settings. Existing portrait recordings retain their original composition by default.
+- Added word-preserving caption correction, phrase split/merge/add/delete, undo/redo, per-clip audio audition and regeneration, vocabulary hints, SRT/VTT interchange, speaker labels, English translation and bilingual text. Caption editing, preview and export now use the current cut consistently.
+- Added reusable caption looks in Studio and Generate with authorable font, colors, background, outline, shadow, alignment, casing, line spacing, animation strength and safe areas. Initial portrait caption placement can avoid a confirmed presenter region; later placement stays under creator control. Clean-video delivery preserves separate subtitle files.
+- Added optional local alignment for corrected English captions, with weak-match review and draggable word timing. Saving preserves untouched partial word records, and Pop captions display edited punctuation consistently with preview and subtitle files. Font fallback, custom safe margins, model-aware language choices and right-to-left punctuation have been improved.
+- Added short source-region tracking with explicit feature selection, frame review and Apply/Clear controls. Gameplay crops and HUD source crops can follow measured translation; uncertain matches and scene changes stop tracking and return to manual framing.
+- Expanded Thorough analysis with shared source transcripts, spoken-intent proposals and wider semantic exploration. Added start-boundary repair, grounded rejection safeguards, conservative launcher screening, and selection that rewards new footage. Local preferences can be scoped by game and clip goals.
+- Added full-source manual clipping, an ordered split/reorder/omit cut list, timed text and zoom/pan waypoints, stable-folder intake, marker/chapter import, and local platform publishing packages with source-cut and rendered OpenTimelineIO handoff.
+- Added qualified hardware encoding with software recovery, validated per-clip render checkpoints, live encoding progress, explicit SDR color handling and output probe/decode checks. Deterministic visual analysis now shares one decode; caption-only cache misses transcribe the requested cut.
+- Added 720p through 2160p output choices and validated montage timing recovery. Studio opens a proxy of the selected cut first and loads wider trim context when needed; a separate bounded CPU lane lets foreground previews proceed during AI work.
+- Expanded title/description angles and readability guidance, retained earlier copy through save/reopen for comparison, and rejected rewrites completed against superseded captions. Added separate opt-in read-only YouTube Analytics with immutable uploaded source/style context, matched comparison controls and sample counts.
+- Added isolated real-media validation commands, resource telemetry and performance comparisons. These changes are still under release validation; runtime packs and the public installer have not been replaced.
 
 ## 1.0.0 Beta 3 — 2026-09-01
 

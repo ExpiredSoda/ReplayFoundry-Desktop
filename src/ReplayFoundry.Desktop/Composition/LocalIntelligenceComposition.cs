@@ -2,9 +2,11 @@ using System.IO;
 using System.Text.Json;
 using ReplayFoundry.Desktop.Features.Generate;
 using ReplayFoundry.Desktop.Features.Generate.Captions;
+using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.Intelligence;
 using ReplayFoundry.Desktop.Features.Generate.Workflow;
 using ReplayFoundry.Desktop.Media.Intelligence;
+using ReplayFoundry.Desktop.Media.AudioExtraction;
 using ReplayFoundry.Desktop.Media.Intelligence.SpeechActivity;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic;
 using ReplayFoundry.Desktop.Media.Transcription;
@@ -15,12 +17,15 @@ using ReplayFoundry.Desktop.Platform.RuntimePacks;
 using ReplayFoundry.Desktop.Platform.SpeechActivity;
 using ReplayFoundry.Desktop.Platform.Transcription;
 using ReplayFoundry.Desktop.Platform.VisualSemantic;
+using ReplayFoundry.Desktop.Platform.Intelligence;
 
 namespace ReplayFoundry.Desktop.Composition;
 
 internal sealed record LocalSpeechServices(
     IGenerationCaptionPreparationService? CaptionPreparation,
-    IGenerationSpeechActivityService? SpeechActivity);
+    IGenerationSpeechActivityService? SpeechActivity,
+    IGenerationTranscriptAnalysisService? TranscriptAnalysis = null,
+    AudioTranscriptionModelLanguageCapabilities? CaptionLanguageCapabilities = null);
 
 internal sealed record LocalVisualReviewServices(
     Qwen3VlQualifiedEditorialRuntime? Runtime,
@@ -35,10 +40,14 @@ internal static class LocalIntelligenceComposition
         TimeSpan.FromMinutes(30);
 
     public static LocalSpeechServices CreateSpeechServices(
-        ReplayFoundryRuntimeEnvironment runtime) =>
-        new(
-            CreateCaptionPreparationService(runtime),
-            CreateSpeechActivityService(runtime));
+        ReplayFoundryRuntimeEnvironment runtime,
+        Action<SourceTranscriptDiagnostic>? transcriptDiagnostics = null)
+    {
+        IGenerationCaptionPreparationService? captions = CreateCaptionPreparationService(runtime,
+            out IGenerationTranscriptAnalysisService? transcripts,
+            out AudioTranscriptionModelLanguageCapabilities languageCapabilities, transcriptDiagnostics);
+        return new(captions, CreateSpeechActivityService(runtime), transcripts, languageCapabilities);
+    }
 
     public static LocalVisualReviewServices CreateVisualReviewServices(
         ReplayFoundryRuntimeEnvironment runtime,
@@ -77,7 +86,7 @@ internal static class LocalIntelligenceComposition
 
         var capabilities = new GenerationRuntimeCapabilities(
             IsCaptionTranscriptionAvailable:
-                speech.CaptionPreparation is not null,
+                speech.CaptionPreparation is not null && speech.CaptionLanguageCapabilities?.IsKnown != false,
             IsSpeechActivityAvailable:
                 speech.SpeechActivity is not null,
             IsVisualSemanticReviewAvailable:
@@ -87,7 +96,10 @@ internal static class LocalIntelligenceComposition
             EditorialAiUnavailableReason:
                 isEditorialAiAvailable
                     ? null
-                    : editorialAiUnavailableReason);
+                    : editorialAiUnavailableReason,
+            EditorialGpuAdmissionCheck: QwenGpuAdmission.GetBlockingReason,
+            EditorialGpuReadiness: QwenGpuAdmission.DescribeReadiness,
+            CaptionLanguageCapabilities: speech.CaptionLanguageCapabilities);
         return new(
             qwenRuntime,
             materializer,
@@ -98,8 +110,12 @@ internal static class LocalIntelligenceComposition
 
     private static IGenerationCaptionPreparationService?
         CreateCaptionPreparationService(
-            ReplayFoundryRuntimeEnvironment runtime)
+            ReplayFoundryRuntimeEnvironment runtime,
+            out IGenerationTranscriptAnalysisService? transcripts,
+            out AudioTranscriptionModelLanguageCapabilities languageCapabilities,
+            Action<SourceTranscriptDiagnostic>? transcriptDiagnostics)
     {
+        transcripts = null;
         string? executable = ExplicitRuntimeEnvironment.Read(
             "REPLAYFOUNDRY_WHISPER_EXE") ??
             runtime.WhisperExecutablePath;
@@ -109,6 +125,7 @@ internal static class LocalIntelligenceComposition
         string? vadModelPath = ExplicitRuntimeEnvironment.Read(
             "REPLAYFOUNDRY_WHISPER_VAD_MODEL") ??
             runtime.WhisperVadModelPath;
+        languageCapabilities = WhisperGgmlLanguageCapabilities.Resolve(modelPath);
         if (string.IsNullOrWhiteSpace(executable) ||
             string.IsNullOrWhiteSpace(modelPath) ||
             !Path.IsPathFullyQualified(executable) ||
@@ -126,7 +143,8 @@ internal static class LocalIntelligenceComposition
             sourceUrlOrNote:
                 "Explicit local model path selected by the Replay Foundry user.",
             languageCapabilityDescription:
-                "Multilingual capability is declared by the selected model, not inferred from audio metadata.");
+                languageCapabilities.Description,
+            languageCapabilities: languageCapabilities);
         var provider = new WhisperCppTranscriptionProvider(
             new WhisperCppProviderSettings(
                 executable,
@@ -143,11 +161,17 @@ internal static class LocalIntelligenceComposition
             AudioTranscriptionProcessorHint.Auto,
             TimeSpan.FromMinutes(10),
             AudioTranscriptionOutputFormatPolicy.StructuredJson);
-        return new GenerationCaptionPreparationService(
-            AudioSegmentExtractionFactory.CreateDefault(),
-            provider,
-            options,
-            model);
+        if (languageCapabilities.IsKnown)
+            options = GenerationCaptionLanguageCatalog.ResolveOptions(options,
+                GenerationCaptionLanguageCatalog.DefaultFor(languageCapabilities), languageCapabilities);
+        IAudioSegmentExtractor extractor = AudioSegmentExtractionFactory.CreateDefault();
+        var sourceTranscription = new SourceAudioTranscriptionService(extractor, provider, model, transcriptDiagnostics);
+        var captions = new GenerationCaptionPreparationService(extractor, provider, options, model,
+            sourceTranscription);
+        if (languageCapabilities.IsKnown)
+            transcripts = new GenerationTranscriptAnalysisService(sourceTranscription, options, captions.ResolveOptions,
+                new MiniLmSemanticTextEmbeddingService());
+        return captions;
     }
 
     private static IGenerationSpeechActivityService?

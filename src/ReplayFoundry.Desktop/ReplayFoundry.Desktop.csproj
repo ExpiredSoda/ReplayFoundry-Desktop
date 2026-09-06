@@ -15,6 +15,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Assets\ThirdParty\Wav2Vec2-LICENSE.txt" LogicalName="ReplayFoundry.CaptionAlignment.LICENSE.txt" />
+    <EmbeddedResource Include="Assets\ThirdParty\Wav2Vec2-NOTICE.txt" LogicalName="ReplayFoundry.CaptionAlignment.NOTICE.txt" />
+    <EmbeddedResource Include="Assets\ThirdParty\MiniLM-LICENSE.txt" LogicalName="ReplayFoundry.SemanticSearch.LICENSE.txt" />
+    <EmbeddedResource Include="Assets\ThirdParty\MiniLM-NOTICE.txt" LogicalName="ReplayFoundry.SemanticSearch.NOTICE.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ReplayFoundry.RuntimePacks\ReplayFoundry.RuntimePacks.csproj" />
   </ItemGroup>
 

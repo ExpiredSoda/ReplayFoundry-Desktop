@@ -33,6 +33,7 @@ public enum MomentAnchorKind
     PresenterAudioAgreement,
     EpisodeActivationPeak,
     UserConfirmedPriority,
+    SourceCoverage,
 }
 
 public enum MomentCandidateDisposition
@@ -58,6 +59,7 @@ public enum MomentCandidateConstructionReason
     ShortSource,
     StandaloneEpisode,
     MontageRepresentativeSegment,
+    SemanticExploration,
 }
 
 public enum MomentScoreComponentCode
@@ -114,6 +116,8 @@ public enum MomentEvidenceReferenceKind
     LumaChange,
     SaturationChange,
     UserConfirmedMomentGuidance,
+    SourceCoverage,
+    TranscriptSegment,
 }
 
 public enum MomentFindingWarningCode
@@ -143,6 +147,7 @@ public enum MomentSignalFamily
     VisualContextChange,
     EpisodeActivation,
     UserGuidance,
+    SourceCoverage,
 }
 
 public enum MomentNeighborhoodSplitReason

@@ -39,7 +39,8 @@ internal sealed record Qwen3VlGroundedMetadataGenerationSchemaProfile(
     bool RecoveryCandidateSelectionModule,
     bool SynthesisSanitizationModule,
     bool EditorialRephraseEligibilitySkip,
-    bool BestAvailableVisualEvidence);
+    bool BestAvailableVisualEvidence,
+    bool IsolatedFieldAuthoring = false);
 
 internal sealed record Qwen3VlGroundedMetadataEditorialRephraseValidation(
     bool Attempted,

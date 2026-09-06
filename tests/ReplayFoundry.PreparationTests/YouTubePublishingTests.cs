@@ -20,7 +20,7 @@ using ReplayFoundry.Desktop.Presentation.Workspaces;
 
 namespace ReplayFoundry.PreparationTests;
 
-internal static class YouTubePublishingTests
+internal static partial class YouTubePublishingTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
@@ -46,6 +46,7 @@ internal static class YouTubePublishingTests
         new("Unchanged Publish rerolls apply and persist once", UnchangedPublishRerollAppliesAndPersists),
         new("Publish editorial shutdown waits for draft persistence", PublishEditorialStopWaitsForDraftPersistence),
         new("Publish rerolls through the retained finalized Studio context", PublishRerollUsesRetainedContext),
+        new("Publish refreshes legacy wording only from an exact finalized source and render binding", PublishLegacyRerollPreservesContextBoundary),
         new("Publish rerolls a Library video without an active Studio session", PublishRerollUsesDurableContext),
         new("Publish opens a focused preparation dialog for a Library video", PreparationUsesFocusedDialog),
         new("Publish calendar visibly rejects past-date drops", CalendarRejectsPastDateDrops),
@@ -826,6 +827,7 @@ internal static class YouTubePublishingTests
             "Deterministic scene and audio support.",
             editorialContext: context,
             editorialMetadata: retained);
+        output = output.WithCurrentCutEditorialMetadata(context, retained).WithRenderedOutput(fixture.Asset.OutputFullPath);
         var project = new GenerationOutputProject(
             "project-1",
             GenerationMode.IndividualClips,
@@ -839,10 +841,15 @@ internal static class YouTubePublishingTests
         var session = new GenerationOutputSession();
         session.Publish(project);
         var generator = new RecordingEditorialGenerationService();
+        var profile = new ClipEditorialProfileSession();
+        profile.Update(new ClipEditorialProfile(
+            namingGuidance: "Original custom creator instruction.",
+            voicePerspective: ClipEditorialVoicePerspective.NeutralNoSubject,
+            copyObjective: ClipEditorialCopyObjective.FollowVariant));
         var service = new PublishEditorialMetadataService(
             session,
             generator,
-            new ClipEditorialProfileSession());
+            profile);
 
         PublishEditorialRerollResult result = await service.RerollAsync(
             fixture.Asset,
@@ -866,6 +873,11 @@ internal static class YouTubePublishingTests
             CancellationToken.None);
 
         TestAssert.Equal(2, generator.CallCount, "Two Publish rerolls must invoke the existing shared generation boundary exactly twice.");
+        TestAssert.True(generator.Requests.All(static request =>
+                request.Profile.CopyObjective == ClipEditorialCopyObjective.FollowVariant &&
+                request.Profile.VoicePerspective == ClipEditorialVoicePerspective.NeutralNoSubject &&
+                request.Profile.NamingGuidance == "Use exact supported actions."),
+            "Publish rerolls retain the typed objective and voice perspective while preserving custom guidance exactly.");
         TestAssert.True(ReferenceEquals(context, generator.Requests[0].Context), "Publish must preserve the retained editorial context by identity.");
         TestAssert.True(ReferenceEquals(media, generator.Requests[0].SourceMedia), "Local-AI rerolls must receive the exact retained source inspection.");
         TestAssert.Equal(5, generator.Requests[0].Attempt, "The first Publish reroll must advance the retained attempt.");
@@ -917,6 +929,7 @@ internal static class YouTubePublishingTests
             "Durably retained scene and audio support.",
             editorialContext: context,
             editorialMetadata: retained);
+        output = output.WithCurrentCutEditorialMetadata(context, retained).WithRenderedOutput(fixture.Asset.OutputFullPath);
         const string sourceProjectId = "project-1";
         const string renderedProjectId =
             sourceProjectId + "-render-abcdef12";

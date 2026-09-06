@@ -16,6 +16,7 @@ from ..commands import (
     _set_failure_structured_decoding,
 )
 from ..canonical_json import _secure_model_messages
+from .. import grounded_pass_diagnostics as _pass_timing
 from ..generation import (
     _failure_generation_payload,
     _generation_case_payload,
@@ -67,6 +68,7 @@ def _bounded_completed_json(text: str) -> str | None:
     return canonical
 
 
+@_pass_timing.observe_grounded_pass
 def _generate_json_once(
     request: dict[str, Any],
     case_ordinal: int,
@@ -238,15 +240,20 @@ def _generate_json_once(
     try:
         admit_grounded_generation(torch)
         with torch.inference_mode(), grounded_sdpa_context(torch):
-            trace = _generate_with_trace(
-                model,
-                inputs,
-                maximum_new_tokens,
-                logits_processor=[logits_processor],
-                approved_generation_arguments=
-                    approved_generation_arguments,
-                cache_implementation=CACHE_IMPLEMENTATION,
-            )
+            _pass_timing.generation_started()
+            try:
+                trace = _generate_with_trace(
+                    model,
+                    inputs,
+                    maximum_new_tokens,
+                    logits_processor=[logits_processor],
+                    approved_generation_arguments=
+                        approved_generation_arguments,
+                    cache_implementation=CACHE_IMPLEMENTATION,
+                )
+            finally:
+                _pass_timing.generation_finished()
+            _pass_timing.retain_generation_trace(trace)
     except Exception as error:
         if is_cuda_out_of_memory(error, torch):
             record_grounded_cuda_out_of_memory(torch)

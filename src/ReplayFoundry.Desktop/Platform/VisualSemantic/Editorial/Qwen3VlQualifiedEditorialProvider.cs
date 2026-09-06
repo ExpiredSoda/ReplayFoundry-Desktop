@@ -4,6 +4,8 @@ using ReplayFoundry.Desktop.Media.Intelligence;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic;
 using ReplayFoundry.Desktop.Platform.Processes;
 
+using ReplayFoundry.Desktop.Platform.Media;
+
 namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 public sealed class Qwen3VlQualifiedEditorialSettings
@@ -124,7 +126,7 @@ public sealed class Qwen3VlQualifiedEditorialProvider :
                     _settings.Host,
                     workspace,
                     _settings.QualificationLockPath);
-            ProcessRunResult process = await _processRunner.RunAsync(
+            ProcessRunResult process = await MediaWorkBudget.RunAsync(_processRunner,
                 new ProcessRunRequest(
                     _settings.Host.PythonExecutablePath,
                     command.Arguments,
@@ -134,7 +136,8 @@ public sealed class Qwen3VlQualifiedEditorialProvider :
                     _settings.Host.MaximumStandardErrorCharacters,
                     _settings.Host.EnvironmentVariables,
                     inheritParentEnvironment: false),
-                cancellationToken);
+                MediaWorkPriority.FinalOutput, MediaWorkKind.HeavyAi, cancellationToken);
+            QwenModelLoadDiagnostics.Report(process.StandardError);
             if (!process.Succeeded)
             {
                 throw new Qwen3VlInferenceException(

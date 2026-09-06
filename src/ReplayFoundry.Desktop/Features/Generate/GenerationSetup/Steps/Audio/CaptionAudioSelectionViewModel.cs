@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using ReplayFoundry.Desktop.Features.Generate.Preparation;
 using ReplayFoundry.Desktop.Media.Inspection;
 using ReplayFoundry.Desktop.Media.AudioExtraction;
+using ReplayFoundry.Desktop.Media.Transcription;
 using ReplayFoundry.Desktop.Presentation;
 using ReplayFoundry.Desktop.Presentation.Commands;
 
@@ -47,7 +48,8 @@ public sealed class CaptionAudioSelectionViewModel :
         PreparedGenerationSource source,
         GenerationCaptionSourceSelection? initialSelection,
         RememberedGenerationAudioRole? rememberedRole = null,
-        IAudioStreamAuditionService? auditionService = null)
+        IAudioStreamAuditionService? auditionService = null,
+        AudioTranscriptionModelLanguageCapabilities? languageCapabilities = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (initialSelection is not null &&
@@ -93,21 +95,10 @@ public sealed class CaptionAudioSelectionViewModel :
                 "Other known speech",
                 "This track contains other speech you want to caption."),
         ];
-        _languages =
-        [
-            new(
-                GenerationCaptionLanguagePolicy.Auto,
-                "Detect automatically",
-                "Useful when the language is unknown; sparse or noisy speech can be misidentified."),
-            new(
-                GenerationCaptionLanguagePolicy.English,
-                "English",
-                "Treat the selected track as English."),
-            new(
-                GenerationCaptionLanguagePolicy.Spanish,
-                "Spanish",
-                "Treat the selected track as Spanish."),
-        ];
+        GenerationCaptionLanguagePolicy selectedLanguage = initialSelection?.LanguagePolicy ??
+            rememberedRole?.LanguagePolicy ?? GenerationCaptionLanguageCatalog.DefaultFor(languageCapabilities);
+        _languages = GenerationCaptionLanguageCatalog.GetChoices(languageCapabilities, selectedLanguage).ToArray();
+        LanguageCapabilitySummary = languageCapabilities?.Description;
         int? selectedStreamIndex = initialSelection?.AbsoluteAudioStreamIndex ??
             rememberedRole?.AbsoluteAudioStreamIndex;
         _selectedStream = selectedStreamIndex is null
@@ -124,9 +115,7 @@ public sealed class CaptionAudioSelectionViewModel :
         _selectedLanguage = _languages.Single(
             language =>
                 language.Value ==
-                (initialSelection?.LanguagePolicy ??
-                 rememberedRole?.LanguagePolicy ??
-                 GenerationCaptionLanguagePolicy.Auto));
+                selectedLanguage);
         IsRememberedSelection = initialSelection is null && rememberedRole is not null;
         _auditionCommand = new AsyncDelegateCommand(
             AuditionAsync,
@@ -148,6 +137,8 @@ public sealed class CaptionAudioSelectionViewModel :
         _roles;
     public IReadOnlyList<SelectionOption<GenerationCaptionLanguagePolicy>>
         Languages => _languages;
+    public string? LanguageCapabilitySummary { get; }
+    public string? LanguageValidationMessage => SelectedLanguage.UnavailableReason;
     public bool HasAudio => _streams.Length > 0;
     public bool IsRememberedSelection { get; }
     public IReadOnlyList<AudioWaveformBar> WaveformBars =>
@@ -247,19 +238,23 @@ public sealed class CaptionAudioSelectionViewModel :
             if (ReferenceEquals(_selectedLanguage, value)) return;
             _selectedLanguage = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsValid));
+            OnPropertyChanged(nameof(LanguageValidationMessage));
+            OnPropertyChanged(nameof(ConfirmationStatus));
             Changed?.Invoke(this, EventArgs.Empty);
         }
     }
 
     public bool IsValid =>
-        !HasAudio || SelectedStream is not null && SelectedRole is not null;
+        !HasAudio || SelectedStream is not null && SelectedRole is not null && SelectedLanguage.IsAvailable;
     public string ConfirmationStatus => !HasAudio
         ? "No audio to caption."
         : IsValid
             ? IsRememberedSelection
                 ? "Using your previously confirmed recording layout. Review it if this capture setup changed."
                 : "Caption track and speech type confirmed."
-            : "Choose a track and say whether it contains your commentary, game dialogue, or mixed speech.";
+            : LanguageValidationMessage ??
+                "Choose a track and say whether it contains your commentary, game dialogue, or mixed speech.";
 
     public GenerationCaptionSourceSelection? CreateSelection() =>
         SelectedStream is null || SelectedRole is null

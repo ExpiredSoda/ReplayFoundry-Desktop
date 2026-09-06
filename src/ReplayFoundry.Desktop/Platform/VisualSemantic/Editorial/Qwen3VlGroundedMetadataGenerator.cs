@@ -7,6 +7,7 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 public sealed class Qwen3VlGroundedMetadataGenerator :
     IClipEditorialVisualMetadataGenerator,
     IClipEditorialMetadataFailSoftBatchGenerator,
+    IClipEditorialMetadataBatchSessionFactory,
     IDisposable
 {
     internal const int MaximumCases = 30;
@@ -22,8 +23,22 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
     internal const int MaximumTotalVideoPixels =
         Qwen3VlGroundedMetadataSamplingPolicy.CoreMaximumTotalVideoPixels;
     internal const string InputSchema =
-        "grounded-editorial-metadata-input-batch-1.8";
+        "grounded-editorial-metadata-input-batch-1.9";
     internal const string OutputSchema =
+        "grounded-editorial-metadata-output-batch-1.61";
+    internal const string PreviousResponsibilitySplitOutputSchema =
+        "grounded-editorial-metadata-output-batch-1.60";
+    internal const string PreviousCompactIsolatedFieldAuthoringOutputSchema =
+        "grounded-editorial-metadata-output-batch-1.59";
+    internal const string PreviousIsolatedFieldAuthoringOutputSchema =
+        "grounded-editorial-metadata-output-batch-1.58";
+    internal const string PreviousSchemaEnforcedBalancedCopyOutputSchema =
+        "grounded-editorial-metadata-output-batch-1.57";
+    internal const string PreviousCompactBalancedCopyOutputSchema =
+        "grounded-editorial-metadata-output-batch-1.56";
+    internal const string PreviousBalancedCopyOutputSchema =
+        "grounded-editorial-metadata-output-batch-1.55";
+    internal const string PreviousCommentaryTimingOutputSchema =
         "grounded-editorial-metadata-output-batch-1.54";
     internal const string PreviousCreatorVoiceOutputSchema =
         "grounded-editorial-metadata-output-batch-1.53";
@@ -115,8 +130,26 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
         "grounded-editorial-metadata-output-batch-1.10";
     internal const string PromptName =
         "ReplayFoundry Grounded Editorial Metadata";
-    internal const string PromptVersion = "1.40";
+    internal const string PromptVersion = "1.46";
     internal const string PromptSha256 =
+        "61ad677ba7cb97a250df90bf77aa0fcaeb27dcd226af871b7226d89b1cf6b2d0";
+    internal const string PreviousCompactIsolatedFieldAuthoringPromptVersion = "1.45";
+    internal const string PreviousCompactIsolatedFieldAuthoringPromptSha256 =
+        "6fa6e96a7a33d28e4c1fdd8ee4a806f57d23cb267aab04aedc3ba591f9f1249d";
+    internal const string PreviousIsolatedFieldAuthoringPromptVersion = "1.44";
+    internal const string PreviousIsolatedFieldAuthoringPromptSha256 =
+        "b09ae948487a8cb447076eb72ae22e7736eb43e249ca46f82e2d33a727a75c28";
+    internal const string PreviousSchemaEnforcedBalancedCopyPromptVersion = "1.43";
+    internal const string PreviousSchemaEnforcedBalancedCopyPromptSha256 =
+        "defb5c76573252699c548200ad86a73d1c1d62bb74fbdc8b9980f5e225de1ec6";
+    internal const string PreviousCompactBalancedCopyPromptVersion = "1.42";
+    internal const string PreviousCompactBalancedCopyPromptSha256 =
+        "688ed574ae46fb8155070b6d6cc340d9e42847db15eb0fd9935228ecaaae2e58";
+    internal const string PreviousBalancedCopyPromptVersion = "1.41";
+    internal const string PreviousBalancedCopyPromptSha256 =
+        "3cad54f5a7aa47b59e1979aa2d41ac85ac6fe0338d18574cff35527102276b53";
+    internal const string PreviousCommentaryTimingPromptVersion = "1.40";
+    internal const string PreviousCommentaryTimingPromptSha256 =
         "241086ff61f2e10108fc5c09c3e0a00381af102ee5b97534d2a1314dd892b72a";
     internal const string PreviousCreatorVoicePromptVersion = "1.39";
     internal const string PreviousCreatorVoicePromptSha256 =
@@ -140,6 +173,8 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
     internal const string BaselinePromptSha256 =
         "732371e8f16101fb07a4afda058c7fca98819f0bba7828b0f77236be1c1fe34c";
     internal const string MetadataSchemaVersion =
+        "grounded-editorial-metadata-json-schema-1.9";
+    internal const string PreviousSchemaEnforcedBalancedCopyMetadataSchemaVersion =
         "grounded-editorial-metadata-json-schema-1.8";
     internal const string PreviousMetadataSchemaVersion =
         "grounded-editorial-metadata-json-schema-1.7";
@@ -197,7 +232,8 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
             runtime,
             new WindowsProcessRunner(),
             new SystemQwen3VlBatchWorkspaceFactory(),
-            new SystemQwen3VlGroundedFailureArchive())
+            new SystemQwen3VlGroundedFailureArchive(),
+            QwenGpuAdmission.GetBlockingReason)
     {
     }
 
@@ -205,20 +241,25 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
         Qwen3VlQualifiedEditorialRuntime runtime,
         IProcessRunner processRunner,
         IQwen3VlBatchWorkspaceFactory workspaceFactory,
-        IQwen3VlGroundedFailureArchive? failureArchive = null)
+        IQwen3VlGroundedFailureArchive? failureArchive = null,
+        Func<string?>? gpuAdmissionCheck = null)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _executor = new Qwen3VlGroundedMetadataExecutor(
             _runtime,
             processRunner,
             workspaceFactory,
-            failureArchive ?? NullQwen3VlGroundedFailureArchive.Instance);
+            failureArchive ?? NullQwen3VlGroundedFailureArchive.Instance,
+            gpuAdmissionCheck);
     }
 
     public ClipEditorialMetadataGeneratorIdentity Identity { get; } =
         new("Qwen3-VL grounded editorial metadata", ProviderVersion);
 
     public bool IsAvailable => true;
+
+    public IClipEditorialMetadataBatchSession CreateBatchSession() =>
+        new Qwen3VlGroundedMetadataBatchSession(_executor, _runtime, Identity);
 
     public async Task<ClipEditorialMetadataDraft> GenerateAsync(
         ClipEditorialMetadataRequest request,

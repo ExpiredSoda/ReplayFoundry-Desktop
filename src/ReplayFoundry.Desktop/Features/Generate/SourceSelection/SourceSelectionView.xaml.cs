@@ -23,7 +23,7 @@ public partial class SourceSelectionView : UserControl
         e.Handled = true;
     }
 
-    private void DropZone_Drop(
+    private async void DropZone_Drop(
         object sender,
         DragEventArgs e)
     {
@@ -40,6 +40,6 @@ public partial class SourceSelectionView : UserControl
             return;
         }
 
-        viewModel.AddDroppedFiles(droppedPaths);
+        await viewModel.AddDroppedPathsAsync(droppedPaths);
     }
 }

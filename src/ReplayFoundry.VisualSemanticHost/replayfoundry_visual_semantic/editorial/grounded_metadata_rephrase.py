@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from typing import Any
 
 from ..commands import HOST_DIRECTORY
@@ -20,144 +19,32 @@ from .grounded_metadata_creator_authority import (
 )
 from .grounded_metadata_lexical import contains_unapproved_non_latin
 from .grounded_metadata_synthesis import _typed_retry_authority_anchor
+from .grounded_metadata_creator_authority import (
+    _scoped_retry_authority,
+    _without_automatic_commentary,
+)
 from .grounded_metadata_validation import strict_metadata, validation_failure_code
 
-POLICY_VERSION = "grounded-editorial-rephrase-2.4"
-POLICY_FILE_NAME = "replayfoundry-grounded-editorial-rephrase-policy-2.4.txt"
-POLICY_SHA256 = "8682a789fdac6ef51963996cfe13f084dd85e8432d7098080875fbaac1e97ca7"
+from .grounded_metadata_rephrase_frame import (
+    _editorial_frame,
+    _presentation_kinds,
+    _frame_has_useful_shape,
+    _editorial_frame_drift,
+    _require_editorial_frame_adherence,
+)
+
+POLICY_VERSION = "grounded-editorial-rephrase-2.9"
+POLICY_FILE_NAME = "replayfoundry-grounded-editorial-rephrase-policy-2.9.txt"
+POLICY_SHA256 = "f8c050c701dafcdc6b2fea4f87868caed21deb7732b1308612f409626e787f25"
 OUTCOME_APPLIED = "Applied"
 OUTCOME_NO_CHANGE = "RetainedOriginalNoMaterialChange"
 OUTCOME_SEMANTIC_REJECTION = "RetainedOriginalSemanticRejection"
-
-_MEANINGFUL_FRAME_MOMENTS = frozenset({
-    "Action", "Progress", "Complication", "Discovery", "Exposition",
-    "Decision", "Outcome",
-})
-_NARRATIVE_PRESENTATIONS = frozenset({
-    "CinematicSequence", "InWorldRecording", "DocumentOrLore",
-    "MenuOrLoadout", "ObjectiveOrInterface",
-})
-_EVIDENCE_REPORTING = re.compile(
-    r"\b(?:is|was|are|were)\s+visible\b|\bcan\s+be\s+seen\b|"
-    r"\bon[- ]screen\s+text\b|\b(?:the|a|an)\s+"
-    r"(?:[\w'’-]+\s+){0,3}(?:screen|display|interface)\s+"
-    r"(?:shows?|showed|displays?|displayed|contains?|contained)\b",
-    re.IGNORECASE,
-)
-_CAMERA_INVENTORY = re.compile(
-    r"\bfilm(?:ed|ing)\b|"
-    r"\bfootage\s+(?:captured|showed|displayed)\s+(?:a|an|the)\b|"
-    r"\b(?:beside|before|facing|near|toward)\s+(?:the\s+)?camera\b|"
-    r"\b(?:speaks?|spoke|speaking)\s+to\s+(?:the\s+)?camera\b|"
-    r"\b(?:film(?:ed|ing)|record(?:ed|ing))\s+"
-    r"(?:him|her|them|the\s+scene)\b|\bclose[- ]?up\b",
-    re.IGNORECASE,
-)
-_NARRATIVE_OBSERVER_OPENING = re.compile(
-    r"^\s*(?:a|an|the)\s+"
-    r"(?!(?:briefing|cutscene|presentation|recording|sequence)\b)"
-    r"(?:(?!(?:as|while|when|after|before|because)\b)[\w'’-]+\s+){1,10}"
-    r"(?:stands?|stood|sits?|sat|holds?|held|carries|carried|"
-    r"remains?|remained|speaks?|spoke|talks?|talked|looks?|looked|"
-    r"turns?|turned|wears?|wore|walks?|walked|faces?|faced|"
-    r"raises?|raised|moves?|moved|points?|pointed)\b",
-    re.IGNORECASE,
-)
-_DISPLAY_INVENTORY = re.compile(
-    r"\b(?:image|notice|document|menu|text)\b[^.!?]{0,80}\b"
-    r"(?:appears?|appeared|was\s+displayed|was\s+shown)\b|"
-    r"\b(?:appears?|appeared|was\s+displayed|was\s+shown)\s+"
-    r"(?:on|in)\s+(?:a|the)\s+(?:screen|display|interface)\b|"
-    r"\b(?:a|an|the)\s+(?:[\w'’-]+\s+){0,4}"
-    r"(?:document|image|notice|menu|text)\s+"
-    r"(?:filled|occupied|covered)\b[^.!?]{0,50}\b"
-    r"(?:screen|display|interface)\b",
-    re.IGNORECASE,
-)
-_BARE_DISPLAY_EVENT = re.compile(
-    r"^\s*(?:(?:a|an|the)\s+)?(?:[\w'’-]+\s+){0,8}"
-    r"(?:appears?|appeared|displays?|displayed|shows?|showed|shown)\b",
-    re.IGNORECASE,
-)
 
 def require_policy() -> None:
     text = (HOST_DIRECTORY / POLICY_FILE_NAME).read_text(encoding="utf-8")
     normalized = text.replace("\r\n", "\n").replace("\r", "\n").strip()
     if hashlib.sha256(normalized.encode("utf-8")).hexdigest() != POLICY_SHA256:
         raise AssertionError("Grounded editorial rephrase policy source changed.")
-
-
-def _editorial_frame(value: dict[str, Any]) -> dict[str, Any] | None:
-    frame = value.get("_editorialFraming")
-    return (
-        frame
-        if isinstance(frame, dict)
-        and frame.get("authorityKind") == "StoryShapeOnly"
-        else None
-    )
-
-
-def _presentation_kinds(frame: dict[str, Any]) -> set[str]:
-    values = [
-        frame.get("primaryPresentationKind"),
-        *frame.get("supportingPresentationKinds", []),
-    ]
-    return {value for value in values if isinstance(value, str)}
-
-
-def _frame_has_useful_shape(frame: dict[str, Any]) -> bool:
-    return (
-        frame.get("momentKind") in _MEANINGFUL_FRAME_MOMENTS
-        or bool(_presentation_kinds(frame).intersection(_NARRATIVE_PRESENTATIONS))
-    )
-
-
-def _editorial_frame_drift(
-    metadata: dict[str, Any],
-    request: dict[str, Any],
-) -> bool:
-    frame = _editorial_frame(request)
-    if frame is None:
-        return False
-    title = metadata["title"]
-    description = metadata["description"]
-    if (
-        _GENERIC_PERSON_SUBJECT_OPENING.search(title)
-        or _GENERIC_PERSON_SUBJECT_OPENING.search(description)
-        or _EVIDENCE_REPORTING.search(title + "\n" + description)
-    ):
-        return True
-    if not _frame_has_useful_shape(frame):
-        return False
-    presentations = _presentation_kinds(frame)
-    combined = title + "\n" + description
-    if presentations.intersection({"CinematicSequence", "InWorldRecording"}) \
-            and (
-                _CAMERA_INVENTORY.search(combined)
-                or _NARRATIVE_OBSERVER_OPENING.search(title)
-                or _NARRATIVE_OBSERVER_OPENING.search(description)
-            ):
-        return True
-    if presentations.intersection({
-        "DocumentOrLore", "MenuOrLoadout", "ObjectiveOrInterface",
-    }) and (
-        _DISPLAY_INVENTORY.search(combined)
-        or _BARE_DISPLAY_EVENT.search(title)
-        or _BARE_DISPLAY_EVENT.search(description)
-    ):
-        return True
-    return False
-
-
-def _require_editorial_frame_adherence(
-    metadata: dict[str, Any],
-    request: dict[str, Any],
-) -> None:
-    if _editorial_frame_drift(metadata, request):
-        raise InferenceError(
-            "Grounded editorial rephrase did not preserve its validated "
-            "editorial frame and retained literal observer framing."
-        )
 
 
 def _attestation_context(
@@ -184,11 +71,16 @@ def _generate_candidate(
     source_kind: str,
     source_rejection_code: str | None,
     source_rejection_codes: tuple[str, ...],
+    primary_only_evidence: bool = False,
+    request_override: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Any, Any, str, str, dict[str, Any], Any]:
+    synthesis_request = context.synthesis_request if request_override is None else request_override
+    from .grounded_metadata_pipeline_state import scoped_metadata_grammar
+    grammar, base_audit = scoped_metadata_grammar(context, synthesis_request)
     messages = _rephrase_messages(
         source_json,
         authority,
-        context.synthesis_request["profile"]["variantIntent"],
+        synthesis_request["profile"]["variantIntent"],
         source_kind,
         source_rejection_code,
         source_rejection_codes,
@@ -208,7 +100,7 @@ def _generate_candidate(
         candidate_json,
         attestation,
     ) = functions.generate_rephrase_json_once(
-        context.synthesis_request,
+        synthesis_request,
         context.case_ordinal,
         messages,
         context.model,
@@ -217,16 +109,17 @@ def _generate_candidate(
         context.torchcodec,
         context.process_vision_info,
         context.session,
-        context.grammar,
-        context.base_audit,
+        grammar,
+        base_audit,
         MAXIMUM_NEW_TOKENS,
         lambda value: strict_metadata(
             value,
-            context.synthesis_request,
+            synthesis_request,
             context.visual_drafts,
             context.primary_visual_draft_ordinal,
             context.primary_actor_authority,
             context.primary_creator_experience_relation,
+            primary_only_evidence,
         ),
         synthesis_attestation_context=attestation_context,
     )
@@ -237,15 +130,16 @@ def _generate_candidate(
         _preserve_non_audience_fields(
             source_json,
             candidate_json,
-            context.synthesis_request,
+            synthesis_request,
             source_rejection_code,
         )
         _require_editorial_frame_adherence(
             candidate_metadata,
-            context.synthesis_request,
+            synthesis_request,
         )
         validate_narrative_case_fact_retention(
             candidate_metadata["title"], candidate_metadata["description"], authority,
+            synthesis_request,
         )
     except InferenceError as error:
         error.schema_valid_rejected_json = candidate_json
@@ -372,13 +266,22 @@ def run_editorial_rephrase(
         if source_rejection_code is not None
         else "AcceptedMetadata"
     )
+    rephrase_request = (
+        _without_automatic_commentary(context.synthesis_request)
+        if progress.withhold_unreviewed_transcripts or progress.primary_only_synthesis_evidence
+        else context.synthesis_request
+    )
     authority = _typed_retry_authority_anchor(
-        context.synthesis_request,
+        rephrase_request,
         context.visual_drafts,
         context.primary_visual_draft_ordinal,
         context.primary_actor_authority,
         context.primary_creator_experience_relation,
     )
+    authority = _scoped_retry_authority(
+        authority, progress.withhold_unreviewed_transcripts, progress.primary_only_synthesis_evidence,
+    )
+    assert authority is not None
     source_sha256 = hashlib.sha256(source_json.encode("utf-8")).hexdigest()
     progress.editorial_rephrase_source_json_sha256 = source_sha256
     if not narrative_presentation_has_distinct_fact(authority):
@@ -409,6 +312,8 @@ def run_editorial_rephrase(
             source_kind,
             source_rejection_code,
             source_rejection_codes,
+            progress.primary_only_synthesis_evidence,
+            rephrase_request,
         )
     except InferenceError as error:
         rejected_json = getattr(error, "schema_valid_rejected_json", None)

@@ -85,7 +85,7 @@ internal static partial class UiUxApplicationSurfaceTests
 
     private static Dispatcher? _uiDispatcher;
 
-    private static void RunOnSta(Action action)
+    internal static void RunOnSta(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
         if (_uiDispatcher is null)

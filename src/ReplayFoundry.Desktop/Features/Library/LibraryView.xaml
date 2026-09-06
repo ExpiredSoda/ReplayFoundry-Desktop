@@ -14,7 +14,7 @@
     d:DataContext="{d:DesignInstance Type=design:LibraryDesignViewModel, IsDesignTimeCreatable=True}"
     Background="Transparent"
     mc:Ignorable="d">
-    <Grid Margin="20">
+    <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -22,10 +22,10 @@
             <Grid Grid.Row="0">
                 <Grid.Style>
                     <Style TargetType="Grid">
-                        <Setter Property="MinHeight" Value="420" />
+                        <Setter Property="MinHeight" Value="0" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding ShouldShowPlaceholder}" Value="True">
-                                <Setter Property="MinHeight" Value="350" />
+                                <Setter Property="MinHeight" Value="0" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -116,17 +116,16 @@
 
                 <Border
                     MaxWidth="1600"
-                    MinHeight="350"
+                    MinHeight="280"
                     Padding="24"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Background="{DynamicResource Brush.SurfacePanel}"
                     BorderBrush="{DynamicResource Brush.BorderSubtle}"
-                    BorderThickness="1"
+                    BorderThickness="0"
                     CornerRadius="7"
                     Visibility="{Binding ShouldShowPlaceholder, Converter={StaticResource BoolToVisibility}}">
                     <controls:IssuePanel
-                        Width="720"
                         MaxWidth="720"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
@@ -136,8 +135,8 @@
                         StageOne="Generate a source"
                         StageTwo="Create a clip"
                         StageThree="Organize and find"
-                        Summary="Library has no finished Studio output yet."
-                        Suggestion="Bring videos into Generate, choose and edit clips in Studio, then create the finished files for Library."
+                        Summary="Your finished clips live here"
+                        Suggestion="Add a recording in Generate, edit a clip in Studio, then export it to your Library."
                         Details="Library is working. Only finished Studio files appear here; clips you leave out stay available in Studio." />
                 </Border>
 

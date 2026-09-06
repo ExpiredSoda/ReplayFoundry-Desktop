@@ -9,14 +9,15 @@
         <composition:PreviewFrameImageConverter x:Key="PreviewFrameImageConverter" />
     </UserControl.Resources>
     <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*" />
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="2*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0">
-            <TextBlock FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Priority moments" />
+        <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
+            <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Priority moments" />
             <TextBlock
                 Margin="0,7,0,18"
                 FontSize="14"
@@ -61,6 +62,15 @@
             </Grid>
 
             <Button HorizontalAlignment="Left" Command="{Binding SelectedSource.AddPointCommand}" Content="Add priority point" Style="{DynamicResource GenerationSetup.SecondaryButton}" />
+            <WrapPanel Margin="0,10,0,0">
+                <Button Command="{Binding SelectedSource.ImportMarkersCommand}" Content="Import CSV / chapter JSON" Style="{DynamicResource GenerationSetup.SecondaryButton}" Margin="0,0,6,6" />
+                <Button Command="{Binding SelectedSource.ImportRecordingChaptersCommand}" Content="Read recording chapters" Style="{DynamicResource GenerationSetup.SecondaryButton}" Margin="0,0,6,6" />
+            </WrapPanel>
+            <TextBlock FontSize="11"
+                Foreground="{DynamicResource Brush.TextSecondary}"
+                Text="CSV: timestamp (seconds or HH:MM:SS), with optional end or duration. Embedded OBS recording chapters are imported at their start times."
+                TextWrapping="Wrap" />
+            <TextBlock Margin="0,5,0,0" FontSize="11" Foreground="{DynamicResource Brush.StatusInfo}" Text="{Binding SelectedSource.MarkerImportStatus}" TextWrapping="Wrap" />
 
             <Border Margin="0,18,0,0" Padding="14" Background="{DynamicResource Brush.SurfaceInset}" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1" CornerRadius="10">
                 <StackPanel>
@@ -84,7 +94,7 @@
             </Border>
         </StackPanel>
 
-        <Border Grid.Column="2" Style="{DynamicResource GenerationSetup.SectionCard}">
+        <Border Style="{DynamicResource GenerationSetup.SummaryCard}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

@@ -42,13 +42,45 @@ public partial class PublishPreparationWindow : Window
             PreviewPosition_PreviewMouseLeftButtonUp;
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         Loaded += Window_Loaded;
+        SizeChanged += Window_SizeChanged;
         Closed += Window_Closed;
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         DialogWindowSizing.FitToOwnerWorkArea(this);
+        UpdateResponsiveLayout();
         OpenSelectedAsset();
+    }
+
+    private void Window_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateResponsiveLayout();
+
+    private void CompactReviewTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, CompactReviewTabs))
+        {
+            UpdateResponsiveLayout();
+        }
+    }
+
+    private void UpdateResponsiveLayout()
+    {
+        // Reposition the existing panes so playback and unsaved fields survive
+        // a window resize or tab change. The save footer never leaves the viewport.
+        if (ReviewPane is null || DetailsPane is null || CompactReviewTabs is null)
+        {
+            return;
+        }
+
+        bool compact = ActualWidth < 1040d;
+        CompactReviewTabs.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        ReviewColumn.Width = new GridLength(compact ? 1d : 1.04d, GridUnitType.Star);
+        GutterColumn.Width = new GridLength(compact ? 0d : 16d);
+        DetailsColumn.Width = compact ? new GridLength(0d) : new GridLength(0.96d, GridUnitType.Star);
+        Grid.SetColumn(DetailsPane, compact ? 0 : 2);
+        ReviewPane.Visibility = !compact || CompactReviewTabs.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+        DetailsPane.Visibility = !compact || CompactReviewTabs.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+        PreviewCanvas.MinHeight = compact ? 140d : 240d;
     }
 
     private void Window_Closed(object? sender, EventArgs e)

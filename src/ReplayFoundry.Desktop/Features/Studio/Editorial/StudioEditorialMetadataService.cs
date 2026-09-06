@@ -2,6 +2,7 @@ using ReplayFoundry.Desktop.Features.Generate.Editorial;
 using ReplayFoundry.Desktop.Features.Generate.Editorial.GameKnowledge;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
+using ReplayFoundry.Desktop.Platform.Media;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 
@@ -17,7 +18,9 @@ internal sealed record StudioEditorialDraftSnapshot(
 internal sealed record StudioEditorialProfileSnapshot(
     string AudienceAddress,
     string NamingGuidance,
-    string DescriptionSignature);
+    string DescriptionSignature,
+    ClipEditorialCopyObjective CopyObjective =
+        ClipEditorialCopyObjective.BalancedActionAndCommentary);
 
 internal sealed record StudioEditorialRerollResult(
     bool IsAiAssisted,
@@ -56,6 +59,8 @@ internal sealed class StudioEditorialMetadataService
 
     public bool IsAiAvailable => _generator?.IsAiAvailable == true;
 
+    public string? AiUnavailableReason => _generator?.AiUnavailableReason;
+
     public bool CanEdit(
         GenerationOutputProject? project,
         GenerationOutputAsset? asset) =>
@@ -77,7 +82,9 @@ internal sealed class StudioEditorialMetadataService
         string status = metadata is null
             ? "This clip does not have a title and description yet."
             : metadata.QualityIssues.Count > 0
-                ? "This title and description are usable but could be stronger. Edit them or try another angle."
+                ? string.Join(Environment.NewLine, metadata.QualityIssues
+                    .Select(ClipEditorialMetadataReview.Describe)
+                    .Distinct(StringComparer.Ordinal))
             : metadata.Readiness switch
             {
                 ClipEditorialMetadataReadiness.WorkingLabel =>
@@ -97,7 +104,11 @@ internal sealed class StudioEditorialMetadataService
                     ? " Local AI was not available, so Replay Foundry used its built-in writer."
                     : " Local AI could not finish, so Replay Foundry used its built-in writer.";
         }
-        string draftState = metadata?.Readiness switch
+        string draftState = metadata?.Readiness == ClipEditorialMetadataReadiness.UserApproved
+            ? "Reviewed"
+            : metadata?.QualityIssues.Count > 0
+            ? "Check copy"
+            : metadata?.Readiness switch
         {
             ClipEditorialMetadataReadiness.WorkingLabel => "Ready",
             ClipEditorialMetadataReadiness.GroundedDraft => "Ready",
@@ -113,8 +124,10 @@ internal sealed class StudioEditorialMetadataService
             draftState,
             needsCurrentCutRefresh,
             needsCurrentCutRefresh
-                ? "The clip or its captions changed after this wording was created. Refresh it so the title and description match what is there now."
-                : "This title and description match the current clip and captions.");
+                ? asset?.EditorialAuthoredContextRevision is null
+                    ? "Review and save this older wording against the current clip and captions, or refresh it."
+                    : "The clip or its captions changed after this wording was created. Refresh it so the title and description match what is there now."
+                : "This wording was saved for the current clip and captions.");
     }
 
     public StudioEditorialProfileSnapshot LoadProfile()
@@ -124,7 +137,8 @@ internal sealed class StudioEditorialMetadataService
         return new StudioEditorialProfileSnapshot(
             profile.AudienceAddress,
             profile.NamingGuidance ?? string.Empty,
-            profile.ReusableDescriptionSignature ?? string.Empty);
+            profile.ReusableDescriptionSignature ?? string.Empty,
+            profile.CopyObjective);
     }
 
     public void Save(
@@ -161,6 +175,8 @@ internal sealed class StudioEditorialMetadataService
                 ClipEditorialProfileTags.Parse(tags),
                 preservePriorTitleHistory:
                     metadataWasCurrent);
+        edited = edited.RememberPreviousCopy(currentAsset.EditorialMetadata,
+            currentAsset.EditorialAuthoredContextRevision ?? StudioEditorialContextRevision.UnknownAuthoredContext);
         edited = RemoveStaleGroundingAudit(
             edited,
             currentCutContext);
@@ -214,6 +230,7 @@ internal sealed class StudioEditorialMetadataService
         StudioEditorialVariant variant =
             StudioEditorialVariant.DirectAction)
     {
+        using IDisposable priority = MediaWorkBudget.WithPriority(MediaWorkPriority.Foreground);
         if (_generator is null ||
             _outputEditor is null)
         {
@@ -236,9 +253,15 @@ internal sealed class StudioEditorialMetadataService
             audienceAddress,
             namingGuidance,
             descriptionSignature,
-            _profileEditor?.Current.DefaultTags ?? []);
+            _profileEditor?.Current.DefaultTags ?? [],
+            _profileEditor?.Current.VoicePerspective ??
+                ClipEditorialVoicePerspective.CreatorFirstPerson,
+            _profileEditor?.Current.CopyObjective ??
+                ClipEditorialCopyObjective.BalancedActionAndCommentary);
         ClipEditorialContext requestedCutContext =
             currentAsset.CreateCurrentCutEditorialContext();
+        string startingContextRevision = StudioEditorialContextRevision.Create(requestedCutContext);
+        requestedCutContext = requestedCutContext.PrepareForEditorialGeneration();
         if (requireAi && _gameKnowledge is not null)
         {
             requestedCutContext = await _gameKnowledge.EnrichAsync(
@@ -287,6 +310,15 @@ internal sealed class StudioEditorialMetadataService
                 "The clip start or end changed during the rewrite. " +
                 "Replay Foundry kept the newer cut; try the rewrite again when the cut is settled.");
         }
+        if (!StudioEditorialContextRevision.Create(currentAsset.CreateCurrentCutEditorialContext()).Equals(
+            startingContextRevision, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "The captions or clip context changed during the rewrite. Replay Foundry kept the newer edits; try the rewrite again.");
+        }
+        if (currentAsset.EditorialMetadata is { } previous)
+            rerolled = rerolled.RememberPreviousCopy(previous,
+                currentAsset.EditorialAuthoredContextRevision ?? StudioEditorialContextRevision.UnknownAuthoredContext);
         _outputEditor.ReplaceAsset(
             currentProject.Id,
             currentAsset.WithCurrentCutEditorialMetadata(
@@ -311,6 +343,10 @@ internal sealed class StudioEditorialMetadataService
                 ClipEditorialVariantIntent.SpecificCuriosity,
             StudioEditorialVariant.OutcomeFocused =>
                 ClipEditorialVariantIntent.OutcomeFocused,
+            StudioEditorialVariant.ConcreteDetail =>
+                ClipEditorialVariantIntent.ConcreteDetail,
+            StudioEditorialVariant.CommentaryLed =>
+                ClipEditorialVariantIntent.CommentaryLed,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(variant),
                 variant,
@@ -378,7 +414,7 @@ internal sealed class StudioEditorialMetadataService
             currentProject.Id,
             currentAsset.WithCurrentCutEditorialMetadata(
                 refreshed,
-                currentAsset.EditorialMetadata!));
+                currentAsset.EditorialMetadata!, markAuthoredForCurrentContext: false));
         return new StudioGameContextOperationResult(
             _gameKnowledge.Inspect(refreshed),
             "Public game information was refreshed without scanning the video again.");
@@ -404,7 +440,7 @@ internal sealed class StudioEditorialMetadataService
             currentProject.Id,
             currentAsset.WithCurrentCutEditorialMetadata(
                 removed,
-                currentAsset.EditorialMetadata!));
+                currentAsset.EditorialMetadata!, markAuthoredForCurrentContext: false));
         return new StudioGameContextOperationResult(
             _gameKnowledge.Inspect(removed),
             "Saved public game information was removed. Your video and clip work were kept.");
@@ -427,7 +463,8 @@ internal sealed class StudioEditorialMetadataService
                 namingGuidance,
                 descriptionSignature,
                 _profileEditor.Current.DefaultTags,
-                _profileEditor.Current.VoicePerspective));
+                _profileEditor.Current.VoicePerspective,
+                _profileEditor.Current.CopyObjective));
     }
 
     private (GenerationOutputProject Project,

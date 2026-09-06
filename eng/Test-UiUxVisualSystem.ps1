@@ -33,9 +33,6 @@ $requiredPaths = @(
     "src/ReplayFoundry.Desktop/Platform/Dialogs/MediaRightsConfirmationWindow.xaml",
     "src/ReplayFoundry.Desktop/Presentation/Controls/IconPath.cs",
     "src/ReplayFoundry.Desktop/Presentation/Controls/AudioSignalWaveform.cs")
-if (-not $isPublicSnapshot) {
-    $requiredPaths += "docs/development/brand-assets.md"
-}
 foreach ($path in $requiredPaths) { Require-Path $path }
 
 $applicationIconPath = Join-Path $repositoryRoot "src/ReplayFoundry.Desktop/Assets/Icons/Application/ReplayFoundry.ico"
@@ -173,17 +170,18 @@ if ($range -notmatch 'x:Name="PART_Track"' -or
 }
 foreach ($kineticContract in @(
     @{ Text = $input; Pattern = 'Control\.InlineSelectorComboBox[\s\S]*Control\.InlineSearchTextBox'; Message = 'Shared inline selector and search styles are missing.' },
-    @{ Text = $input; Pattern = 'DropDownCaret[\s\S]*Brush\.KineticGlow'; Message = 'Shared ComboBox lacks its stateful caret or bounded popup glow.' },
+    @{ Text = $input; Pattern = 'DropDownCaret[\s\S]*x:Name="PART_Popup"[\s\S]*PopupAnimation="None"[\s\S]*x:Name="PopupSurface"[\s\S]*Property="IsDropDownOpen"[\s\S]*TargetName="DropDownCaret"'; Message = 'Shared ComboBox must keep a stateful caret and one bounded, nonanimated popup.' },
     @{ Text = $selection; Pattern = 'Control\.PreferenceChoice[\s\S]*Control\.CanvasRailListBoxItem'; Message = 'Shared preference choices or bounded navigation selection are missing.' },
-    @{ Text = $buttons; Pattern = 'SystemParameters\.ClientAreaAnimation[\s\S]*Control\.GhostButton'; Message = 'Ghost actions or reduced-motion-aware button lift are missing.' },
+    @{ Text = $buttons; Pattern = 'Control\.KeyboardFocus[\s\S]*Control\.GhostButton'; Message = 'Ghost actions and the shared keyboard-only focus foundation are missing.' },
     @{ Text = $cards; Pattern = 'Control\.CanvasPane[\s\S]*Control\.KineticMediaCard'; Message = 'Tonal panes or kinetic media cards are missing.' },
     @{ Text = $range; Pattern = 'ThumbSurface[\s\S]*IsDragging[\s\S]*Style TargetType="\{x:Type Slider\}" BasedOn="\{StaticResource Control\.KeyboardFocus\}"'; Message = 'Slider drag feedback and its keyboard-only focus adorner are missing.' })) {
     if ($kineticContract.Text -notmatch $kineticContract.Pattern) { Add-Failure $kineticContract.Message }
 }
 if ($buttons -notmatch 'x:Name="Surface"' -or
-    $buttons -notmatch 'Storyboard\.TargetName="HoverScale"[\s\S]*To="1\.01"' -or
-    $buttons -notmatch 'Storyboard\.TargetName="PressScale"[\s\S]*To="0\.9703"') {
-    Add-Failure 'Shared buttons must retain one complete interaction surface, hover lift, and tactile press compression.'
+    $buttons -notmatch 'Property="IsMouseOver"[\s\S]*TargetName="Surface"' -or
+    $buttons -notmatch 'Property="IsPressed"[\s\S]*TargetName="Surface"' -or
+    $buttons -match 'HoverScale|PressScale|DoubleAnimation|DropShadowEffect') {
+    Add-Failure 'Shared buttons must retain one stable surface with hover/press feedback and no motion or shadow layers.'
 }
 if ($buttons -match 'x:Name="(?:KineticAura|HoverAuraRoot|PressAuraGate)"' -or
     $buttons -match 'IsKeyboardFocusWithin[\s\S]{0,220}Property="BorderBrush"') {
@@ -261,20 +259,22 @@ foreach ($chromeSurface in @(
     if ([regex]::Matches($surfaceText, 'Text\.CaptionGlyph').Count -lt 3) { Add-Failure "$chromeSurface must use the shared compact style for all three native caption glyphs." }
     if ($surfaceText -notmatch '<Image[\s\S]*?Width="28"[\s\S]*?Height="28"[\s\S]*?Source="\{Binding Icon, RelativeSource=\{RelativeSource AncestorType=') { Add-Failure "$chromeSurface must project the application icon at 28 DIP from its owning Window." }
 }
-Require-Pattern "src/ReplayFoundry.Desktop/Resources/Theme/Colors.xaml" '#071014[\s\S]*#58D6FF[\s\S]*#1599C8[\s\S]*#FFC85A' "The shared theme must preserve the website-aligned ink, cyan, blue, and yellow brand palette."
+Require-Pattern "src/ReplayFoundry.Desktop/Resources/Theme/Colors.xaml" '#0B0F14[\s\S]*#58D6FF[\s\S]*#1599C8[\s\S]*#FFC85A' "The shared theme must preserve graphite ink with the cyan, blue, and yellow brand accents."
 Require-Pattern "src/ReplayFoundry.Desktop/Resources/Theme/Brushes.xaml" 'x:Key="Brush\.WindowGrid"' "The scalable brand grid brush is missing."
 Require-Pattern "src/ReplayFoundry.Desktop/Shell/Dock/FloatingDock.xaml" 'controls:IconPath' "The dock must use scalable semantic icons instead of raster artwork."
 $floatingDock = Read-RepoText "src/ReplayFoundry.Desktop/Shell/Dock/FloatingDock.xaml"
 $floatingDockStyles = Read-RepoText "src/ReplayFoundry.Desktop/Resources/Controls/FloatingDockStyles.xaml"
-if ([regex]::Matches($floatingDock, '<DropShadowEffect').Count -ne 1 -or
-    $floatingDock -notmatch 'ShadowDepth="0"') {
-    Add-Failure "The floating dock must use one centered shadow instead of an offset duplicate rectangle."
+if ($floatingDock -match 'DropShadowEffect' -or
+    $floatingDock -notmatch 'x:Name="DockFrame"') {
+    Add-Failure "The compact dock must use one frame without offset shadow layers."
 }
-if ($floatingDockStyles -notmatch '<Grid ClipToBounds="True">[\s\S]*?x:Name="ActiveSurface"[\s\S]*?Margin="5,2"') {
-    Add-Failure "Dock selection must remain clipped and inset inside its navigation cell."
+if ($floatingDock -notmatch '<Grid ClipToBounds="True">' -or
+    $floatingDockStyles -notmatch 'x:Name="ButtonSurface"[\s\S]*Property="dock:FloatingDock\.IsActive"[\s\S]*TargetName="ButtonSurface" Property="Background" Value="\{DynamicResource Brush\.InteractiveSelected\}"' -or
+    $floatingDockStyles -notmatch 'Control\.DockKeyboardFocus') {
+    Add-Failure "Dock selection must stay inside its single button surface with a distinct keyboard focus cue."
 }
-$activeDockSurface = [regex]::Match($floatingDockStyles, '<Border\s+x:Name="ActiveSurface"[\s\S]*?/>').Value
-if ($activeDockSurface -match 'BorderBrush|BorderThickness') {
+$activeDockTrigger = [regex]::Match($floatingDockStyles, '<Trigger Property="dock:FloatingDock\.IsActive"[\s\S]*?</Trigger>').Value
+if ($activeDockTrigger -match 'BorderBrush|BorderThickness') {
     Add-Failure "Dock selection must use one tonal active surface without a second outline beneath keyboard focus."
 }
 if ($selection -match 'x:Name="SelectionWash"') {

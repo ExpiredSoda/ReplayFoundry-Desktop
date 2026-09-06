@@ -58,7 +58,7 @@ internal sealed class FfmpegLibraryThumbnailRecoveryService :
                     asset.OutputFullPath,
                     asset.Duration,
                     temporary);
-            ProcessRunResult result = await _processRunner.RunAsync(
+            ProcessRunResult result = await MediaWorkBudget.RunAsync(_processRunner,
                 new ProcessRunRequest(
                     _toolLocator.LocateFfmpeg(),
                     command.Arguments,
@@ -66,7 +66,7 @@ internal sealed class FfmpegLibraryThumbnailRecoveryService :
                     command.WorkingDirectory,
                     maxStandardOutputCharacters: 64 * 1024,
                     maxStandardErrorCharacters: 512 * 1024),
-                cancellationToken).ConfigureAwait(false);
+                MediaWorkPriority.Background, cancellationToken).ConfigureAwait(false);
             if (!result.Succeeded ||
                 !File.Exists(temporary) ||
                 new FileInfo(temporary).Length <= 0)

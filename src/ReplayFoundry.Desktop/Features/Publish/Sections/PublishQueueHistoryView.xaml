@@ -21,7 +21,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
-                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="UPLOAD QUEUE" />
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Upload queue" />
                         <TextBlock
                             Margin="0,4,0,0"
                             Style="{DynamicResource Text.Meta}"
@@ -80,7 +80,57 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0">
-                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YOUTUBE HISTORY" />
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YouTube history" />
+                        <Expander Margin="0,10,0,0" Header="Performance observations"
+                                  Visibility="{Binding Analytics.IsAvailable, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBlock Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                                           Text="Optional read-only analytics for your published clips. Saved results stay on this computer. Title variants are observational; audience, timing and the clip itself also affect results." />
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="Connect analytics" Command="{Binding Analytics.ConnectCommand}" Margin="0,0,6,0" />
+                                    <Button Content="Disconnect analytics on this device" Command="{Binding Analytics.DisconnectCommand}" />
+                                </WrapPanel>
+                                <WrapPanel Margin="0,8,0,0">
+                                    <DatePicker AutomationProperties.Name="Analytics start date" SelectedDate="{Binding Analytics.From}" Margin="0,0,6,0" />
+                                    <DatePicker AutomationProperties.Name="Analytics end date" SelectedDate="{Binding Analytics.To}" />
+                                </WrapPanel>
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="Refresh observations" Command="{Binding Analytics.RefreshCommand}" Margin="0,0,6,0" />
+                                    <Button Content="Clear saved observations" Command="{Binding Analytics.ClearCommand}" />
+                                </WrapPanel>
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Text="{Binding Analytics.Status}" />
+                                <TextBlock Margin="0,8,0,4" Style="{DynamicResource Text.Meta}" Text="Filter game, frame, caption look, or source" />
+                                <TextBox Text="{Binding Analytics.ComparisonFilter, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Filter comparable published clips" />
+                                <TextBlock Margin="0,8,0,4" Style="{DynamicResource Text.Meta}" Text="Compare with a reference clip" />
+                                <ComboBox ItemsSource="{Binding Analytics.ReferenceChoices}"
+                                    SelectedValuePath="VideoId"
+                                    SelectedValue="{Binding Analytics.ReferenceVideoId}"
+                                    AutomationProperties.Name="Reference clip for performance comparison" />
+                                <WrapPanel Margin="0,6,0,0">
+                                    <CheckBox Content="Same game" IsChecked="{Binding Analytics.MatchGame}" Margin="0,0,8,0" />
+                                    <CheckBox Content="Same dimensions" IsChecked="{Binding Analytics.MatchFormat}" Margin="0,0,8,0" />
+                                    <CheckBox Content="Same channel" IsChecked="{Binding Analytics.MatchChannel}" />
+                                    <CheckBox Content="Similar duration (±20% or 3s)" IsChecked="{Binding Analytics.MatchDuration}" Margin="0,0,8,0" />
+                                    <CheckBox Content="Same upload-age band" IsChecked="{Binding Analytics.MatchAge}" ToolTip="Age at report end: 0–7, 8–30, 31–90, or over 90 days. Upload age can differ from public release age." />
+                                </WrapPanel>
+                                <TextBlock Margin="0,6,0,4" Text="{Binding Analytics.CohortSummary}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
+                                <ItemsControl ItemsSource="{Binding Analytics.Observations}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,10,0,0">
+                                                <TextBlock Text="{Binding PublishedTitle}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" />
+                                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                                                <TextBlock Text="{Binding ProvenanceSummary}" TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                                                <TextBlock Text="{Binding CaptionLookSummary}" ToolTip="{Binding CaptionLookDetails}" TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                                                <TextBlock Text="{Binding SourceCutSummary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SourceCutSummary}" Style="{DynamicResource Text.Meta}" />
+                                                <TextBlock Text="{Binding AgeSummary}" TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                                                <TextBlock Text="{Binding ReportSummary}" TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Expander>
                         <TextBlock
                             Margin="0,4,0,0"
                             Style="{DynamicResource Text.Meta}"

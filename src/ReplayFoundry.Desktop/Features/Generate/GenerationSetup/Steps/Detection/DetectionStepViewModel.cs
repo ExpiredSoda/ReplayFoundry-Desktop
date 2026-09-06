@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
+using ReplayFoundry.Desktop.Presentation.Commands;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.Workflow;
 
@@ -11,6 +13,16 @@ namespace ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.Detectio
 public sealed class DetectionStepViewModel : INotifyPropertyChanged
 {
     private readonly GenerationSetupDraft _draft;
+    private readonly GenerationRuntimeCapabilities _runtime;
+    public string GpuReadiness { get; private set; } = "";
+    public ICommand RefreshGpuReadinessCommand { get; }
+    private void RefreshGpuReadiness()
+    {
+        GpuReadiness = !_runtime.IsEditorialAiAvailable ? _runtime.EditorialAiBlockingReason :
+            _runtime.EditorialGpuReadiness?.Invoke() ?? _runtime.EditorialGpuAdmissionCheck?.Invoke() ??
+            "The local AI runtime checks memory before loading its model.";
+        OnPropertyChanged(nameof(GpuReadiness));
+    }
 
     private readonly SelectionOption<GenerationAnalysisDepth>[]
         _options;
@@ -32,6 +44,9 @@ public sealed class DetectionStepViewModel : INotifyPropertyChanged
 
         _draft = draft;
         ArgumentNullException.ThrowIfNull(runtimeCapabilities);
+        _runtime = runtimeCapabilities;
+        RefreshGpuReadinessCommand = new DelegateCommand(RefreshGpuReadiness);
+        RefreshGpuReadiness();
 
         _options =
         [

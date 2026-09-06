@@ -12,7 +12,7 @@ public sealed class GenerationMomentPortfolioSelector
         GenerationMomentFindingRequest request,
         IReadOnlyList<GenerationSourceMomentResult> sourceResults,
         CancellationToken cancellationToken = default)
-        => SelectCore(request, sourceResults, null, cancellationToken);
+        => SelectCore(request, sourceResults, null, null, null, cancellationToken);
 
     public IReadOnlyList<GenerationMomentCandidate> Select(
         GenerationMomentFindingRequest request,
@@ -22,14 +22,23 @@ public sealed class GenerationMomentPortfolioSelector
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(refinements);
-        return SelectCore(request, sourceResults, refinements, cancellationToken);
+        return SelectCore(request, sourceResults, refinements, null, null, cancellationToken);
     }
+
+    internal IReadOnlyList<GenerationMomentCandidate> SelectEligible(
+        GenerationMomentFindingRequest request, IReadOnlyList<GenerationSourceMomentResult> sourceResults,
+        IReadOnlyDictionary<MomentCandidate, GenerationCandidateRefinement> refinements,
+        IReadOnlySet<MomentCandidate> eligibleCandidates,
+        IReadOnlyDictionary<MomentCandidate, double> selectionPreferences, CancellationToken cancellationToken) =>
+        SelectCore(request, sourceResults, refinements, eligibleCandidates, selectionPreferences, cancellationToken);
 
     private static IReadOnlyList<GenerationMomentCandidate> SelectCore(
         GenerationMomentFindingRequest request,
         IReadOnlyList<GenerationSourceMomentResult> sourceResults,
         IReadOnlyDictionary<MomentCandidate, GenerationCandidateRefinement>?
             refinements,
+        IReadOnlySet<MomentCandidate>? eligibleCandidates,
+        IReadOnlyDictionary<MomentCandidate, double>? selectionPreferences,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -40,6 +49,7 @@ public sealed class GenerationMomentPortfolioSelector
                 .SelectMany(
                     (source, sourceOrder) =>
                         source.Moments.Proposals
+                            .Where(candidate => eligibleCandidates is null || eligibleCandidates.Contains(candidate))
                             .Where(
                                 static candidate =>
                                     candidate.Disposition is not
@@ -162,9 +172,22 @@ public sealed class GenerationMomentPortfolioSelector
             int maximumSelections = int.MaxValue)
         {
             int added = 0;
-            foreach (PortfolioEntry entry in entries)
+            var remaining = entries.ToList();
+            while (remaining.Count > 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // A candidate contributes only the part of its footage that
+                // the current portfolio has not already shown. Recompute
+                // after each pick so two nearly identical cuts cannot beat a
+                // comparably strong, independent moment just below a hard
+                // overlap threshold.
+                PortfolioEntry entry = requireDiversity
+                    ? remaining.OrderByDescending(value => MarginalScore(value, selected,
+                        reason == GenerationCandidateSelectionReason.QualityQualified &&
+                        selectionPreferences is not null && selectionPreferences.TryGetValue(value.Candidate, out double preference) ? preference : 0))
+                        .ThenBy(value => remaining.IndexOf(value)).First()
+                    : remaining[0];
+                remaining.Remove(entry);
 
                 if (selected.Count >=
                     request.Setup.DesiredResultCount)
@@ -336,7 +359,7 @@ public sealed class GenerationMomentPortfolioSelector
             : entry.Refinement.FinalScore < request.Setup.QualityThreshold;
 
     private static bool IsAutomaticEndingSafe(PortfolioEntry entry) =>
-        entry.Refinement?.HasIncompleteSpeechEnding != true;
+        GenerationAutomaticCandidateEligibility.IsEligible(entry.Candidate, entry.Refinement);
 
     private static double GuidanceMatchStrength(
         PortfolioEntry entry,
@@ -382,12 +405,12 @@ public sealed class GenerationMomentPortfolioSelector
                         candidate.Candidate.Window) >=
                     options.CandidateOverlapSuppressionRatio);
         bool sameEpisode =
-            candidate.Candidate.EpisodeId is not null &&
+            EpisodeDiversityIdentity(candidate.Candidate, options.OutputKind) is not null &&
             sameSource.Any(
                 existing =>
                     string.Equals(
-                        existing.Candidate.EpisodeId,
-                        candidate.Candidate.EpisodeId,
+                        EpisodeDiversityIdentity(existing.Candidate, options.OutputKind),
+                        EpisodeDiversityIdentity(candidate.Candidate, options.OutputKind),
                         StringComparison.Ordinal));
         bool montageCooldown =
             options.OutputKind ==
@@ -413,4 +436,26 @@ public sealed class GenerationMomentPortfolioSelector
         TimeSpan.FromTicks(
             window.Start.Ticks +
             window.Duration.Ticks / 2);
+
+    private static double MarginalScore(PortfolioEntry candidate, IEnumerable<SelectedPortfolioEntry> selected, double selectionPreference = 0)
+    {
+        var overlap = selected.Where(value => value.Entry.SourceOrder == candidate.SourceOrder)
+            .Select(value => (Start: Math.Max(candidate.Candidate.Window.Start.Ticks, value.Entry.Candidate.Window.Start.Ticks),
+                End: Math.Min(candidate.Candidate.Window.End.Ticks, value.Entry.Candidate.Window.End.Ticks)))
+            .Where(static range => range.End > range.Start).OrderBy(static range => range.Start).ToArray();
+        long covered = 0;
+        long lastEnd = 0;
+        foreach (var range in overlap)
+        {
+            covered += Math.Max(0, range.End - Math.Max(lastEnd, range.Start));
+            lastEnd = Math.Max(lastEnd, range.End);
+        }
+        double novelty = 1 - Math.Clamp(covered / (double)candidate.Candidate.Window.Duration.Ticks, 0, 1);
+        return (Math.Max(0, candidate.Refinement?.RankingScore ?? candidate.Candidate.Score.RawComponentTotal) + selectionPreference) * novelty;
+    }
+
+    private static string? EpisodeDiversityIdentity(MomentCandidate candidate, MomentOutputKind kind) =>
+        kind == MomentOutputKind.StandaloneClip
+            ? candidate.EpisodeCohesionIdentity ?? candidate.EpisodeId
+            : candidate.EpisodeId;
 }

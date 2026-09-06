@@ -94,6 +94,51 @@ public sealed class ClipGoalsStepViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public IReadOnlyList<SelectionOption<GenerationMomentIntent>> IntentOptions { get; } =
+    [
+        new(GenerationMomentIntent.Any, "Any strong moment", "Discover a balanced range of moments."),
+        new(GenerationMomentIntent.Action, "Action", "Prefer complete action events."),
+        new(GenerationMomentIntent.Humor, "Humor and reactions", "Prefer moments observed as humor."),
+        new(GenerationMomentIntent.Story, "Stories", "Prefer self-contained stories."),
+        new(GenerationMomentIntent.Discovery, "Discoveries", "Prefer reveals and discoveries."),
+        new(GenerationMomentIntent.Failure, "Failures", "Prefer observable failures."),
+        new(GenerationMomentIntent.Dialogue, "Dialogue", "Prefer dialogue with sufficient context."),
+        new(GenerationMomentIntent.Clutch, "Comebacks and clutches", "Search spoken context for recovery against the odds; review must establish what happened."),
+        new(GenerationMomentIntent.Tutorial, "Tutorials", "Search spoken context for explanations and instructions."),
+        new(GenerationMomentIntent.Reaction, "Creator reactions", "Search spoken context for surprise or excitement."),
+    ];
+
+    public SelectionOption<GenerationMomentIntent> SelectedIntentOption
+    {
+        get => IntentOptions.Single(value => value.Value == _draft.DiscoveryIntent.MomentType);
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _draft.UpdateDiscoveryIntent(new(value.Value, SpokenSearchTerms, NaturalLanguageQuery));
+            OnPropertyChanged();
+        }
+    }
+
+    public string SpokenSearchTerms
+    {
+        get => _draft.DiscoveryIntent.SpokenTerms;
+        set
+        {
+            _draft.UpdateDiscoveryIntent(new(SelectedIntentOption.Value, value, NaturalLanguageQuery));
+            OnPropertyChanged();
+        }
+    }
+
+    public string NaturalLanguageQuery
+    {
+        get => _draft.DiscoveryIntent.NaturalLanguageQuery;
+        set
+        {
+            _draft.UpdateDiscoveryIntent(new(SelectedIntentOption.Value, SpokenSearchTerms, value));
+            OnPropertyChanged();
+        }
+    }
+
     public IReadOnlyList<SelectionOption<ContentEmphasis>>
         EmphasisOptions =>
         _emphasisOptions;

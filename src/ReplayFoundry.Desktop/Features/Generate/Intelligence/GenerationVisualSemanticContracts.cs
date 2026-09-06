@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using ReplayFoundry.Desktop.Features.Generate.Evidence;
+using ReplayFoundry.Desktop.Features.Generate.Moments;
 using ReplayFoundry.Desktop.Media.Intelligence;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic;
 using ReplayFoundry.Desktop.Media.Moments;
@@ -12,20 +13,20 @@ public sealed class GenerationVisualSemanticSettings
         VisualSemanticPromptManifest prompt,
         VisualSemanticModelManifest model,
         VisualSemanticVideoInputPolicy videoPolicy,
-        int maximumCandidateCount = 8)
+        int maximumCandidateCount = GenerationSemanticReviewBudgetPolicy.MaximumCandidates)
     {
         Prompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
         Model = model ?? throw new ArgumentNullException(nameof(model));
         VideoPolicy = videoPolicy ??
             throw new ArgumentNullException(nameof(videoPolicy));
-        if (maximumCandidateCount is < 1 or > 8 ||
+        if (maximumCandidateCount is < 1 or > GenerationSemanticReviewBudgetPolicy.MaximumCandidates ||
             !string.Equals(
                 prompt.Version,
                 VisualSemanticPromptManifest.QualifiedEditorialVersion,
                 StringComparison.Ordinal))
         {
             throw new ArgumentException(
-                "Thorough visual review requires the frozen qualified prompt and one to eight candidates.");
+                "Thorough visual review requires the qualified prompt and a budget of one to thirty-two candidates in bounded batches.");
         }
 
         MaximumCandidateCount = maximumCandidateCount;
@@ -153,6 +154,7 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
         string,
         MaterializedVisualSemanticReviewVideo> _reviewVideos;
     private bool _disposed;
+    private GenerationVisualSemanticAnalysisResult[] _ownedReviews = [];
 
     public GenerationVisualSemanticAnalysisResult(
         GenerationCandidateIntelligenceResult candidateIntelligence,
@@ -177,7 +179,7 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
             .SelectMany(static source => source.Moments.Proposals)
             .ToArray();
         if (!Enum.IsDefined(outcome) ||
-            snapshot.Length > 8 ||
+            snapshot.Length > GenerationSemanticReviewBudgetPolicy.MaximumCandidates ||
             outcome == GenerationVisualSemanticOutcome.Completed &&
                 snapshot.Length == 0 ||
             outcome == GenerationVisualSemanticOutcome
@@ -233,18 +235,39 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
     public long? PeakAllocatedGpuBytes { get; }
     public GenerationVisualSemanticOutcome Outcome { get; }
     public bool NeedsReview => Outcome ==
-        GenerationVisualSemanticOutcome.RetainedDeterministicCandidates;
+        GenerationVisualSemanticOutcome.RetainedDeterministicCandidates || FallbackReason is not null;
     public string? FallbackReason { get; }
     public string? DiagnosticDetails { get; }
+    internal bool SupplementalReviewAttempted { get; private set; }
+
+    internal static GenerationVisualSemanticAnalysisResult Combine(
+        GenerationVisualSemanticAnalysisResult previous, GenerationVisualSemanticAnalysisResult supplemental)
+    {
+        if (previous._disposed || supplemental._disposed ||
+            !ReferenceEquals(previous.CandidateIntelligence, supplemental.CandidateIntelligence) ||
+            previous.Outcome != GenerationVisualSemanticOutcome.Completed ||
+            previous.SupplementalReviewAttempted || supplemental.Observations.Count > GenerationSemanticReviewBudgetPolicy.MaximumBatchSize)
+            throw new ArgumentException("Supplemental review must extend one live initial review from the same intelligence.");
+        var combined = new GenerationVisualSemanticAnalysisResult(previous.CandidateIntelligence, previous.Provider,
+            previous.Observations.Concat(supplemental.Observations), previous.Elapsed + supplemental.Elapsed,
+            previous.PeakAllocatedGpuBytes is null && supplemental.PeakAllocatedGpuBytes is null ? null :
+                Math.Max(previous.PeakAllocatedGpuBytes ?? 0, supplemental.PeakAllocatedGpuBytes ?? 0),
+            fallbackReason: supplemental.Outcome == GenerationVisualSemanticOutcome.RetainedDeterministicCandidates
+                ? "Some newly promoted moments could not be checked. Automatic selection uses the successfully reviewed candidates only."
+                : null,
+            diagnosticDetails: supplemental.DiagnosticDetails);
+        combined._ownedReviews = [previous, supplemental];
+        combined.SupplementalReviewAttempted = true;
+        return combined;
+    }
 
     internal VisualSemanticInputManifest? FindReviewVideo(
         string candidateId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(candidateId);
-        return !_disposed &&
-               _reviewVideos.TryGetValue(candidateId, out var video)
-            ? video.Input
-            : null;
+        if (_disposed) return null;
+        if (_reviewVideos.TryGetValue(candidateId, out var video)) return video.Input;
+        return _ownedReviews.Select(review => review.FindReviewVideo(candidateId)).FirstOrDefault(input => input is not null);
     }
 
     public void Dispose()
@@ -260,6 +283,7 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
         {
             video.Dispose();
         }
+        foreach (GenerationVisualSemanticAnalysisResult review in _ownedReviews.Reverse()) review.Dispose();
     }
 }
 
@@ -269,6 +293,13 @@ public interface IGenerationVisualSemanticAnalysisService
         GenerationCandidateIntelligenceResult candidateIntelligence,
         IProgress<GenerationVisualSemanticProgress>? progress,
         CancellationToken cancellationToken);
+
+    Task<GenerationVisualSemanticAnalysisResult> ReviewPromotedAsync(
+        GenerationCandidateIntelligenceResult baseline,
+        IReadOnlyList<GenerationMomentCandidate> selected,
+        GenerationVisualSemanticAnalysisResult previous,
+        IProgress<GenerationVisualSemanticProgress>? progress,
+        CancellationToken cancellationToken) => Task.FromResult(previous);
 }
 
 public sealed class GenerationVisualSemanticAnalysisException : Exception

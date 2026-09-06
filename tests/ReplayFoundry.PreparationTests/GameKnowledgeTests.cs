@@ -103,9 +103,89 @@ internal static class GameKnowledgeTests
             Qwen3VlGroundedMetadataGenerator.ProviderVersion,
             "Creator-voice title separation changes provider identity.");
         TestAssert.Equal(
-            "grounded-editorial-metadata-output-batch-1.54",
+            "grounded-editorial-metadata-output-batch-1.61",
             Qwen3VlGroundedMetadataGenerator.OutputSchema,
             "Current grounded metadata output schema.");
+        TestAssert.Equal(
+            "grounded-editorial-metadata-output-batch-1.60",
+            Qwen3VlGroundedMetadataGenerator.PreviousResponsibilitySplitOutputSchema,
+            "The shipped compact authoring identity remains readable after responsibility extraction.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCompactIsolatedFieldAuthoring(
+                Qwen3VlGroundedMetadataGenerator.PreviousResponsibilitySplitOutputSchema) &&
+            !Qwen3VlGroundedMetadataSchemaCapabilities.SupportsEditorialResponsibilityModules(
+                Qwen3VlGroundedMetadataGenerator.PreviousResponsibilitySplitOutputSchema) &&
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsEditorialResponsibilityModules(
+                Qwen3VlGroundedMetadataGenerator.OutputSchema),
+            "Only the new schema requires the expanded responsibility roster; prompt semantics stay compact.");
+        TestAssert.Equal(
+            "grounded-editorial-metadata-output-batch-1.59",
+            Qwen3VlGroundedMetadataGenerator.PreviousCompactIsolatedFieldAuthoringOutputSchema,
+            "The original isolated-authoring output remains readable.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsIsolatedFieldAuthoring(
+                Qwen3VlGroundedMetadataGenerator.PreviousCompactIsolatedFieldAuthoringOutputSchema) &&
+            !Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCompactIsolatedFieldAuthoring(
+                Qwen3VlGroundedMetadataGenerator.PreviousCompactIsolatedFieldAuthoringOutputSchema) &&
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCompactIsolatedFieldAuthoring(
+                Qwen3VlGroundedMetadataGenerator.OutputSchema),
+            "Output 1.59 retains its original component-prompt contract.");
+        TestAssert.Equal(
+            "grounded-editorial-metadata-output-batch-1.58",
+            Qwen3VlGroundedMetadataGenerator.PreviousIsolatedFieldAuthoringOutputSchema,
+            "The previous full-object authoring output remains readable.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsSchemaEnforcedBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.PreviousIsolatedFieldAuthoringOutputSchema) &&
+            !Qwen3VlGroundedMetadataSchemaCapabilities.SupportsIsolatedFieldAuthoring(
+                Qwen3VlGroundedMetadataGenerator.PreviousIsolatedFieldAuthoringOutputSchema),
+            "Output 1.58 retains its grammar contract without claiming isolated component generation.");
+        TestAssert.Equal(
+            "grounded-editorial-metadata-output-batch-1.57",
+            Qwen3VlGroundedMetadataGenerator.PreviousSchemaEnforcedBalancedCopyOutputSchema,
+            "Output before schema-enforced attribution remains readable.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCompactBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.PreviousSchemaEnforcedBalancedCopyOutputSchema) &&
+            !Qwen3VlGroundedMetadataSchemaCapabilities.SupportsSchemaEnforcedBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.PreviousSchemaEnforcedBalancedCopyOutputSchema) &&
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsSchemaEnforcedBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.OutputSchema),
+            "Output 1.57 retains the compact brief without claiming schema-enforced attribution.");
+        TestAssert.Equal(
+            "grounded-editorial-metadata-output-batch-1.56",
+            Qwen3VlGroundedMetadataGenerator.PreviousCompactBalancedCopyOutputSchema,
+            "Output before compact balanced authoring remains readable.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.PreviousCompactBalancedCopyOutputSchema) &&
+            !Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCompactBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.PreviousCompactBalancedCopyOutputSchema) &&
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCompactBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.OutputSchema),
+            "Output 1.56 retains balance without claiming the compact brief.");
+        TestAssert.Equal(
+            "grounded-editorial-metadata-output-batch-1.55",
+            Qwen3VlGroundedMetadataGenerator.PreviousBalancedCopyOutputSchema,
+            "Output before the typed balanced objective remains readable.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCommentaryTiming(
+                Qwen3VlGroundedMetadataGenerator.PreviousBalancedCopyOutputSchema) &&
+            !Qwen3VlGroundedMetadataSchemaCapabilities.SupportsBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.PreviousBalancedCopyOutputSchema) &&
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsBalancedCopy(
+                Qwen3VlGroundedMetadataGenerator.OutputSchema),
+            "Output 1.55 retains commentary timing without claiming balanced-copy policy.");
+        TestAssert.Equal(
+            "grounded-editorial-metadata-output-batch-1.54",
+            Qwen3VlGroundedMetadataGenerator.PreviousCommentaryTimingOutputSchema,
+            "Output before bounded automatic commentary and timing remains readable.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCommentaryTiming(
+                Qwen3VlGroundedMetadataGenerator.OutputSchema) &&
+            !Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCommentaryTiming(
+                Qwen3VlGroundedMetadataGenerator.PreviousCommentaryTimingOutputSchema),
+            "Historical output must retain its original commentary authority.");
         TestAssert.Equal(
             "grounded-editorial-metadata-output-batch-1.53",
             Qwen3VlGroundedMetadataGenerator
@@ -157,7 +237,11 @@ internal static class GameKnowledgeTests
                 .SupportsRecoveryCandidateSelectionModule(
                     Qwen3VlGroundedMetadataGenerator
                         .PreviousCreatorVoiceOutputSchema),
-            "Only output 1.54 attests the extracted candidate-selection module.");
+            "Output 1.54 and newer attest the extracted candidate-selection module.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsRecoveryCandidateSelectionModule(
+                Qwen3VlGroundedMetadataGenerator.PreviousCommentaryTimingOutputSchema),
+            "Output 1.54 retains candidate-selection provenance.");
         TestAssert.True(
             Qwen3VlGroundedMetadataSchemaCapabilities
                 .SupportsSeparatedTitleTags(
@@ -166,7 +250,11 @@ internal static class GameKnowledgeTests
                 .SupportsSeparatedTitleTags(
                     Qwen3VlGroundedMetadataGenerator
                         .PreviousCreatorVoiceOutputSchema),
-            "Only output 1.54 separates the final title from generated game tags.");
+            "Output 1.54 and newer separate the final title from generated game tags.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSchemaCapabilities.SupportsSeparatedTitleTags(
+                Qwen3VlGroundedMetadataGenerator.PreviousCommentaryTimingOutputSchema),
+            "Output 1.54 retains separated game tags.");
         TestAssert.Equal(
             "grounded-editorial-metadata-output-batch-1.50",
             Qwen3VlGroundedMetadataGenerator
@@ -248,10 +336,114 @@ internal static class GameKnowledgeTests
             """);
         Qwen3VlGroundedMetadataEditorialRephraseValidation rephraseValidation =
             Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
-                editorialRephrase.RootElement);
+                editorialRephrase.RootElement,
+                commentaryTimingSupported: false);
         TestAssert.True(
             rephraseValidation.Attempted && rephraseValidation.Applied,
-            "Current rephrase provenance must prove one applied bounded pass.");
+            "Output 1.54 rephrase provenance must prove one applied bounded pass.");
+        using JsonDocument currentRephrase = JsonDocument.Parse(
+            editorialRephrase.RootElement.GetRawText()
+                .Replace("grounded-editorial-rephrase-2.4",
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.Version,
+                    StringComparison.Ordinal)
+                .Replace("8682a789fdac6ef51963996cfe13f084dd85e8432d7098080875fbaac1e97ca7",
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.Sha256,
+                    StringComparison.Ordinal));
+        TestAssert.True(
+            Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                currentRephrase.RootElement).Applied,
+            "Current output accepts its exact rephrase identity.");
+        using JsonDocument balanceRejectedRephrase = JsonDocument.Parse(
+            currentRephrase.RootElement.GetRawText()
+                .Replace("\"editorialRephraseApplied\": true", "\"editorialRephraseApplied\": false", StringComparison.Ordinal)
+                .Replace("\"Applied\"", "\"RetainedOriginalSemanticRejection\"", StringComparison.Ordinal)
+                .Replace("\"editorialRephraseRejectionCode\": null",
+                    "\"editorialRephraseRejectionCode\": \"BalanceNotSatisfied\"", StringComparison.Ordinal));
+        var balanceRejection = Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+            balanceRejectedRephrase.RootElement);
+        TestAssert.True(balanceRejection.Attempted && !balanceRejection.Applied,
+            "A completed rephrase rejected for balance remains readable without claiming acceptance.");
+        using JsonDocument previousIsolatedRephrase = JsonDocument.Parse(
+            currentRephrase.RootElement.GetRawText()
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Version,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousIsolatedFieldAuthoringVersion, StringComparison.Ordinal)
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Sha256,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousIsolatedFieldAuthoringSha256, StringComparison.Ordinal));
+        TestAssert.True(Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+            previousIsolatedRephrase.RootElement, isolatedFieldAuthoringSupported: false).Applied,
+            "Output 1.58 retains its exact 2.8 rephrase identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(() =>
+            Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(previousIsolatedRephrase.RootElement),
+            "Current output cannot relabel a 2.8 rephrase as the isolated policy.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(() =>
+            Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(currentRephrase.RootElement, isolatedFieldAuthoringSupported: false),
+            "Historical output cannot claim the new rephrase policy.");
+        using JsonDocument previousSchemaEnforcedRephrase = JsonDocument.Parse(
+            currentRephrase.RootElement.GetRawText()
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Version,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousSchemaEnforcedBalancedCopyVersion,
+                    StringComparison.Ordinal)
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Sha256,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousSchemaEnforcedBalancedCopySha256,
+                    StringComparison.Ordinal));
+        TestAssert.True(
+            Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                previousSchemaEnforcedRephrase.RootElement, schemaEnforcedBalancedCopySupported: false).Applied,
+            "Output 1.57 accepts its exact 2.7 rephrase identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(previousSchemaEnforcedRephrase.RootElement),
+            "Current output cannot claim schema enforcement with an older identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                currentRephrase.RootElement, schemaEnforcedBalancedCopySupported: false),
+            "Output 1.57 cannot claim the 2.8 rephrase policy.");
+        using JsonDocument previousCompactRephrase = JsonDocument.Parse(
+            currentRephrase.RootElement.GetRawText()
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Version,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousCompactBalancedCopyVersion,
+                    StringComparison.Ordinal)
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Sha256,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousCompactBalancedCopySha256,
+                    StringComparison.Ordinal));
+        TestAssert.True(
+            Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                previousCompactRephrase.RootElement, compactBalancedCopySupported: false).Applied,
+            "Output 1.56 accepts its exact 2.6 rephrase identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(previousCompactRephrase.RootElement),
+            "Current output cannot claim the compact brief with an older identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                currentRephrase.RootElement, compactBalancedCopySupported: false),
+            "Output 1.56 cannot claim the 2.7 rephrase policy.");
+        using JsonDocument previousBalancedRephrase = JsonDocument.Parse(
+            currentRephrase.RootElement.GetRawText()
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Version,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousBalancedCopyVersion,
+                    StringComparison.Ordinal)
+                .Replace(Qwen3VlGroundedMetadataEditorialRephrasePolicy.Sha256,
+                    Qwen3VlGroundedMetadataEditorialRephrasePolicy.PreviousBalancedCopySha256,
+                    StringComparison.Ordinal));
+        TestAssert.True(
+            Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                previousBalancedRephrase.RootElement, balancedCopySupported: false).Applied,
+            "Output 1.55 accepts its exact 2.5 rephrase identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                previousBalancedRephrase.RootElement),
+            "Current output cannot claim balanced-copy policy with an older identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                currentRephrase.RootElement, balancedCopySupported: false),
+            "Output 1.55 cannot claim the 2.6 rephrase policy.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                editorialRephrase.RootElement),
+            "Current output cannot claim new commentary policy with an old rephrase identity.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
+                currentRephrase.RootElement, commentaryTimingSupported: false),
+            "Historical output cannot claim the new rephrase policy.");
         using JsonDocument skippedRephrase = JsonDocument.Parse(
             """
             {
@@ -273,7 +465,8 @@ internal static class GameKnowledgeTests
             """);
         Qwen3VlGroundedMetadataEditorialRephraseValidation skippedValidation =
             Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
-                skippedRephrase.RootElement);
+                skippedRephrase.RootElement,
+                commentaryTimingSupported: false);
         TestAssert.True(
             skippedValidation.EligibilitySkipped &&
             !skippedValidation.Attempted &&
@@ -282,7 +475,8 @@ internal static class GameKnowledgeTests
         TestAssert.Throws<Qwen3VlOutputParseException>(
             () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
                 skippedRephrase.RootElement,
-                eligibilitySkipSupported: false),
+                eligibilitySkipSupported: false,
+                commentaryTimingSupported: false),
             "Historical output schemas cannot acquire the current skip contract retroactively.");
         string previousAudienceFrame = editorialRephrase.RootElement
             .GetRawText()
@@ -297,7 +491,8 @@ internal static class GameKnowledgeTests
         using JsonDocument previousAudienceFrameDocument =
             JsonDocument.Parse(previousAudienceFrame);
         Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
-            previousAudienceFrameDocument.RootElement);
+            previousAudienceFrameDocument.RootElement,
+            commentaryTimingSupported: false);
         string previousStoryLedGrammaticalCenter = previousAudienceFrame
             .Replace(
                 "grounded-editorial-rephrase-2.3",
@@ -310,7 +505,8 @@ internal static class GameKnowledgeTests
         using JsonDocument previousStoryLedGrammaticalCenterDocument =
             JsonDocument.Parse(previousStoryLedGrammaticalCenter);
         Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
-            previousStoryLedGrammaticalCenterDocument.RootElement);
+            previousStoryLedGrammaticalCenterDocument.RootElement,
+            commentaryTimingSupported: false);
         string mismatchedStoryLedGrammaticalCenter = editorialRephrase
             .RootElement
             .GetRawText()
@@ -322,7 +518,8 @@ internal static class GameKnowledgeTests
             JsonDocument.Parse(mismatchedStoryLedGrammaticalCenter);
         TestAssert.Throws<Qwen3VlOutputParseException>(
             () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
-                mismatchedStoryLedGrammaticalCenterDocument.RootElement),
+                mismatchedStoryLedGrammaticalCenterDocument.RootElement,
+                commentaryTimingSupported: false),
             "Historical rephrase provenance requires its exact policy hash.");
         string recoveredRejectedLanguage = editorialRephrase.RootElement
             .GetRawText()
@@ -334,7 +531,8 @@ internal static class GameKnowledgeTests
             recoveredRejectedLanguage);
         TestAssert.Throws<Qwen3VlOutputParseException>(
             () => Qwen3VlGroundedMetadataEditorialRephrasePolicy.ParseForTesting(
-                recoveredDocument.RootElement),
+                recoveredDocument.RootElement,
+                commentaryTimingSupported: false),
             "Current reviewable-copy output cannot use the removed language-recovery outcome.");
         string historicalRecoveredRejectedLanguage = recoveredRejectedLanguage
             .Replace(
@@ -581,7 +779,8 @@ internal static class GameKnowledgeTests
             unknownRejection);
         _ = TestAssert.Throws<Qwen3VlOutputParseException>(
             () => Qwen3VlGroundedMetadataEditorialRephrasePolicy
-                .ParseForTesting(unknownRejectionDocument.RootElement),
+                .ParseForTesting(unknownRejectionDocument.RootElement,
+                    commentaryTimingSupported: false),
             "Unknown rephrase rejection codes must fail closed.");
         TestAssert.Equal(
             "grounded-editorial-metadata-output-batch-1.38",
@@ -784,7 +983,7 @@ internal static class GameKnowledgeTests
                 .LegacyRetryableSemanticRejectionSet.Contains(
                     "UnsupportedCreatorEmbodiment"),
             "Outputs 1.32 through 1.20 retain the broad semantic set; output 1.19 retains policy 1.0.");
-        (string ModuleName, string FileName)[] expectedGroundedModules =
+        (string ModuleName, string FileName)[] expectedHistoricalGroundedModules =
         [
             ("pipeline", "grounded_metadata_pipeline.py"),
             ("pipelineContract", "grounded_metadata_pipeline_contract.py"),
@@ -818,12 +1017,27 @@ internal static class GameKnowledgeTests
             ("structuredDecoding", "structured_decoding.py"),
             ("recoveryPoolPolicy", "grounded_metadata_synthesis_decoding.py"),
         ];
+        (string ModuleName, string FileName)[] expectedGroundedModules =
+        [
+            expectedHistoricalGroundedModules[0],
+            ("isolatedFieldAuthoring", "grounded_metadata_isolated_fields.py"),
+            ("groundingPacketHandoff", "grounded_packet_handoff.py"),
+            .. expectedHistoricalGroundedModules.Skip(1),
+            ("automaticCommentary", "grounded_metadata_automatic_commentary.py"),
+            ("editorialFraming", "grounded_metadata_editorial_framing.py"),
+            ("rephraseCorrections", "grounded_metadata_rephrase_corrections.py"),
+            ("rephraseFrame", "grounded_metadata_rephrase_frame.py"),
+        ];
         TestAssert.True(
             Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
                 .GroundedMetadataModules.SequenceEqual(expectedGroundedModules),
             "Every extracted grounded-metadata module must stay attested in exact runtime order.");
+        TestAssert.True(
+            Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
+                .PreviousIsolatedFieldAuthoringGroundedMetadataModules.SequenceEqual(expectedHistoricalGroundedModules),
+            "Schema 1.58 retains its exact roster without isolated authoring or handoff modules.");
         TestAssert.Equal(
-            expectedGroundedModules.Length - 1,
+            expectedHistoricalGroundedModules.Length - 1,
             Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
                 .PreviousRecoveryCandidateSelectionGroundedMetadataModules.Count,
             "Schema 1.53 retains its pre-candidate-selection module roster.");
@@ -835,7 +1049,7 @@ internal static class GameKnowledgeTests
                         StringComparison.Ordinal)),
             "Historical schemas must not claim the current candidate-selection module.");
         TestAssert.Equal(
-            expectedGroundedModules.Length - 2,
+            expectedHistoricalGroundedModules.Length - 2,
             Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
                 .PreviousSynthesisSanitizationGroundedMetadataModules.Count,
             "Schema 1.52 retains its pre-sanitization module roster.");
@@ -4215,6 +4429,16 @@ internal static class GameKnowledgeTests
             modules,
             recoveryCandidateSelectionSupported: true,
             synthesisSanitizationSupported: true);
+        Qwen3VlGroundedMetadataModuleIdentity[] previousResponsibilityModules =
+            Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy.PreviousResponsibilitySplitGroundedMetadataModules
+                .Select(module => new Qwen3VlGroundedMetadataModuleIdentity(module.ModuleName, module.FileName, hashA)).ToArray();
+        ValidateModuleRoster(previousResponsibilityModules, true, true, editorialResponsibilityModulesSupported: false);
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => ValidateModuleRoster(previousResponsibilityModules, true, true),
+            "Current ordinary synthesis must attest the extracted validation modules.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(
+            () => ValidateModuleRoster(modules, true, true, editorialResponsibilityModulesSupported: false),
+            "Schemas 1.59 and 1.60 cannot be relabeled with the later module roster.");
         Qwen3VlGroundedMetadataModuleIdentity[] previousCandidateModules =
             Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
                 .PreviousRecoveryCandidateSelectionGroundedMetadataModules
@@ -4582,7 +4806,8 @@ internal static class GameKnowledgeTests
         void ValidateModuleRoster(
             IReadOnlyList<Qwen3VlGroundedMetadataModuleIdentity> actualModules,
             bool recoveryCandidateSelectionSupported,
-            bool synthesisSanitizationSupported) =>
+            bool synthesisSanitizationSupported,
+            bool editorialResponsibilityModulesSupported = true) =>
             Qwen3VlGroundedMetadataSelection
                 .ValidateSynthesisRecoveryPoolProvenance(
                     synthesisPassCount: 7,
@@ -4609,7 +4834,8 @@ internal static class GameKnowledgeTests
                     recoveryCandidateSelectionModuleSupported:
                         recoveryCandidateSelectionSupported,
                     synthesisSanitizationModuleSupported:
-                        synthesisSanitizationSupported);
+                        synthesisSanitizationSupported,
+                    editorialResponsibilityModulesSupported: editorialResponsibilityModulesSupported);
     }
 
     private static void ValidateConditionalRecoveryPoolSourceContract()

@@ -70,7 +70,9 @@ internal static class FfmpegClipRenderCommandBuilder
         StudioVideoEffectPreset videoEffect =
             StudioVideoEffectPreset.None,
         double videoEffectIntensityPercent = 0,
-        IReadOnlyList<StudioGraphicOverlay>? graphicOverlays = null)
+        IReadOnlyList<StudioGraphicOverlay>? graphicOverlays = null,
+        StudioRenderSettings? renderSettings = null,
+        string? timedTextFileName = null)
     {
         ArgumentNullException.ThrowIfNull(media);
         ArgumentNullException.ThrowIfNull(profile);
@@ -95,6 +97,10 @@ internal static class FfmpegClipRenderCommandBuilder
                 "Subtitle scripts must use a simple ASS filename and an explicit working directory.",
                 nameof(subtitleFileName));
         }
+        if (timedTextFileName is not null &&
+            (!System.Text.RegularExpressions.Regex.IsMatch(timedTextFileName, "^[A-Za-z0-9_-]+\\.ass$") ||
+             string.IsNullOrWhiteSpace(workingDirectory) || !Path.IsPathFullyQualified(workingDirectory)))
+            throw new ArgumentException("Text overlays require an owned ASS filename and working directory.", nameof(timedTextFileName));
         if (!Enum.IsDefined(videoEffect) ||
             !double.IsFinite(videoEffectIntensityPercent) ||
             videoEffectIntensityPercent is < 0 or > 100)
@@ -115,19 +121,26 @@ internal static class FfmpegClipRenderCommandBuilder
         string start = Seconds(sourceStart);
         string duration = Seconds(clipDuration);
         int videoBitRate = CalculateVideoBitRate(profile);
+        videoBitRate = checked((int)(videoBitRate * (renderSettings?.Quality switch
+        {
+            StudioExportQuality.Compact => 0.65,
+            StudioExportQuality.High => 1.5,
+            _ => 1,
+        })));
         string filter =
             $"scale={profile.Width}:{profile.Height}:" +
             "force_original_aspect_ratio=decrease," +
             $"pad={profile.Width}:{profile.Height}:" +
             "(ow-iw)/2:(oh-ih)/2:color=black," +
             "setsar=1," +
-            $"fps={profile.FramesPerSecond}," +
+            $"fps={profile.FfmpegFrameRate}:start_time=0:eof_action=pass," +
             BuildVideoEffectFilter(
                 videoEffect,
                 videoEffectIntensityPercent) +
             (subtitleFileName is null
                 ? string.Empty
                 : $"ass=filename='{subtitleFileName}',") +
+            (timedTextFileName is null ? string.Empty : $"ass=filename='{timedTextFileName}',") +
             "format=yuv420p";
         var arguments = new List<string>
         {
@@ -158,9 +171,19 @@ internal static class FfmpegClipRenderCommandBuilder
         }
         var filterGraph = new List<string>();
         string videoMap = $"0:{media.PrimaryVideoStream.Index}";
+        string videoInput = $"[0:{media.PrimaryVideoStream.Index}]";
+        if (renderSettings is not null)
+        {
+            videoInput = FfmpegStudioCompositionGraph.AppendVideo(filterGraph, media, profile, renderSettings, sourceStart);
+            filter = $"fps={profile.FfmpegFrameRate}:start_time=0:eof_action=pass," +
+                BuildVideoEffectFilter(videoEffect, videoEffectIntensityPercent) +
+                (subtitleFileName is null ? string.Empty : $"ass=filename='{subtitleFileName}',") +
+                (timedTextFileName is null ? string.Empty : $"ass=filename='{timedTextFileName}',") +
+                "format=yuv420p";
+        }
         if (overlays.Length > 0)
         {
-            filterGraph.Add($"[0:{media.PrimaryVideoStream.Index}]{filter}[vstage0]");
+            filterGraph.Add($"{videoInput}{filter}[vstage0]");
             for (int index = 0; index < overlays.Length; index++)
             {
                 StudioGraphicOverlay overlay = overlays[index];
@@ -179,7 +202,17 @@ internal static class FfmpegClipRenderCommandBuilder
             }
             videoMap = $"[vstage{overlays.Length}]";
         }
-        if (audioStreamCount > 1)
+        else if (renderSettings is not null)
+        {
+            filterGraph.Add($"{videoInput}{filter}[vout]");
+            videoMap = "[vout]";
+        }
+        string? customAudioMap = null;
+        if (audioStreamCount > 0 && renderSettings is not null &&
+            (renderSettings.AudioTracks.Count > 0 || renderSettings.DuckGameplay ||
+             renderSettings.AudioMastering.NormalizeLoudness || renderSettings.AudioMastering.LimitTruePeak))
+            customAudioMap = FfmpegStudioCompositionGraph.AppendAudio(filterGraph, media, renderSettings, clipDuration);
+        else if (audioStreamCount > 1)
         {
             string audioMixInputs = string.Concat(
                 media.AudioStreams.Select(
@@ -202,14 +235,16 @@ internal static class FfmpegClipRenderCommandBuilder
             "-map",
             videoMap,
             "-map",
-            audioStreamCount switch
+            customAudioMap ?? (audioStreamCount switch
             {
                 0 => $"{overlays.Length + 1}:a:0",
                 1 => $"0:{media.AudioStreams[0].Index}",
                 _ => "[aout]",
-            },
+            }),
         ]);
         arguments.AddRange(FfmpegH264EncodingPolicy.CreateArguments(videoBitRate));
+        // Output -t owns the requested cut duration. -shortest can terminate
+        // H.264 output one frame early while the AAC encoder drains.
         arguments.AddRange(
         [
             "-c:a",
@@ -220,12 +255,11 @@ internal static class FfmpegClipRenderCommandBuilder
             "48000",
             "-ac",
             "2",
-            "-shortest",
             "-movflags",
             "+faststart",
             outputPath,
         ]);
-        if (overlays.Length == 0)
+        if (overlays.Length == 0 && renderSettings is null)
         {
             int outputIndex = arguments.Count - 1;
             arguments.InsertRange(outputIndex, ["-vf", filter]);
@@ -283,6 +317,39 @@ internal static class FfmpegClipRenderCommandBuilder
                 120,
                 1800));
         return new(arguments, timeout, outputPath);
+    }
+
+    public static FfmpegClipRenderCommand BuildNormalizedConcatenation(
+        string concatListPath, string outputPath, TimeSpan totalDuration,
+        GenerationClipOutputProfile profile, bool requiresBt709Tags = false,
+        StudioExportQuality quality = StudioExportQuality.Standard)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        if (!Enum.IsDefined(quality)) throw new ArgumentOutOfRangeException(nameof(quality));
+        // Reuse path/duration validation, but retain only the demuxer prefix.
+        FfmpegClipRenderCommand copy = BuildConcatenation(concatListPath, outputPath, totalDuration);
+        var arguments = copy.Arguments.TakeWhile(static value => value != "-c").ToList();
+        string duration = Seconds(totalDuration);
+        arguments.AddRange([
+            "-map", "0:v:0", "-map", "0:a:0",
+            "-vf", $"fps={profile.FfmpegFrameRate}:start_time=0:eof_action=pass," +
+                $"tpad=stop_mode=clone:stop_duration=0.3,trim=duration={duration},format=yuv420p",
+            "-af", $"aresample=48000:async=1:first_pts=0,apad=whole_dur={duration}," +
+                $"atrim=duration={duration},asetpts=N/SR/TB",
+            "-t", duration,
+        ]);
+        int bitrate = checked((int)(CalculateVideoBitRate(profile) * (quality switch
+        {
+            StudioExportQuality.Compact => .65,
+            StudioExportQuality.High => 1.5,
+            _ => 1,
+        })));
+        arguments.AddRange(FfmpegH264EncodingPolicy.CreateArguments(bitrate));
+        arguments.AddRange(["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2"]);
+        if (requiresBt709Tags)
+            arguments.AddRange(["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv"]);
+        arguments.AddRange(["-movflags", "+faststart", outputPath]);
+        return new(arguments, TimeSpan.FromSeconds(Math.Clamp(totalDuration.TotalSeconds * 6, 120, 1800)), outputPath);
     }
 
     public static FfmpegClipRenderCommand BuildThumbnail(
@@ -349,7 +416,7 @@ internal static class FfmpegClipRenderCommandBuilder
         return checked((int)Math.Clamp(
             Math.Round(bitsPerSecond),
             1_500_000d,
-            30_000_000d));
+            Math.Max(profile.Width, profile.Height) > 1920 ? 80_000_000d : 30_000_000d));
     }
 
     private static string BuildVideoEffectFilter(

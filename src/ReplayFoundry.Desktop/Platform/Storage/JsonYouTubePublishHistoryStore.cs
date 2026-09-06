@@ -8,9 +8,10 @@ public sealed class JsonYouTubePublishHistoryStore :
     IYouTubePublishHistoryStore
 {
     private const string SchemaVersion =
-        "replayfoundry-youtube-publish-history-1.1";
+        "replayfoundry-youtube-publish-history-1.2";
     private const string PreviousSchemaVersion =
-        "replayfoundry-youtube-publish-history-1.0";
+        "replayfoundry-youtube-publish-history-1.1";
+    private const string OriginalSchemaVersion = "replayfoundry-youtube-publish-history-1.0";
     private static readonly JsonSerializerOptions JsonOptions =
         ReplayFoundryLocalJsonPolicy.IndentedCamelCase;
 
@@ -110,7 +111,7 @@ public sealed class JsonYouTubePublishHistoryStore :
                 JsonOptions);
             if (document is null ||
                 document.SchemaVersion != SchemaVersion &&
-                document.SchemaVersion != PreviousSchemaVersion ||
+                document.SchemaVersion != PreviousSchemaVersion && document.SchemaVersion != OriginalSchemaVersion ||
                 document.Entries is null)
             {
                 throw new InvalidDataException(
@@ -146,7 +147,8 @@ public sealed class JsonYouTubePublishHistoryStore :
                     string.IsNullOrWhiteSpace(entry.RemoteStatus)
                         ? YouTubeRemoteVideoStatus.NotChecked
                         : Enum.Parse<YouTubeRemoteVideoStatus>(entry.RemoteStatus),
-                    entry.RemoteCheckedAtUtc));
+                    entry.RemoteCheckedAtUtc,
+                    entry.Provenance));
             }
             if (result.Select(static value => value.Id)
                     .Distinct(StringComparer.Ordinal).Count() != result.Count)
@@ -186,6 +188,7 @@ public sealed class JsonYouTubePublishHistoryStore :
                     FailureMessage = entry.FailureMessage,
                     RemoteStatus = entry.RemoteStatus.ToString(),
                     RemoteCheckedAtUtc = entry.RemoteCheckedAtUtc,
+                    Provenance = entry.Provenance,
                 }).ToArray(),
         };
         AtomicJsonFile.Write(_path, document, JsonOptions);
@@ -212,5 +215,6 @@ public sealed class JsonYouTubePublishHistoryStore :
         public string? FailureMessage { get; set; }
         public string? RemoteStatus { get; set; }
         public DateTimeOffset? RemoteCheckedAtUtc { get; set; }
+        public YouTubePublishProvenance? Provenance { get; set; }
     }
 }

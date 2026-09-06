@@ -62,18 +62,15 @@ internal static class Qwen3VlGroundedMetadataRecoveryPolicyParser
         bool foundationalPolicy = outputSchema.Equals(
             LegacyOutputSchema,
             StringComparison.Ordinal);
-        bool latestPolicy = outputSchema.Equals(
-            OutputSchema,
-            StringComparison.Ordinal);
+        bool latestPolicy = Qwen3VlGroundedMetadataSchemaCapabilities
+            .SupportsRecoveryCandidateSelectionModule(outputSchema);
         bool terminalPeriodPolicy = !latestPolicy &&
             Qwen3VlGroundedMetadataSchemaCapabilities.IsNewerThan(
                 outputSchema,
                 PreviousInterfaceCorrectionOutputSchema);
         bool policy17 = currentPolicy && !latestPolicy &&
             !terminalPeriodPolicy;
-        string expectedVersion = outputSchema.Equals(
-                OutputSchema,
-                StringComparison.Ordinal)
+        string expectedVersion = latestPolicy
             ? Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy.Version
             : terminalPeriodPolicy
             ? Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
@@ -106,9 +103,7 @@ internal static class Qwen3VlGroundedMetadataRecoveryPolicyParser
                                     .FoundationalVersion
                                 : throw new Qwen3VlOutputParseException(
                                     "Grounded Qwen recovery-pool schema is unsupported.");
-        string expectedSha256 = outputSchema.Equals(
-                OutputSchema,
-                StringComparison.Ordinal)
+        string expectedSha256 = latestPolicy
             ? Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy.Sha256
             : terminalPeriodPolicy
             ? Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy

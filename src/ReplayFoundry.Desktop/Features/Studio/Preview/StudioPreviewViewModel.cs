@@ -54,6 +54,8 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
     private bool _resumeAfterScrub;
     private bool _playWhenSynchronized;
     private bool _isUpdatingRange;
+    private bool _isBinding;
+    private bool _needsEnvelope;
     private bool _isLoading;
     private bool _isCaptionContentVisible = true;
     private bool _isStopping;
@@ -94,7 +96,7 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
             () => _asset is not null && !IsPreviewLoading);
         _toggleCaptionVisibilityCommand = new DelegateCommand(
             ToggleCaptionVisibility,
-            () => _hasProject && _asset?.Captions is not null);
+            () => _hasProject && _asset?.Captions is not null && _asset.RenderSettings.BurnCaptions);
     }
 
 
@@ -157,13 +159,16 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         : "Icon.Play";
     public string PreviewFormatText => _asset is null
         ? "1080 × 1920 · 30 FPS"
-        : GenerationClipOutputProfile.FromReference(
-            _asset.SourceMedia.PrimaryVideoStream).DisplayText;
+        : GenerationClipOutputProfile.FromAsset(_asset).DisplayText;
     public double PreviewCanvasWidth => PreviewProfile.Width;
     public double PreviewCanvasHeight => PreviewProfile.Height;
-    public string PreviewScaleText => PreviewCanvasHeight > PreviewCanvasWidth
-        ? "PHONE FIT · 9:16"
-        : "FIT · 16:9";
+    public string PreviewScaleText => _asset?.RenderSettings.Canvas switch
+    {
+        StudioOutputCanvas.Portrait => "PORTRAIT · 9:16",
+        StudioOutputCanvas.Square => "SQUARE · 1:1",
+        StudioOutputCanvas.Landscape => "LANDSCAPE · 16:9",
+        _ => "SOURCE ASPECT",
+    };
     public string PreviewTimecode => _asset is null
         ? "0:00"
         : StudioTimeFormatter.FormatDuration(
@@ -174,11 +179,16 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         : StudioTimeFormatter.FormatDuration(_rangeEnd - _rangeStart);
     public bool IsCaptionContentVisible => _isCaptionContentVisible;
     public bool CanShowCaptionControls =>
-        _showCaptionControls && _asset?.Captions is not null;
+        _showCaptionControls && _asset?.Captions is not null && _asset.RenderSettings.BurnCaptions;
     public bool HasLiveCaption =>
-        IsCaptionContentVisible &&
+        IsCaptionContentVisible && _asset?.RenderSettings.BurnCaptions == true &&
         !string.IsNullOrWhiteSpace(_liveCaptionFrame.Text);
     public string? LiveCaptionText => _liveCaptionFrame.Text;
+    public IReadOnlyList<StudioCaptionWordSpan> LiveCaptionEmphasisSpans =>
+        _liveCaptionFrame.EmphasisSpans ?? [];
+    public string? LiveSecondaryCaptionText => _liveCaptionFrame.SecondaryText;
+    public bool HasLiveSecondaryCaption => IsCaptionContentVisible && _asset?.RenderSettings.BurnCaptions == true &&
+        !string.IsNullOrWhiteSpace(LiveSecondaryCaptionText);
     public string? LiveCaptionActiveWord =>
         _liveCaptionFrame.ActiveWord;
     public int LiveCaptionAccentStartIndex =>
@@ -191,9 +201,12 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         _liveCaptionFrame.AccentProgress;
     public double LiveCaptionScale => _liveCaptionFrame.Scale;
     public double LiveCaptionVerticalPercent =>
-        (_draftAppearance ?? _asset?.Appearance)?
-            .CaptionVerticalPositionPercent ??
-        StudioClipAppearance.DefaultCaptionVerticalPositionPercent;
+        Math.Min(_asset?.Captions?.Segments.Any(segment => !string.IsNullOrWhiteSpace(segment.SecondaryText)) == true ? 80 : 100,
+            LiveCaptionTypography.ConstrainVerticalPosition(ActiveCaptionAppearance.CaptionVerticalPositionPercent));
+    public double LiveSecondaryCaptionVerticalPercent => Math.Min(90, LiveCaptionVerticalPercent + 10);
+    public double LiveSecondaryCaptionFontSizePixels =>
+        Math.Round(LiveCaptionLayout.BaseFontSizePixels * .75) * .75;
+    public StudioCaptionTypography LiveCaptionTypography => ActiveCaptionAppearance.CaptionTypography;
     public GenerationCaptionStylePreset LiveCaptionStyle =>
         _asset?.Captions is { } captions
             ? StudioCaptionPresentationPolicy.ResolveEffectiveStyle(
@@ -205,10 +218,33 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
     public double LiveCaptionFontSizePixels =>
         StudioCaptionPresentationPolicy.GetWpfPreviewFontSize(
             LiveCaptionLayout);
+    private (GenerationCandidateCaptionTrack Track, StudioClipAppearance Appearance, int Width, int Height, TimeSpan Start, TimeSpan Duration)? _captionBoundsKey;
+    private string? _captionBoundsWarning;
+    private string? _captionTimingWarning;
     public string? LiveCaptionPresentationWarning
-        => StudioCaptionPresentationPolicy.GetPresentationWarning(
-            _asset?.Captions,
-            ActiveCaptionAppearance);
+    {
+        get
+        {
+            if (_asset?.Captions is not { } track || !_asset.RenderSettings.BurnCaptions) return null;
+            var appearance = ActiveCaptionAppearance;
+            var key = (track, appearance, PreviewProfile.Width, PreviewProfile.Height, _asset.SourceStart, _asset.Duration);
+            if (_captionBoundsKey != key)
+            {
+                var cut = StudioCaptionCutProjection.Project(track, _asset.SourceStart, _asset.SourceEnd).Track;
+                _captionTimingWarning = StudioCaptionPresentationPolicy.GetPresentationWarning(cut, appearance);
+                _captionBoundsWarning = StudioCaptionBoundsReview.GetWarning(cut, LiveCaptionTypography, LiveCaptionStyle,
+                    StudioCaptionPresentationPolicy.ResolveEffectiveWordLimit(LiveCaptionStyle, appearance.CaptionWordLimit),
+                    LiveCaptionLayout, key.Width, key.Height, LiveCaptionVerticalPercent);
+                _captionBoundsKey = key;
+            }
+            string warning = string.Join(" ", new[]
+            {
+                _captionTimingWarning,
+                StudioCaptionFontResolver.Resolve(LiveCaptionTypography.FontFamily).Warning, _captionBoundsWarning,
+            }.Where(static value => value is not null));
+            return warning.Length == 0 ? null : warning;
+        }
+    }
     public bool HasLiveCaptionPresentationWarning =>
         LiveCaptionPresentationWarning is not null;
     public string CaptionVisibilityText =>
@@ -244,6 +280,7 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
             StringComparison.Ordinal);
         if (shouldReload)
         {
+            _needsEnvelope = false;
             StartPreviewSession();
         }
         _hasProject = hasProject;
@@ -260,9 +297,14 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
             _draftAppearance = null;
             _captionFrameCalculator.Reset();
         }
-        UpdateRange(
-            asset?.SourceStart ?? TimeSpan.Zero,
-            asset?.SourceEnd ?? TimeSpan.Zero);
+        _isBinding = true;
+        try
+        {
+            UpdateRange(
+                asset?.SourceStart ?? TimeSpan.Zero,
+                asset?.SourceEnd ?? TimeSpan.Zero);
+        }
+        finally { _isBinding = false; }
         NotifyContextProperties();
         NotifyLiveCaptionProperties();
         NotifyCommandState();
@@ -319,6 +361,16 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         }
         RefreshLiveCaptionFrame();
         NotifyLiveCaptionContentProperties();
+        if (!_isBinding && !_isLoading && _asset is not null && _lease is not null &&
+            _rangeMode == StudioPreviewRangeMode.EditableEnvelope && !CoversCurrentRange(_lease))
+        {
+            // The first foreground request renders only the selected cut. Pay
+            // for trim context only when an edit actually needs footage outside
+            // that proxy; a completed background envelope can satisfy this hit.
+            _needsEnvelope = true;
+            StartPreviewSession();
+            _ = ReloadAsync();
+        }
     }
 
     public void UpdateAppearanceDraft(StudioClipAppearance appearance)
@@ -721,15 +773,28 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         _error = null;
         _status = "Getting this clip ready…";
         NotifyPreviewProperties();
+        bool reloadForRange = false;
         try
         {
+            StudioPreviewMediaRequest request = CreateMediaRequest(requestedAsset);
             StudioPreviewMediaLease lease = await _mediaService.MaterializeAsync(
-                CreateMediaRequest(requestedAsset),
+                request,
                 cancellationToken);
             if (cancellationToken.IsCancellationRequested ||
                 loadGeneration != _loadGeneration)
             {
                 lease.Dispose();
+                return;
+            }
+            if (_rangeMode == StudioPreviewRangeMode.EditableEnvelope && !CoversCurrentRange(lease))
+            {
+                // A trim may move while the exact-cut proxy is being prepared.
+                // Never expose a proxy that cannot seek to the current range.
+                lease.Dispose();
+                if (request.SourceStart <= _rangeStart && request.SourceEnd >= _rangeEnd)
+                    throw new InvalidDataException("The prepared preview does not cover the requested source range. Reload the preview to try again.");
+                _needsEnvelope = true;
+                reloadForRange = true;
                 return;
             }
 
@@ -763,6 +828,11 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
             {
                 _isLoading = false;
                 NotifyPreviewProperties();
+                if (reloadForRange && !_isStopping)
+                {
+                    StartPreviewSession();
+                    _ = ReloadAsync();
+                }
             }
         }
     }
@@ -841,84 +911,24 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
 
     private void NotifyContextProperties()
     {
-        foreach (string propertyName in new[]
-        {
-            nameof(SequenceSummary),
-            nameof(ProjectPromptTitle),
-            nameof(PreviewFormatText),
-            nameof(PreviewCanvasWidth),
-            nameof(PreviewCanvasHeight),
-            nameof(PreviewScaleText),
-            nameof(CanShowCaptionControls),
-            nameof(IsCaptionContentVisible),
-            nameof(CaptionVisibilityText),
-            nameof(CaptionVisibilityShortText),
-        })
-        {
-            OnPropertyChanged(propertyName);
-        }
+        StudioPreviewPropertyNotifications.Context(OnPropertyChanged);
     }
 
     private void NotifyPreviewProperties()
     {
-        foreach (string propertyName in new[]
-        {
-            nameof(PreviewMediaPath),
-            nameof(PreviewSourceOffsetSeconds),
-            nameof(PreviewSeekVersion),
-            nameof(IsPreviewPlaying),
-            nameof(IsPreviewLoading),
-            nameof(IsPreviewAvailable),
-            nameof(IsPreviewSynchronized),
-            nameof(ProjectPromptTitle),
-            nameof(PreviewStatus),
-            nameof(PreviewError),
-            nameof(HasPreviewError),
-            nameof(PreviewPlayPauseText),
-            nameof(PreviewPlayPauseIconKey),
-            nameof(HasLiveCaption),
-            nameof(LiveCaptionText),
-            nameof(LiveCaptionActiveWord),
-            nameof(LiveCaptionAccentStartIndex),
-            nameof(LiveCaptionAccentLength),
-            nameof(LiveCaptionSweepLength),
-            nameof(LiveCaptionAccentProgress),
-            nameof(LiveCaptionScale),
-            nameof(LiveCaptionVerticalPercent),
-            nameof(LiveCaptionStyle),
-            nameof(LiveCaptionMaximumWidthPixels),
-            nameof(LiveCaptionFontSizePixels),
-            nameof(LiveCaptionPresentationWarning),
-            nameof(HasLiveCaptionPresentationWarning),
-        })
-        {
-            OnPropertyChanged(propertyName);
-        }
+        StudioPreviewPropertyNotifications.Preview(OnPropertyChanged);
         NotifyCommandState();
     }
 
     private void NotifyLiveCaptionProperties()
     {
         RefreshLiveCaptionFrame();
-        NotifyLiveCaptionContentProperties();
-        OnPropertyChanged(nameof(LiveCaptionVerticalPercent));
-        OnPropertyChanged(nameof(LiveCaptionStyle));
-        OnPropertyChanged(nameof(LiveCaptionMaximumWidthPixels));
-        OnPropertyChanged(nameof(LiveCaptionFontSizePixels));
-        OnPropertyChanged(nameof(LiveCaptionPresentationWarning));
-        OnPropertyChanged(nameof(HasLiveCaptionPresentationWarning));
+        StudioPreviewPropertyNotifications.LiveCaption(OnPropertyChanged);
     }
 
     private void NotifyLiveCaptionContentProperties()
     {
-        OnPropertyChanged(nameof(HasLiveCaption));
-        OnPropertyChanged(nameof(LiveCaptionText));
-        OnPropertyChanged(nameof(LiveCaptionActiveWord));
-        OnPropertyChanged(nameof(LiveCaptionAccentStartIndex));
-        OnPropertyChanged(nameof(LiveCaptionAccentLength));
-        OnPropertyChanged(nameof(LiveCaptionSweepLength));
-        OnPropertyChanged(nameof(LiveCaptionAccentProgress));
-        OnPropertyChanged(nameof(LiveCaptionScale));
+        StudioPreviewPropertyNotifications.LiveCaptionContent(OnPropertyChanged);
     }
 
     private void NotifyCommandState()
@@ -954,28 +964,26 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         StudioClipAppearance.CreateDefault(
             GenerationCaptionStylePreset.Clean);
 
-    private static string? CreatePreviewMediaIdentity(
-        GenerationOutputAsset? asset,
-        StudioPreviewRangeMode rangeMode) => asset is null
-            ? null
-            : StudioPreviewCacheKey.CreateMediaIdentity(
-                new StudioPreviewMediaRequest(asset, rangeMode));
+    private static string? CreatePreviewMediaIdentity(GenerationOutputAsset? asset, StudioPreviewRangeMode rangeMode) =>
+        StudioPreviewRequestPolicy.CreateIdentity(asset, rangeMode);
 
-    private StudioPreviewMediaRequest CreateMediaRequest(
-        GenerationOutputAsset asset) => new(asset, _rangeMode);
+    private StudioPreviewMediaRequest CreateMediaRequest(GenerationOutputAsset asset) =>
+        StudioPreviewRequestPolicy.CreateRequest(asset, _rangeMode, _needsEnvelope, _rangeStart, _rangeEnd);
+
+    private bool CoversCurrentRange(StudioPreviewMediaLease lease) =>
+        lease.SourceOffset <= _rangeStart && lease.SourceOffset + lease.Duration >= _rangeEnd;
 
     private StudioCaptionFrameLayout LiveCaptionLayout =>
         StudioCaptionPresentationPolicy.CalculateFrameLayout(
             PreviewProfile.Width,
             PreviewProfile.Height,
             LiveCaptionStyle,
-            ActiveCaptionAppearance.CaptionMaximumWidthPercent,
+            LiveCaptionTypography.ConstrainMaximumWidth(ActiveCaptionAppearance.CaptionMaximumWidthPercent),
             ActiveCaptionAppearance.CaptionFontScalePercent);
 
     private GenerationClipOutputProfile PreviewProfile => _asset is null
         ? new GenerationClipOutputProfile(1080, 1920, 30)
-        : GenerationClipOutputProfile.FromReference(
-            _asset.SourceMedia.PrimaryVideoStream);
+        : GenerationClipOutputProfile.FromAsset(_asset);
 
 }
 

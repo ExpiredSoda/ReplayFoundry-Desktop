@@ -8,7 +8,7 @@
             <StackPanel>
                 <Grid>
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YOUTUBE CONNECTION" />
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YouTube connection" />
                         <TextBlock
                             Margin="0,4,120,0"
                             Style="{DynamicResource Text.Body}"
@@ -95,7 +95,7 @@
             <StackPanel>
                 <Grid>
                     <StackPanel Margin="0,0,170,0">
-                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="LOCAL WORDING STYLE LEARNING" />
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Local wording style learning" />
                         <TextBlock
                             Margin="0,4,0,0"
                             Style="{DynamicResource Text.Body}"
@@ -230,7 +230,7 @@
 
                 <Border Margin="0,14,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="MANUAL FEEDBACK" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Manual feedback" />
                         <TextBox
                             Margin="0,8,0,0"
                             MaxLength="160"
@@ -340,7 +340,7 @@
             <StackPanel>
                 <Grid>
                     <StackPanel Margin="0,0,170,0">
-                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="OPTIONAL RESEARCH SHARING" />
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Optional research sharing" />
                         <TextBlock
                             Margin="0,4,0,0"
                             Style="{DynamicResource Text.Body}"
@@ -414,7 +414,7 @@
 
         <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasPane}">
             <StackPanel>
-                <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="WHAT STAYS PRIVATE" />
+                <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="What stays private" />
                 <TextBlock
                     Margin="0,8,0,0"
                     Style="{DynamicResource Text.Body}"

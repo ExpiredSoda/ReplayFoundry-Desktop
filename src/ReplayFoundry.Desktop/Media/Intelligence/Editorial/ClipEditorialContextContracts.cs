@@ -133,6 +133,12 @@ public enum ClipEditorialVariantIntent
     CommentaryLed,
 }
 
+public enum ClipEditorialCopyObjective
+{
+    FollowVariant = 0,
+    BalancedActionAndCommentary = 1,
+}
+
 public enum ClipEditorialGameContextSource
 {
     SourcePathHint,
@@ -227,11 +233,10 @@ public sealed class ClipEditorialGameContext
 public sealed class ClipEditorialProfile
 {
     public const string DefaultNamingGuidance =
-        "Write concise creator-ready short-form copy. Lead with the most " +
-        "specific supported action or object. Avoid camera-view, " +
-        "player/character, and scene-inventory boilerplate when the visible " +
-        "action can stand on its own. Keep the description to one or two " +
-        "natural sentences, not a shot-by-shot recap.";
+        "Balance the creator's supported point with the visible action. " +
+        "Automatic speech suggests an angle, not facts or quotations. " +
+        "Use one complete concise hook and one or two natural description " +
+        "sentences. Avoid scene inventories, invented outcomes, or claiming I did something the clip does not establish.";
 
     private readonly ReadOnlyCollection<string> _defaultTags;
 
@@ -241,11 +246,17 @@ public sealed class ClipEditorialProfile
         string? reusableDescriptionSignature = null,
         IEnumerable<string>? defaultTags = null,
         ClipEditorialVoicePerspective voicePerspective =
-            ClipEditorialVoicePerspective.CreatorFirstPerson)
+            ClipEditorialVoicePerspective.CreatorFirstPerson,
+        ClipEditorialCopyObjective copyObjective =
+            ClipEditorialCopyObjective.BalancedActionAndCommentary)
     {
         if (!Enum.IsDefined(voicePerspective))
         {
             throw new ArgumentOutOfRangeException(nameof(voicePerspective));
+        }
+        if (!Enum.IsDefined(copyObjective))
+        {
+            throw new ArgumentOutOfRangeException(nameof(copyObjective));
         }
         AudienceAddress = RequiredBounded(
             audienceAddress,
@@ -260,6 +271,7 @@ public sealed class ClipEditorialProfile
             1_500,
             nameof(reusableDescriptionSignature));
         VoicePerspective = voicePerspective;
+        CopyObjective = copyObjective;
 
         string[] tags = (defaultTags ?? [])
             .Select(NormalizeTag)
@@ -279,6 +291,8 @@ public sealed class ClipEditorialProfile
     public IReadOnlyList<string> DefaultTags => _defaultTags;
 
     public ClipEditorialVoicePerspective VoicePerspective { get; }
+
+    public ClipEditorialCopyObjective CopyObjective { get; }
 
     public static ClipEditorialProfile Default { get; } = new();
 
@@ -459,9 +473,7 @@ public sealed class ClipEditorialContext
                 _transcripts,
                 _evidence,
                 VisualText)
-            : GroundedEditorialBriefBuilder.EnrichCreatorReactionAngle(
-                editorialBrief,
-                _transcripts);
+            : editorialBrief;
         if (!EditorialBrief.CandidateId.Equals(
                 CandidateId,
                 StringComparison.Ordinal) ||
@@ -507,6 +519,16 @@ public sealed class ClipEditorialContext
         _evidence;
 
     public GroundedEditorialBrief EditorialBrief { get; }
+
+    internal ClipEditorialContext PrepareForEditorialGeneration()
+    {
+        GroundedEditorialBrief preparedBrief = GroundedEditorialBriefBuilder
+            .RefreshAutomaticCommentaryAngle(EditorialBrief, Transcripts);
+        return ReferenceEquals(preparedBrief, EditorialBrief) ? this : new(
+            CandidateId, SourceFullPath, SourceLabel, SourceStart, SourceEnd, SourceDuration,
+            DeterministicScore, DeterministicReason, Transcripts, Evidence, GameContext,
+            GameKnowledge, GameplayRegion, VisualText, preparedBrief);
+    }
 
     public ClipEditorialContext WithTranscripts(
         IEnumerable<ClipEditorialTranscriptContext> transcripts) =>

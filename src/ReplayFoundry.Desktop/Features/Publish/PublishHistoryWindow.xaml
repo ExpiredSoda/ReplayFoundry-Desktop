@@ -75,14 +75,14 @@
             <Border Grid.Row="1" Margin="0,16,0,0" Style="{DynamicResource Control.SectionCard}">
                 <WrapPanel>
                     <StackPanel Width="280" Margin="0,0,10,8">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="SEARCH TITLES" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Search titles" />
                         <TextBox
                             Margin="0,5,0,0"
                             AutomationProperties.Name="Search YouTube history titles"
                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Width="170" Margin="0,0,10,8">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="STATUS" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Status" />
                         <ComboBox
                             Margin="0,5,0,0"
                             AutomationProperties.Name="Filter YouTube history by status"
@@ -91,7 +91,7 @@
                             SelectedValuePath="Key" />
                     </StackPanel>
                     <StackPanel Width="150" Margin="0,0,10,8">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="FROM" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="From" />
                         <DatePicker
                             Margin="0,5,0,0"
                             AutomationProperties.Name="YouTube history start date"
@@ -99,7 +99,7 @@
                             Style="{DynamicResource Control.FormDatePicker}" />
                     </StackPanel>
                     <StackPanel Width="150" Margin="0,0,10,8">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="TO" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="To" />
                         <DatePicker
                             Margin="0,5,0,0"
                             AutomationProperties.Name="YouTube history end date"
@@ -107,7 +107,7 @@
                             Style="{DynamicResource Control.FormDatePicker}" />
                     </StackPanel>
                     <StackPanel Width="150" Margin="0,0,10,8">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="ORDER" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Order" />
                         <ComboBox
                             Margin="0,5,0,0"
                             AutomationProperties.Name="Sort YouTube history"
@@ -234,7 +234,7 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Style="{DynamicResource Text.FormLabel}" Text="RECORDED ACTIVITY" />
+                                            <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Recorded activity" />
                                             <TextBlock
                                                 Margin="0,4,0,0"
                                                 Foreground="{DynamicResource Brush.TextSecondary}"

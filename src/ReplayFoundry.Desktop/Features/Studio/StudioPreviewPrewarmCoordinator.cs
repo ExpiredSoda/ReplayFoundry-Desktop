@@ -42,6 +42,8 @@ internal sealed class StudioPreviewPrewarmCoordinator : IDisposable
         CancelPending();
     }
 
+    public void Suspend() => CancelPending();
+
     private void CancelPending()
     {
         _cancellation?.Cancel();

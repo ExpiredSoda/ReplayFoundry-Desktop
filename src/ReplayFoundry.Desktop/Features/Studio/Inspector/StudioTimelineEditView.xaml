@@ -1,0 +1,21 @@
+<UserControl x:Class="ReplayFoundry.Desktop.Features.Studio.Inspector.StudioTimelineEditView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Margin="0,10,0,8" Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
+        Visibility="{Binding IsClipBoundaryEditorVisible, Converter={StaticResource BoolToVisibility}}">
+        <Expander Header="Split &amp; arrange" Style="{DynamicResource Control.DisclosureExpander}">
+        <StackPanel DataContext="{Binding TimelineEdits}" IsEnabled="{Binding CanEdit}">
+            <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Cut list" />
+            <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="{Binding Summary}" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Output assembly" />
+            <ComboBox Margin="0,4,0,8" ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" AutomationProperties.Name="Cut list output assembly" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Split time from selected clip start (seconds)" TextWrapping="Wrap" />
+            <TextBox Margin="0,4,0,8" Text="{Binding SplitOffsetSeconds, StringFormat=F3}" AutomationProperties.Name="Clip split time" />
+            <Button HorizontalAlignment="Left" Content="Split into two sections" Command="{Binding SplitCommand}" />
+            <WrapPanel Margin="0,8,0,8"><Button Margin="0,0,8,0" Content="Move earlier" Command="{Binding MoveEarlierCommand}" /><Button Content="Move later" Command="{Binding MoveLaterCommand}" /></WrapPanel>
+            <CheckBox Margin="0,0,0,8" Content="Keep this section in the output" IsChecked="{Binding IsKept}" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
+        </Expander>
+    </Border>
+</UserControl>

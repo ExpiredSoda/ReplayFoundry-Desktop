@@ -8,6 +8,7 @@ using ReplayFoundry.Desktop.Features.Studio.Editing;
 using ReplayFoundry.Desktop.Features.Studio.Preview;
 using ReplayFoundry.Desktop.Platform.Dialogs;
 using ReplayFoundry.Desktop.Platform.Media;
+using ReplayFoundry.Desktop.Platform.Transcription;
 
 namespace ReplayFoundry.Desktop.Composition;
 
@@ -64,7 +65,10 @@ internal static class PrimaryFeatureComposition
             dependencies.Speech.CaptionPreparation,
             dependencies.Speech.SpeechActivity,
             dependencies.Feedback.CandidateRefinement,
-            dependencies.VisualReview.Analysis);
+            dependencies.VisualReview.Analysis,
+            dependencies.Speech.TranscriptAnalysis,
+            new ReplayFoundry.Desktop.Features.Generate.Intelligence.GenerationCaptureContextScreeningService(
+                dependencies.Experience.VisualText));
 
     private static StudioViewModel CreateStudioViewModel(
         PrimaryFeatureDependencies dependencies,
@@ -90,7 +94,9 @@ internal static class PrimaryFeatureComposition
             dependencies.Workspace.LibraryCatalog,
             dependencies.Preferences.EditorialReroll,
             dependencies.Preferences.MetadataCorrectionRecorder,
-            dependencies.Experience.GameKnowledge);
+            dependencies.Experience.GameKnowledge,
+            new OnnxCorrectedCaptionAlignmentService(AudioSegmentExtractionFactory.CreateDefault()),
+            new StudioCaptionLanguageModel(dependencies.Speech.CaptionLanguageCapabilities));
 
     private static GenerateViewModel CreateGenerateViewModel(
         PrimaryFeatureDependencies dependencies,

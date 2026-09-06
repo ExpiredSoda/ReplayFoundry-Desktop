@@ -14,7 +14,8 @@ internal static class Qwen3VlGroundedMetadataEvidenceParser
         ClipEditorialMetadataRequest request,
         string outputSchema,
         Qwen3VlGroundedMetadataGenerationSchemaProfile profile,
-        Qwen3VlGroundedMetadataRecoveryValidation recovery)
+        Qwen3VlGroundedMetadataRecoveryValidation recovery,
+        bool isolatedFieldAuthoring = false)
     {
         bool selectionApplied = Boolean(generation, "knowledgeSelectionApplied");
         string selectedPassageId = Qwen3VlEditorialJson.Text(
@@ -126,10 +127,14 @@ internal static class Qwen3VlGroundedMetadataEvidenceParser
             profile.AdaptiveSampling,
             profile.PeakBoundedSampling,
             profile.LowPeakSampling);
-        ValidateStructuredDecodingAudit(
-            result,
-            recovery.GeneratedTokenCount,
-            profile.GroundedTagShapeConstrained);
+        if (!isolatedFieldAuthoring)
+        {
+            ValidateStructuredDecodingAudit(
+                result,
+                recovery.GeneratedTokenCount,
+                outputSchema,
+                profile.GroundedTagShapeConstrained);
+        }
         return new(
             selectionApplied,
             selectedPassageId,
@@ -141,6 +146,25 @@ internal static class Qwen3VlGroundedMetadataEvidenceParser
     internal static bool IncludesClipLinkedKnowledgeSelection(
         string outputSchema) =>
         outputSchema.Equals(OutputSchema, StringComparison.Ordinal) ||
+        outputSchema.Equals(PreviousResponsibilitySplitOutputSchema, StringComparison.Ordinal) ||
+        outputSchema.Equals(
+            PreviousCompactIsolatedFieldAuthoringOutputSchema,
+            StringComparison.Ordinal) ||
+        outputSchema.Equals(
+            PreviousIsolatedFieldAuthoringOutputSchema,
+            StringComparison.Ordinal) ||
+        outputSchema.Equals(
+            PreviousSchemaEnforcedBalancedCopyOutputSchema,
+            StringComparison.Ordinal) ||
+        outputSchema.Equals(
+            PreviousCompactBalancedCopyOutputSchema,
+            StringComparison.Ordinal) ||
+        outputSchema.Equals(
+            PreviousBalancedCopyOutputSchema,
+            StringComparison.Ordinal) ||
+        outputSchema.Equals(
+            PreviousCommentaryTimingOutputSchema,
+            StringComparison.Ordinal) ||
         outputSchema.Equals(
             PreviousCreatorVoiceOutputSchema,
             StringComparison.Ordinal) ||
@@ -239,14 +263,34 @@ internal static class Qwen3VlGroundedMetadataEvidenceParser
         outputSchema.Equals(InitialOutputSchema, StringComparison.Ordinal) ||
         outputSchema.Equals(OldestOutputSchema, StringComparison.Ordinal);
 
-    private static void ValidateStructuredDecodingAudit(
+    internal static string MetadataSchemaFor(
+        string outputSchema,
+        bool groundedTagShapeConstrained) =>
+        Qwen3VlGroundedMetadataSchemaCapabilities.SupportsSchemaEnforcedBalancedCopy(outputSchema)
+            ? MetadataSchemaVersion
+            : groundedTagShapeConstrained
+                ? PreviousSchemaEnforcedBalancedCopyMetadataSchemaVersion
+                : PreviousMetadataSchemaVersion;
+
+    internal static void ValidateStructuredDecodingAudit(
         JsonElement result,
         int generatedTokenCount,
+        string outputSchema,
         bool groundedTagShapeConstrained)
     {
         JsonElement audit = Qwen3VlEditorialJson.Object(
             result,
             "structuredDecodingAudit");
+        ValidateComponentStructuredDecodingAudit(
+            audit, generatedTokenCount,
+            MetadataSchemaFor(outputSchema, groundedTagShapeConstrained));
+    }
+
+    internal static void ValidateComponentStructuredDecodingAudit(
+        JsonElement audit,
+        int generatedTokenCount,
+        string expectedSchema)
+    {
         Qwen3VlEditorialJson.Exact(
             audit,
             "policyVersion",
@@ -277,9 +321,7 @@ internal static class Qwen3VlGroundedMetadataEvidenceParser
         RequireText(
             audit,
             "schemaVersion",
-            groundedTagShapeConstrained
-                ? MetadataSchemaVersion
-                : PreviousMetadataSchemaVersion);
+            expectedSchema);
         RequireText(
             audit,
             "representation",
@@ -289,7 +331,10 @@ internal static class Qwen3VlGroundedMetadataEvidenceParser
             "cudaMaskBackend",
             Qwen3VlEditorialStructuredDecodingPolicy.CudaMaskBackend);
         _ = Qwen3VlEditorialJson.Sha256(audit, "schemaSha256");
-        _ = Qwen3VlEditorialJson.Finite(audit, "compileElapsedSeconds");
+        if (Qwen3VlEditorialJson.Finite(audit, "compileElapsedSeconds") < 0)
+        {
+            throw new Qwen3VlOutputParseException("Grounded Qwen grammar compile duration is invalid.");
+        }
         if (Qwen3VlEditorialJson.Integer(
                 audit,
                 "generatedTokenCount") != generatedTokenCount ||

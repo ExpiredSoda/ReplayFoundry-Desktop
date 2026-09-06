@@ -34,10 +34,18 @@ public sealed class StudioPreviewPrewarmer : IStudioPreviewPrewarmer
         foreach (GenerationOutputAsset asset in ordered)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using StudioPreviewMediaLease lease =
-                await _mediaService.MaterializeAsync(
-                    new StudioPreviewMediaRequest(asset),
+            try
+            {
+                using StudioPreviewMediaLease lease = await _mediaService.MaterializeAsync(
+                    new StudioPreviewMediaRequest(asset, StudioPreviewRangeMode.ExactSelection,
+                        StudioPreviewWorkIntent.BackgroundPrewarm),
                     cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // A real foreground request superseded this optional same-key prewarm.
+                // Its owner will prepare the entry; continue with the other candidates.
+            }
         }
     }
 }

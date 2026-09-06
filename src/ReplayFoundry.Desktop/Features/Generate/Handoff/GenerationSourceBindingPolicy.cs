@@ -36,13 +36,18 @@ internal static class GenerationSourceBindingPolicy
         ArgumentNullException.ThrowIfNull(track);
         ArgumentException.ThrowIfNullOrWhiteSpace(candidateId);
         ArgumentNullException.ThrowIfNull(sourceMedia);
-        RequireCaptionSelection(
-            track.SourceSelection,
-            sourceMedia,
-            parameterName);
+        // An imported or manually authored subtitle track can belong to a silent
+        // recording. Automatic transcripts still require inspected audio, and
+        // manual captions retain the same source-path and window requirements.
+        bool manualSilentTrack = track.IsUserEdited && sourceMedia.AudioStreams.Count == 0;
+        if (!manualSilentTrack)
+        {
+            RequireCaptionSelection(track.SourceSelection, sourceMedia, parameterName);
+        }
         TimeSpan captionEnd =
             track.SourceWindowStart + track.SourceWindowDuration;
-        if (!track.CandidateId.Equals(
+        if (!SameSource(track.SourceSelection.SourceFullPath, sourceMedia.FullPath) ||
+            !track.CandidateId.Equals(
                 candidateId,
                 StringComparison.Ordinal) ||
             track.SourceDuration != sourceMedia.Duration ||

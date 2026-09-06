@@ -5,7 +5,7 @@
     <Border
         Margin="0,12,0,8"
         AutomationProperties.Name="Video effect editor"
-        Style="{DynamicResource Control.CanvasInsetCard}"
+        Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
         Visibility="{Binding IsVideoEffectEditorVisible, Converter={StaticResource BoolToVisibility}}">
         <StackPanel>
             <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Color treatment" />

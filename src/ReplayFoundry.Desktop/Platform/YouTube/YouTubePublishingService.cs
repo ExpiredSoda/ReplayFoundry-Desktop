@@ -11,6 +11,7 @@ namespace ReplayFoundry.Desktop.Platform.YouTube;
 
 internal sealed class YouTubePublishingService :
     IYouTubePublishingService,
+    IYouTubeAnalyticsSource,
     IDisposable
 {
     private readonly IYouTubeAuthorizationService _authorization;
@@ -20,13 +21,16 @@ internal sealed class YouTubePublishingService :
     private readonly IDisposable? _ownedResource;
     private readonly SemaphoreSlim _publishGate = new(1, 1);
     private bool _disposed;
+    private KnownChannel? _knownChannel;
+    private sealed record KnownChannel(string CredentialFingerprint, string ChannelId);
 
     public YouTubePublishingService(
         IYouTubeAuthorizationService authorization,
         IYouTubeDataApiClient api,
         IYouTubePublishHistoryStore history,
         IYouTubeConnectionPermission? connectionPermission = null,
-        IDisposable? ownedResource = null)
+        IDisposable? ownedResource = null,
+        IYouTubeAnalyticsService? analytics = null)
     {
         ArgumentNullException.ThrowIfNull(authorization);
         ArgumentNullException.ThrowIfNull(api);
@@ -36,6 +40,7 @@ internal sealed class YouTubePublishingService :
         _history = history;
         _connectionPermission = connectionPermission;
         _ownedResource = ownedResource;
+        Analytics = analytics;
     }
 
     public void Dispose()
@@ -48,10 +53,12 @@ internal sealed class YouTubePublishingService :
         _disposed = true;
         _publishGate.Dispose();
         (_authorization as IDisposable)?.Dispose();
+        (Analytics as IDisposable)?.Dispose();
         _ownedResource?.Dispose();
     }
 
     public bool IsConfigured => true;
+    public IYouTubeAnalyticsService? Analytics { get; }
     public IReadOnlyList<YouTubePublishHistoryEntry> History =>
         _history.Current;
 
@@ -69,12 +76,10 @@ internal sealed class YouTubePublishingService :
                     forceRefresh: false,
                     cancellationToken)
                 .ConfigureAwait(false);
-            return credential is null
-                ? null
-                : await _api.GetChannelAsync(
-                        credential.AccessToken,
-                        cancellationToken)
-                    .ConfigureAwait(false);
+            if (credential is null) { _knownChannel = null; return null; }
+            YouTubeAccountConnection connection = await _api.GetChannelAsync(credential.AccessToken, cancellationToken).ConfigureAwait(false);
+            _knownChannel = new(CredentialFingerprint(credential), connection.ChannelId);
+            return connection;
         }
         catch (Exception exception) when (IsInfrastructureFailure(exception))
         {
@@ -91,10 +96,12 @@ internal sealed class YouTubePublishingService :
             YouTubeAccessCredential credential = await _authorization
                 .ConnectAsync(cancellationToken)
                 .ConfigureAwait(false);
-            return await _api.GetChannelAsync(
+            YouTubeAccountConnection connection = await _api.GetChannelAsync(
                     credential.AccessToken,
                     cancellationToken)
                 .ConfigureAwait(false);
+            _knownChannel = new(CredentialFingerprint(credential), connection.ChannelId);
+            return connection;
         }
         catch (YouTubePublishingException)
         {
@@ -126,6 +133,7 @@ internal sealed class YouTubePublishingService :
 
     public async Task DisconnectAsync(CancellationToken cancellationToken)
     {
+        _knownChannel = null;
         try
         {
             await _authorization.DisconnectAsync(cancellationToken)
@@ -197,6 +205,9 @@ internal sealed class YouTubePublishingService :
             YouTubeAccessCredential credential = await RequireCredentialAsync(
                     cancellationToken)
                 .ConfigureAwait(false);
+            string? channelId = _knownChannel is { } known && known.CredentialFingerprint == CredentialFingerprint(credential)
+                ? known.ChannelId : null;
+            YouTubePublishProvenance? provenance = YouTubePublishProvenance.Capture(request.Asset, channelId);
             string videoId = await _api.UploadVideoAsync(
                     credential.AccessToken,
                     request,
@@ -280,7 +291,8 @@ internal sealed class YouTubePublishingService :
                 result.Outcome,
                 result.Visibility,
                 result.CompletedAtUtc,
-                result.ScheduledForUtc));
+                result.ScheduledForUtc,
+                provenance: provenance));
             progress?.Report(new YouTubePublishProgress(
                 YouTubePublishPhase.Completed,
                 outcome == YouTubePublishOutcome.Scheduled
@@ -434,6 +446,9 @@ internal sealed class YouTubePublishingService :
         throw new YouTubePublishingException(
             "Connect a YouTube channel before publishing.",
             "youtube.oauth.connection-required");
+
+    private static string CredentialFingerprint(YouTubeAccessCredential credential) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(credential.AccessToken)));
 
     private static string CreateHistoryId(YouTubePublishRequest request)
     {

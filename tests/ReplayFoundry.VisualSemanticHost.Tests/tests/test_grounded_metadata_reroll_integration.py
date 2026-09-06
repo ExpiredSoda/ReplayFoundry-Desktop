@@ -368,7 +368,7 @@ class GroundedMetadataRerollIntegrationTests(unittest.TestCase):
             "run-grounded-editorial-metadata-batch"
         )
 
-    def test_first_pass_messages_remain_byte_equivalent(self):
+    def test_first_pass_messages_match_current_qualified_identity(self):
         messages = _metadata_messages(
             _request(0, "DirectAction"),
             "prompt",
@@ -381,10 +381,12 @@ class GroundedMetadataRerollIntegrationTests(unittest.TestCase):
             separators=(",", ":"),
         ).encode("utf-8")
         self.assertEqual(
-            "6ab0214f201ed85b3291a08fb407946b21a7d48462dfcb0acb8f73b0d00b59a5",
+            "619ccae8d52648959c378998167db5cc1663514a7383b8cb4bdaf6d350b73b5a",
             hashlib.sha256(canonical).hexdigest(),
         )
         self.assertEqual(["system", "user"], [item["role"] for item in messages])
+        self.assertIn("Window order establishes no cause", canonical.decode("utf-8"))
+        self.assertIn("AutomaticUnreviewed", canonical.decode("utf-8"))
 
     def test_completed_rejected_json_is_canonical_and_strictly_bounded(self):
         retained = _bounded_completed_json('{"b":2,"a":"value"}')
@@ -1920,7 +1922,7 @@ class GroundedMetadataRerollIntegrationTests(unittest.TestCase):
             attestations[2]["retryAnchorDisabledReason"],
         )
 
-    def test_ghostwire_first_error_masking_uses_attested_immutable_pool(self):
+    def test_first_error_masking_keeps_primary_only_pool_scoped_and_attested(self):
         source = _request(0, "DirectAction")
         source["game"]["notes"] = (
             "Hannya, identifiable by the horned mask, confronted Akito beside "
@@ -1970,7 +1972,7 @@ class GroundedMetadataRerollIntegrationTests(unittest.TestCase):
             repeated_generic,
             pool_cross_draft,
             _generated(
-                "Hannya confronted Akito beside a glowing chain #ExampleGame"
+                "A masked figure confronted another person #ExampleGame"
             ),
         ]
         calls: list[list[dict]] = []
@@ -2032,7 +2034,11 @@ class GroundedMetadataRerollIntegrationTests(unittest.TestCase):
                 correction,
             )
             self.assertNotIn("A man in a skull mask stands in fog", correction)
-            self.assertIn("Hannya", correction)
+            self.assertNotIn("Hannya", serialized_messages)
+            self.assertNotIn("Akito", serialized_messages)
+            self.assertNotIn("userGameContext", correction)
+            self.assertIn("A masked figure confronted another person.", correction)
+            self.assertIn('"chronologicalProgression":[]', correction)
             self.assertIn("CrossDraftTitleContamination", correction)
             self.assertIn("audience copy is intentionally withheld", correction)
         generation = result["generation"]

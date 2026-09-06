@@ -20,6 +20,10 @@ public enum GenerationHiddenMomentReason
     SameEventSuppressed,
     CooldownSuppressed,
     PortfolioNotSelected,
+    GroundedVisualRejection,
+    IncompleteSpeechBoundary,
+    PendingSemanticReview,
+    CaptureContextReview,
 }
 
 public sealed class GenerationHiddenMoment
@@ -186,6 +190,14 @@ public sealed class GenerationHiddenMoment
             "This moment was held back to keep the main results varied.",
         GenerationHiddenMomentReason.PortfolioNotSelected =>
             "This safe proposal did not enter the final ranked portfolio.",
+        GenerationHiddenMomentReason.GroundedVisualRejection =>
+            "The picture review found a clear reason to leave this moment for your manual review.",
+        GenerationHiddenMomentReason.IncompleteSpeechBoundary =>
+            "The proposed cut interrupts speech. Adjust its boundaries before keeping it.",
+        GenerationHiddenMomentReason.PendingSemanticReview =>
+            "This source window still needs a grounded picture review or your review before keeping it.",
+        GenerationHiddenMomentReason.CaptureContextReview =>
+            "Repeated application or loading labels lowered this moment's rank. Review it if that context matters to your clip.",
         _ => throw new InvalidOperationException(
             "The hidden-moment reason is unsupported."),
     };
@@ -548,7 +560,7 @@ public static class GenerationHiddenMomentPlanner
                 entry.Candidate,
                 entry.FinalScore,
                 moments.Request.Setup.QualityThreshold,
-                MapReason(entry.Candidate, entry.FinalScore,
+                MapReason(entry.Candidate, entry.Refinement, entry.FinalScore,
                     moments.Request.Setup.QualityThreshold,
                     moments.Request.Setup.ResultCountMode ==
                         GenerationResultCountMode.Exact &&
@@ -557,7 +569,9 @@ public static class GenerationHiddenMomentPlanner
                 Explain(entry),
                 GenerationClipPreferenceFeatureExtractor.Create(
                     entry.Candidate,
-                    entry.Refinement),
+                    entry.Refinement,
+                    GenerationClipPreferenceFeatureExtractor.CreateContext(moments.Request.Setup,
+                        entry.Source.PreparedSource.Media.FullPath)),
                 editorialPreference:
                     moments.Request.Setup.MetadataAuthoringMode ==
                     GenerationMetadataAuthoringMode.AiRequired
@@ -589,10 +603,24 @@ public static class GenerationHiddenMomentPlanner
 
     private static GenerationHiddenMomentReason MapReason(
         MomentCandidate candidate,
+        GenerationCandidateRefinement? refinement,
         double finalScore,
         double qualityTarget,
         bool requestedCountReached) => candidate.Disposition switch
         {
+            _ when refinement?.HasApplicationStartupLeadIn == true =>
+                GenerationHiddenMomentReason.CaptureContextReview,
+            _ when refinement?.HasGroundedVisualRejection == true =>
+                GenerationHiddenMomentReason.GroundedVisualRejection,
+            _ when refinement?.HasIncompleteSpeechBeginning == true ||
+                   refinement?.HasIncompleteSpeechEnding == true =>
+                GenerationHiddenMomentReason.IncompleteSpeechBoundary,
+            _ when refinement?.RequiresSemanticReview == true =>
+                GenerationHiddenMomentReason.PendingSemanticReview,
+            _ when refinement?.Components.Any(static component =>
+                component.Code == GenerationCandidateRefinementComponentCode.CaptureContextPenalty &&
+                component.RawValue > 0) == true =>
+                GenerationHiddenMomentReason.CaptureContextReview,
             MomentCandidateDisposition.SuppressedOverlap =>
                 GenerationHiddenMomentReason.OverlapSuppressed,
             MomentCandidateDisposition.SuppressedEpisode or
@@ -609,6 +637,19 @@ public static class GenerationHiddenMomentPlanner
         };
 
     private static string Explain(CandidateEntry entry) =>
+        entry.Refinement?.HasApplicationStartupLeadIn == true
+            ? entry.Refinement.Components.First(static component => component.Code == GenerationCandidateRefinementComponentCode.ApplicationStartupLeadIn).Explanation
+            : entry.Refinement?.HasNonGameplayCapture == true
+            ? entry.Refinement.Components.First(static component => component.Code == GenerationCandidateRefinementComponentCode.NonGameplayCapture).Explanation
+            : entry.Refinement?.RequiresSemanticReview == true
+            ? "This exploratory window has not received a grounded Keep. Review its full context before adding it."
+            :
+        entry.Refinement?.Components.FirstOrDefault(static component =>
+            component.RawValue > 0 && component.Code is
+                GenerationCandidateRefinementComponentCode.GroundedVisualRejection or
+                GenerationCandidateRefinementComponentCode.IncompleteSpeechBeginning or
+                GenerationCandidateRefinementComponentCode.IncompleteSpeechEnding or
+                GenerationCandidateRefinementComponentCode.CaptureContextPenalty)?.Explanation ??
         entry.Refinement?.Components
             .OrderByDescending(static value => value.SignedContribution)
             .Select(static value => value.Explanation)

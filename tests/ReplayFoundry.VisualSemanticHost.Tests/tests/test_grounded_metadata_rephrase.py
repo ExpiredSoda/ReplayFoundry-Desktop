@@ -102,6 +102,16 @@ def _attestation(args, kwargs, completed_json: str) -> dict:
     }
 
 
+class _SchemaSession:
+    def __init__(self):
+        self.schemas = []
+
+    def compile_json_schema(self, canonical, version, sha256, **kwargs):
+        schema = json.loads(canonical)
+        self.schemas.append(schema)
+        return schema, SimpleNamespace(schema_version=version, schema_sha256=sha256)
+
+
 def _context():
     request = _request()
     draft = {
@@ -125,9 +135,10 @@ def _context():
         torch=None,
         torchcodec=None,
         process_vision_info=None,
-        session=object(),
+        session=_SchemaSession(),
         grammar=object(),
         base_audit=object(),
+        metadata_grammar_cache={},
         case_ordinal=1,
     )
 
@@ -951,7 +962,9 @@ class GroundedMetadataRephraseTests(unittest.TestCase):
             "UnsupportedCreatorEmbodiment",
         )
         rendered = json.dumps(messages, ensure_ascii=False)
-        self.assertIn("Remove I, we, my, and our", rendered)
+        self.assertIn("Remove unsupported gameplay I, we, my, and our", rendered)
+        self.assertNotIn("Required balanced copy objective", rendered)
+        self.assertNotIn('\\"automaticCreatorCommentary\\":', rendered)
         self.assertIn("A neutral human subject such as a person is permitted", rendered)
         self.assertIn("player, character, streamer, creator, and camera wearer remain forbidden", rendered)
         self.assertIn("unmistakable retrospective past tense", rendered)

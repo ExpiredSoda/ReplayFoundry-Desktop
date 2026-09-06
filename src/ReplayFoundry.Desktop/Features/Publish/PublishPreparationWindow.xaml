@@ -10,8 +10,8 @@
     Style="{DynamicResource Control.ThemedWindow}"
     Width="1380"
     Height="900"
-    MinWidth="1040"
-    MinHeight="700"
+    MinWidth="760"
+    MinHeight="600"
     ResizeMode="CanResize"
     ShowInTaskbar="False"
     WindowStartupLocation="CenterOwner"
@@ -27,18 +27,26 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <controls:WindowTitleBar Subtitle="Prepare for YouTube" Status="Review before upload" />
-        <Grid Grid.Row="1" Margin="18">
+        <Grid Grid.Row="1" Margin="16">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.04*" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="0.96*" />
+                <ColumnDefinition x:Name="ReviewColumn" Width="1.04*" />
+                <ColumnDefinition x:Name="GutterColumn" Width="16" />
+                <ColumnDefinition x:Name="DetailsColumn" Width="0.96*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Border Style="{DynamicResource Control.SectionCard}">
+            <TabControl x:Name="CompactReviewTabs" Grid.ColumnSpan="3" Margin="0,0,0,8"
+                AutomationProperties.Name="YouTube preparation sections"
+                SelectedIndex="0" SelectionChanged="CompactReviewTabs_SelectionChanged" Visibility="Collapsed">
+                <TabItem Header="Video preview" AutomationProperties.Name="Show YouTube video preview" />
+                <TabItem Header="Details &amp; upload" AutomationProperties.Name="Show YouTube details and upload review" />
+            </TabControl>
+
+            <Border x:Name="ReviewPane" Grid.Row="1" Style="{DynamicResource Control.SectionCard}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -48,7 +56,7 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="VIDEO REVIEW" />
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Video review" />
                         <TextBlock
                             Margin="0,4,0,0"
                             Style="{DynamicResource Text.Meta}"
@@ -75,8 +83,9 @@
                             Text="{Binding AssetResolution}" />
                     </Grid>
                     <Border
+                        x:Name="PreviewCanvas"
                         Grid.Row="2"
-                        MinHeight="280"
+                        MinHeight="240"
                         Background="Black"
                         BorderBrush="{DynamicResource Brush.BorderSubtle}"
                         BorderThickness="1"
@@ -177,6 +186,8 @@
             </Border>
 
             <ScrollViewer
+                x:Name="DetailsPane"
+                Grid.Row="1"
                 Grid.Column="2"
                 CanContentScroll="False"
                 HorizontalScrollBarVisibility="Disabled"
@@ -191,7 +202,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <Border Grid.Row="1" Grid.ColumnSpan="3" Margin="0,14,0,0" Padding="14,12" Style="{DynamicResource Control.InsetCard}">
+            <Border Grid.Row="2" Grid.ColumnSpan="3" Margin="0,12,0,0" Padding="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />

@@ -115,6 +115,13 @@ public sealed class MomentGuidanceSourceViewModel :
     private readonly DelegateCommand _addRangeCommand;
     private readonly DelegateCommand<UserMomentGuidanceItemViewModel> _removeCommand;
     private readonly AsyncDelegateCommand _refreshPreviewCommand;
+    private readonly DelegateCommand _importMarkersCommand;
+    private readonly AsyncDelegateCommand _importRecordingChaptersCommand;
+    private readonly CancellationTokenSource _markerLifetime = new();
+    private bool _markerDisposed;
+    public string? MarkerImportStatus { get; private set; }
+    public ICommand ImportMarkersCommand => _importMarkersCommand;
+    public ICommand ImportRecordingChaptersCommand => _importRecordingChaptersCommand;
     private double _currentPositionSeconds;
     private double _rangeStartSeconds;
     private double _rangeEndSeconds;
@@ -138,6 +145,8 @@ public sealed class MomentGuidanceSourceViewModel :
         _rangeStartSeconds = _currentPositionSeconds;
         _rangeEndSeconds = Math.Min(MaximumSeconds, _currentPositionSeconds + 30);
         _addPointCommand = new DelegateCommand(AddPoint);
+        _importMarkersCommand = new DelegateCommand(ImportMarkerFile, () => !_markerDisposed);
+        _importRecordingChaptersCommand = new AsyncDelegateCommand(ImportRecordingChaptersAsync, () => !_markerDisposed);
         _captureRangeStartCommand = new DelegateCommand(CaptureRangeStart);
         _captureRangeEndCommand = new DelegateCommand(CaptureRangeEnd);
         _addRangeCommand = new DelegateCommand(AddRange, () => CanAddRange);
@@ -239,7 +248,58 @@ public sealed class MomentGuidanceSourceViewModel :
         }
     }
 
-    public void Dispose() => Preview?.Dispose();
+    public void Dispose()
+    {
+        if (_markerDisposed) return;
+        _markerDisposed = true;
+        _markerLifetime.Cancel(); _markerLifetime.Dispose(); Preview?.Dispose();
+        _importMarkersCommand.RaiseCanExecuteChanged(); _importRecordingChaptersCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ImportMarkerFile()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Markers (CSV or chapter JSON)|*.csv;*.json", CheckFileExists = true };
+        if (dialog.ShowDialog() != true) return;
+        try
+        {
+            if (new System.IO.FileInfo(dialog.FileName).Length > 1_000_000) throw new ArgumentException("Marker files must be smaller than 1 MB.");
+            string text = System.IO.File.ReadAllText(dialog.FileName);
+            ImportMarkerText(text, System.IO.Path.GetExtension(dialog.FileName).Equals(".json", StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or
+            ArgumentException or FormatException or System.Text.Json.JsonException or KeyNotFoundException)
+        { MarkerImportStatus = "Markers were not imported: " + e.Message; OnPropertyChanged(nameof(MarkerImportStatus)); }
+    }
+    public void ImportMarkerText(string text, bool chapterJson = false)
+    {
+        var markers = chapterJson ? MomentMarkerImporter.ParseChapterJson(text, SourceFullPath, _source.Media.Duration) :
+            MomentMarkerImporter.ParseCsv(text, SourceFullPath, _source.Media.Duration);
+        AddImportedMarkers(markers);
+    }
+    private async Task ImportRecordingChaptersAsync()
+    {
+        if (_markerDisposed) return;
+        CancellationToken cancellationToken = _markerLifetime.Token;
+        MarkerImportStatus = "Reading chapter markers from the selected recording…"; OnPropertyChanged(nameof(MarkerImportStatus));
+        try
+        {
+            var markers = await Platform.Media.FfprobeChapterMarkerReader.ReadAsync(SourceFullPath, _source.Media.Duration, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            AddImportedMarkers(markers);
+        }
+        catch (OperationCanceledException) { MarkerImportStatus = "Marker import cancelled."; }
+        catch (Exception e) { MarkerImportStatus = "Recording markers could not be read: " + e.Message; }
+        OnPropertyChanged(nameof(MarkerImportStatus));
+    }
+    private void AddImportedMarkers(IReadOnlyList<UserMomentGuidance> markers)
+    {
+        int before = _items.Count;
+        var ids = _items.Select(item => item.Guidance.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var marker in markers) if (ids.Add(marker.Id)) _items.Add(new UserMomentGuidanceItemViewModel(marker, Remove));
+        _changed(); OnPropertyChanged(nameof(HasItems));
+        MarkerImportStatus = $"Imported {_items.Count - before} new priority mark(s). Existing identical marks were kept once. Recording chapters become priority points.";
+        OnPropertyChanged(nameof(MarkerImportStatus));
+    }
 
     public void ReportPlaybackOpened()
     {

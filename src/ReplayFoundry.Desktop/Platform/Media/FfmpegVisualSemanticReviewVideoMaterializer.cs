@@ -38,7 +38,7 @@ internal sealed class FfmpegVisualSemanticReviewVideoMaterializer :
                 FfmpegVisualSemanticReviewVideoCommandBuilder.Build(
                     request,
                     outputPath);
-            ProcessRunResult process = await _processRunner.RunAsync(
+            ProcessRunResult process = await MediaWorkBudget.RunAsync(_processRunner,
                 new ProcessRunRequest(
                     executablePath,
                     command.Arguments,
@@ -46,7 +46,7 @@ internal sealed class FfmpegVisualSemanticReviewVideoMaterializer :
                     directory,
                     maxStandardOutputCharacters: 64 * 1024,
                     maxStandardErrorCharacters: 512 * 1024),
-                cancellationToken);
+                MediaWorkPriority.FinalOutput, cancellationToken);
             if (!process.Succeeded || !File.Exists(outputPath))
             {
                 throw new VisualSemanticReviewVideoMaterializationException(

@@ -32,7 +32,8 @@ public sealed class ClipEditorialMetadataDraft
         ClipEditorialMetadataReadiness? readiness = null,
         IEnumerable<ClipEditorialMetadataQualityIssue>? qualityIssues = null,
         IEnumerable<string>? priorAcceptedTitles = null,
-        GameKnowledgeInfluenceAudit? groundingAudit = null)
+        GameKnowledgeInfluenceAudit? groundingAudit = null,
+        IEnumerable<ClipEditorialCopyVersion>? copyVersions = null)
     {
         if (!Enum.IsDefined(origin))
         {
@@ -102,6 +103,10 @@ public sealed class ClipEditorialMetadataDraft
                     priorAcceptedTitles)
                 .ToArray());
         GroundingAudit = groundingAudit;
+        ClipEditorialCopyVersion[] versions = copyVersions?.ToArray() ?? [];
+        if (versions.Any(static version => version is null))
+            throw new ArgumentException("Earlier copy cannot contain null entries.", nameof(copyVersions));
+        CopyVersions = Array.AsReadOnly(versions.TakeLast(20).ToArray());
     }
 
     public string Title { get; }
@@ -145,6 +150,24 @@ public sealed class ClipEditorialMetadataDraft
 
     public GameKnowledgeInfluenceAudit? GroundingAudit { get; }
 
+    public IReadOnlyList<ClipEditorialCopyVersion> CopyVersions { get; }
+
+    public ClipEditorialMetadataDraft RememberPreviousCopy(
+        ClipEditorialMetadataDraft previous, string contextFingerprint)
+    {
+        ArgumentNullException.ThrowIfNull(previous);
+        var version = new ClipEditorialCopyVersion(previous.Title, previous.Description,
+            previous.Tags, contextFingerprint, DateTimeOffset.UtcNow);
+        IEnumerable<ClipEditorialCopyVersion> versions = previous.CopyVersions
+            .Concat(CopyVersions)
+            .Append(version)
+            .Reverse()
+            .DistinctBy(static value => (value.ContextFingerprint, value.Title, value.Description, string.Join(",", value.Tags)))
+            .Reverse();
+        return new(Title, Description, Tags, Origin, Generator, Attempt, Evidence,
+            Warnings, AiProvenance, Readiness, QualityIssues, PriorAcceptedTitles, GroundingAudit, versions);
+    }
+
     public IReadOnlyList<ClipEditorialPriorTitleExclusion>
         CreatePriorTitleExclusions(ClipEditorialContext context)
     {
@@ -180,7 +203,8 @@ public sealed class ClipEditorialMetadataDraft
                     PriorAcceptedTitles,
                     Title)
                 : [],
-            groundingAudit: GroundingAudit);
+            groundingAudit: GroundingAudit,
+            copyVersions: CopyVersions);
 
     public ClipEditorialMetadataDraft MarkReviewed() =>
         new(
@@ -196,7 +220,8 @@ public sealed class ClipEditorialMetadataDraft
             ClipEditorialMetadataReadiness.UserApproved,
             QualityIssues,
             PriorAcceptedTitles,
-            GroundingAudit);
+            GroundingAudit,
+            CopyVersions);
 
     internal ClipEditorialMetadataDraft WithoutGroundingAudit() =>
         GroundingAudit is null
@@ -214,7 +239,8 @@ public sealed class ClipEditorialMetadataDraft
                 Readiness,
                 QualityIssues,
                 PriorAcceptedTitles,
-                groundingAudit: null);
+                groundingAudit: null,
+                copyVersions: CopyVersions);
 
     private static string RequiredBounded(
         string value,

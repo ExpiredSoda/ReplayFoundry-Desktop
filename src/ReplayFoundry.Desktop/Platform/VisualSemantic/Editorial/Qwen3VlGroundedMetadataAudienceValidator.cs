@@ -28,7 +28,8 @@ internal static class Qwen3VlGroundedMetadataAudienceValidator
         bool requireLiteralActionEntailment = false,
         bool requireInterfaceAttributionAuthority = false,
         bool allowNeutralPersonSubject = false,
-        bool creatorAuthorityUsesAudienceFieldsOnly = false) =>
+        bool creatorAuthorityUsesAudienceFieldsOnly = false,
+        bool allowAutomaticCommentaryAttribution = false) =>
         Qwen3VlGroundedMetadataRules.Validate(
             title,
             description,
@@ -40,7 +41,8 @@ internal static class Qwen3VlGroundedMetadataAudienceValidator
             requireLiteralActionEntailment,
             requireInterfaceAttributionAuthority,
             allowNeutralPersonSubject,
-            creatorAuthorityUsesAudienceFieldsOnly);
+            creatorAuthorityUsesAudienceFieldsOnly,
+            allowAutomaticCommentaryAttribution);
 
     internal static Qwen3VlGroundedMetadataGroundingReference[] ParseGrounding(
         JsonElement metadata,

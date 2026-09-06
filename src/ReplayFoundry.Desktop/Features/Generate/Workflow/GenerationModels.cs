@@ -396,7 +396,7 @@ public sealed class GenerationResult
                             request.SetupOptions.QualityThreshold,
                             selected.SelectionReason,
                             GenerationClipPreferenceFeatureExtractor.Create(
-                                selected));
+                                selected, request.SetupOptions));
                     })
                 .ToArray();
 

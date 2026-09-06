@@ -14,9 +14,11 @@ public sealed class AudioTranscriptionWord
         TimeSpan relativeEnd,
         TimeSpan absoluteSourceStart,
         TimeSpan absoluteSourceEnd,
-        double? providerReportedProbability = null)
+        double? providerReportedProbability = null,
+        bool isEmphasized = false)
     {
         Text = RequiredText(text, nameof(text));
+        IsEmphasized = isEmphasized;
         ValidateTimes(
             relativeStart,
             relativeEnd,
@@ -35,6 +37,7 @@ public sealed class AudioTranscriptionWord
     }
 
     public string Text { get; }
+    public bool IsEmphasized { get; }
 
     public TimeSpan RelativeStart { get; }
 
@@ -111,7 +114,9 @@ public sealed class AudioTranscriptionSegment
         IEnumerable<AudioTranscriptionWord>? words = null,
         double? providerReportedConfidence = null,
         AudioTranscriptionLanguage? language = null,
-        IEnumerable<AudioTranscriptionWarning>? warnings = null)
+        IEnumerable<AudioTranscriptionWarning>? warnings = null,
+        string? speaker = null,
+        string? secondaryText = null)
     {
         if (string.IsNullOrWhiteSpace(id) ||
             string.IsNullOrWhiteSpace(neighborhoodId))
@@ -168,6 +173,10 @@ public sealed class AudioTranscriptionSegment
             }
         }
 
+        Speaker = string.IsNullOrWhiteSpace(speaker) ? null : speaker.Trim();
+        SecondaryText = string.IsNullOrWhiteSpace(secondaryText) ? null : secondaryText.Trim();
+        if (SecondaryText?.Length > 4000) throw new ArgumentException("Secondary caption text is too long.", nameof(secondaryText));
+        if (Speaker?.Length > 100) throw new ArgumentException("Speaker names must be at most 100 characters.", nameof(speaker));
         Id = id.Trim();
         NeighborhoodId = neighborhoodId.Trim();
         RelativeStart = relativeStart;
@@ -182,6 +191,8 @@ public sealed class AudioTranscriptionSegment
     }
 
     public string Id { get; }
+    public string? Speaker { get; }
+    public string? SecondaryText { get; }
 
     public string NeighborhoodId { get; }
 

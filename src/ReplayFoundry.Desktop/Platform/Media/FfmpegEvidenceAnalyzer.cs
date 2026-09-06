@@ -29,13 +29,15 @@ internal sealed class FfmpegEvidenceAnalyzer :
     private readonly IProcessRunner _processRunner;
     private readonly FfmpegEvidencePassRunner _passRunner;
     private readonly IFfmpegToolLocator _toolLocator;
+    private readonly bool _useCombinedVisualPass;
     private readonly object _toolInfoSync = new();
 
     private Task<FfmpegToolInfo>? _toolInfoTask;
 
     public FfmpegEvidenceAnalyzer(
         IProcessRunner processRunner,
-        IFfmpegToolLocator toolLocator)
+        IFfmpegToolLocator toolLocator,
+        bool useCombinedVisualPass = false)
     {
         ArgumentNullException.ThrowIfNull(processRunner);
         ArgumentNullException.ThrowIfNull(toolLocator);
@@ -43,10 +45,13 @@ internal sealed class FfmpegEvidenceAnalyzer :
         _processRunner = processRunner;
         _passRunner = new FfmpegEvidencePassRunner(processRunner);
         _toolLocator = toolLocator;
+        _useCombinedVisualPass = useCombinedVisualPass;
     }
 
     public MediaEvidenceAnalyzerIdentity Identity =>
-        AnalyzerIdentity;
+        _useCombinedVisualPass
+            ? new MediaEvidenceAnalyzerIdentity(AnalyzerIdentity.Name, "3.1.0")
+            : AnalyzerIdentity;
 
     public async Task<MediaEvidenceResult> AnalyzeAsync(
         MediaEvidenceAnalysisRequest request,
@@ -90,7 +95,9 @@ internal sealed class FfmpegEvidenceAnalyzer :
         progress?.Report(
             new MediaEvidenceProgressUpdate(
                 MediaEvidenceAnalysisPhase.Preparing,
-                request.IsCompositionAware
+                _useCombinedVisualPass
+                    ? $"Replay Foundry will analyze {targetPlan.Targets.Count} visual targets in one shared video decode."
+                    : request.IsCompositionAware
                     ? $"Replay Foundry will analyze the full frame and " +
                       $"{targetPlan.Targets.Count - 1} confirmed region targets " +
                       "in two shared video passes."
@@ -102,19 +109,31 @@ internal sealed class FfmpegEvidenceAnalyzer :
             completedPasses,
             totalPasses,
             MediaEvidenceAnalysisPhase.ScenePassStarted,
-            "Studying scene changes, brightness, color, and sampled activity while a second shared pass checks dark and frozen sections.");
+            _useCombinedVisualPass
+                ? "Studying scenes, brightness, color, activity, and dark or frozen sections together."
+                : "Studying scene changes, brightness, color, and sampled activity while a second shared pass checks dark and frozen sections.");
 
         ReportPass(
             progress,
             completedPasses,
             totalPasses,
             MediaEvidenceAnalysisPhase.VisualIntervalPassStarted,
-            "The two shared visual passes are running together so the source is not scanned serially twice.");
+            _useCombinedVisualPass
+                ? "The scene and interval filters share the same decoded frames."
+                : "The two shared visual passes are running together so the source is not scanned serially twice.");
 
-        (
-            ProcessRunResult sceneResult,
-            ProcessRunResult visualResult) =
-            await _passRunner.RunVisualPassesAsync(
+        ProcessRunResult sceneResult, visualResult;
+        if (_useCombinedVisualPass)
+        {
+            sceneResult = await _passRunner.RunPassAsync(toolInfo.Path, request.Media.FullPath,
+                "Combined visual evidence", FfmpegEvidenceCommandBuilder.BuildCombinedVisualArguments(request, targetPlan.Targets),
+                request.Options.ProcessTimeout, checked(sceneOutputLimit + FfmpegEvidencePassRunner.VisualIntervalOutputLimit), cancellationToken);
+            visualResult = sceneResult;
+            timings.Add(new AnalysisPassTiming("Combined visual evidence", sceneResult.Duration));
+        }
+        else
+        {
+            (sceneResult, visualResult) = await _passRunner.RunVisualPassesAsync(
                 toolInfo.Path,
                 request,
                 targetPlan,
@@ -129,6 +148,7 @@ internal sealed class FfmpegEvidenceAnalyzer :
             new AnalysisPassTiming(
                 "Black and freeze detection",
                 visualResult.Duration));
+        }
 
         completedPasses++;
         ReportPass(
@@ -146,7 +166,8 @@ internal sealed class FfmpegEvidenceAnalyzer :
                     visualResult.StandardOutput,
                     targetPlan.Targets,
                     request.Options
-                        .VisualSignalSampleInterval);
+                        .VisualSignalSampleInterval,
+                    combinedOutput: _useCombinedVisualPass);
 
         rootWarnings.AddRange(
             parsedVisual.RootWarnings);
@@ -261,7 +282,7 @@ internal sealed class FfmpegEvidenceAnalyzer :
                     static target =>
                         target.SignalCoverage),
                 audioSignalCoverages,
-                visualPassCount: 2,
+                visualPassCount: _useCombinedVisualPass ? 1 : 2,
                 audioPassCount:
                     request.Media.AudioStreams.Count,
                 timings,

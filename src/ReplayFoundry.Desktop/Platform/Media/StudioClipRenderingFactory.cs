@@ -8,5 +8,8 @@ public static class StudioProjectRenderingFactory
     public static IStudioProjectRenderingService CreateDefault() =>
         new FfmpegStudioProjectRenderingService(
             new WindowsProcessRunner(),
-            new FfmpegToolLocator());
+            new FfmpegToolLocator(),
+            verifyOutput: true,
+            hardwareEncoding: true,
+            resumeCompletedSegments: true);
 }

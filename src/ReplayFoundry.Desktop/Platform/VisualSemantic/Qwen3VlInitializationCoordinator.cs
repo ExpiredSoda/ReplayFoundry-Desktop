@@ -4,6 +4,8 @@ using ReplayFoundry.Desktop.Media.Intelligence.Moments;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic;
 using ReplayFoundry.Desktop.Platform.Processes;
 
+using ReplayFoundry.Desktop.Platform.Media;
+
 namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal sealed class Qwen3VlInitializationCoordinator
@@ -118,11 +120,11 @@ internal sealed class Qwen3VlInitializationCoordinator
                     _settings,
                     workspace);
             ProcessRunResult result =
-                await _processRunner.RunAsync(
+                await MediaWorkBudget.RunAsync(_processRunner,
                     CreateProcessRequest(
                         command,
                         workspace.DirectoryPath),
-                    cancellationToken);
+                    MediaWorkPriority.Background, MediaWorkKind.HeavyAi, cancellationToken);
 
             if (!result.Succeeded)
             {

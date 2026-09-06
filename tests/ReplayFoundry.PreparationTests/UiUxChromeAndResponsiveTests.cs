@@ -19,6 +19,7 @@ using ReplayFoundry.Desktop;
 using ReplayFoundry.Desktop.Features.Generate;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Generate.CompositionReview;
+using ReplayFoundry.Desktop.Media.Preview;
 using ReplayFoundry.Desktop.Features.Generate.Evidence;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.MomentGuidance;
@@ -84,6 +85,19 @@ internal static partial class UiUxApplicationSurfaceTests
             TestAssert.True(
                 toggle.ActualWidth >= 270,
                 "The shared drop-down toggle must cover the selected value and padding, not only the chevron.");
+
+            combo.DisplayMemberPath = "Name";
+            combo.ItemsSource = new[] { new { Name = "Balanced" }, new { Name = "Thorough" } };
+            foreach (int index in new[] { 0, 1 })
+            {
+                combo.SelectedIndex = index;
+                combo.UpdateLayout();
+                string expected = index == 0 ? "Balanced" : "Thorough";
+                TestAssert.True(
+                    EnumerateVisualDescendants<TextBlock>(combo)
+                        .Any(text => text.Text == expected),
+                    "The closed dropdown must show the selected item's display label, not its object type.");
+            }
         });
         return Task.CompletedTask;
     }
@@ -100,6 +114,14 @@ internal static partial class UiUxApplicationSurfaceTests
             };
             view.Measure(new Size(340, 720));
             view.Arrange(new Rect(0, 0, 340, 720));
+            view.UpdateLayout();
+
+            Expander placement = EnumerateVisualDescendants<Expander>(view)
+                .Single(expander => string.Equals(
+                    expander.Header as string,
+                    "Size & placement",
+                    StringComparison.Ordinal));
+            placement.IsExpanded = true;
             view.UpdateLayout();
 
             TestAssert.Equal(
@@ -593,8 +615,8 @@ internal static partial class UiUxApplicationSurfaceTests
                 Button exclude = EnumerateVisualDescendants<Button>(first)
                     .Single(button =>
                         string.Equals(
-                            button.Content as string,
-                            "Exclude clip",
+                            System.Windows.Automation.AutomationProperties.GetName(button),
+                            "Remove clip from Studio",
                             StringComparison.Ordinal));
                 ICommand excludeCommand = exclude.Command ??
                     throw new InvalidOperationException(
@@ -1291,6 +1313,7 @@ internal static partial class UiUxApplicationSurfaceTests
     {
         RunOnSta(() =>
         {
+            EnsureApplication();
             var studio = new StudioView();
             var library = new LibraryView();
             var publish = new PublishView();
@@ -1315,8 +1338,209 @@ internal static partial class UiUxApplicationSurfaceTests
                 TestAssert.Equal(compact, publish.IsCompactLayout, "Publish compact breakpoint should match.");
                 TestAssert.Equal(compact, settings.IsCompactLayout, "Settings compact breakpoint should match.");
             }
+
+            // A view-only fixture exposes the real video and transport layout
+            // without opening media or starting a preview provider.
+            studio.DataContext = new
+            {
+                ShouldShowPlaceholder = false,
+                ProjectName = "Short workspace layout",
+                Preview = new LayoutOnlyStudioPreview(),
+            };
+            foreach ((double width, double height) in new[] { (1266d, 520d), (1920d, 880d), (760d, 400d) })
+            {
+                var compactTabs = (TabControl)studio.FindName("CompactLayout");
+                compactTabs.SelectedIndex = 1;
+                studio.Width = width;
+                studio.Height = height;
+                studio.Measure(new Size(width, height));
+                studio.Arrange(new Rect(0, 0, width, height));
+                studio.UpdateLayout();
+                Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
+                studio.UpdateLayout();
+
+                var panes = (Grid)studio.FindName("FullLayout");
+                StudioPreviewView preview = studio.IsCompactLayout
+                    ? (StudioPreviewView)((TabItem)compactTabs.Items[1]).Content
+                    : panes.Children.OfType<StudioPreviewView>().Single();
+                var workspace = (WorkspaceScrollViewport)studio.FindName("StudioViewport");
+                var scrollViewer = (ScrollViewer)workspace.Template.FindName("PART_ScrollViewer", workspace);
+                var scrollPresenter = (ScrollContentPresenter)scrollViewer.Template.FindName("PART_ScrollContentPresenter", scrollViewer);
+                TestAssert.True(workspace.HasMoreBelow && scrollPresenter.ActualHeight > 0d &&
+                    scrollPresenter.ActualHeight < studio.ActualHeight,
+                    "This layout must exercise the actual inner viewport while the continuation cue reserves space below it.");
+                Button[] transport = EnumerateVisualDescendants<Button>(preview)
+                    .Where(button => System.Windows.Automation.AutomationProperties.GetName(button) is
+                        "Previous frame" or "Rewind five seconds" or "Play or pause preview" or
+                        "Forward five seconds" or "Next frame")
+                    .ToArray();
+                TestAssert.Equal(5, transport.Length, "Every preview transport action must remain present.");
+                foreach (Button button in transport)
+                {
+                    Rect inPreview = button.TransformToAncestor(preview).TransformBounds(new Rect(button.RenderSize));
+                    Rect inViewport = button.TransformToAncestor(scrollPresenter).TransformBounds(new Rect(button.RenderSize));
+                    TestAssert.True(button.ActualHeight >= 40d && inPreview.Top >= 0d &&
+                        inPreview.Bottom <= preview.ActualHeight + 0.5d &&
+                        (studio.IsCompactLayout ||
+                            (inViewport.Top >= 0d && inViewport.Bottom <= scrollPresenter.ActualHeight + 0.5d)),
+                        "All 40-DIP transport targets must fit the preview pane; standard and wide layouts must also fit the actual scroll content viewport above the continuation cue. Compact tabs may scroll.");
+                }
+                var videoViewport = (Grid)preview.FindName("PreviewViewport");
+                TestAssert.True(videoViewport.ActualHeight >= (studio.IsCompactLayout ? 220d : 100d),
+                    "Compact tabs may scroll to preserve a useful portrait picture; full-size transport targets must never shrink with the video.");
+            }
         });
         return Task.CompletedTask;
+    }
+
+    private sealed class LayoutOnlyStudioPreview
+    {
+        public string SequenceSummary { get; } = "Clip 1 of 3";
+        public string ModeBadge { get; } = "Shorts";
+        public string PreviewScaleText { get; } = "Fit";
+        public string PreviewFormatText { get; } = "1080 × 1920";
+        public bool IsPreviewAvailable { get; } = true;
+        public bool IsPreviewLoading { get; } = false;
+        public bool HasPreviewError { get; } = false;
+        public bool HasLiveCaption { get; } = false;
+        public bool HasLiveSecondaryCaption { get; } = false;
+        public bool HasLiveCaptionPresentationWarning { get; } = false;
+        public bool UsesSecondaryGuidancePlacement { get; } = false;
+        public bool CanShowCaptionControls { get; } = true;
+        public bool IsCaptionContentVisible { get; } = true;
+        public string CaptionVisibilityText { get; } = "Hide captions";
+        public string CaptionVisibilityShortText { get; } = "CC";
+        public double PreviewCanvasWidth { get; } = 1080d;
+        public double PreviewCanvasHeight { get; } = 1920d;
+        public double PreviewPositionMinimumSeconds { get; } = 0d;
+        public double PreviewPositionMaximumSeconds { get; } = 6d;
+        public double PreviewPositionSeconds { get; set; }
+        public string PreviewTimecode { get; } = "00:00";
+        public string PreviewDurationText { get; } = "00:06";
+        public string PreviewStatus { get; } = "Ready";
+    }
+
+    private static Task SetupStepNavigationResetsScroll()
+    {
+        RunOnSta(() =>
+        {
+            EnsureApplication();
+            var request = new GenerationSetupRequest(
+                GenerationMode.IndividualClips,
+                PreparedGenerationWorkflowTests.CreatePreparation(
+                    [(TestMediaFactory.CreateSourcePath("setup-scroll-navigation.mkv"), true, true)]));
+            var setup = new GenerationSetupViewModel(request,
+                PreparedGenerationWorkflowTests.CreateOptions());
+            var window = new GenerationSetupWindow(setup)
+            {
+                Width = 760,
+                Height = 600,
+                ShowInTaskbar = false,
+            };
+            try
+            {
+                window.Show();
+                setup.NavigateToStepCommand.Execute(GenerationSetupStep.GameContext);
+                Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
+                window.UpdateLayout();
+                var scroll = (ScrollViewer)window.FindName("StepScrollViewer");
+                scroll.ScrollToBottom();
+                window.UpdateLayout();
+                double previousOffset = scroll.VerticalOffset;
+                TestAssert.True(previousOffset > 0d,
+                    "The compact setup fixture must exercise a step that actually scrolls.");
+
+                setup.GameContextStep.SelectedSource.ContextNotes = "A view-only navigation note.";
+                setup.NavigateToStepCommand.Execute(GenerationSetupStep.GameContext);
+                Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
+                window.UpdateLayout();
+                TestAssert.True(Math.Abs(scroll.VerticalOffset - previousOffset) < 0.5d,
+                    "Editing or selecting the already active step must preserve the user's scroll position.");
+
+                setup.NextCommand.Execute(null);
+                Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
+                window.UpdateLayout();
+                TestAssert.Equal(GenerationSetupStep.MomentGuidance, setup.CurrentStep,
+                    "The fixture must navigate to the actual Priority Moments step.");
+                TestAssert.True(scroll.ScrollableHeight > 0d && scroll.VerticalOffset < 0.5d,
+                    "The next scrollable step must open at its title and explanation, not at the previous step's offset.");
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+        return Task.CompletedTask;
+    }
+
+    private static Task CompositionReviewFitsCompactDialog()
+    {
+        RunOnSta(() =>
+        {
+            EnsureApplication();
+            var preparation = PreparedGenerationWorkflowTests.CreatePreparation(
+                [(TestMediaFactory.CreateSourcePath("compact-layout-review.mkv"), true, true)]);
+            var review = new CompositionReviewViewModel(
+                new GenerationCompositionReviewRequest(preparation), new LayoutOnlyPreviewProvider());
+            var window = new CompositionReviewWindow(review)
+            {
+                Width = 760,
+                Height = 600,
+                ShowInTaskbar = false,
+            };
+            try
+            {
+                window.Show();
+                // These are the actual dimensions produced when the shared
+                // sizing policy fits a dialog to a 760x600 owner.
+                window.MinWidth = 0;
+                window.MinHeight = 0;
+                window.Width = 728;
+                window.Height = 568;
+                Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
+                window.UpdateLayout();
+
+                var scroll = (ScrollViewer)window.FindName("ReviewScrollViewer");
+                var panels = (Grid)window.FindName("ReviewPanels");
+                TestAssert.True(scroll.ScrollableHeight > 0d && scroll.ScrollableWidth < 0.5d,
+                    "Compact review should scroll vertically rather than require horizontal navigation.");
+                foreach (Border panel in panels.Children.OfType<Border>())
+                {
+                    Rect bounds = panel.TransformToAncestor(scroll).TransformBounds(new Rect(panel.RenderSize));
+                    TestAssert.True(bounds.Left >= -0.5d && bounds.Right <= scroll.ViewportWidth + 0.5d,
+                        "Each source, preview, and area panel must fit the compact viewport width without clipped controls.");
+                }
+                var previewPanel = (Border)window.FindName("PreviewPanel");
+                CompositionRegionEditor editor = EnumerateVisualDescendants<CompositionRegionEditor>(previewPanel).Single();
+                TestAssert.True(editor.ActualHeight >= 120d,
+                    "The stacked review must retain a useful editable picture even when its preview has an error.");
+
+                Button confirm = EnumerateVisualDescendants<Button>(window).Single(button =>
+                    System.Windows.Automation.AutomationProperties.GetName(button) == "Confirm this video");
+                confirm.BringIntoView();
+                Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
+                window.UpdateLayout();
+                Rect confirmationBounds = confirm.TransformToAncestor(scroll).TransformBounds(new Rect(confirm.RenderSize));
+                TestAssert.True(confirmationBounds.Top >= -0.5d && confirmationBounds.Bottom <= scroll.ActualHeight + 0.5d,
+                    "Confirming the selected video must be reachable through vertical scrolling.");
+                var footer = (Grid)window.FindName("ReviewFooter");
+                Rect footerBounds = footer.TransformToAncestor(window).TransformBounds(new Rect(footer.RenderSize));
+                TestAssert.True(footerBounds.Top >= 0d && footerBounds.Bottom <= window.ActualHeight + 0.5d &&
+                    EnumerateVisualDescendants<Button>(footer).All(static button => button.ActualHeight >= 40d),
+                    "Cancel and Continue must stay pinned and full size while the review panels scroll.");
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+        return Task.CompletedTask;
+    }
+
+    private sealed class LayoutOnlyPreviewProvider : IVideoPreviewFrameProvider
+    {
+        public Task<VideoPreviewFrame> GetFrameAsync(VideoPreviewFrameRequest request, CancellationToken cancellationToken) =>
+            Task.FromException<VideoPreviewFrame>(new InvalidDataException("No media is decoded by this layout-only fixture."));
     }
 
     private static Task ViewsInstantiateWithAppResources()

@@ -31,6 +31,10 @@ public sealed class GenerateViewModel : IWorkspaceChromeSource, IDisposable,
     private readonly GenerateWorkflowCoordinator _workflowCoordinator;
     private readonly DelegateCommand _selectSingleFileCommand;
     private readonly DelegateCommand _selectMultipleFilesCommand;
+    private readonly AsyncDelegateCommand _importFolderCommand;
+    private readonly AsyncOperationLifetime _folderImports = new();
+    public string? FolderImportStatus { get; private set; }
+    public ICommand ImportFolderCommand => _importFolderCommand;
     private readonly DelegateCommand _clearSelectionCommand;
     private readonly AsyncDelegateCommand _continueToGenerationSetupCommand;
     private readonly AsyncDelegateCommand<RecentGenerationProject>
@@ -108,6 +112,7 @@ public sealed class GenerateViewModel : IWorkspaceChromeSource, IDisposable,
         _selectMultipleFilesCommand = new DelegateCommand(
             SelectMultipleFiles,
             CanEditSourceSelection);
+        _importFolderCommand = new AsyncDelegateCommand(ChooseFolderAsync, CanEditSourceSelection);
         _clearSelectionCommand = new DelegateCommand(
             ClearSelection,
             () => CanEditSourceSelection() && HasSelectedSources);
@@ -255,6 +260,7 @@ public sealed class GenerateViewModel : IWorkspaceChromeSource, IDisposable,
             return;
         }
         _isDisposed = true;
+        _folderImports.Seal();
         _sourceSelection.Changed -= SourceSelection_Changed;
         _session.Changed -= Session_Changed;
         GenerationProgress.PropertyChanged -= GenerationProgress_PropertyChanged;
@@ -332,6 +338,7 @@ public sealed class GenerateViewModel : IWorkspaceChromeSource, IDisposable,
         RaiseSourceCommandStateChanged();
     private bool CanEditSourceSelection() =>
         !_isDisposed &&
+        !_folderImports.IsSealed &&
         !_operations.HasActiveOperation &&
         WorkflowState == GenerateWorkflowState.SourceSelection;
     private void SelectSingleFile()
@@ -345,6 +352,57 @@ public sealed class GenerateViewModel : IWorkspaceChromeSource, IDisposable,
         ThrowIfDisposed();
         EnsureSourceSelectionIsEditable();
         _sourceSelection.AddCandidates(_videoFilePicker.PickMultipleVideos());
+    }
+    private async Task ChooseFolderAsync()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Import a recording folder" };
+        if (dialog.ShowDialog() == true) await AddFolderAsync(dialog.FolderName);
+    }
+    public Task AddFolderAsync(string folder)
+    {
+        ThrowIfDisposed();
+        EnsureSourceSelectionIsEditable();
+        return _folderImports.RunAsync(() => AddFolderCoreAsync(folder));
+    }
+    private async Task AddFolderCoreAsync(string folder)
+    {
+        try
+        {
+            using GenerationOperationLease operation =
+                _operations.Begin(GenerationOperationKind.FolderImport);
+            FolderImportStatus = "Checking that recording files are stable and no longer open for writing…";
+            OnPropertyChanged(nameof(FolderImportStatus));
+            RaiseSourceCommandStateChanged();
+            var result = await new StableVideoFolderImporter().ScanAsync(
+                folder, operation.CancellationToken);
+            operation.CancellationToken.ThrowIfCancellationRequested();
+            if (_isDisposed) return;
+            int before = _sourceSelection.Count;
+            _sourceSelection.AddCandidates(result.ReadyFiles);
+            FolderImportStatus = $"Added {_sourceSelection.Count - before} recording(s). " +
+                $"Skipped {result.SkippedFiles.Count} empty, changing, linked, or open file(s). " +
+                "Files in subfolders are not included; media is checked when you continue.";
+        }
+        catch (OperationCanceledException) { FolderImportStatus = "Folder import cancelled."; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { FolderImportStatus = "Folder import failed: " + e.Message; }
+        finally
+        {
+            OnPropertyChanged(nameof(FolderImportStatus));
+            RaiseSourceCommandStateChanged();
+        }
+    }
+    public async Task AddDroppedPathsAsync(IEnumerable<string> paths)
+    {
+        if (!CanEditSourceSelection()) return;
+        string[] candidates = paths.ToArray();
+        string[] files = candidates.Where(path => !Directory.Exists(path)).ToArray();
+        if (files.Length > 0) AddDroppedFiles(files);
+        foreach (string folder in candidates.Where(Directory.Exists))
+        {
+            if (!CanEditSourceSelection()) break;
+            await AddFolderAsync(folder);
+        }
     }
     private void ClearSelection()
     {
@@ -381,10 +439,12 @@ public sealed class GenerateViewModel : IWorkspaceChromeSource, IDisposable,
             "changed.";
     }
 
-    async Task IApplicationStopParticipant.StopAsync(
-        CancellationToken cancellationToken) =>
-        await _operations.StopAsync(cancellationToken)
-            .ConfigureAwait(false);
+    async Task IApplicationStopParticipant.StopAsync(CancellationToken cancellationToken)
+    {
+        Task folderImportCompletion = _folderImports.Seal();
+        await _operations.StopAsync(cancellationToken).ConfigureAwait(false);
+        await folderImportCompletion.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     private void ClearRecentProjects()
     {
@@ -480,6 +540,7 @@ public sealed class GenerateViewModel : IWorkspaceChromeSource, IDisposable,
     {
         _selectSingleFileCommand.RaiseCanExecuteChanged();
         _selectMultipleFilesCommand.RaiseCanExecuteChanged();
+        _importFolderCommand.RaiseCanExecuteChanged();
         _clearSelectionCommand.RaiseCanExecuteChanged();
         _continueToGenerationSetupCommand.RaiseCanExecuteChanged();
         _openRecentProjectCommand.RaiseCanExecuteChanged();

@@ -5,7 +5,7 @@
     <StackPanel>
       <Border Style="{DynamicResource Control.CanvasPane}">
         <StackPanel>
-            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="FILES &amp; STORAGE" />
+            <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="Files &amp; storage" />
             <TextBlock
                 Margin="0,8,0,0"
                 Style="{DynamicResource Text.Body}"
@@ -13,7 +13,7 @@
                 TextWrapping="Wrap" />
             <Border Margin="0,14,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="SAVE NEW VIDEOS HERE" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Save new videos here" />
                     <TextBox
                         Margin="0,8,0,0"
                         AutomationProperties.Name="Current output folder"

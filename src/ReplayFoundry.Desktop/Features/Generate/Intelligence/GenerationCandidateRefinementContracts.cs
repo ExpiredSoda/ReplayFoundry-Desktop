@@ -16,6 +16,15 @@ public enum GenerationCandidateRefinementComponentCode
     VisualSemanticActionEvidence,
     CorrelatedVisualSupportPenalty,
     PersonalPreference,
+    IncompleteSpeechBeginning,
+    GroundedVisualRejection,
+    SemanticDiscoveryEvidence,
+    SpokenIntentMatch,
+    CreatorIntentMatch,
+    CaptureContextPenalty,
+    NonGameplayCapture,
+    SemanticRetrievalRelevance,
+    ApplicationStartupLeadIn,
 }
 
 public sealed record GenerationCandidateRefinementComponent
@@ -120,6 +129,28 @@ public sealed class GenerationCandidateRefinement
                 GenerationCandidateRefinementComponentCode
                     .IncompleteSpeechEnding &&
             component.RawValue > 0);
+
+    public bool HasIncompleteSpeechBeginning => _components.Any(
+        static component => component.Code ==
+            GenerationCandidateRefinementComponentCode.IncompleteSpeechBeginning &&
+            component.RawValue > 0);
+
+    public bool HasGroundedVisualRejection => _components.Any(
+        static component => component.Code ==
+            GenerationCandidateRefinementComponentCode.GroundedVisualRejection &&
+            component.RawValue > 0);
+
+    public bool HasNonGameplayCapture => _components.Any(static component =>
+        component.Code == GenerationCandidateRefinementComponentCode.NonGameplayCapture && component.RawValue > 0);
+
+    public bool HasApplicationStartupLeadIn => _components.Any(static component =>
+        component.Code == GenerationCandidateRefinementComponentCode.ApplicationStartupLeadIn && component.RawValue > 0);
+
+    public bool RequiresSemanticReview =>
+        Candidate.ConstructionReason == MomentCandidateConstructionReason.SemanticExploration &&
+        !_components.Any(static component => component.Code ==
+            GenerationCandidateRefinementComponentCode.SemanticDiscoveryEvidence &&
+            component.RawValue > 0);
 }
 
 public sealed class GenerationCandidateIntelligenceResult
@@ -132,7 +163,8 @@ public sealed class GenerationCandidateIntelligenceResult
         GenerationSpeechActivityResult speechActivity,
         IEnumerable<GenerationCandidateRefinement> refinements,
         GenerationMomentFindingResult refinedMoments,
-        GenerationVisualSemanticAnalysisResult? visualSemantic = null)
+        GenerationVisualSemanticAnalysisResult? visualSemantic = null,
+        GenerationTranscriptAnalysisResult? transcripts = null)
     {
         ArgumentNullException.ThrowIfNull(baseMoments);
         ArgumentNullException.ThrowIfNull(speechActivity);
@@ -147,6 +179,12 @@ public sealed class GenerationCandidateIntelligenceResult
             !ReferenceEquals(baseMoments.Request, refinedMoments.Request) ||
             visualSemantic is not null &&
             !ReferenceEquals(visualSemantic.CandidateIntelligence.BaseMoments, baseMoments) ||
+            transcripts is not null &&
+            (!ReferenceEquals(transcripts.ExpandedMoments.Request, baseMoments.Request) ||
+                transcripts.Sources.Select(static source => source.SourceFullPath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != transcripts.Sources.Count ||
+                transcripts.Sources.Any(source => !baseMoments.Sources.Any(moment =>
+                    moment.AnalyzedSource.PreparedSource.Media.FullPath.Equals(source.SourceFullPath, StringComparison.OrdinalIgnoreCase) &&
+                    moment.AnalyzedSource.PreparedSource.Media.AudioStreams.Any(stream => stream.Index == source.AudioStreamIndex)))) ||
             snapshot.Length != proposals.Length ||
             snapshot.Select(static item => item.Candidate).Distinct(ReferenceEqualityComparer.Instance).Count() != snapshot.Length ||
             proposals.Any(proposal => !snapshot.Any(item => ReferenceEquals(item.Candidate, proposal))))
@@ -160,6 +198,7 @@ public sealed class GenerationCandidateIntelligenceResult
         _refinements = Array.AsReadOnly(snapshot);
         RefinedMoments = refinedMoments;
         VisualSemantic = visualSemantic;
+        Transcripts = transcripts;
     }
 
     public GenerationMomentFindingResult BaseMoments { get; }
@@ -168,4 +207,8 @@ public sealed class GenerationCandidateIntelligenceResult
         _refinements;
     public GenerationMomentFindingResult RefinedMoments { get; }
     public GenerationVisualSemanticAnalysisResult? VisualSemantic { get; }
+    public GenerationTranscriptAnalysisResult? Transcripts { get; }
+
+    public GenerationCandidateIntelligenceResult WithTranscripts(GenerationTranscriptAnalysisResult transcripts) =>
+        GenerationDiscoveryIntentPolicy.ApplyTranscriptIntent(this, transcripts);
 }

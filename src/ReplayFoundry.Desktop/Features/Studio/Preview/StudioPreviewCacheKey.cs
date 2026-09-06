@@ -10,7 +10,7 @@ internal sealed record StudioPreviewCacheKey(
     string Hash,
     string CanonicalInput)
 {
-    public const string PolicyVersion = "1.1";
+    public const string PolicyVersion = "1.3";
 
     public static string CreateMediaIdentity(
         StudioPreviewMediaRequest request)
@@ -18,6 +18,7 @@ internal sealed record StudioPreviewCacheKey(
         ArgumentNullException.ThrowIfNull(request);
         var builder = new StringBuilder();
         Add(builder, "policy", PolicyVersion);
+        Add(builder, "output", request.Asset.RenderSettings.CanonicalIdentity());
         Add(builder, "source", request.Asset.SourceFullPath.ToUpperInvariant());
         Add(builder, "context-start", request.SourceStart.Ticks);
         Add(builder, "context-end", request.SourceEnd.Ticks);
@@ -50,6 +51,7 @@ internal sealed record StudioPreviewCacheKey(
         FileInfo source = Snapshot(request.Asset.SourceFullPath);
         var builder = new StringBuilder();
         Add(builder, "policy", PolicyVersion);
+        Add(builder, "output", request.Asset.RenderSettings.CanonicalIdentity());
         Add(builder, "source", source.FullName.ToUpperInvariant());
         Add(builder, "source-length", source.Length);
         Add(builder, "source-write-utc", source.LastWriteTimeUtc.Ticks);

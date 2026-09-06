@@ -11,13 +11,20 @@ public sealed class CreatorVoiceSettings
         string audienceAddress,
         string namingGuidance,
         string descriptionSignature,
-        IEnumerable<string> defaultTags)
+        IEnumerable<string> defaultTags,
+        ClipEditorialCopyObjective copyObjective =
+            ClipEditorialCopyObjective.BalancedActionAndCommentary)
     {
         ArgumentNullException.ThrowIfNull(defaultTags);
+        if (!Enum.IsDefined(copyObjective))
+        {
+            throw new ArgumentOutOfRangeException(nameof(copyObjective));
+        }
         AudienceAddress = audienceAddress ?? string.Empty;
         NamingGuidance = namingGuidance ?? string.Empty;
         DescriptionSignature = descriptionSignature ?? string.Empty;
         _defaultTags = Array.AsReadOnly(defaultTags.ToArray());
+        CopyObjective = copyObjective;
     }
 
     public string AudienceAddress { get; }
@@ -28,6 +35,8 @@ public sealed class CreatorVoiceSettings
 
     public IReadOnlyList<string> DefaultTags => _defaultTags;
 
+    public ClipEditorialCopyObjective CopyObjective { get; }
+
     internal static CreatorVoiceSettings FromProfile(
         ClipEditorialProfile profile)
     {
@@ -36,7 +45,8 @@ public sealed class CreatorVoiceSettings
             profile.AudienceAddress,
             profile.NamingGuidance ?? string.Empty,
             profile.ReusableDescriptionSignature ?? string.Empty,
-            profile.DefaultTags);
+            profile.DefaultTags,
+            profile.CopyObjective);
     }
 }
 

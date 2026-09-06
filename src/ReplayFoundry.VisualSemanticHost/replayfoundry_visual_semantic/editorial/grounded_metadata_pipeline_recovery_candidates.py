@@ -5,6 +5,8 @@ import hashlib
 import json
 from typing import Any
 
+from .grounded_metadata_creator_authority import _without_automatic_commentary
+
 from ..commands import (
     InferenceError,
     _add_failure_diagnostic,
@@ -54,6 +56,8 @@ def run_recovery_candidates(
         return
     request = context.request
     synthesis_request = context.synthesis_request
+    if progress.withhold_unreviewed_transcripts or progress.primary_only_synthesis_evidence:
+        synthesis_request = _without_automatic_commentary(synthesis_request)
     case_ordinal = context.case_ordinal
     visual_drafts = context.visual_drafts
     primary_visual_draft_ordinal = context.primary_visual_draft_ordinal
@@ -68,8 +72,8 @@ def run_recovery_candidates(
     torchcodec = context.torchcodec
     process_vision_info = context.process_vision_info
     session = context.session
-    grammar = context.grammar
-    base_audit = context.base_audit
+    from .grounded_metadata_pipeline_state import scoped_metadata_grammar
+    grammar, base_audit = scoped_metadata_grammar(context, synthesis_request)
 
     rejected_rules = progress.rejected_rules
     synthesis_recovery_pool_source_pass_ordinal = (

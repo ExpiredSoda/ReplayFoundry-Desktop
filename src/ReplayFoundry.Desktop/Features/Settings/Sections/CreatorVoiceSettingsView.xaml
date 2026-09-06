@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Border Style="{DynamicResource Control.CanvasPane}">
         <StackPanel>
-            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="CREATOR VOICE" />
+            <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="Creator voice" />
             <TextBlock
                 Margin="0,6,0,0"
                 Style="{DynamicResource Text.Body}"

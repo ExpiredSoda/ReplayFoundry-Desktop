@@ -5,7 +5,7 @@
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
     <Border Style="{DynamicResource Control.CanvasPane}">
         <StackPanel>
-            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="LOCAL TOOLS &amp; AI" />
+            <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="Local tools &amp; AI" />
             <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Body}" Text="Replay Foundry keeps its video tools and optional AI on this PC." TextWrapping="Wrap" />
             <controls:UnavailableBanner Margin="0,12,0,0" Title="{Binding RuntimeProfileStatus}" Description="{Binding AiStatus}" />
             <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">

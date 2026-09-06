@@ -52,6 +52,21 @@ public static partial class ClipEditorialMetadataQuality
             StringComparison.OrdinalIgnoreCase).Trim();
         string combined = audienceTitle + "\n" + description;
 
+        if (ClipEditorialTitleCompletenessPolicy.HasUnfinishedModifier(audienceTitle, description))
+        {
+            issues.Add(new ClipEditorialMetadataQualityIssue(
+                ClipEditorialMetadataQualityIssueCode.AudienceCopyReview,
+                "The title ends inside a modifier clause. Shorten it to a complete supported thought instead of adding unverified words.",
+                sourceRuleCode: "IncompleteTitle"));
+        }
+        else if (ClipEditorialTitleCompletenessPolicy.HasDanglingPunctuation(audienceTitle))
+        {
+            issues.Add(new ClipEditorialMetadataQualityIssue(
+                ClipEditorialMetadataQualityIssueCode.AudienceCopyReview,
+                "The title has dangling punctuation or an unmatched closing quote. Review it as one complete supported thought; do not invent a missing ending.",
+                sourceRuleCode: "IncompleteTitle"));
+        }
+
         AddIf(
             issues,
             ThirdPersonCreatorRegex().IsMatch(combined) ||

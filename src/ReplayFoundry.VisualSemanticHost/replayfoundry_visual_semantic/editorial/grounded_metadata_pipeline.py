@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from .grounded_knowledge_selection import _request_with_selected_knowledge
+from .grounded_metadata_creator_authority import _timed_synthesis_drafts
 from .grounded_metadata_generation import _generate_json_once
 from .grounded_metadata_generation import (
     _generate_json_once as _generate_rephrase_json_once,
@@ -146,13 +147,16 @@ def _prepare_synthesis_context(
         for ordinal in sorted(supporting_ordinals)
     ))
     synthesis_request["_editorialFraming"] = editorial_frame
-    canonical_schema, schema_sha256 = _metadata_schema(synthesis_request)
-    grammar, base_audit = session.compile_json_schema(
-        canonical_schema,
-        METADATA_SCHEMA_VERSION,
-        schema_sha256,
-        any_whitespace=ANY_WHITESPACE,
-    )
+    from .grounded_metadata_creator_authority import _requires_balanced_copy
+    grammar, base_audit = None, None
+    if not _requires_balanced_copy(synthesis_request):
+        canonical_schema, schema_sha256 = _metadata_schema(synthesis_request)
+        grammar, base_audit = session.compile_json_schema(
+            canonical_schema,
+            METADATA_SCHEMA_VERSION,
+            schema_sha256,
+            any_whitespace=ANY_WHITESPACE,
+        )
     all_prior_accepted_titles = _combined_prior_title_references(
         request,
         prior_accepted_titles,
@@ -174,7 +178,9 @@ def _prepare_synthesis_context(
         process_vision_info=process_vision_info,
         session=session,
         synthesis_started=synthesis_started,
-        visual_drafts=facts["visualDrafts"],
+        visual_drafts=_timed_synthesis_drafts(
+            facts["visualDrafts"], facts["visualDraftRecords"], request["clip"],
+        ),
         visual_draft_records=facts["visualDraftRecords"],
         stable_readable_text=facts["stableReadableText"],
         visual_event_selection_applied=facts["visualEventSelectionApplied"],
@@ -241,6 +247,11 @@ def _synthesize_case(
         prior_accepted_titles,
     )
     progress = SynthesisProgress()
+    from .grounded_metadata_creator_authority import _requires_balanced_copy
+    if _requires_balanced_copy(context.synthesis_request):
+        from .grounded_metadata_isolated_fields import run_isolated_fields
+        run_isolated_fields(context, functions, progress)
+        return build_synthesis_result(context, progress)
     run_ordinary_refinement(context, functions, progress)
     recovery_messages = prepare_recovery_pool(context, progress)
     run_recovery_candidates(

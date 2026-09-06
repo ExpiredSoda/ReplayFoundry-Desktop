@@ -62,7 +62,8 @@ public sealed class AudioTranscriptionManifest
         TimeSpan sourceDuration,
         int absoluteAudioStreamIndex,
         AudioTranscriptionOptions options,
-        InferenceExecutionManifest execution)
+        InferenceExecutionManifest execution,
+        IEnumerable<AudioTranscriptionManifest>? sourceManifests = null)
     {
         if (string.IsNullOrWhiteSpace(neighborhoodId))
         {
@@ -83,6 +84,12 @@ public sealed class AudioTranscriptionManifest
 
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(execution);
+        AudioTranscriptionManifest[] sources = sourceManifests?.ToArray() ?? [];
+        if (sources.Any(source => source is null || source.IsProjection ||
+            source.SourceDuration != sourceDuration || source.AbsoluteAudioStreamIndex != absoluteAudioStreamIndex))
+        {
+            throw new ArgumentException("A projected transcript must retain its original source-chunk manifests.", nameof(sourceManifests));
+        }
 
         NeighborhoodId = neighborhoodId.Trim();
         InputDuration = inputDuration;
@@ -91,6 +98,7 @@ public sealed class AudioTranscriptionManifest
         AbsoluteAudioStreamIndex = absoluteAudioStreamIndex;
         Options = options;
         Execution = execution;
+        SourceManifests = Array.AsReadOnly(sources);
     }
 
     public string NeighborhoodId { get; }
@@ -106,4 +114,9 @@ public sealed class AudioTranscriptionManifest
     public AudioTranscriptionOptions Options { get; }
 
     public InferenceExecutionManifest Execution { get; }
+
+    // For a projection, Execution is the first contributing execution for
+    // compatibility; SourceManifests retains the complete original provenance.
+    public IReadOnlyList<AudioTranscriptionManifest> SourceManifests { get; }
+    public bool IsProjection => SourceManifests.Count > 0;
 }

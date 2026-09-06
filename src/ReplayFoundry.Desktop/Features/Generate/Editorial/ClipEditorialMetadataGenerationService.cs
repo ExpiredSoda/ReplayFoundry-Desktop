@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Moments;
@@ -9,6 +10,8 @@ namespace ReplayFoundry.Desktop.Features.Generate.Editorial;
 public interface IClipEditorialMetadataGenerationService
 {
     bool IsAiAvailable { get; }
+
+    string? AiUnavailableReason => null;
 
     Task<ClipEditorialMetadataDraft> GenerateAsync(
         ClipEditorialMetadataRequest request,
@@ -36,13 +39,15 @@ public sealed class ClipEditorialMetadataGenerationService :
 
     private readonly IClipEditorialMetadataGenerator _heuristic;
     private readonly IClipEditorialMetadataGenerator? _ai;
+    private readonly string? _aiUnavailableReason;
     private readonly IVisualSemanticReviewVideoMaterializer?
         _reviewVideoMaterializer;
 
     public ClipEditorialMetadataGenerationService(
         IClipEditorialMetadataGenerator heuristic,
         IClipEditorialMetadataGenerator? ai = null,
-        IVisualSemanticReviewVideoMaterializer? reviewVideoMaterializer = null)
+        IVisualSemanticReviewVideoMaterializer? reviewVideoMaterializer = null,
+        string? aiUnavailableReason = null)
     {
         _heuristic = heuristic ??
             throw new ArgumentNullException(nameof(heuristic));
@@ -54,6 +59,8 @@ public sealed class ClipEditorialMetadataGenerationService :
         }
 
         _ai = ai;
+        _aiUnavailableReason = string.IsNullOrWhiteSpace(aiUnavailableReason)
+            ? null : aiUnavailableReason.Trim();
         _reviewVideoMaterializer = reviewVideoMaterializer;
     }
 
@@ -61,6 +68,9 @@ public sealed class ClipEditorialMetadataGenerationService :
         _ai?.IsAvailable == true &&
         (_ai is not IClipEditorialVisualMetadataGenerator ||
          _reviewVideoMaterializer is not null);
+
+    public string? AiUnavailableReason =>
+        IsAiAvailable ? null : _aiUnavailableReason;
 
     public async Task<ClipEditorialMetadataDraft> GenerateAsync(
         ClipEditorialMetadataRequest request,
@@ -275,6 +285,12 @@ public sealed class ClipEditorialMetadataGenerationService :
             IClipEditorialMetadataBatchGenerator generator,
             CancellationToken cancellationToken)
     {
+        using IClipEditorialMetadataBatchSession? session =
+            (generator as IClipEditorialMetadataBatchSessionFactory)?.CreateBatchSession();
+        generator = session ?? generator;
+        long batchStarted = Stopwatch.GetTimestamp();
+        string diagnosticBatchId = Guid.NewGuid().ToString("N");
+        IReadOnlyList<ClipEditorialMetadataRequest> currentRequests = effectiveRequests;
         IReadOnlyList<ClipEditorialMetadataDraft> currentDrafts =
             await GenerateProviderBatchAsync(
                 originalRequests,
@@ -299,6 +315,7 @@ public sealed class ClipEditorialMetadataGenerationService :
         {
             cancellationToken.ThrowIfCancellationRequested();
             var pendingIndexes = new List<int>();
+            var pendingDecisions = new List<ClipEditorialRetryCaseDiagnostic>();
             for (int position = 0;
                  position < currentIndexes.Length;
                  position++)
@@ -322,14 +339,33 @@ public sealed class ClipEditorialMetadataGenerationService :
                     EditorialRetryIssues(draft, originalRequest);
                 if (titleRejected || qualityIssues.Count > 0)
                 {
-                    if (titleRejected || RequiresDifferentTitle(
+                    bool differentTitleRequired = titleRejected || RequiresDifferentTitle(
                             draft,
                             originalRequest,
-                            qualityIssues))
+                            qualityIssues);
+                    if (differentTitleRequired)
                     {
                         rejectedTitles[originalIndex].Add(draft.Title);
                     }
                     pendingIndexes.Add(originalIndex);
+                    ClipEditorialMetadataRequest currentRequest = currentRequests[position];
+                    pendingDecisions.Add(new ClipEditorialRetryCaseDiagnostic(
+                        currentRequest.Context.CandidateId,
+                        currentRequest.Attempt,
+                        currentRequest.VariantIntent.ToString(),
+                        currentRequest.Attempt,
+                        currentRequest.VariantIntent.ToString(),
+                        titleRejected,
+                        titleRejected
+                            ? ClipEditorialBatchNoveltyPolicy.IsBannedAbstractFamily(draft.Title)
+                                ? "BannedAbstractFamily" : "TitleCollision"
+                            : null,
+                        differentTitleRequired,
+                        Array.AsReadOnly(qualityIssues.Select(static issue =>
+                            issue.Code.ToString()).Distinct(StringComparer.Ordinal).ToArray()),
+                        Array.AsReadOnly(qualityIssues.Select(static issue =>
+                            issue.SourceRuleCode).OfType<string>()
+                            .Distinct(StringComparer.Ordinal).ToArray())));
                     continue;
                 }
 
@@ -363,20 +399,52 @@ public sealed class ClipEditorialMetadataGenerationService :
                     rejectedTitles[index],
                     retryCount + 1))
                 .ToArray();
+            IReadOnlyList<ClipEditorialRetryCaseDiagnostic> retryCases = Array.AsReadOnly(
+                retryRequests.Select((request, index) => pendingDecisions[index] with
+                {
+                    NextAttempt = request.Attempt,
+                    NextVariant = request.VariantIntent.ToString(),
+                }).ToArray());
+            long retryStarted = Stopwatch.GetTimestamp();
+            var retryDiagnostic = new ClipEditorialRetryDiagnostic(
+                "Started", diagnosticBatchId, retryCount + 1,
+                Stopwatch.GetElapsedTime(batchStarted).TotalSeconds,
+                null, retryCases);
+            ClipEditorialRetryDiagnostics.Report(retryDiagnostic);
             try
             {
+                currentRequests = retryRequests;
                 currentDrafts = await GenerateProviderBatchAsync(
                     retryRequests,
                     retryRequests,
                     generator,
                     cancellationToken);
+                ClipEditorialRetryDiagnostics.Report(retryDiagnostic with
+                {
+                    Event = "Completed",
+                    ElapsedSeconds = Stopwatch.GetElapsedTime(batchStarted).TotalSeconds,
+                    RetryElapsedSeconds = Stopwatch.GetElapsedTime(retryStarted).TotalSeconds,
+                });
             }
             catch (OperationCanceledException)
             {
+                ClipEditorialRetryDiagnostics.Report(retryDiagnostic with
+                {
+                    Event = "Cancelled",
+                    ElapsedSeconds = Stopwatch.GetElapsedTime(batchStarted).TotalSeconds,
+                    RetryElapsedSeconds = Stopwatch.GetElapsedTime(retryStarted).TotalSeconds,
+                });
                 throw;
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                ClipEditorialRetryDiagnostics.Report(retryDiagnostic with
+                {
+                    Event = "Failed",
+                    ElapsedSeconds = Stopwatch.GetElapsedTime(batchStarted).TotalSeconds,
+                    RetryElapsedSeconds = Stopwatch.GetElapsedTime(retryStarted).TotalSeconds,
+                    FailureType = exception.GetType().Name,
+                });
                 // Every pending row already has at least one schema- and
                 // provenance-valid AI attempt. A failed corrective rewrite
                 // must not erase that work or switch authorship to heuristics.
@@ -397,7 +465,12 @@ public sealed class ClipEditorialMetadataGenerationService :
         EditorialRetryIssues(
         ClipEditorialMetadataDraft draft,
         ClipEditorialMetadataRequest request)
-        => MergedAdvisoryIssues(draft, request);
+        // Provenance reconciliation and an unmet packaging preference remain
+        // visible, but neither alone justifies repeating visual inference.
+        => MergedAdvisoryIssues(draft, request)
+            .Where(static issue => issue.SourceRuleCode is not
+                ("RerollDiversityProvenanceRecomputed" or "BalanceNotSatisfied"))
+            .ToArray();
 
     private static bool RequiresDifferentTitle(
         ClipEditorialMetadataDraft draft,
@@ -477,6 +550,9 @@ public sealed class ClipEditorialMetadataGenerationService :
                 candidate.Draft,
                 candidate.Issues,
                 comparisonTitles))
+            .ThenBy(candidate => ClipAudiencePackagingAssessment.Evaluate(
+                candidate.Draft.Title,
+                candidate.Draft.Description).Penalty)
             .ThenByDescending(static candidate => candidate.Index)
             .Select(static candidate => candidate.Draft)
             .First();
@@ -540,6 +616,7 @@ public sealed class ClipEditorialMetadataGenerationService :
         }
 
         if (rule is
+                "BalanceNotSatisfied" or
                 "EditorialFrameDrift" or
                 "FirstPersonTitleSubject" or
                 "GenericOpening" or

@@ -1,9 +1,11 @@
 using ReplayFoundry.Desktop.Features.Generate.Captions;
+using ReplayFoundry.Desktop.Features.Generate.Editorial;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
 using ReplayFoundry.Desktop.Features.Generate.Moments;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
+using ReplayFoundry.Desktop.Features.Studio.Editorial;
 using ReplayFoundry.Desktop.Features.Studio.Projects;
 using ReplayFoundry.Desktop.Features.Studio.Rendering;
 using ReplayFoundry.Desktop.Media.Composition;
@@ -12,6 +14,7 @@ using ReplayFoundry.Desktop.Media.Intelligence.Preferences;
 using ReplayFoundry.Desktop.Media.Intelligence.GameKnowledge;
 using ReplayFoundry.Desktop.Media.Intelligence.Moments;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualText;
+using ReplayFoundry.Desktop.Media.Preview;
 using ReplayFoundry.Desktop.Media.Transcription;
 using ReplayFoundry.Desktop.Platform.Storage;
 using System.Text.Json;
@@ -19,7 +22,7 @@ using System.Text.Json.Nodes;
 
 namespace ReplayFoundry.PreparationTests;
 
-internal static class StudioProjectPersistenceTests
+internal static partial class StudioProjectPersistenceTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
@@ -29,6 +32,8 @@ internal static class StudioProjectPersistenceTests
         new("Studio schema 1.1 restores transcript contexts that predate timed spans", LoadsLegacyTranscriptWithoutSpans),
         new("Studio project persistence reads 1.0 metadata without reroll history", ReadsLegacyProjectWithoutHistory),
         new("Studio schema 1.2 persists only selected attributable public context", PersistsOnlySelectedGameKnowledge),
+        new("Earlier copy remains restorable after transient context is removed by real project storage", CopyHistorySurvivesPersistedContextProjection),
+        new("Authored context freshness and unknown legacy provenance survive project storage", AuthoredContextFreshnessSurvivesStorage),
         new("Studio schema 1.1 loads bounded context without re-saving its cache", LoadsLegacyGameKnowledgeBoundedly),
         new("Studio hidden moments default missing provider history to required AI", MissingHiddenMomentPreferenceDefaultsToAi),
         new("Studio legacy hidden moments migrate automatic heuristics to required AI", LegacyAutomaticHeuristicPreferenceMigratesToAi),
@@ -475,6 +480,77 @@ internal static class StudioProjectPersistenceTests
             loaded.Project!.PrimaryAsset.EditorialContext!.Transcripts.Single()
                 .Spans.Count,
             "A legacy transcript without timed spans must restore as bounded untimed context.");
+        return Task.CompletedTask;
+    }
+
+    private static Task CopyHistorySurvivesPersistedContextProjection()
+    {
+        using var fixture = new PersistenceFixture();
+        GenerationOutputProject project = fixture.CreateProjectWithGameKnowledge();
+        GenerationOutputAsset asset = project.PrimaryAsset;
+        ClipEditorialContext context = asset.EditorialContext!;
+        ClipVisualTextContext retainedText = context.VisualText!;
+        var frame = new VideoPreviewFrame(
+            asset.SourceFullPath,
+            asset.SourceDuration,
+            asset.SourceMedia.PrimaryVideoStream.Index,
+            TimeSpan.FromSeconds(12),
+            decodedTimestamp: null,
+            1280,
+            720,
+            CompositionCoordinateSpace.EffectiveDisplayNormalizedBeforeCrop,
+            [1],
+            new VideoPreviewFrameManifest("fake", "1", "ffmpeg", "1",
+                Path.GetFullPath("ffmpeg.exe"), DateTimeOffset.UnixEpoch, TimeSpan.Zero));
+        var observation = new VisualTextFrameObservation(
+            new VisualTextFrameRequest(frame),
+            new VisualTextProviderIdentity("fake", "1", "CPU", "1", "en-US"),
+            [new VisualTextLine("Hidden Route",
+            [
+                new VisualTextWord("Hidden", new VisualTextBoundingBox(.1, .1, .1, .1)),
+                new VisualTextWord("Route", new VisualTextBoundingBox(.2, .1, .1, .1)),
+            ])],
+            TimeSpan.Zero);
+        context = context.WithVisualText(new ClipVisualTextContext(
+            context.CandidateId, context.SourceFullPath, retainedText.ContentRegion,
+            [observation], retainedText.Anchors, retainedText.Warnings));
+        ClipEditorialMetadataDraft original = asset.EditorialMetadata!;
+        string durableRevision = StudioEditorialContextRevision.CreateDurable(context);
+        var draft = original.WithUserEdits("An alternate grounded title", original.Description, original.Tags)
+            .RememberPreviousCopy(original, durableRevision);
+        project = project.ReplaceAsset(asset.WithCurrentCutEditorialMetadata(context, draft));
+
+        fixture.Store.Save(project, revision: 1);
+        StudioProjectLoadResult loaded = fixture.Store.Load(project.Id);
+        TestAssert.Equal(StudioProjectLoadOutcome.Loaded, loaded.Outcome,
+            "A project with copy history and source-backed editorial evidence must reopen normally.");
+        GenerationOutputProject restoredProject = loaded.Project!;
+        GenerationOutputAsset restoredAsset = restoredProject.PrimaryAsset;
+        ClipEditorialContext restored = restoredAsset.CreateCurrentCutEditorialContext();
+        TestAssert.Equal(1, context.VisualText!.Frames.Count,
+            "The original context must contain transient raw OCR observations.");
+        TestAssert.Equal(0, restored.VisualText!.Frames.Count,
+            "Raw OCR images must remain outside the durable Studio document.");
+        TestAssert.Equal(10, context.GameKnowledge!.Snapshot!.Passages.Count,
+            "The original context must contain unused reusable knowledge passages.");
+        TestAssert.Equal(4, restored.GameKnowledge!.Snapshot!.Passages.Count,
+            "Only selected attributable knowledge survives Studio storage.");
+        TestAssert.Equal(durableRevision, StudioEditorialContextRevision.CreateDurable(restored),
+            "Copy identity must use the same retained transcript, game, evidence, crop, OCR anchors, and grounded claims after reopening.");
+        TestAssert.False(StudioEditorialContextRevision.Create(context).Equals(
+            StudioEditorialContextRevision.Create(restored), StringComparison.Ordinal),
+            "The pending-provider guard must still distinguish discarded raw OCR and full live knowledge snapshots.");
+        TestAssert.Equal(durableRevision, restoredAsset.EditorialMetadata!.CopyVersions.Single().ContextFingerprint,
+            "The stored copy version must keep its exact durable context identity.");
+        var session = new GenerationOutputSession();
+        session.Publish(restoredProject);
+        using var editor = new StudioEditorialMetadataViewModel(session, generator: null, new ClipEditorialProfileSession());
+        editor.Bind(restoredProject, restoredAsset);
+        TestAssert.True(editor.RestoreCopyCommand.CanExecute(null),
+            "Reloading an unchanged cut must preserve the ability to restore its earlier wording.");
+        editor.RestoreCopyCommand.Execute(null);
+        TestAssert.Equal(original.Title, editor.Title,
+            "Restoring the reopened version must place its original wording in the editable draft.");
         return Task.CompletedTask;
     }
 

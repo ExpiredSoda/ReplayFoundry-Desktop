@@ -14,9 +14,13 @@ public sealed class GenerationVisualTextAnalysisRequest
     public GenerationVisualTextAnalysisRequest(
         ClipEditorialContext context,
         MediaProbeResult media,
-        IEnumerable<TimeSpan>? priorityTimestamps = null)
+        IEnumerable<TimeSpan>? priorityTimestamps = null,
+        int maximumSampleCount = GenerationVisualTextAnalysisService.MaximumSampleCount)
     {
         Context = context ?? throw new ArgumentNullException(nameof(context));
+        if (maximumSampleCount is < 1 or > GenerationVisualTextAnalysisService.MaximumSampleCount)
+            throw new ArgumentOutOfRangeException(nameof(maximumSampleCount));
+        MaximumSampleCount = maximumSampleCount;
         Media = media ?? throw new ArgumentNullException(nameof(media));
         if (!context.SourceFullPath.Equals(
                 media.FullPath,
@@ -40,6 +44,7 @@ public sealed class GenerationVisualTextAnalysisRequest
     public ClipEditorialContext Context { get; }
     public MediaProbeResult Media { get; }
     public IReadOnlyList<TimeSpan> PriorityTimestamps => _priorityTimestamps;
+    public int MaximumSampleCount { get; }
 }
 
 public interface IGenerationVisualTextAnalysisService
@@ -159,7 +164,7 @@ public sealed class GenerationVisualTextAnalysisService :
             .ThenBy(static value => value.Time)
             .Select(static value => value.Time)
             .Distinct()
-            .Take(MaximumSampleCount)
+            .Take(request.MaximumSampleCount)
             .OrderBy(static value => value)
             .ToArray();
         return Array.AsReadOnly(selected);

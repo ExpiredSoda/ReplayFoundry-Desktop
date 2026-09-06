@@ -384,19 +384,26 @@ internal static partial class UiUxApplicationSurfaceTests
             };
             kineticPrimary.ApplyTemplate();
             TestAssert.True(
-                kineticPrimary.Template.FindName("MotionRoot", kineticPrimary) is Grid &&
-                kineticPrimary.Template.FindName("HoverScale", kineticPrimary) is ScaleTransform &&
-                kineticPrimary.Template.FindName("PressScale", kineticPrimary) is ScaleTransform &&
-                kineticPrimary.Template.FindName("HoverTranslate", kineticPrimary) is TranslateTransform &&
-                kineticPrimary.Template.FindName("PressTranslate", kineticPrimary) is TranslateTransform,
-                "Every shared button must animate its complete silhouette with composable hover and press transforms.");
-            TestAssert.True(
                 kineticPrimary.Template.FindName("Surface", kineticPrimary) is Border &&
                 kineticPrimary.Template.FindName("KineticAura", kineticPrimary) is null &&
                 kineticPrimary.Template.FindName("HoverAuraRoot", kineticPrimary) is null &&
                 kineticPrimary.Template.FindName("PressAuraGate", kineticPrimary) is null &&
                 kineticPrimary.FocusVisualStyle is Style,
                 "Every shared button must use one interactive surface and one keyboard-only focus adorner without a second aura rim.");
+
+            var dockButton = new Button
+            {
+                Content = "Studio",
+                Style = (Style)app.FindResource("Control.DockButton"),
+            };
+            ReplayFoundry.Desktop.Shell.Dock.FloatingDock.SetIsActive(dockButton, true);
+            dockButton.ApplyTemplate();
+            TestAssert.True(
+                dockButton.Template.FindName("ButtonSurface", dockButton) is Border activeDockSurface &&
+                ReferenceEquals(app.FindResource("Brush.InteractiveSelected"), activeDockSurface.Background) &&
+                dockButton.FocusVisualStyle is Style &&
+                dockButton.Focusable,
+                "The current workspace must remain visibly selected and keyboard-focusable in the compact dock.");
 
             var railItem = new ListBoxItem
             {
@@ -488,13 +495,6 @@ internal static partial class UiUxApplicationSurfaceTests
             "Library",
             "Sections",
             "LibraryContentView.xaml"));
-        string dock = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "ReplayFoundry.Desktop",
-            "Resources",
-            "Controls",
-            "FloatingDockStyles.xaml"));
         string buttons = File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -620,10 +620,6 @@ internal static partial class UiUxApplicationSurfaceTests
             selection.Contains("x:Name=\"SelectionRail\"", StringComparison.Ordinal),
             "The shared visual system must not restore stacked hover auras or full selected-card outlines.");
         TestAssert.True(
-            dock.Contains("Brush.KineticGlowSoft", StringComparison.Ordinal) &&
-            !dock.Contains("Brush.BrandYellow", StringComparison.Ordinal),
-            "The dock active state should use an upward cyan aura instead of a hard yellow underline.");
-        TestAssert.True(
             regions.Contains("CompositionReview.CropMark", StringComparison.Ordinal) &&
             !regions.Contains("Value=\"4\"", StringComparison.Ordinal),
             "Layout Review should use precise crop marks and thin outlines instead of thick selected-region boxes.");
@@ -651,7 +647,6 @@ internal static partial class UiUxApplicationSurfaceTests
             !studioBrowser.Contains("Control.KineticMediaCard", StringComparison.Ordinal) &&
             !studioBrowser.Contains("Control.IconButton", StringComparison.Ordinal) &&
             !studioBrowser.Contains("Control.StudioCardHitTarget", StringComparison.Ordinal) &&
-            studioBrowser.Contains("Margin=\"4,4,11,20\"", StringComparison.Ordinal) &&
             studioBrowser.Contains("ClipToBounds=\"False\"", StringComparison.Ordinal),
             "Studio Browser should make the complete tonal card the keyboard and pointer target while keeping nested secondary and red exclusion actions distinct.");
         TestAssert.True(

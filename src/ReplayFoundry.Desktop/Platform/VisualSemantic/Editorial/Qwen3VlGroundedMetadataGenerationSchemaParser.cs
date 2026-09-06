@@ -13,6 +13,13 @@ internal static class Qwen3VlGroundedMetadataGenerationSchemaParser
         string[] groundedJsonSchemas =
         [
             OutputSchema,
+            PreviousResponsibilitySplitOutputSchema,
+            PreviousCompactIsolatedFieldAuthoringOutputSchema,
+            PreviousIsolatedFieldAuthoringOutputSchema,
+            PreviousSchemaEnforcedBalancedCopyOutputSchema,
+            PreviousCompactBalancedCopyOutputSchema,
+            PreviousBalancedCopyOutputSchema,
+            PreviousCommentaryTimingOutputSchema,
             PreviousCreatorVoiceOutputSchema,
             PreviousEditorialFrameAdherenceOutputSchema,
             PreviousEditorialFramingOutputSchema,
@@ -166,14 +173,17 @@ internal static class Qwen3VlGroundedMetadataGenerationSchemaParser
             Qwen3VlGroundedMetadataSchemaCapabilities
                 .SupportsEditorialRephraseEligibilitySkip(outputSchema),
             Qwen3VlGroundedMetadataSchemaCapabilities
-                .SupportsBestAvailableVisualEvidence(outputSchema));
+                .SupportsBestAvailableVisualEvidence(outputSchema),
+            Qwen3VlGroundedMetadataSchemaCapabilities
+                .SupportsIsolatedFieldAuthoring(outputSchema));
         JsonElement generation = Qwen3VlEditorialJson.Object(result, "generation");
-        RequireExactFields(generation, profile);
+        RequireExactFields(generation, profile, outputSchema);
         return (generation, profile);
     }
     private static void RequireExactFields(
         JsonElement generation,
-        Qwen3VlGroundedMetadataGenerationSchemaProfile profile)
+        Qwen3VlGroundedMetadataGenerationSchemaProfile profile,
+        string outputSchema)
     {
         string[] generationFields =
         [
@@ -182,6 +192,9 @@ internal static class Qwen3VlGroundedMetadataGenerationSchemaParser
             "terminationReason",
             "firstEndOfSequenceGeneratedIndex",
             "decodedTextSha256",
+            .. (Qwen3VlGroundedMetadataSchemaCapabilities.SupportsIsolatedFieldAuthoring(outputSchema)
+                ? new[] { "isolatedFieldAuthoring", "isolatedFieldAuthoringPassCount" }
+                : Array.Empty<string>()),
             .. (profile.ReviewableAudienceCopy
                 ? new[] { "metadataReviewRequired", "metadataReviewIssues" }
                 : Array.Empty<string>()),

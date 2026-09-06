@@ -107,6 +107,8 @@ internal static class MomentSignalFamilyMap
                 MomentSignalFamily.EpisodeActivation,
             MomentAnchorKind.UserConfirmedPriority =>
                 MomentSignalFamily.UserGuidance,
+            MomentAnchorKind.SourceCoverage =>
+                MomentSignalFamily.SourceCoverage,
             _ => throw new ArgumentOutOfRangeException(nameof(anchor)),
         };
 }

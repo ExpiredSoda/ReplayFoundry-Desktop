@@ -16,18 +16,28 @@ internal sealed class FfmpegStudioProjectRenderingService :
 {
     private readonly IProcessRunner _processRunner;
     private readonly IFfmpegToolLocator _toolLocator;
+    private readonly IStudioRenderedMediaValidator? _validator;
+    private readonly FfmpegEncodingExecutor? _encoding;
+    private readonly StudioRenderCheckpointCache? _checkpoints;
     private readonly object _completedRenderLock = new();
     private readonly Dictionary<string, string> _completedRenderOwners =
         new(StringComparer.OrdinalIgnoreCase);
 
     public FfmpegStudioProjectRenderingService(
         IProcessRunner processRunner,
-        IFfmpegToolLocator toolLocator)
+        IFfmpegToolLocator toolLocator,
+        bool verifyOutput = false,
+        bool hardwareEncoding = false,
+        bool resumeCompletedSegments = false,
+        IStudioRenderedMediaValidator? validator = null)
     {
         _processRunner = processRunner ??
             throw new ArgumentNullException(nameof(processRunner));
         _toolLocator = toolLocator ??
             throw new ArgumentNullException(nameof(toolLocator));
+        _validator = validator ?? (verifyOutput ? new StudioRenderedMediaValidator(processRunner, toolLocator) : null);
+        if (hardwareEncoding) _encoding = new FfmpegEncodingExecutor(processRunner);
+        if (resumeCompletedSegments) _checkpoints = new StudioRenderCheckpointCache();
     }
 
     public async Task<StudioProjectRenderResult> FinalizeAsync(
@@ -70,8 +80,11 @@ internal sealed class FfmpegStudioProjectRenderingService :
         try
         {
             GenerationClipOutputProfile profile =
-                GenerationClipOutputProfile.FromReference(
-                    draft.IncludedAssets[0].SourceMedia.PrimaryVideoStream);
+                GenerationClipOutputProfile.FromAsset(draft.IncludedAssets[0]);
+            if (draft.Mode == GenerationMode.Montage && draft.IncludedAssets.Any(asset =>
+                    GenerationClipOutputProfile.FromAsset(asset) is { } other &&
+                    (other.Width != profile.Width || other.Height != profile.Height)))
+                throw new InvalidOperationException("Choose one output canvas for this montage before rendering. Canvas changes apply to all montage clips.");
             GenerationOutputAsset[] stagedAssets =
                 draft.Mode == GenerationMode.IndividualClips
                     ? await RenderIndividualAsync(
@@ -89,6 +102,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
                         progress,
                         cancellationToken);
 
+            await StudioPlatformExportPackageWriter.WriteAsync(draft, stagedAssets, staging, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             Directory.Delete(captionWorkspace, recursive: true);
             Directory.Move(staging, finalDirectory);
@@ -224,6 +238,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
         {
             cancellationToken.ThrowIfCancellationRequested();
             GenerationOutputAsset asset = included[index];
+            profile = GenerationClipOutputProfile.FromAsset(asset);
             progress.Report(
                 new StudioProjectRenderProgress(
                     "Rendering final clips",
@@ -238,6 +253,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
                 profile,
                 captionWorkspace,
                 cancellationToken);
+            string? timedTextFileName = await WriteTimedTextScriptAsync(asset, profile, captionWorkspace, cancellationToken);
             await RunAsync(
                 FfmpegClipRenderCommandBuilder.BuildSegment(
                     asset.SourceMedia,
@@ -249,9 +265,15 @@ internal sealed class FfmpegStudioProjectRenderingService :
                     captionWorkspace,
                     asset.Appearance.VideoEffect,
                     asset.Appearance.VideoEffectIntensityPercent,
-                    asset.Appearance.GraphicOverlays),
+                    asset.Appearance.GraphicOverlays,
+                    asset.RenderSettings,
+                    timedTextFileName),
                 cancellationToken,
-                "final clip render");
+                "final clip render",
+                profile, asset.Duration,
+                (fraction, detail) => progress.Report(new StudioProjectRenderProgress(
+                    "Rendering final clips", detail ?? $"Encoding clip {index + 1} of {total}.", index, total, fraction)),
+                requiresBt709ToneMap: RequiresBt709ToneMap(asset));
             string thumbnail = ThumbnailPath(output);
             await RunAsync(
                 FfmpegClipRenderCommandBuilder.BuildThumbnail(
@@ -261,6 +283,9 @@ internal sealed class FfmpegStudioProjectRenderingService :
                 cancellationToken,
                 "Library thumbnail extraction");
             assets.Add(asset.WithRenderedOutput(output, thumbnail));
+            if (asset.Captions is not null)
+                await WriteSidecarsAsync(output, SubtitleSidecarSerializer.Project(asset.Captions,
+                    asset.SourceStart, asset.Duration), cancellationToken);
             progress.Report(
                 new StudioProjectRenderProgress(
                     "Rendering final clips",
@@ -303,6 +328,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
                 profile,
                 captionWorkspace,
                 cancellationToken);
+            string? timedTextFileName = await WriteTimedTextScriptAsync(asset, profile, captionWorkspace, cancellationToken);
             await RunAsync(
                 FfmpegClipRenderCommandBuilder.BuildSegment(
                     asset.SourceMedia,
@@ -314,8 +340,14 @@ internal sealed class FfmpegStudioProjectRenderingService :
                     captionWorkspace,
                     asset.Appearance.VideoEffect,
                     asset.Appearance.VideoEffectIntensityPercent,
-                    asset.Appearance.GraphicOverlays),
-                cancellationToken);
+                    asset.Appearance.GraphicOverlays,
+                    asset.RenderSettings,
+                    timedTextFileName),
+                cancellationToken,
+                "montage segment render", profile, asset.Duration,
+                (fraction, detail) => progress.Report(new StudioProjectRenderProgress(
+                    "Rendering montage segments", detail ?? $"Encoding segment {index + 1} of {included.Length}.",
+                    index, totalSteps, fraction)), requiresBt709ToneMap: RequiresBt709ToneMap(asset));
             segments.Add(output);
         }
 
@@ -324,9 +356,9 @@ internal sealed class FfmpegStudioProjectRenderingService :
             listPath,
             string.Join(
                 Environment.NewLine,
-                segments.Select(
-                    path =>
-                        "file '" + EscapeConcatPath(path) + "'")) +
+                segments.Select((path, index) =>
+                        "file '" + EscapeConcatPath(path) + "'" + Environment.NewLine +
+                        "duration " + included[index].Duration.TotalSeconds.ToString("0.#########", CultureInfo.InvariantCulture))) +
             Environment.NewLine,
             new UTF8Encoding(false),
             cancellationToken);
@@ -341,13 +373,32 @@ internal sealed class FfmpegStudioProjectRenderingService :
                 "Joining the completed segments without another video encode.",
                 included.Length,
                 totalSteps));
-        await RunAsync(
-            FfmpegClipRenderCommandBuilder.BuildConcatenation(
-                listPath,
-                montage,
-                duration),
-            cancellationToken,
-            "montage join");
+        try
+        {
+            await RunAsync(
+                FfmpegClipRenderCommandBuilder.BuildConcatenation(listPath, montage, duration),
+                cancellationToken, "montage join", profile, duration,
+                requiresBt709ToneMap: RequiresBt709ToneMap(included[0]));
+        }
+        catch (StudioRenderedMediaValidationException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // The copy completed, but packet-level joins can leave cadence gaps
+            // between fractional video frames and independently primed AAC.
+            // Reconstruct one continuous output clock without changing source
+            // cut durations, caption offsets, or the validation requirements.
+            File.Delete(montage);
+            progress.Report(new StudioProjectRenderProgress("Finishing montage",
+                "Normalizing picture and sound timing at the segment joins.", included.Length, totalSteps));
+            await RunAsync(
+                FfmpegClipRenderCommandBuilder.BuildNormalizedConcatenation(listPath, montage, duration,
+                    profile, RequiresBt709ToneMap(included[0]),
+                    // A mixed-quality montage must not downgrade a High segment
+                    // merely because its first segment requested Compact.
+                    included.Select(static asset => asset.RenderSettings.Quality).Max()),
+                cancellationToken, "normalized montage join", profile, duration,
+                requiresBt709ToneMap: RequiresBt709ToneMap(included[0]));
+        }
         progress.Report(
             new StudioProjectRenderProgress(
                 "Preparing Library preview",
@@ -363,6 +414,16 @@ internal sealed class FfmpegStudioProjectRenderingService :
             cancellationToken,
             "Library thumbnail extraction");
         Directory.Delete(segmentDirectory, recursive: true);
+        var cues = new List<SubtitleCue>();
+        TimeSpan offset = TimeSpan.Zero;
+        foreach (GenerationOutputAsset asset in included)
+        {
+            if (asset.Captions is not null)
+                cues.AddRange(SubtitleSidecarSerializer.Project(asset.Captions, asset.SourceStart, asset.Duration)
+                    .Select(cue => cue with { Start = cue.Start + offset, End = cue.End + offset }));
+            offset += asset.Duration;
+        }
+        if (cues.Count > 0) await WriteSidecarsAsync(montage, cues, cancellationToken);
         progress.Report(
             new StudioProjectRenderProgress(
                 "Finishing montage",
@@ -377,20 +438,81 @@ internal sealed class FfmpegStudioProjectRenderingService :
             .ToArray();
     }
 
+    private static bool RequiresBt709ToneMap(GenerationOutputAsset asset) =>
+        asset.SourceMedia.PrimaryVideoStream.ColorTransfer is "smpte2084" or "arib-std-b67";
+
     private async Task RunAsync(
         FfmpegClipRenderCommand command,
         CancellationToken cancellationToken,
-        string operation = "Studio final render")
+        string operation = "Studio final render",
+        GenerationClipOutputProfile? outputProfile = null,
+        TimeSpan? expectedDuration = null,
+        Action<double, string?>? progress = null,
+        bool requiresBt709ToneMap = false)
     {
-        ProcessRunResult result = await _processRunner.RunAsync(
-            new ProcessRunRequest(
+        using IDisposable mediaSlot = await MediaWorkBudget.AcquireAsync(cancellationToken, MediaWorkPriority.FinalOutput);
+        string? checkpointKey = _checkpoints is not null && command.Arguments.Contains("-hw_encoding")
+            ? StudioRenderCheckpointCache.CreateKey(command, _toolLocator.LocateFfmpeg()) : null;
+        if (checkpointKey is not null && await _checkpoints!.TryRestoreAsync(checkpointKey, command.OutputPath, cancellationToken))
+        {
+            progress?.Invoke(1, "Reused a completed clip from the previous render.");
+            return;
+        }
+        var elapsed = Stopwatch.StartNew();
+        await using var watchdog = expectedDuration.HasValue ? new FfmpegProgressWatchdog(cancellationToken) : null;
+        if (_encoding is not null) watchdog?.Pause();
+        IReadOnlyList<string> arguments = expectedDuration.HasValue
+            ? new[] { "-progress", "pipe:1", "-nostats", "-stats_period", "0.5" }.Concat(command.Arguments).ToArray()
+            : command.Arguments;
+        var request = new ProcessRunRequest(
                 _toolLocator.LocateFfmpeg(),
-                command.Arguments,
+                arguments,
                 command.Timeout,
                 command.WorkingDirectory,
-                maxStandardOutputCharacters: 64 * 1024,
-                maxStandardErrorCharacters: 2 * 1024 * 1024),
-            cancellationToken);
+                maxStandardOutputCharacters: 2 * 1024 * 1024,
+                maxStandardErrorCharacters: 2 * 1024 * 1024,
+                standardOutputLine: line =>
+                {
+                    if (line.StartsWith("encoder_started=", StringComparison.Ordinal))
+                    {
+                        elapsed.Restart();
+                        watchdog?.Restart();
+                        return;
+                    }
+                    if (line == "encoder_fallback=software")
+                    {
+                        elapsed.Restart();
+                        watchdog?.Restart();
+                        progress?.Invoke(0, "Hardware encoding was unavailable; continuing with the software encoder.");
+                    }
+                    if (expectedDuration is not { } duration || !line.StartsWith("out_time_us=", StringComparison.Ordinal) ||
+                        !long.TryParse(line.AsSpan(12), NumberStyles.Integer, CultureInfo.InvariantCulture, out long micros)) return;
+                    watchdog?.Advance(micros);
+                    double fraction = Math.Clamp(micros / 1_000_000d / duration.TotalSeconds, 0, .99);
+                    string? remaining = fraction > .02 ?
+                        $"Encoding · {fraction:P0} · about {Math.Max(1, (int)(elapsed.Elapsed.TotalSeconds * (1 - fraction) / fraction))} seconds remaining" : null;
+                    progress?.Invoke(fraction, remaining);
+                });
+        async Task ValidateOutput(CancellationToken token)
+        {
+            watchdog?.Pause();
+            if (_validator is not null && outputProfile is not null && expectedDuration is { } expected)
+            {
+                progress?.Invoke(.99, "Checking the rendered picture, sound, and duration.");
+                await _validator.ValidateAsync(command.OutputPath, expected, outputProfile, requiresBt709ToneMap, token);
+            }
+        }
+        ProcessRunResult result;
+        try
+        {
+            result = _encoding is null
+                ? await _processRunner.RunAsync(request, watchdog?.Token ?? cancellationToken)
+                : await _encoding.RunAsync(request, watchdog?.Token ?? cancellationToken, ValidateOutput);
+        }
+        catch (OperationCanceledException) when (watchdog?.IsStalled == true && !cancellationToken.IsCancellationRequested)
+        {
+            throw new InvalidOperationException("The encoder stopped making progress for two minutes. Retry the queue; completed clips remain reusable.");
+        }
         if (!result.Succeeded ||
             !File.Exists(command.OutputPath) ||
             new FileInfo(command.OutputPath).Length <= 0)
@@ -400,6 +522,32 @@ internal sealed class FfmpegStudioProjectRenderingService :
                 $"Exit code: {result.ExitCode}. " +
                 result.StandardError);
         }
+        if (_encoding is null) await ValidateOutput(cancellationToken);
+        if (checkpointKey is not null)
+        {
+            try { await _checkpoints!.StoreAsync(checkpointKey, command.OutputPath, cancellationToken); }
+            catch (IOException) { /* Cache capacity or access never invalidates a finished export. */ }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    private static async Task WriteSidecarsAsync(string video, IEnumerable<SubtitleCue> cues, CancellationToken cancellationToken)
+    {
+        SubtitleCue[] snapshot = cues.ToArray();
+        foreach (SubtitleSidecarFormat format in Enum.GetValues<SubtitleSidecarFormat>())
+            await File.WriteAllTextAsync(Path.ChangeExtension(video, format == SubtitleSidecarFormat.Srt ? ".srt" : ".vtt"),
+                SubtitleSidecarSerializer.Build(snapshot, format), new UTF8Encoding(false), cancellationToken);
+    }
+
+    private static async Task<string?> WriteTimedTextScriptAsync(GenerationOutputAsset asset,
+        GenerationClipOutputProfile profile, string workspace, CancellationToken cancellationToken)
+    {
+        if (asset.RenderSettings.TimedTextOverlays.Count == 0) return null;
+        string name = $"text-{asset.Rank:000}.ass";
+        await File.WriteAllTextAsync(Path.Combine(workspace, name), StudioTimedTextScript.Build(
+            asset.RenderSettings.TimedTextOverlays, profile, asset.SourceStart, asset.SourceEnd),
+            new UTF8Encoding(true), cancellationToken);
+        return name;
     }
 
     private static async Task<string?> WriteCaptionScriptAsync(
@@ -408,7 +556,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
         string captionWorkspace,
         CancellationToken cancellationToken)
     {
-        if (asset.Captions is null)
+        if (asset.Captions is null || !asset.RenderSettings.BurnCaptions)
         {
             return null;
         }
@@ -423,7 +571,8 @@ internal sealed class FfmpegStudioProjectRenderingService :
             asset.Appearance.CaptionVerticalPositionPercent,
             asset.Appearance.CaptionWordLimit,
             asset.Appearance.CaptionMaximumWidthPercent,
-            asset.Appearance.CaptionFontScalePercent);
+            asset.Appearance.CaptionFontScalePercent,
+            asset.Appearance.CaptionTypography);
         await File.WriteAllTextAsync(
             Path.Combine(captionWorkspace, fileName),
             document.Script,

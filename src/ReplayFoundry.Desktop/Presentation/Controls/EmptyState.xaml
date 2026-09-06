@@ -7,7 +7,7 @@
     MinHeight="150"
     AutomationProperties.Name="Empty state">
     <StackPanel MaxWidth="430" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Border Width="44" Height="44" HorizontalAlignment="Center" Background="{DynamicResource Brush.InteractiveSelected}" BorderBrush="{DynamicResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="7">
+        <Border Width="44" Height="44" HorizontalAlignment="Center" Background="{DynamicResource Brush.SurfaceElevated}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="7">
             <controls:IconPath
                 Width="22"
                 Height="22"

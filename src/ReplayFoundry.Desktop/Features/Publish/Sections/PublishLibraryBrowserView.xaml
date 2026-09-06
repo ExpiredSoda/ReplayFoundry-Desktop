@@ -18,7 +18,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,16,0">
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="LIBRARY" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Library" />
                     <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Drag a finished video onto a date, or choose Schedule. Nothing uploads until you confirm it." TextWrapping="Wrap" />
                 </StackPanel>
                 <TextBlock

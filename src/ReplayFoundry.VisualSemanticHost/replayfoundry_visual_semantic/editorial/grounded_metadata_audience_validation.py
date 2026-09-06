@@ -7,6 +7,7 @@ from typing import Any
 
 from ..errors import InferenceError, _fail
 from .grounded_metadata_creator_authority import (
+    _balanced_copy_satisfied,
     _FIRST_PERSON_GENERIC_OBSERVER_OPENING,
     _GENERIC_PERSON_SUBJECT_OPENING,
     validate_creator_actor_authority,
@@ -404,6 +405,8 @@ def strict_metadata(
             "Grounded metadata did not preserve the English audience-copy language policy.",
         )
     grounding = strict_grounding(result["grounding"], request, title, description)
+    if not _balanced_copy_satisfied(request, title, description, visual_drafts):
+        _fail(InferenceError, "Grounded metadata did not satisfy the requested balanced copy objective.")
     return {
         "title": title,
         "description": description,

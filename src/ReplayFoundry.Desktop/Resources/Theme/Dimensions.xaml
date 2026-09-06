@@ -3,9 +3,9 @@
     <sys:Double x:Key="Dimension.CompactControlHeight">40</sys:Double>
     <sys:Double x:Key="Dimension.InteractiveTarget">40</sys:Double>
     <CornerRadius x:Key="Radius.Card">8</CornerRadius>
-    <CornerRadius x:Key="Radius.Surface">12</CornerRadius>
-    <CornerRadius x:Key="Radius.OrganicPane">16,0,16,0</CornerRadius>
-    <CornerRadius x:Key="Radius.OrganicCard">12,3,12,3</CornerRadius>
-    <CornerRadius x:Key="Radius.OrganicPopup">14,3,14,7</CornerRadius>
+    <CornerRadius x:Key="Radius.Surface">10</CornerRadius>
+    <CornerRadius x:Key="Radius.OrganicPane">10</CornerRadius>
+    <CornerRadius x:Key="Radius.OrganicCard">6</CornerRadius>
+    <CornerRadius x:Key="Radius.OrganicPopup">10</CornerRadius>
     <CornerRadius x:Key="Radius.Pill">999</CornerRadius>
 </ResourceDictionary>

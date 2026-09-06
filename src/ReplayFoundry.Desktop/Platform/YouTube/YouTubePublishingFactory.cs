@@ -42,6 +42,13 @@ public static class YouTubePublishingFactory
             new YouTubeDataApiClient(httpClient),
             new JsonYouTubePublishHistoryStore(),
             connectionPermission,
-            httpClient);
+            httpClient,
+            new YouTubeAnalyticsService(
+                new GoogleYouTubeAuthorizationService(
+                    new YouTubeOAuthClientConfiguration(configuration.ClientId, configuration.ClientSecret,
+                        configuration.ApplicationName, analyticsOnly: true),
+                    new WindowsCredentialYouTubeTokenStore(configuration.ClientId + "/analytics"),
+                    new WindowsSystemBrowser(), httpClient, revokeOnDisconnect: false),
+                httpClient, connectionPermission));
     }
 }

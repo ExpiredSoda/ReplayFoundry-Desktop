@@ -69,7 +69,7 @@ internal static partial class GenerationClipRenderingTests
                         StringComparison.OrdinalIgnoreCase))
                 .All(
                 request =>
-                    request.Arguments.Contains("-vf") &&
+                    (request.Arguments.Contains("-vf") || request.Arguments.Contains("-filter_complex")) &&
                     request.Arguments.Any(
                         argument =>
                             argument.Contains(

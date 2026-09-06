@@ -1,0 +1,607 @@
+{
+      "candidateId": "g-016fceed9ebfb3a576db",
+      "attempt": 3,
+      "metadata": {
+        "title": "A figure ascended a staircase, then a ramp, before entering a dark, un",
+        "description": "I wondered if running might turn back on if you take your time",
+        "tags": [
+          "REANIMAL",
+          "dark tunnel",
+          "staircase ascent",
+          "ramp run"
+        ],
+        "grounding": []
+      },
+      "generation": {
+        "generatedTokenCount": 19,
+        "maximumNewTokens": 768,
+        "terminationReason": "EndOfSequence",
+        "firstEndOfSequenceGeneratedIndex": 18,
+        "decodedTextSha256": "2e3332826f0468ac78f9b1d44323fa1d389a5f635e49cb983a92852c31d56bf7",
+        "metadataReviewRequired": true,
+        "metadataReviewIssues": [
+          "UnsupportedCreatorEmbodiment",
+          "BalanceNotSatisfied"
+        ],
+        "editorialRephrasePolicyVersion": "grounded-editorial-rephrase-2.9",
+        "editorialRephrasePolicySha256": "f8c050c701dafcdc6b2fea4f87868caed21deb7732b1308612f409626e787f25",
+        "editorialRephraseAttempted": false,
+        "editorialRephraseApplied": false,
+        "editorialRephraseOutcome": "NotAttempted",
+        "editorialRephraseSourceJsonSha256": null,
+        "editorialRephraseOutputJsonSha256": null,
+        "editorialRephraseRejectionCode": null,
+        "editorialRephraseCanonicalMessagesSha256": null,
+        "editorialRephraseRenderedPromptSha256": null,
+        "editorialRephraseRenderedPromptUtf8ByteCount": null,
+        "editorialRephraseInputTokenIdsSha256": null,
+        "editorialRephraseInputTokenCount": null,
+        "editorialRephraseRawOutputSha256": null,
+        "generationPassCount": 7,
+        "groundingPassCount": 5,
+        "synthesisPassCount": 0,
+        "isolatedFieldAuthoringPassCount": 2,
+        "isolatedFieldAuthoring": {
+          "policyVersion": "grounded-editorial-isolated-fields-1.0",
+          "visualField": "Title",
+          "attributedThoughtField": "Description",
+          "components": [
+            {
+              "kind": "Visual",
+              "field": "Title",
+              "promptVersion": "1.0",
+              "promptSha256": "8a7810dd6f6d56c53a89783ce844e4586ea61b141b586ba18db687a6b34ede29",
+              "canonicalMessagesSha256": "4b472348419ef8138f68b42e4219447350612060d68b705ce67fdf82e768ee4a",
+              "renderedPromptSha256": "a168541d2d25dae9ba893bc4096bde50a63e415afbbf4e14d938839a9e41b43e",
+              "renderedPromptUtf8ByteCount": 4724,
+              "inputTokenIdsSha256": "c60c60864f588ff6723630f7c4bf8161896185c4ac139ac436192350d3816457",
+              "inputTokenCount": 1133,
+              "rawOutputSha256": "ecee90f02a481c2c76acb3423d4e869fb97ce76bbec40b6b514476a7c392c4c5",
+              "outputJsonSha256": "498bfd8454e891d295d1f191eb527981453585684bd51276868f8a2da06654b9",
+              "outputJson": "{\"grounding\":[],\"tags\":[\"REANIMAL\",\"dark tunnel\",\"staircase ascent\",\"ramp run\"],\"temporalVoice\":\"RetrospectivePast\",\"text\":\"A figure ascended a staircase, then a ramp, before entering a dark, un\"}",
+              "generatedTokenCount": 63,
+              "maximumNewTokens": 768,
+              "terminationReason": "EndOfSequence",
+              "firstEndOfSequenceGeneratedIndex": 62,
+              "structuredDecodingAudit": {
+                "policyVersion": "visual-semantic-editorial-structured-decoding-1.7",
+                "backendName": "XGrammar",
+                "backendVersion": "0.2.2",
+                "schemaVersion": "grounded-editorial-isolated-visual-field-json-schema-1.0",
+                "schemaSha256": "0df28a19e47aede16177883dd3386241d7adc1866101e87cd41f738660f47056",
+                "representation": "JsonSchema",
+                "cudaMaskBackend": "torch_native",
+                "compileElapsedSeconds": 0.107717,
+                "generatedTokenCount": 63,
+                "grammarTerminationState": "EndOfSequence",
+                "strictParserAccepted": true,
+                "unconstrainedFallbackUsed": false,
+                "semanticRepairApplied": false
+              }
+            },
+            {
+              "kind": "Commentary",
+              "field": "Description",
+              "promptVersion": "1.0",
+              "promptSha256": "f63ce0a4378222b2a5d4c2a6d1373c2bc6e2c6403abdf5e69737e7270ae772d5",
+              "canonicalMessagesSha256": "bcc0e9a73f05f376275b9b4a1756ee1bdaa17b19e740b04b9b1e0f29b1f666fb",
+              "renderedPromptSha256": "c4809628deaeebc23c89d051d6cb70b751f82c18154264a0da15aa5bd22ef5d9",
+              "renderedPromptUtf8ByteCount": 2293,
+              "inputTokenIdsSha256": "17efb71cd02ccc652bcf6a74bed0c5f084904ac40c2e7d49fd3d361d507fd508",
+              "inputTokenCount": 467,
+              "rawOutputSha256": "2e3332826f0468ac78f9b1d44323fa1d389a5f635e49cb983a92852c31d56bf7",
+              "outputJsonSha256": "d621bc40d7d0e08b78199137b462ee125407893a59d39c929e9c2bdada5abf02",
+              "outputJson": "{\"text\":\"I wondered if running might turn back on if you take your time\"}",
+              "generatedTokenCount": 19,
+              "maximumNewTokens": 768,
+              "terminationReason": "EndOfSequence",
+              "firstEndOfSequenceGeneratedIndex": 18,
+              "structuredDecodingAudit": {
+                "policyVersion": "visual-semantic-editorial-structured-decoding-1.7",
+                "backendName": "XGrammar",
+                "backendVersion": "0.2.2",
+                "schemaVersion": "grounded-editorial-isolated-commentary-field-json-schema-1.0",
+                "schemaSha256": "cf21204179412817d8a94a2a6551c0bcb29c01158d0754b14e7ad6140ec97fdb",
+                "representation": "JsonSchema",
+                "cudaMaskBackend": "torch_native",
+                "compileElapsedSeconds": 27.394885,
+                "generatedTokenCount": 19,
+                "grammarTerminationState": "EndOfSequence",
+                "strictParserAccepted": true,
+                "unconstrainedFallbackUsed": false,
+                "semanticRepairApplied": false
+              }
+            }
+          ],
+          "mergedJson": {
+            "titleBody": "A figure ascended a staircase, then a ramp, before entering a dark, un",
+            "description": "I wondered if running might turn back on if you take your time",
+            "tags": [
+              "REANIMAL",
+              "dark tunnel",
+              "staircase ascent",
+              "ramp run"
+            ],
+            "grounding": [],
+            "temporalVoice": "RetrospectivePast"
+          },
+          "mergedJsonSha256": "b811f9c60467ded42e834db6e78a4942fabff4c42ac8796748e9cadfa2635b2e"
+        },
+        "nonRetrospectiveRetryAnchorApplied": false,
+        "nonRetrospectiveRetryAnchorSourcePassOrdinal": null,
+        "nonRetrospectiveRetryAnchorSourceRule": null,
+        "nonRetrospectiveRetryAnchorEnvelopeSha256": null,
+        "nonRetrospectiveRetryAnchorAuthoritySha256": null,
+        "duplicateSynthesisRecoveryApplied": false,
+        "duplicateSynthesisRecoverySourcePassOrdinal": null,
+        "duplicateSynthesisRecoveryRepeatedPassOrdinal": null,
+        "duplicateSynthesisRecoverySourceRejectedJsonSha256": null,
+        "duplicateSynthesisRecoveryRepeatedRejectedJsonSha256": null,
+        "synthesisDecodingPolicyVersion": "grounded-editorial-synthesis-recovery-pool-1.9",
+        "synthesisDecodingPolicySha256": "65d105bccf11e28c5fe15edf8b8b2d62b14437d8d654a03f960810f1a2ae1af2",
+        "synthesisRecoveryPoolApplied": false,
+        "synthesisRecoveryPoolSourcePassOrdinal": null,
+        "synthesisRecoveryPoolSourceRejectedJsonSha256": null,
+        "synthesisRecoveryPoolSourceSelectionReason": null,
+        "synthesisRecoveryPoolSelectedCandidateOrdinal": null,
+        "synthesisRecoveryPoolAttemptedCandidateCount": 0,
+        "synthesisRecoveryPoolPolicyVersion": "grounded-editorial-synthesis-recovery-pool-1.9",
+        "synthesisRecoveryPoolPolicySha256": "65d105bccf11e28c5fe15edf8b8b2d62b14437d8d654a03f960810f1a2ae1af2",
+        "synthesisRecoveryPoolRetryableSemanticRejections": [
+          "ThirdPersonCreatorFraming",
+          "UnsupportedCreatorEmbodiment",
+          "GenericOpening",
+          "UnsupportedInterfaceAttribution",
+          "UnsupportedMentalState",
+          "UnreviewedTranscriptReuse",
+          "TitleDescriptionRepetition",
+          "RedundantGameIdentity",
+          "AnalysisBookkeeping",
+          "CaseLocalFactRetention",
+          "OutputLanguage",
+          "NonRetrospectiveVoice",
+          "IncompleteTitle",
+          "CrossDraftTitleContamination",
+          "UnstableReadableTextReuse",
+          "FirstPersonTitleSubject",
+          "GameHashtag",
+          "UncoupledKnowledgeReference",
+          "UnsupportedTag",
+          "TagShape",
+          "UnsupportedKnowledgeGrounding",
+          "GroundedRefinementUnchanged",
+          "UnresolvedVisualGrounding",
+          "RerollTitleTooSimilar"
+        ],
+        "synthesisRecoveryPoolRetryableSemanticRejectionsSha256": "2e49c2a7b8ff18531084f68749bf54305f25842857c21debec46753e6e559c5f",
+        "synthesisRecoveryPoolTrigger": "None",
+        "synthesisRecoveryPoolLogicalPassOrdinal": 4,
+        "synthesisRecoveryPoolSize": 4,
+        "synthesisRecoveryPoolSeeds": [
+          3407,
+          3408,
+          3409,
+          3410
+        ],
+        "synthesisRecoveryPoolBatchSize": 1,
+        "synthesisRecoveryPoolDoSample": true,
+        "synthesisRecoveryPoolNumberOfBeams": 1,
+        "synthesisRecoveryPoolUseCache": true,
+        "synthesisRecoveryPoolTemperature": 0.7,
+        "synthesisRecoveryPoolTopP": 0.8,
+        "synthesisRecoveryPoolTopK": 20,
+        "synthesisRecoveryPoolFreshMatcher": true,
+        "synthesisRecoveryPoolUnconstrainedFallbackUsed": false,
+        "synthesisRecoveryPoolSemanticRepairApplied": false,
+        "groundedMetadataModuleIdentities": [
+          {
+            "moduleName": "pipeline",
+            "fileName": "grounded_metadata_pipeline.py",
+            "sha256": "b8303dd3b512ca9151d985f2c8bc3d02e4a20a20afa442857c63e6047adea0cd"
+          },
+          {
+            "moduleName": "isolatedFieldAuthoring",
+            "fileName": "grounded_metadata_isolated_fields.py",
+            "sha256": "28c7fed787c3eafb9a4601f0e44b134d625443f1e265f7313755cfad49dfbb02"
+          },
+          {
+            "moduleName": "groundingPacketHandoff",
+            "fileName": "grounded_packet_handoff.py",
+            "sha256": "de8fed2cdc43797e5dc80e6d27bf77ecfab28e9c1cdfbb536f9bd64df60ceae9"
+          },
+          {
+            "moduleName": "pipelineContract",
+            "fileName": "grounded_metadata_pipeline_contract.py",
+            "sha256": "60a28d4239805ecab1c9839adc9b4400e1a48c17d97086823bf89ada2c6b5a41"
+          },
+          {
+            "moduleName": "pipelineAttestation",
+            "fileName": "grounded_metadata_pipeline_attestation.py",
+            "sha256": "4f220e6729b483a75b8912b151a93ce92dc3162d9142aec6a4891c2ed2863cdf"
+          },
+          {
+            "moduleName": "pipelineGrounding",
+            "fileName": "grounded_metadata_pipeline_grounding.py",
+            "sha256": "2e077be156a91f5d4c6100d88982516566e55bf0a4d93347c44831e8c2a9d7df"
+          },
+          {
+            "moduleName": "pipelineState",
+            "fileName": "grounded_metadata_pipeline_state.py",
+            "sha256": "7ed1777c4e25a3da9df50ec1b9a5ddb02d80047fe4d2ec5437fab0295dba68c1"
+          },
+          {
+            "moduleName": "pipelineRefinement",
+            "fileName": "grounded_metadata_pipeline_refinement.py",
+            "sha256": "0b8fca3448fdc0a2b88329a2b666a1d0fe6301fff5a717e2989ca6385b5ba947"
+          },
+          {
+            "moduleName": "pipelineRecovery",
+            "fileName": "grounded_metadata_pipeline_recovery.py",
+            "sha256": "c7d0cb83359a09740bd94ab2e06d63cf37ca2ec40e2fcefff84499ca50587a68"
+          },
+          {
+            "moduleName": "pipelineRecoveryCandidates",
+            "fileName": "grounded_metadata_pipeline_recovery_candidates.py",
+            "sha256": "13416a421a201d52de69414c6382312dd8bad7fe779d3ce57828dbe3c453ad98"
+          },
+          {
+            "moduleName": "pipelineRecoveryCandidateSelection",
+            "fileName": "grounded_metadata_recovery_candidate_selection.py",
+            "sha256": "1c39f90da56a76d6c7ea8ecd8b726cd476004ff372ccaaf82bab8dff21d25844"
+          },
+          {
+            "moduleName": "pipelineResult",
+            "fileName": "grounded_metadata_pipeline_result.py",
+            "sha256": "76762e86ec7aa3a6eb3edc38cc33e4290bcb9f5bb1f73ae146b12e91d1b68c72"
+          },
+          {
+            "moduleName": "editorialRephrase",
+            "fileName": "grounded_metadata_rephrase.py",
+            "sha256": "5a1fad2587575a6e66772524c99a23e95e31157789a2c124d39830510e29013e"
+          },
+          {
+            "moduleName": "editorialRephraseMessages",
+            "fileName": "grounded_metadata_rephrase_messages.py",
+            "sha256": "2fc4a8cf2fb884757458d4c3f18eea321a37a0bfa231cc9105458e0e7305855c"
+          },
+          {
+            "moduleName": "synthesis",
+            "fileName": "grounded_metadata_synthesis.py",
+            "sha256": "63dc290da640e19eb1a3654d4dc1566483ea4dd08da7fa340492e798f1ad9361"
+          },
+          {
+            "moduleName": "synthesisSanitization",
+            "fileName": "grounded_metadata_synthesis_sanitization.py",
+            "sha256": "f4056708b74d37af4a3561f1b5078bea5650c1cc02b2c6f736549e9a874bb4ef"
+          },
+          {
+            "moduleName": "synthesisMessages",
+            "fileName": "grounded_metadata_synthesis_messages.py",
+            "sha256": "8ec75ad3b7d2575f78539d0d08cf18ccc612d15552a9cff7257a76e7d9e288f2"
+          },
+          {
+            "moduleName": "generation",
+            "fileName": "grounded_metadata_generation.py",
+            "sha256": "39912b3cb25d9a68b8f7f45d5de74398e8ad04a159b6ad5a8bd249422b4217e4"
+          },
+          {
+            "moduleName": "jsonWhitespace",
+            "fileName": "grounded_metadata_json_whitespace.py",
+            "sha256": "cc1bcb8f8df50e22f75fcd54f2680ed81ec035ab03af32e9655ad71658c641e2"
+          },
+          {
+            "moduleName": "validation",
+            "fileName": "grounded_metadata_validation.py",
+            "sha256": "497494e60c4c51c17eaa8ab96f9e1c6f61be96e6f19f0834fa9d48d29201d9cb"
+          },
+          {
+            "moduleName": "audienceValidation",
+            "fileName": "grounded_metadata_audience_validation.py",
+            "sha256": "5fedbbe4d2214135b862899b8f8347fca695c9cd446eafc0c1c80cd4f3220583"
+          },
+          {
+            "moduleName": "creatorAuthority",
+            "fileName": "grounded_metadata_creator_authority.py",
+            "sha256": "7b7ec7742031917f6416b35c999ac834775efbb0595db05c49bd753057965235"
+          },
+          {
+            "moduleName": "groundingValidation",
+            "fileName": "grounded_metadata_grounding_validation.py",
+            "sha256": "e6d87d21974a9d286f34b8c1e2ee8e4d2840546c902cafe59bbc2550e28e7112"
+          },
+          {
+            "moduleName": "structuredDecoding",
+            "fileName": "structured_decoding.py",
+            "sha256": "a5ef331f1c0547e70414ff6090ba76d0ac9aa15aab8f06a037b5cbb243d57058"
+          },
+          {
+            "moduleName": "recoveryPoolPolicy",
+            "fileName": "grounded_metadata_synthesis_decoding.py",
+            "sha256": "d42d73990e0e761743aa9f1f7948b5b01ad80dd9c2985762a89eb482f1df2f08"
+          }
+        ],
+        "groundedJsonWhitespacePolicyVersion": "grounded-editorial-json-whitespace-1.0",
+        "groundedJsonWhitespacePolicySha256": "d62e42426c262f8979d0a956072b81db0e273f20c2ab7e4ed54f594a2c6fd555",
+        "groundedJsonAnyWhitespace": false,
+        "synthesisPassAttestations": [],
+        "groundingPacketSchemaVersion": "grounded-editorial-grounding-packet-1.1",
+        "groundingPacketRequestSha256": "259e7676e7301ca9147c8d8e8c242637bdc5f161fb6d1ec8e354cff0591688de",
+        "groundingPacketFactSha256": "241d9df150928749e3930501e0753c30c61e9d0f7c832cda4dd3eb58190f3a24",
+        "groundingPacketSourceAttempt": 3,
+        "groundingPacketReused": false,
+        "synthesisEvidencePolicyVersion": "grounded-editorial-synthesis-evidence-1.0",
+        "primaryOnlySynthesisEvidenceApplied": false,
+        "visualDraftCount": 4,
+        "visualDrafts": [
+          {
+            "actions": [
+              "A character walks through a dark, narrow tunnel.",
+              "The character approaches a large, circular doorway.",
+              "The character enters the circular doorway.",
+              "The character is now inside a larger, dimly lit room with a ladder and a light source on the wall."
+            ],
+            "decodedTextSha256": "268da7ad02bf526a47fef5d996fa349a907f3c4f53f8e5607aa6786807205bd3",
+            "endSeconds": 11.042000000000002,
+            "environment": "A dark, narrow tunnel with a large circular doorway at the end. The room inside the doorway is larger and dimly lit, but",
+            "environmentUncertain": true,
+            "generatedTokenCount": 155,
+            "ordinal": 1,
+            "readableText": [],
+            "sampling": {
+              "actualFrameCount": 4,
+              "actualFrameHeight": 320,
+              "actualFrameWidth": 352,
+              "actualPixelsPerFrame": 112640,
+              "actualTotalVideoPixels": 450560,
+              "framesPerSecond": 0.2,
+              "maximumFrames": 6,
+              "maximumPixelsPerFrame": 131072,
+              "maximumTotalVideoPixels": 786432,
+              "minimumFrames": 4,
+              "policyVersion": "grounded-editorial-adaptive-sampling-1.2",
+              "tier": "SparseContext"
+            },
+            "startSeconds": 0.0,
+            "subjectsAndObjects": [
+              "A character"
+            ],
+            "uncertainties": [
+              "The exact nature of the room inside the doorway is uncertain.",
+              "The character's identity or purpose is not visible.",
+              "The purpose of the circular doorway is not clear."
+            ]
+          },
+          {
+            "actions": [
+              "Three figures move forward through a dark, circular tunnel.",
+              "The figures approach a circular opening in the tunnel wall.",
+              "The camera pans to show a circular window with a figure standing in front of it.",
+              "The camera pans to show a circular window with a figure standing in front of it, and a metal pipe on"
+            ],
+            "decodedTextSha256": "2acc561d2f153d5972819aeabcd495bf29e4a5fdc9de22b851780be7bd3dd7e0",
+            "endSeconds": 24.042,
+            "environment": "A dark, circular tunnel with a circular opening in the wall.",
+            "environmentUncertain": false,
+            "generatedTokenCount": 143,
+            "ordinal": 2,
+            "readableText": [],
+            "sampling": {
+              "actualFrameCount": 6,
+              "actualFrameHeight": 352,
+              "actualFrameWidth": 384,
+              "actualPixelsPerFrame": 135168,
+              "actualTotalVideoPixels": 811008,
+              "framesPerSecond": 0.5,
+              "maximumFrames": 6,
+              "maximumPixelsPerFrame": 147456,
+              "maximumTotalVideoPixels": 884736,
+              "minimumFrames": 4,
+              "policyVersion": "grounded-editorial-adaptive-sampling-1.2",
+              "tier": "CandidateCore"
+            },
+            "startSeconds": 11.042000000000002,
+            "subjectsAndObjects": [
+              "Three figures",
+              "Circular tunnel",
+              "Circular opening",
+              "Circular window",
+              "Figure standing in front of circular window",
+              "Metal pipe"
+            ],
+            "uncertainties": []
+          },
+          {
+            "actions": [
+              "A figure runs up a staircase.",
+              "The figure ascends a ramp.",
+              "The figure runs into a dark tunnel."
+            ],
+            "decodedTextSha256": "edff22a8011749098babd8c55cb1e4cc9392cb23da1c6279d125c342d2388790",
+            "endSeconds": 35.042,
+            "environment": "A dark, underwater tunnel with a circular opening and a staircase.",
+            "environmentUncertain": true,
+            "generatedTokenCount": 103,
+            "ordinal": 3,
+            "readableText": [],
+            "sampling": {
+              "actualFrameCount": 6,
+              "actualFrameHeight": 352,
+              "actualFrameWidth": 384,
+              "actualPixelsPerFrame": 135168,
+              "actualTotalVideoPixels": 811008,
+              "framesPerSecond": 0.5,
+              "maximumFrames": 6,
+              "maximumPixelsPerFrame": 147456,
+              "maximumTotalVideoPixels": 884736,
+              "minimumFrames": 4,
+              "policyVersion": "grounded-editorial-adaptive-sampling-1.2",
+              "tier": "CandidateCore"
+            },
+            "startSeconds": 22.042,
+            "subjectsAndObjects": [
+              "A figure"
+            ],
+            "uncertainties": [
+              "The figure's identity is not visible.",
+              "The figure's destination is not visible.",
+              "The figure's speed is not visible."
+            ]
+          },
+          {
+            "actions": [
+              "A figure swims through a dark, narrow underwater passage, illuminated by a bright light source on a"
+            ],
+            "decodedTextSha256": "1cc67f42480dfcef9ba1f77928546b18aecdc7a12c1407f8ebeb317f95fe6d67",
+            "endSeconds": 46.084,
+            "environment": "dark underwater passage with large, angular structures on either side, water filled with particles or debris",
+            "environmentUncertain": false,
+            "generatedTokenCount": 82,
+            "ordinal": 4,
+            "readableText": [],
+            "sampling": {
+              "actualFrameCount": 4,
+              "actualFrameHeight": 320,
+              "actualFrameWidth": 352,
+              "actualPixelsPerFrame": 112640,
+              "actualTotalVideoPixels": 450560,
+              "framesPerSecond": 0.2,
+              "maximumFrames": 6,
+              "maximumPixelsPerFrame": 131072,
+              "maximumTotalVideoPixels": 786432,
+              "minimumFrames": 4,
+              "policyVersion": "grounded-editorial-adaptive-sampling-1.2",
+              "tier": "SparseContext"
+            },
+            "startSeconds": 35.042,
+            "subjectsAndObjects": [
+              "a figure swimming underwater"
+            ],
+            "uncertainties": []
+          }
+        ],
+        "stableReadableText": [],
+        "stableReadableTextPolicyVersion": "1.0",
+        "visualDraftPromptVersion": "1.4",
+        "visualDraftPromptSha256": "e07bb76961c9764c12fdbf13b60963928d319af15f5da55cca76bd660754f77b",
+        "visualDraftSchemaVersion": "grounded-editorial-visual-draft-json-schema-1.1",
+        "visualEventSelectionApplied": true,
+        "actorAuthorityAssessmentApplied": true,
+        "primaryVisualDraftOrdinal": 3,
+        "primaryActorAuthority": "Unknown",
+        "primaryCreatorExperienceRelation": "Unestablished",
+        "visualEventSelectionAssessmentCount": 4,
+        "visualEventSelectionAssessments": [
+          {
+            "actorAuthority": "Unknown",
+            "creatorExperienceRelation": "Unestablished",
+            "distinctAction": true,
+            "objectInteraction": false,
+            "ordinal": 1,
+            "presentationKind": "InteractiveGameplay",
+            "readableInterfaceChange": false,
+            "routineOnly": false,
+            "uncertain": true,
+            "visibleOutcome": true
+          },
+          {
+            "actorAuthority": "Unknown",
+            "creatorExperienceRelation": "Unestablished",
+            "distinctAction": true,
+            "objectInteraction": false,
+            "ordinal": 2,
+            "presentationKind": "InteractiveGameplay",
+            "readableInterfaceChange": false,
+            "routineOnly": false,
+            "uncertain": false,
+            "visibleOutcome": true
+          },
+          {
+            "actorAuthority": "Unknown",
+            "creatorExperienceRelation": "Unestablished",
+            "distinctAction": true,
+            "objectInteraction": false,
+            "ordinal": 3,
+            "presentationKind": "InteractiveGameplay",
+            "readableInterfaceChange": false,
+            "routineOnly": false,
+            "uncertain": true,
+            "visibleOutcome": true
+          },
+          {
+            "actorAuthority": "Unknown",
+            "creatorExperienceRelation": "Unestablished",
+            "distinctAction": true,
+            "objectInteraction": false,
+            "ordinal": 4,
+            "presentationKind": "InteractiveGameplay",
+            "readableInterfaceChange": false,
+            "routineOnly": false,
+            "uncertain": false,
+            "visibleOutcome": true
+          }
+        ],
+        "editorialFrame": {
+          "authorityKind": "StoryShapeOnly",
+          "creatorAuthorityAdjusted": false,
+          "momentKind": "Action",
+          "policyVersion": "grounded-editorial-frame-1.0",
+          "premise": null,
+          "supportingDraftOrdinals": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "visualEventSelectionPromptVersion": "1.2",
+        "visualEventSelectionPromptSha256": "4d717bd549a6cdac1ab739aa129bb2628037666e876ffda7df68a6abc98aee35",
+        "visualEventSelectionSchemaVersion": "grounded-editorial-visual-event-selection-json-schema-1.3",
+        "knowledgeSelectionApplied": false,
+        "selectedCurrentPassageId": "None",
+        "knowledgeSelectionAssessmentCount": 0,
+        "knowledgeSelectionAssessments": [],
+        "knowledgeSelectionPromptVersion": "1.4",
+        "knowledgeSelectionPromptSha256": "723d0892c5e74d75671bc61854f2717b19f852133c8b994ceed4bd595ec0001a",
+        "knowledgeSelectionSchemaVersion": "grounded-editorial-knowledge-selection-json-schema-1.1",
+        "groundingReviewApplied": true,
+        "rejectedValidationRules": [],
+        "rerollDiversityPolicyVersion": "grounded-editorial-reroll-diversity-1.0",
+        "priorAcceptedTitleCount": 2,
+        "rerollTitleDiversityCode": "MateriallyDistinct",
+        "rerollTitleTokenJaccardNumerator": 1,
+        "rerollTitleTokenJaccardDenominator": 6,
+        "samplingPolicyVersion": "grounded-editorial-adaptive-sampling-1.2",
+        "videoFramesPerSecond": 0.5,
+        "minimumVideoFrames": 4,
+        "maximumVideoFrames": 6,
+        "maximumPixelsPerFrame": 147456,
+        "maximumTotalVideoPixels": 884736
+      },
+      "structuredDecodingAudit": {
+        "policyVersion": "visual-semantic-editorial-structured-decoding-1.7",
+        "backendName": "XGrammar",
+        "backendVersion": "0.2.2",
+        "schemaVersion": "grounded-editorial-isolated-commentary-field-json-schema-1.0",
+        "schemaSha256": "cf21204179412817d8a94a2a6551c0bcb29c01158d0754b14e7ad6140ec97fdb",
+        "representation": "JsonSchema",
+        "cudaMaskBackend": "torch_native",
+        "compileElapsedSeconds": 27.394885,
+        "generatedTokenCount": 19,
+        "grammarTerminationState": "EndOfSequence",
+        "strictParserAccepted": true,
+        "unconstrainedFallbackUsed": false,
+        "semanticRepairApplied": false
+      },
+      "elapsedSeconds": 322.247916,
+      "generationWatchdog": {
+        "policyVersion": "visual-semantic-generation-watchdog-1.0",
+        "policySha256": "a8f797b610de464de2c81cfa2beeb0b5bc732d65766be53c2e2a0b009143917e",
+        "maximumGenerationWallClockSeconds": 240.0,
+        "maximumGroundedCaseWallClockSeconds": 900.0,
+        "timeoutBehavior": "FailClosed",
+        "generationInvocationCount": 7,
+        "elapsedCaseWallClockSeconds": 322.25,
+        "triggered": false,
+        "timeoutReason": null
+      }
+    }

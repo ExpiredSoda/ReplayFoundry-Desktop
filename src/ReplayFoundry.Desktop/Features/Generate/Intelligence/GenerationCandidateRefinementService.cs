@@ -16,6 +16,16 @@ public interface IGenerationCandidateRefinementService
         GenerationSpeechActivityResult speechActivity,
         CancellationToken cancellationToken = default);
 
+    GenerationCandidateIntelligenceResult Refine(
+        GenerationMomentFindingResult moments,
+        GenerationSpeechActivityResult speechActivity,
+        GenerationTranscriptAnalysisResult? transcripts,
+        CancellationToken cancellationToken = default)
+    {
+        GenerationCandidateIntelligenceResult result = Refine(moments, speechActivity, cancellationToken);
+        return transcripts is null ? result : result.WithTranscripts(transcripts);
+    }
+
     GenerationCandidateIntelligenceResult ApplyVisualSemantic(
         GenerationCandidateIntelligenceResult candidateIntelligence,
         GenerationVisualSemanticAnalysisResult visualSemantic,
@@ -25,8 +35,8 @@ public interface IGenerationCandidateRefinementService
 public sealed class GenerationCandidateRefinementService :
     IGenerationCandidateRefinementService
 {
-    private const string PolicyVersion = "1.3";
-    private const string VisualPolicyVersion = "1.4";
+    private const string PolicyVersion = "1.8";
+    private const string VisualPolicyVersion = "1.8";
     private const string PreferencePolicyVersion = "1.5";
     private readonly GenerationMomentPortfolioSelector _portfolioSelector;
     private readonly IClipPreferenceProfileProvider? _preferenceProfiles;
@@ -43,6 +53,13 @@ public sealed class GenerationCandidateRefinementService :
     public GenerationCandidateIntelligenceResult Refine(
         GenerationMomentFindingResult moments,
         GenerationSpeechActivityResult speechActivity,
+        CancellationToken cancellationToken = default) =>
+        Refine(moments, speechActivity, null, cancellationToken);
+
+    public GenerationCandidateIntelligenceResult Refine(
+        GenerationMomentFindingResult moments,
+        GenerationSpeechActivityResult speechActivity,
+        GenerationTranscriptAnalysisResult? transcripts,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(moments);
@@ -58,10 +75,23 @@ public sealed class GenerationCandidateRefinementService :
                 "Candidate refinement requires moments and speech activity from the same retained request.",
                 nameof(speechActivity));
         }
+        if (transcripts is not null &&
+            (!ReferenceEquals(transcripts.ExpandedMoments, moments) ||
+                transcripts.Sources.Select(static source => source.SourceFullPath)
+                    .Distinct(StringComparer.OrdinalIgnoreCase).Count() != transcripts.Sources.Count ||
+                transcripts.Sources.Any(transcript => !moments.Sources.Any(source =>
+                    source.AnalyzedSource.PreparedSource.Media.FullPath.Equals(
+                        transcript.SourceFullPath, StringComparison.OrdinalIgnoreCase) &&
+                    source.AnalyzedSource.PreparedSource.Media.AudioStreams.Any(stream =>
+                        stream.Index == transcript.AudioStreamIndex)))))
+        {
+            throw new ArgumentException("Beginning repair requires transcripts from the retained moment request.", nameof(transcripts));
+        }
 
         PreparedNaturalEndings naturalEndings = PrepareNaturalEndings(
             moments,
-            speechActivity);
+            speechActivity,
+            transcripts);
         moments = naturalEndings.Moments;
         var refinements = new List<GenerationCandidateRefinement>();
         var byCandidate = new Dictionary<
@@ -79,8 +109,11 @@ public sealed class GenerationCandidateRefinementService :
                     candidate,
                     sourceSpeech,
                     moments.Request.Setup.ContentEmphasis,
-                    naturalEndings.Adjustments[candidate]);
-                refinement = ApplyPreference(refinement);
+                    naturalEndings.Adjustments[candidate],
+                    naturalEndings.BeginningAdjustments[candidate]);
+                refinement = ApplyPreference(refinement,
+                    GenerationClipPreferenceFeatureExtractor.CreateContext(moments.Request.Setup,
+                        source.AnalyzedSource.PreparedSource.Media.FullPath));
                 refinements.Add(refinement);
                 byCandidate.Add(candidate, refinement);
             }
@@ -95,12 +128,14 @@ public sealed class GenerationCandidateRefinementService :
         var refinedMoments = new GenerationMomentFindingResult(
             moments.Request,
             moments.Sources,
-            selected);
-        return new GenerationCandidateIntelligenceResult(
+            selected,
+            byCandidate);
+        var result = new GenerationCandidateIntelligenceResult(
             moments,
             speechActivity,
             refinements,
             refinedMoments);
+        return transcripts is null ? result : result.WithTranscripts(transcripts);
     }
 
     public GenerationCandidateIntelligenceResult ApplyVisualSemantic(
@@ -126,7 +161,8 @@ public sealed class GenerationCandidateRefinementService :
                 candidateIntelligence.SpeechActivity,
                 candidateIntelligence.Refinements,
                 candidateIntelligence.RefinedMoments,
-                visualSemantic);
+                visualSemantic,
+                candidateIntelligence.Transcripts);
         }
 
         var byCandidate = new Dictionary<MomentCandidate,
@@ -142,8 +178,12 @@ public sealed class GenerationCandidateRefinementService :
                 ? existing
                 : AddVisualComponents(
                     WithoutPreference(existing),
-                    reviewed);
-            updated = ApplyPreference(updated);
+                    reviewed,
+                    candidateIntelligence.BaseMoments.Request.Setup);
+            updated = ApplyPreference(updated,
+                GenerationClipPreferenceFeatureExtractor.CreateContext(candidateIntelligence.BaseMoments.Request.Setup,
+                    candidateIntelligence.BaseMoments.Sources.Single(source => source.Moments.Proposals.Any(
+                        candidate => ReferenceEquals(candidate, existing.Candidate))).AnalyzedSource.PreparedSource.Media.FullPath));
             byCandidate.Add(existing.Candidate, updated);
         }
 
@@ -156,20 +196,24 @@ public sealed class GenerationCandidateRefinementService :
         var refinedMoments = new GenerationMomentFindingResult(
             candidateIntelligence.BaseMoments.Request,
             candidateIntelligence.BaseMoments.Sources,
-            selected);
+            selected,
+            byCandidate);
         return new GenerationCandidateIntelligenceResult(
             candidateIntelligence.BaseMoments,
             candidateIntelligence.SpeechActivity,
             byCandidate.Values,
             refinedMoments,
-            visualSemantic);
+            visualSemantic,
+            candidateIntelligence.Transcripts);
     }
 
     private static GenerationCandidateRefinement AddVisualComponents(
         GenerationCandidateRefinement existing,
-        GenerationVisualSemanticCandidateObservation reviewed)
+        GenerationVisualSemanticCandidateObservation reviewed,
+        GenerationSetupOptions setup)
     {
         VisualSemanticEditorialObservation observation = reviewed.Observation;
+        bool unavailableGameplay = GenerationGroundedVisualRejectionPolicy.HasCorroboratedUnavailableGameplay(reviewed, setup);
         double support =
             TernarySupport(observation.HasDistinctEvent, 0.30, 0.12) +
             TernarySupport(observation.HasObservablePayoff, 0.25, 0.10) +
@@ -213,7 +257,29 @@ public sealed class GenerationCandidateRefinementService :
             .ToArray();
         GenerationCandidateRefinementComponent[] components =
         [
-            .. existing.Components,
+            .. existing.Components.Where(component => component.Code is not (GenerationCandidateRefinementComponentCode.CaptureContextPenalty or
+                GenerationCandidateRefinementComponentCode.NonGameplayCapture) ||
+                !(observation.EditorialDisposition == VisualSemanticEditorialDisposition.Keep &&
+                  observation.UncertaintyReasons.Count == 0 && references.Length > 0 &&
+                  reviewed.ReviewedSourceStart <= existing.Candidate.Window.Start &&
+                  reviewed.ReviewedSourceEnd >= existing.Candidate.Window.End)),
+            GenerationDiscoveryIntentPolicy.SemanticMatch(setup.DiscoveryIntent, reviewed),
+            new GenerationCandidateRefinementComponent(
+                GenerationCandidateRefinementComponentCode.SemanticDiscoveryEvidence,
+                existing.Candidate.ConstructionReason == MomentCandidateConstructionReason.SemanticExploration &&
+                    observation.EditorialDisposition == VisualSemanticEditorialDisposition.Keep &&
+                    observation.HasDistinctEvent == VisualSemanticTernary.Yes &&
+                    observation.HasObservablePayoff == VisualSemanticTernary.Yes &&
+                    observation.CandidateRequiresMissingContext == VisualSemanticTernary.No &&
+                    observation.RoutineTraversalOrMenuOnly == VisualSemanticTernary.No &&
+                    observation.CandidateContainsOnlyAmbientChange == VisualSemanticTernary.No &&
+                    observation.UncertaintyReasons.Count == 0 &&
+                    references.Length > 0 &&
+                    reviewed.ReviewedSourceStart <= existing.Candidate.Window.Start &&
+                    reviewed.ReviewedSourceEnd >= existing.Candidate.Window.End ? 1 : 0,
+                75,
+                "A source-coverage window earns semantic discovery support only after a complete picture review confirms a distinct event, payoff, and sufficient context.",
+                references),
             new GenerationCandidateRefinementComponent(
                 GenerationCandidateRefinementComponentCode.VisualSemanticSupport,
                 Math.Clamp(support, 0, 1),
@@ -225,6 +291,16 @@ public sealed class GenerationCandidateRefinementService :
                 penalty,
                 -7,
                 "The deterministic refinement policy applies a bounded penalty when the qualified observation truth table reports Reject or Unsure.",
+                references),
+            new GenerationCandidateRefinementComponent(
+                GenerationCandidateRefinementComponentCode.GroundedVisualRejection,
+                unavailableGameplay || GenerationGroundedVisualRejectionPolicy.ShouldExcludeAutomatically(
+                    existing, reviewed) ? 1 : 0,
+                0,
+                unavailableGameplay
+                    ? "The gameplay region is predominantly black and nearly static, and the complete picture review " +
+                        "reports no observable payoff. This cut remains available for manual review rather than automatic gameplay highlights."
+                    : "A complete, unambiguous picture review with grounded rejection evidence is kept for manual review and excluded from automatic selections.",
                 references),
             new GenerationCandidateRefinementComponent(
                 GenerationCandidateRefinementComponentCode.VisualSemanticActionEvidence,
@@ -264,11 +340,12 @@ public sealed class GenerationCandidateRefinementService :
         };
 
     private GenerationCandidateRefinement ApplyPreference(
-        GenerationCandidateRefinement existing)
+        GenerationCandidateRefinement existing,
+        ClipPreferenceContext context)
     {
         GenerationCandidateRefinement withoutPreference =
             WithoutPreference(existing);
-        if (_preferenceProfiles?.Current is not ClipPreferenceProfile profile)
+        if (_preferenceProfiles?.ForContext(context) is not ClipPreferenceProfile profile)
         {
             return withoutPreference;
         }
@@ -287,7 +364,8 @@ public sealed class GenerationCandidateRefinementService :
             GenerationCandidateRefinementComponentCode.PersonalPreference,
             Math.Abs(evaluation.SignedContribution) / maximum,
             Math.Sign(evaluation.SignedContribution) * maximum,
-            evaluation.Explanation);
+            $"Preference scope: {context.Game}, {context.OutputKind}, {context.Emphasis}, {context.Intent}. " +
+                evaluation.Explanation.Replace("game-agnostic", "contextual", StringComparison.Ordinal));
         return new GenerationCandidateRefinement(
             existing.Candidate,
             [.. withoutPreference.Components, component],
@@ -317,7 +395,8 @@ public sealed class GenerationCandidateRefinementService :
         MomentCandidate candidate,
         GenerationSourceSpeechActivity speech,
         ContentEmphasis emphasis,
-        GenerationCandidateNaturalEndingAdjustment naturalEnding)
+        GenerationCandidateNaturalEndingAdjustment naturalEnding,
+        GenerationCandidateNaturalEndingAdjustment naturalBeginning)
     {
         var allIntervals = new List<SpeechActivityInterval>();
         var creatorIntervals = new List<SpeechActivityInterval>();
@@ -352,6 +431,12 @@ public sealed class GenerationCandidateRefinementService :
         double creator = NormalizedCoverage(candidate.Window, creatorIntervals);
         double game = NormalizedCoverage(candidate.Window, gameIntervals);
         double unknown = NormalizedCoverage(candidate.Window, unknownIntervals);
+        SpeechActivityInterval[] crossingStart = allIntervals
+            .Where(interval => interval.AbsoluteStart < candidate.Window.Start &&
+                interval.AbsoluteEnd > candidate.Window.Start)
+            .ToArray();
+        bool incompleteBeginning = crossingStart.Length > 0 ||
+            naturalBeginning.RequiresAutomaticRejection;
         SpeechActivityInterval[] crossingEnd = allIntervals
             .Where(interval =>
                 interval.AbsoluteStart < candidate.Window.End &&
@@ -408,6 +493,22 @@ public sealed class GenerationCandidateRefinementService :
                         .SelectMany(static pair => pair.Value)
                         .Distinct(StringComparer.Ordinal)),
                 new GenerationCandidateRefinementComponent(
+                    GenerationCandidateRefinementComponentCode.IncompleteSpeechBeginning,
+                    incompleteBeginning ? 1 : 0,
+                    -100,
+                    incompleteBeginning
+                        ? "Speech started before this cut, so Replay Foundry will not select it automatically."
+                        : naturalBeginning.WasAdjusted
+                            ? naturalBeginning.EvidenceReferences.Any(static reference =>
+                                reference.StartsWith("transcript:sentence-start:", StringComparison.Ordinal))
+                                ? "Replay Foundry included the beginning of the creator's timed sentence with a short natural lead-in."
+                                : "Replay Foundry included the start of confirmed creator speech with a short natural lead-in."
+                            : "No detected speech crosses the beginning of this cut.",
+                    crossingStart.Select(interval =>
+                            $"vad:cut-start:{interval.AbsoluteStart:c}-{interval.AbsoluteEnd:c}")
+                        .Concat(naturalBeginning.EvidenceReferences)
+                        .Distinct(StringComparer.Ordinal)),
+                new GenerationCandidateRefinementComponent(
                     GenerationCandidateRefinementComponentCode
                         .IncompleteSpeechEnding,
                     incompleteSpeechEnding,
@@ -415,7 +516,10 @@ public sealed class GenerationCandidateRefinementService :
                     hasIncompleteSpeechEnding
                         ? "Speech continues beyond this cut, so Replay Foundry will not select it automatically."
                         : naturalEnding.WasAdjusted
-                            ? "Replay Foundry extended this automatic cut through confirmed creator speech and kept a short natural tail."
+                            ? naturalEnding.EvidenceReferences.Any(static reference =>
+                                reference.StartsWith("transcript:sentence-end:", StringComparison.Ordinal))
+                                ? "Replay Foundry placed the ending at a complete timed sentence, without padding into the next utterance."
+                                : "Replay Foundry extended this automatic cut through confirmed creator speech and kept a short natural tail."
                             : "Speech reaches a complete boundary before this cut ends.",
                     endingReferences),
             ],
@@ -476,13 +580,17 @@ public sealed class GenerationCandidateRefinementService :
 
     private static PreparedNaturalEndings PrepareNaturalEndings(
         GenerationMomentFindingResult moments,
-        GenerationSpeechActivityResult speechActivity)
+        GenerationSpeechActivityResult speechActivity,
+        GenerationTranscriptAnalysisResult? transcripts)
     {
         var replacements = new Dictionary<MomentCandidate, MomentCandidate>(
             ReferenceEqualityComparer.Instance);
         var adjustments = new Dictionary<
             MomentCandidate,
             GenerationCandidateNaturalEndingAdjustment>(
+                ReferenceEqualityComparer.Instance);
+        var beginningAdjustments = new Dictionary<
+            MomentCandidate, GenerationCandidateNaturalEndingAdjustment>(
                 ReferenceEqualityComparer.Instance);
         var sources = new List<GenerationSourceMomentResult>(
             moments.Sources.Count);
@@ -501,6 +609,11 @@ public sealed class GenerationCandidateRefinementService :
                 .OrderBy(static interval => interval.AbsoluteStart)
                 .ThenBy(static interval => interval.AbsoluteEnd)
                 .ToArray();
+            GenerationSourceTranscript? creatorTranscript = transcripts?.Sources.SingleOrDefault(transcript =>
+                transcript.SourceFullPath.Equals(source.AnalyzedSource.PreparedSource.Media.FullPath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                sourceSpeech.Streams.Any(stream => stream.AbsoluteAudioStreamIndex == transcript.AudioStreamIndex &&
+                    stream.Role.Role == AudioContentRole.CreatorSpeech));
             bool sourceAdjusted = false;
             foreach (MomentCandidate candidate in source.Moments.Proposals)
             {
@@ -515,10 +628,23 @@ public sealed class GenerationCandidateRefinementService :
                         : GenerationCandidateNaturalEndingPolicy.Adjust(
                             candidate,
                             creatorSpeech,
-                            moments.Request.Settings.Options.MaximumDuration);
-                replacements.Add(candidate, adjustment.Candidate);
-                adjustments.Add(adjustment.Candidate, adjustment);
-                sourceAdjusted |= adjustment.WasAdjusted;
+                            moments.Request.Settings.Options.MaximumDuration,
+                            creatorTranscript,
+                            moments.Request.Settings.Options.MinimumDuration);
+                GenerationCandidateNaturalEndingAdjustment beginning =
+                    preserveUserWindow
+                        ? GenerationCandidateNaturalEndingAdjustment.Unchanged(
+                            adjustment.Candidate)
+                        : GenerationCandidateNaturalBeginningPolicy.Adjust(
+                            adjustment.Candidate,
+                            creatorSpeech,
+                            moments.Request.Settings.Options.MaximumDuration,
+                            creatorTranscript);
+                MomentCandidate repaired = beginning.Candidate;
+                replacements.Add(candidate, repaired);
+                adjustments.Add(repaired, adjustment);
+                beginningAdjustments.Add(repaired, beginning);
+                sourceAdjusted |= adjustment.WasAdjusted || beginning.WasAdjusted;
             }
 
             if (!sourceAdjusted)
@@ -545,7 +671,7 @@ public sealed class GenerationCandidateRefinementService :
 
         if (!anyAdjusted)
         {
-            return new PreparedNaturalEndings(moments, adjustments);
+            return new PreparedNaturalEndings(moments, adjustments, beginningAdjustments);
         }
 
         GenerationMomentCandidate[] selected = moments.SelectedCandidates
@@ -573,7 +699,7 @@ public sealed class GenerationCandidateRefinementService :
             moments.Request,
             sources,
             selected);
-        return new PreparedNaturalEndings(repairedMoments, adjustments);
+        return new PreparedNaturalEndings(repairedMoments, adjustments, beginningAdjustments);
     }
 
     private static bool MatchesUserGuidance(
@@ -599,5 +725,8 @@ public sealed class GenerationCandidateRefinementService :
         GenerationMomentFindingResult Moments,
         IReadOnlyDictionary<
             MomentCandidate,
-            GenerationCandidateNaturalEndingAdjustment> Adjustments);
+            GenerationCandidateNaturalEndingAdjustment> Adjustments,
+        IReadOnlyDictionary<
+            MomentCandidate,
+            GenerationCandidateNaturalEndingAdjustment> BeginningAdjustments);
 }

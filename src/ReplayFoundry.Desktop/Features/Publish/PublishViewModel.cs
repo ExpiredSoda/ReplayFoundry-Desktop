@@ -180,6 +180,8 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             ? null
             : new PublishYouTubeOperationController(youtube);
         _connectionPermission = connectionPermission;
+        Analytics = new YouTubeAnalyticsViewModel((youtube as IYouTubeAnalyticsSource)?.Analytics,
+            () => youtube?.History ?? []);
         _preferences = preferences;
         _drafts = drafts ?? new InMemoryYouTubePublishDraftStore();
         _thumbnailPicker = thumbnailPicker;
@@ -1090,6 +1092,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     public ICommand ClearLibraryFiltersCommand =>
         _clearLibraryFiltersCommand;
     public PublishHistoryViewModel History { get; }
+    public YouTubeAnalyticsViewModel Analytics { get; }
     public PublishEditorialMetadataViewModel Editorial { get; }
     public Task InitializeAsync() =>
         _viewOperations.RunAsync(InitializeCoreAsync);
@@ -1185,6 +1188,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         _youtubeOperations?.CancelAll();
         Editorial.PropertyChanged -= Editorial_PropertyChanged;
         Editorial.Dispose();
+        Analytics.Dispose();
         _viewOperations.DisposeWhenQuiescent(_youtubeOperations);
         _libraryCatalog.Changed -= LibraryCatalog_Changed;
         if (_connectionPermission is not null)
@@ -1201,6 +1205,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         _youtubeOperations?.CancelAll();
         await Task.WhenAll(
                 viewStop.WaitAsync(cancellationToken),
+                Analytics.StopAsync(cancellationToken),
                 Editorial.StopAsync(cancellationToken))
             .ConfigureAwait(false);
         if (_youtubeOperations is not null)

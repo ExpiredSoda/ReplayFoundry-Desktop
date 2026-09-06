@@ -10,25 +10,26 @@
 
     <Grid>
 
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*" />
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="2*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0">
+        <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
 
             <TextBlock
                 Foreground="{DynamicResource Brush.TextPrimary}"
-                FontSize="26"
+                FontSize="23"
                 FontWeight="SemiBold"
-                Text="Clip Goals" />
+                Text="Clip goals" />
 
             <TextBlock
                 Margin="0,7,0,20"
                 Foreground="{DynamicResource Brush.TextSecondary}"
                 FontSize="14"
-                Text="Choose how many clips you want, how picky Replay Foundry should be, and which kinds of moments to favor."
+                Text="Set the amount, length, and kinds of moments you want."
                 TextWrapping="Wrap" />
 
             <Border
@@ -66,7 +67,7 @@
                     <CheckBox
                         Margin="0,0,0,10"
                         AutomationProperties.Name="Choose clip amount automatically"
-                        Content="Automatic amount · keep every strong, distinct clip (up to 30)"
+                        Content="Choose amount automatically (up to 30 clips)"
                         IsChecked="{Binding IsAutomaticResultCount, Mode=TwoWay}" />
 
                     <Slider
@@ -116,6 +117,8 @@
                 </StackPanel>
             </Border>
 
+            <Expander Header="Selection and quality" Margin="0,0,0,20" Style="{DynamicResource Control.DisclosureExpander}">
+                <StackPanel Margin="0,16,0,0">
             <Border
                 Style="{DynamicResource GenerationSetup.SectionCard}">
 
@@ -206,6 +209,9 @@
 
             </Border>
 
+                </StackPanel>
+            </Expander>
+
             <Border
                 Style="{DynamicResource GenerationSetup.SectionCard}">
 
@@ -228,15 +234,55 @@
                         Text="{Binding SelectedEmphasisDescription}"
                         TextWrapping="Wrap" />
 
+                    <TextBlock Margin="0,18,0,8" Text="Find moments about"
+                        Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" />
+                    <ComboBox ItemsSource="{Binding IntentOptions}"
+                        SelectedItem="{Binding SelectedIntentOption, Mode=TwoWay}"
+                        DisplayMemberPath="Name" Style="{DynamicResource GenerationSetup.ComboBox}" />
+                    <Expander Header="Search the transcript (optional)" Margin="0,16,0,0">
+                        <Expander.Style>
+                            <Style TargetType="Expander" BasedOn="{StaticResource Control.DisclosureExpander}">
+                                <Setter Property="IsExpanded" Value="True" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding NaturalLanguageQuery}" Value="" />
+                                            <Condition Binding="{Binding SpokenSearchTerms}" Value="" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="IsExpanded" Value="False" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Expander.Style>
+                        <StackPanel>
+                    <TextBlock Margin="0,12,0,6" Text="Exact spoken phrases (optional)"
+                        Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" />
+                    <TextBox Text="{Binding SpokenSearchTerms, UpdateSourceTrigger=PropertyChanged}"
+                        MaxLength="240" Padding="8" MinHeight="34" />
+                    <TextBlock Margin="0,8,0,0" FontSize="12"
+                        Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap"
+                        Text="Separate exact phrases with commas. Spoken matches guide review; they do not confirm a game event." />
+                    <TextBlock Margin="0,12,0,5" Text="Describe what to find (optional, English)"
+                        Foreground="{DynamicResource Brush.TextSecondary}" />
+                    <TextBox Text="{Binding NaturalLanguageQuery, UpdateSourceTrigger=PropertyChanged}" MaxLength="240"
+                        TextWrapping="Wrap" MinHeight="48" />
+                        </StackPanel>
+                    </Expander>
+                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="12"
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        Text="Semantic search, comebacks, tutorials and reactions use a Thorough scan and a one-time 22 MiB download. English text is processed on your computer." />
+                    <Expander Header="Search limitations" Margin="0,8,0,0" Style="{DynamicResource Control.DisclosureExpander}">
+                        <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap"
+                                   Text="Similarity suggests passages for visual review, not proof. Negation, hypothetical speech and sarcasm can produce false matches. Other languages and unspoken events may be missed." />
+                    </Expander>
+
                 </StackPanel>
 
             </Border>
 
         </StackPanel>
 
-        <Border
-            Grid.Column="2"
-            Style="{DynamicResource GenerationSetup.SectionCard}">
+        <Border Style="{DynamicResource GenerationSetup.SummaryCard}">
 
             <StackPanel>
 

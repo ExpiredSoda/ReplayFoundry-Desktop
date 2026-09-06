@@ -77,6 +77,7 @@
                                     VerticalAlignment="Center"
                                     Content="{TemplateBinding SelectionBoxItem}"
                                     ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                    ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                     ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                     IsHitTestVisible="False"
                                     TextElement.Foreground="{TemplateBinding Foreground}" />
@@ -105,7 +106,7 @@
                             IsOpen="{TemplateBinding IsDropDownOpen}"
                             Placement="Bottom"
                             PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
-                            PopupAnimation="Fade"
+                            PopupAnimation="None"
                             StaysOpen="False"
                             VerticalOffset="6">
                             <Border
@@ -113,17 +114,10 @@
                                 MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                 MaxHeight="{TemplateBinding MaxDropDownHeight}"
                                 Background="{DynamicResource Brush.SurfaceElevated}"
-                                BorderBrush="{DynamicResource Brush.KineticGlow}"
+                                BorderBrush="{DynamicResource Brush.BorderStrong}"
                                 BorderThickness="1"
                                 CornerRadius="{DynamicResource Radius.OrganicPopup}"
                                 Padding="6">
-                                <Border.Effect>
-                                    <DropShadowEffect
-                                        BlurRadius="14"
-                                        Color="{DynamicResource Color.AccentCyan}"
-                                        Opacity="0.22"
-                                        ShadowDepth="1" />
-                                </Border.Effect>
                                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" CanContentScroll="True">
                                     <ItemsPresenter />
                                 </ScrollViewer>

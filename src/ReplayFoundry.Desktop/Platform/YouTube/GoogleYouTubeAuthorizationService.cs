@@ -41,6 +41,7 @@ internal sealed class GoogleYouTubeAuthorizationService :
     private readonly IYouTubeCredentialStore _credentialStore;
     private readonly ISystemBrowser _browser;
     private readonly HttpClient _httpClient;
+    private readonly bool _revokeOnDisconnect;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private YouTubeAccessCredential? _active;
     private bool _disposed;
@@ -49,7 +50,8 @@ internal sealed class GoogleYouTubeAuthorizationService :
         YouTubeOAuthClientConfiguration configuration,
         IYouTubeCredentialStore credentialStore,
         ISystemBrowser browser,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        bool revokeOnDisconnect = true)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(credentialStore);
@@ -59,6 +61,7 @@ internal sealed class GoogleYouTubeAuthorizationService :
         _credentialStore = credentialStore;
         _browser = browser;
         _httpClient = httpClient;
+        _revokeOnDisconnect = revokeOnDisconnect;
     }
 
     public void Dispose()
@@ -215,7 +218,10 @@ internal sealed class GoogleYouTubeAuthorizationService :
             YouTubeStoredCredential? stored = _credentialStore.Read();
             try
             {
-                if (stored is not null)
+                // Google revocation invalidates every grant for the OAuth project,
+                // including publishing. An optional analytics connection can be
+                // removed from this device without revoking those other grants.
+                if (stored is not null && _revokeOnDisconnect)
                 {
                     using var content = new FormUrlEncodedContent(
                         new Dictionary<string, string>

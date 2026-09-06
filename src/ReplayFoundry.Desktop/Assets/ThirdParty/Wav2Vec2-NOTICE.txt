@@ -1,0 +1,20 @@
+Caption alignment model provenance
+
+Base model: facebook/wav2vec2-base-960h
+Model card: https://huggingface.co/facebook/wav2vec2-base-960h
+Model card revision inspected: 22aad52d435eb6dbaf354bdad9b0da84ce7d6156
+The upstream model card declares Apache-2.0.
+
+ONNX conversion: Xenova/wav2vec2-base-960h
+Source: https://huggingface.co/Xenova/wav2vec2-base-960h
+Pinned revision: a19f851b3d42865797e410752b4c570c871e4825
+File: onnx/model_quantized.onnx
+Size: 95286046 bytes
+SHA-256: CD5040C147381580ED73258143DD8E0C28E800A09E74EE42EE2B3E8CB4D760A3
+
+Replay Foundry downloads these exact ONNX model bytes without modifying them.
+Its English corrected-text alignment uses the separately installed ONNX Runtime
+CPU provider and an independently implemented bounded CTC path decoder.
+No audio or caption text is uploaded during model download or alignment.
+
+License text: Wav2Vec2-LICENSE.txt (Apache License, Version 2.0)

@@ -15,13 +15,14 @@ using ReplayFoundry.Desktop.Media.Intelligence.Preferences;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Handoff;
 
-public sealed class GenerationOutputSession :
+public sealed partial class GenerationOutputSession :
     IGenerationOutputSink,
     IGenerationOutputSession,
     IGenerationOutputSessionMaintenance,
     IGenerationRenderedOutputSink,
     IGenerationRenderedOutputSession,
-    IGenerationOutputEditor
+    IGenerationOutputEditor,
+    IGenerationManualClipEditor
 {
     public GenerationOutputProject? Current { get; private set; }
 
@@ -51,6 +52,14 @@ public sealed class GenerationOutputSession :
         CurrentChanged?.Invoke(
             this,
             new GenerationOutputChangedEventArgs(null));
+    }
+
+    public void AddManualSourceClip(string projectId, string sourceFullPath, TimeSpan start, TimeSpan end)
+    {
+        if (Current is null || !Current.Id.Equals(projectId, StringComparison.Ordinal))
+            throw new InvalidOperationException("The manual clip does not belong to the current Studio project.");
+        Current = Current.AddManualSourceClip(sourceFullPath, start, end);
+        CurrentChanged?.Invoke(this, new GenerationOutputChangedEventArgs(Current));
     }
 
     public void ReplaceAsset(

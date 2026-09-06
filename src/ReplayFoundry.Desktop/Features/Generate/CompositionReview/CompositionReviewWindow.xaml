@@ -10,13 +10,14 @@
     Style="{DynamicResource Control.ThemedWindow}"
     Width="1600"
     Height="900"
-    MinWidth="1060"
-    MinHeight="650"
+    MinWidth="760"
+    MinHeight="600"
     Background="{DynamicResource Brush.WindowFallback}"
-    Icon="pack://application:,,,/Assets/Icons/Application/ReplayFoundry.ico"
+    Icon="pack://application:,,,/ReplayFoundry.Desktop;component/Assets/Icons/Application/ReplayFoundry.ico"
     ResizeMode="CanResize"
     ShowInTaskbar="False"
     WindowStartupLocation="CenterOwner"
+    SizeChanged="CompositionReviewWindow_SizeChanged"
     WindowStyle="None"
     shell:WindowChrome.WindowChrome="{DynamicResource ReplayFoundry.WindowChrome}"
     windowing:WindowChromeInteraction.Attach="True">
@@ -39,7 +40,7 @@
                 <Setter Property="Padding" Value="16" />
                 <Setter Property="Background" Value="{DynamicResource Brush.CompositionSurface}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
-                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="CornerRadius" Value="8" />
 
             </Style>
@@ -69,7 +70,7 @@
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
-                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
                 <Setter Property="Cursor" Value="Arrow" />
                 <Setter Property="Template">
@@ -124,7 +125,7 @@
             Grid.Row="1"
             Background="{DynamicResource Brush.WindowFallback}"
             CornerRadius="0,0,14,14">
-        <Grid Margin="20">
+        <Grid Margin="16">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -143,7 +144,7 @@
 
                 <TextBlock
                     Foreground="{DynamicResource Brush.TextPrimary}"
-                    FontSize="28"
+                    FontFamily="{DynamicResource Font.Display}" FontSize="24"
                     FontWeight="SemiBold"
                     Text="Video Layout Review" />
 
@@ -182,12 +183,19 @@
         </Grid>
 
         <ScrollViewer
+            x:Name="ReviewScrollViewer"
             Grid.Row="1"
             Margin="0,18,0,0"
             HorizontalScrollBarVisibility="Auto"
             VerticalScrollBarVisibility="Disabled"
             PanningMode="HorizontalOnly">
-        <Grid MinWidth="1014">
+        <Grid x:Name="ReviewPanels" MinWidth="1014">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="0" />
+                <RowDefinition Height="0" />
+            </Grid.RowDefinitions>
 
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="270" />
@@ -198,6 +206,7 @@
             </Grid.ColumnDefinitions>
 
             <Border
+                x:Name="SourcePanel"
                 Grid.Column="0"
                 Style="{StaticResource CompositionReview.Panel}">
 
@@ -372,6 +381,7 @@
             </Border>
 
             <Border
+                x:Name="PreviewPanel"
                 Grid.Column="2"
                 Style="{StaticResource CompositionReview.Panel}">
 
@@ -515,6 +525,7 @@
             </Border>
 
             <Border
+                x:Name="AreaPanel"
                 Grid.Column="4"
                 Style="{StaticResource CompositionReview.Panel}">
 
@@ -670,6 +681,7 @@
         </ScrollViewer>
 
         <Grid
+            x:Name="ReviewFooter"
             Grid.Row="2"
             Margin="0,18,0,0">
 

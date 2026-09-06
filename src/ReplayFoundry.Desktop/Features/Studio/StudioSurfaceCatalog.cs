@@ -165,6 +165,7 @@ internal static class StudioSurfaceCatalog
                 "Similar option",
             GenerationCandidateSelectionReason.HiddenMomentRecovery =>
                 "Found later",
+            GenerationCandidateSelectionReason.ManualSourceCut => "Your cut",
             _ => "Selected clip",
         };
         return new StudioClipSelectionPresentation(
@@ -227,6 +228,8 @@ internal static class StudioSurfaceCatalog
                 "This option completed your requested clip count and may feel similar to another pick.",
             GenerationCandidateSelectionReason.HiddenMomentRecovery =>
                 "You brought this alternate into the Studio.",
+            GenerationCandidateSelectionReason.ManualSourceCut =>
+                "You chose this range from the full source recording.",
             _ => "Replay Foundry selected this as a useful editing option.",
         };
     }

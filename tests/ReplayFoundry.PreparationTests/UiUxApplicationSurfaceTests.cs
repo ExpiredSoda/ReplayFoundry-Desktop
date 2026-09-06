@@ -114,6 +114,9 @@ internal static partial class UiUxApplicationSurfaceTests
         new("Studio alternate review warms only its next moment", StudioAlternateReviewWarmsOnlyNextMoment),
         new("Studio cancels alternate warmup when the project changes", StudioAlternateWarmupCancelsOnProjectChange),
         new("Studio preview defers the initial seek until MediaElement is open", StudioPreviewDefersInitialSeek),
+        new("Studio preview opens the exact cut and lazily obtains trim context", StudioPreviewLoadsExactCutBeforeTrimContext),
+        new("Studio preview honors a trim that moves during initial loading", StudioPreviewHandlesTrimDuringInitialLoad),
+        new("Studio preview stops on insufficient provider coverage", StudioPreviewRejectsInsufficientProviderCoverage),
         new("Studio preview cache retains every active playback lease", StudioPreviewCacheRetainsActiveLeases),
         new("Studio preview detaches old media before releasing its cache lease", StudioPreviewReleasesAfterMediaPathNotification),
         new("Studio project commands stay disabled without a project", StudioProjectCommandsStayDisabled),
@@ -200,6 +203,8 @@ internal static partial class UiUxApplicationSurfaceTests
         new("Workspace continuation cue tracks remaining scroll content", WorkspaceContinuationCueTracksScrollExtent),
         new("Priority Moment marks occupy the full timeline track", PriorityMomentMarksOccupyTimelineTrack),
         new("Responsive roots expose compact standard and wide states", ResponsiveBreakpointsWork),
+        new("Setup step navigation opens the next step at its beginning", SetupStepNavigationResetsScroll),
+        new("Layout review stacks within a compact dialog and keeps its footer visible", CompositionReviewFitsCompactDialog),
         new("New workspace views and resources instantiate", ViewsInstantiateWithAppResources),
     ];
 

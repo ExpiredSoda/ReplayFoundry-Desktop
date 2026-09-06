@@ -13,6 +13,7 @@ public enum GenerationCandidateSelectionReason
     CountFillBelowQualityTarget,
     CountFillRelaxedDiversity,
     HiddenMomentRecovery,
+    ManualSourceCut,
 }
 
 public sealed class GenerationMomentCandidate

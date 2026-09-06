@@ -7,31 +7,23 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:navigation="clr-namespace:ReplayFoundry.Desktop.Shell.Navigation"
-    d:DesignHeight="104"
-    d:DesignWidth="620"
+    d:DesignHeight="56"
+    d:DesignWidth="576"
     Background="Transparent"
     Focusable="False"
     mc:Ignorable="d">
 
-    <Grid Width="620" Height="104">
+    <Grid Width="576" Height="56">
         <Border
             x:Name="DockFrame"
-            Width="600"
-            Height="88"
-            Padding="10,8"
+            Width="560"
+            Height="50" Padding="4"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Background="{DynamicResource Brush.DockSurface}"
             BorderBrush="{DynamicResource Brush.DockBorder}"
             BorderThickness="1"
-            CornerRadius="16">
-            <Border.Effect>
-                <DropShadowEffect
-                    BlurRadius="28"
-                    Color="{DynamicResource Color.DockShadow}"
-                    Opacity="0.38"
-                    ShadowDepth="0" />
-            </Border.Effect>
+            CornerRadius="{DynamicResource Radius.Surface}">
             <Grid ClipToBounds="True">
                 <UniformGrid Columns="5">
                 <Button
@@ -40,11 +32,11 @@
                     Command="{Binding NavigateCommand, ElementName=DockControl}"
                     CommandParameter="{x:Static navigation:ShellDestination.Generate}"
                     Style="{DynamicResource Control.DockButton}">
-                    <StackPanel>
+                    <StackPanel Orientation="Horizontal">
                         <Border Style="{DynamicResource Control.DockIconTile}">
                             <controls:IconPath
-                                Width="24"
-                                Height="24"
+                                Width="20"
+                                Height="20"
                                 IconKey="Icon.Spark"
                                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                 StrokeThickness="1.35"
@@ -60,11 +52,11 @@
                     Command="{Binding NavigateCommand, ElementName=DockControl}"
                     CommandParameter="{x:Static navigation:ShellDestination.Studio}"
                     Style="{DynamicResource Control.DockButton}">
-                    <StackPanel>
+                    <StackPanel Orientation="Horizontal">
                         <Border Style="{DynamicResource Control.DockIconTile}">
                             <controls:IconPath
-                                Width="24"
-                                Height="24"
+                                Width="20"
+                                Height="20"
                                 IconKey="Icon.Edit"
                                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                 StrokeThickness="1.35"
@@ -80,11 +72,11 @@
                     Command="{Binding NavigateCommand, ElementName=DockControl}"
                     CommandParameter="{x:Static navigation:ShellDestination.Library}"
                     Style="{DynamicResource Control.DockButton}">
-                    <StackPanel>
+                    <StackPanel Orientation="Horizontal">
                         <Border Style="{DynamicResource Control.DockIconTile}">
                             <controls:IconPath
-                                Width="24"
-                                Height="24"
+                                Width="20"
+                                Height="20"
                                 IconKey="Icon.Folder"
                                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                 StrokeThickness="1.35"
@@ -100,11 +92,11 @@
                     Command="{Binding NavigateCommand, ElementName=DockControl}"
                     CommandParameter="{x:Static navigation:ShellDestination.Publish}"
                     Style="{DynamicResource Control.DockButton}">
-                    <StackPanel>
+                    <StackPanel Orientation="Horizontal">
                         <Border Style="{DynamicResource Control.DockIconTile}">
                             <controls:IconPath
-                                Width="24"
-                                Height="24"
+                                Width="20"
+                                Height="20"
                                 IconKey="Icon.Export"
                                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                 StrokeThickness="1.35"
@@ -120,11 +112,11 @@
                     Command="{Binding NavigateCommand, ElementName=DockControl}"
                     CommandParameter="{x:Static navigation:ShellDestination.Settings}"
                     Style="{DynamicResource Control.DockButton}">
-                    <StackPanel>
+                    <StackPanel Orientation="Horizontal">
                         <Border Style="{DynamicResource Control.DockIconTile}">
                             <controls:IconPath
-                                Width="24"
-                                Height="24"
+                                Width="20"
+                                Height="20"
                                 IconKey="Icon.Settings"
                                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                 StrokeThickness="1.25"

@@ -1,3 +1,5 @@
+using ReplayFoundry.Desktop.Media.Transcription;
+
 namespace ReplayFoundry.Desktop.Features.Generate.Workflow;
 
 public sealed record GenerationRuntimeCapabilities(
@@ -5,7 +7,10 @@ public sealed record GenerationRuntimeCapabilities(
     bool IsSpeechActivityAvailable = false,
     bool IsVisualSemanticReviewAvailable = false,
     bool IsEditorialAiAvailable = false,
-    string? EditorialAiUnavailableReason = null)
+    string? EditorialAiUnavailableReason = null,
+    Func<string?>? EditorialGpuAdmissionCheck = null,
+    Func<string>? EditorialGpuReadiness = null,
+    AudioTranscriptionModelLanguageCapabilities? CaptionLanguageCapabilities = null)
 {
     public const string DefaultEditorialAiUnavailableReason =
         "Local AI title writing is not ready. Install or repair " +

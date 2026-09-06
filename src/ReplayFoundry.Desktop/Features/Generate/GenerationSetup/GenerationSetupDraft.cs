@@ -43,6 +43,7 @@ public sealed class GenerationSetupDraft
         ContentEmphasis =
             initialOptions?.ContentEmphasis ??
             ContentEmphasis.Balanced;
+        DiscoveryIntent = initialOptions?.DiscoveryIntent ?? GenerationDiscoveryIntent.Default;
 
         ClipFulfillmentPreference =
             initialOptions?.ClipFulfillmentPreference ??
@@ -95,6 +96,18 @@ public sealed class GenerationSetupDraft
     public double QualityThreshold { get; private set; }
 
     public ContentEmphasis ContentEmphasis { get; private set; }
+
+    public GenerationDiscoveryIntent DiscoveryIntent { get; private set; }
+
+    public void UpdateDiscoveryIntent(GenerationDiscoveryIntent intent)
+    {
+        ArgumentNullException.ThrowIfNull(intent);
+        DiscoveryIntent = intent;
+        if (!intent.IsDefault)
+        {
+            AnalysisDepth = GenerationAnalysisDepth.Thorough;
+        }
+    }
 
     public ClipFulfillmentPreference ClipFulfillmentPreference
     {
@@ -299,7 +312,8 @@ public sealed class GenerationSetupDraft
             AnalysisDepth,
             GameContextSettings,
             MaximumClipDuration,
-            MetadataAuthoringMode);
+            MetadataAuthoringMode,
+            DiscoveryIntent);
     }
 
     private static int GetDefaultResultCount(

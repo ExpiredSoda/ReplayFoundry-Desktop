@@ -26,10 +26,15 @@ using ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 namespace ReplayFoundry.PreparationTests;
 
-internal static class GenerationSpeechActivityTests
+internal static partial class GenerationSpeechActivityTests
 {
     public static IEnumerable<TestCase> GetTests()
     {
+        foreach (TestCase test in GenerationMaturityTests())
+        {
+            yield return test;
+        }
+        foreach (TestCase test in PromotedReviewTests()) yield return test;
         yield return new TestCase(
             "Generation speech activity skips Fast before extraction",
             FastSkipsBeforeExtraction);
@@ -1714,7 +1719,9 @@ internal static class GenerationSpeechActivityTests
         int desiredCount = 10,
         double qualityThreshold = 70,
         ContentEmphasis contentEmphasis = ContentEmphasis.Balanced,
-        GenerationMomentGuidance? momentGuidance = null)
+        GenerationMomentGuidance? momentGuidance = null,
+        GenerationDiscoveryIntent? discoveryIntent = null,
+        TimeSpan? maximumClipDuration = null)
     {
         var selected = sources.Select((source, index) =>
             new SelectedVideoSource(
@@ -1752,7 +1759,9 @@ internal static class GenerationSpeechActivityTests
             contentEmphasis,
             momentGuidance: momentGuidance,
             captionSettings: captions,
-            analysisDepth: analysisDepth);
+            analysisDepth: analysisDepth,
+            discoveryIntent: discoveryIntent,
+            maximumClipDuration: maximumClipDuration);
         return PreparedGenerationWorkflowTests.CreateGenerationRequest(
             preparation,
             options);

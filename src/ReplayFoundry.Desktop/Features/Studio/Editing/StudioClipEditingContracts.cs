@@ -8,13 +8,15 @@ public sealed class StudioProjectRenderProgress
         string title,
         string detail,
         int completedOutputs,
-        int totalOutputs)
+        int totalOutputs,
+        double currentOutputFraction = 0)
     {
         if (string.IsNullOrWhiteSpace(title) ||
             string.IsNullOrWhiteSpace(detail) ||
             totalOutputs <= 0 ||
             completedOutputs < 0 ||
-            completedOutputs > totalOutputs)
+            completedOutputs > totalOutputs || !double.IsFinite(currentOutputFraction) ||
+            currentOutputFraction is < 0 or > 1)
         {
             throw new ArgumentException(
                 "Studio final-render progress requires text and a valid completed-output boundary.");
@@ -24,14 +26,16 @@ public sealed class StudioProjectRenderProgress
         Detail = detail.Trim();
         CompletedOutputs = completedOutputs;
         TotalOutputs = totalOutputs;
+        CurrentOutputFraction = currentOutputFraction;
     }
 
     public string Title { get; }
     public string Detail { get; }
     public int CompletedOutputs { get; }
     public int TotalOutputs { get; }
+    public double CurrentOutputFraction { get; }
     public double Percentage =>
-        CompletedOutputs * 100d / TotalOutputs;
+        Math.Min(100, (CompletedOutputs + CurrentOutputFraction) * 100d / TotalOutputs);
 }
 
 public sealed class StudioProjectRenderResult

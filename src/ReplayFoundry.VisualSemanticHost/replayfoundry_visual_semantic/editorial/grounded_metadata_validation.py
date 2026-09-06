@@ -12,6 +12,7 @@ from ..errors import (
 )
 from ..request_validation import _require_array, _require_exact_keys, _require_object
 from .grounded_metadata_contract_values import bounded_text
+from .grounded_metadata_creator_authority import _balanced_copy_satisfied
 from .grounded_metadata_grounding_validation import (
     grounding_binding_id,
     knowledge_claim_is_specific,
@@ -203,6 +204,7 @@ def validation_failure_code(error: InferenceError) -> str:
         return "RerollTitleTooSimilar"
     message = str(error)
     rules = (
+        ("requested balanced copy objective", "BalanceNotSatisfied"),
         ("validated editorial frame", "EditorialFrameDrift"),
         ("unsupported creator embodiment", "UnsupportedCreatorEmbodiment"),
         ("third-person creator framing", "ThirdPersonCreatorFraming"),
@@ -308,6 +310,9 @@ def reviewable_metadata(
     except InferenceError as error:
         shape = parse_metadata_shape(text, request)
         review_issues = [validation_failure_code(error)]
+        if not _balanced_copy_satisfied(request, shape["title"], shape["description"], visual_drafts) \
+                and "BalanceNotSatisfied" not in review_issues:
+            review_issues.append("BalanceNotSatisfied")
         try:
             grounding = strict_grounding(
                 shape["raw"]["grounding"],

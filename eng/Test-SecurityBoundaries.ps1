@@ -28,10 +28,56 @@ $approvedNetworkFiles = @(
     'src/ReplayFoundry.Desktop/Platform/YouTube/GoogleYouTubeAuthorizationService.cs',
     'src/ReplayFoundry.Desktop/Platform/YouTube/YouTubeDataApiClient.cs',
     'src/ReplayFoundry.Desktop/Platform/YouTube/YouTubePublishingFactory.cs'
+    'src/ReplayFoundry.Desktop/Platform/Intelligence/MiniLmModelArtifacts.cs'
+    'src/ReplayFoundry.Desktop/Platform/Transcription/OnnxCorrectedCaptionAlignmentService.cs'
+    'src/ReplayFoundry.Desktop/Platform/YouTube/YouTubeAnalyticsService.cs'
 )
 $unexpected = @($networkMatches | Where-Object { $_ -notin $approvedNetworkFiles })
 if ($unexpected.Count -gt 0) {
     Fail "unreviewed desktop network client(s): $($unexpected -join ', ')"
+}
+
+# First-use model acquisition sends only fixed artifact URLs. Local recordings,
+# transcripts and captions remain outside these HTTP requests. Require bounded,
+# hash-pinned downloads and atomic promotion for both reviewed artifact clients.
+$modelClients = @(
+    @{
+        Path = 'src/ReplayFoundry.Desktop/Platform/Intelligence/MiniLmModelArtifacts.cs'
+        Url = 'https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/'
+        Bound = 'received > bytes'
+    },
+    @{
+        Path = 'src/ReplayFoundry.Desktop/Platform/Transcription/OnnxCorrectedCaptionAlignmentService.cs'
+        Url = 'https://huggingface.co/Xenova/wav2vec2-base-960h/resolve/'
+        Bound = 'received > ModelBytes'
+    }
+)
+foreach ($client in $modelClients) {
+    foreach ($required in @(
+        [regex]::Escape($client.Url),
+        [regex]::Escape($client.Bound),
+        'SHA256\.HashDataAsync',
+        'HttpCompletionOption\.ResponseHeadersRead',
+        'CancelAfter\(TimeSpan\.FromMinutes\(5\)\)',
+        'File\.Move\(temporary,.*overwrite:\s*false')) {
+        Require-Text $client.Path $required "$($client.Path) lost a reviewed download boundary"
+    }
+    $clientText = Get-Content -Raw -LiteralPath (Join-Path $root $client.Path)
+    if ($clientText -match 'PostAsync|PutAsync|MultipartFormDataContent|StringContent|ByteArrayContent') {
+        Fail "$($client.Path) gained an outbound content transport"
+    }
+}
+
+$analytics = 'src/ReplayFoundry.Desktop/Platform/YouTube/YouTubeAnalyticsService.cs'
+foreach ($required in @(
+    'RequirePermission\(\);',
+    'RequireScope\(credential\);',
+    'AnalyticsReadOnlyScope',
+    'new HttpRequestMessage\(HttpMethod\.Get, "https://youtubeanalytics\.googleapis\.com/v2/reports\?',
+    'Take\(100\)',
+    'CancelAfter\(TimeSpan\.FromSeconds\(45\)\)',
+    'buffer\.Length \+ count > maximumBytes')) {
+    Require-Text $analytics $required 'read-only analytics lost an authorization or response boundary'
 }
 
 $pythonNetwork = Get-ChildItem -LiteralPath `

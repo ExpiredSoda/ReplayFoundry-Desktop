@@ -1,21 +1,34 @@
 using ReplayFoundry.Desktop.Media.Geometry;
 using ReplayFoundry.Desktop.Media.Inspection;
+using ReplayFoundry.Desktop.Features.Generate.Handoff;
+using ReplayFoundry.Desktop.Features.Studio.Editing;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Rendering;
 
 internal sealed record GenerationClipOutputProfile(
     int Width,
     int Height,
-    int FramesPerSecond)
+    double FramesPerSecond)
 {
+    public static GenerationClipOutputProfile FromAsset(GenerationOutputAsset asset)
+    {
+        GenerationClipOutputProfile source = FromReference(asset.SourceMedia.PrimaryVideoStream, asset.RenderSettings.Resolution);
+        (int shortEdge, int longEdge) = ResolutionEdges(asset.RenderSettings.Resolution);
+        return asset.RenderSettings.Canvas switch
+        {
+            StudioOutputCanvas.Portrait => new(shortEdge, longEdge, source.FramesPerSecond),
+            StudioOutputCanvas.Square => new(shortEdge, shortEdge, source.FramesPerSecond),
+            StudioOutputCanvas.Landscape => new(longEdge, shortEdge, source.FramesPerSecond),
+            _ => source,
+        };
+    }
     public static GenerationClipOutputProfile FromReference(
-        VideoStreamInfo video)
+        VideoStreamInfo video, StudioOutputResolution resolution = StudioOutputResolution.FullHd1080)
     {
         ArgumentNullException.ThrowIfNull(video);
         EffectiveDisplayGeometry geometry =
             EffectiveDisplayGeometryCalculator.Calculate(video);
-        const int maximumLongEdge = 1920;
-        const int maximumShortEdge = 1080;
+        (int maximumShortEdge, int maximumLongEdge) = ResolutionEdges(resolution);
         double scale = Math.Min(
             1d,
             Math.Min(
@@ -25,15 +38,23 @@ internal sealed record GenerationClipOutputProfile(
                     (double)Math.Min(geometry.Width, geometry.Height)));
         int width = PositiveEvenNearest(geometry.Width * scale);
         int height = PositiveEvenNearest(geometry.Height * scale);
-        int framesPerSecond =
-            video.PreferredFrameRate is >= 50
-                ? 60
-                : 30;
+        double framesPerSecond = video.PreferredFrameRate is double sourceRate &&
+            double.IsFinite(sourceRate) && sourceRate > 0 ? Math.Min(60, sourceRate) : 30;
         return new(width, height, framesPerSecond);
     }
 
     public string DisplayText =>
-        $"{Width} × {Height} · {FramesPerSecond} FPS";
+        $"{Width} × {Height} · {FramesPerSecond:0.###} FPS";
+    public string FfmpegFrameRate => FramesPerSecond.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static (int ShortEdge, int LongEdge) ResolutionEdges(StudioOutputResolution resolution) => resolution switch
+    {
+        StudioOutputResolution.Hd720 => (720, 1280),
+        StudioOutputResolution.FullHd1080 => (1080, 1920),
+        StudioOutputResolution.Qhd1440 => (1440, 2560),
+        StudioOutputResolution.Uhd2160 => (2160, 3840),
+        _ => throw new ArgumentOutOfRangeException(nameof(resolution)),
+    };
 
     private static int PositiveEvenNearest(double value)
     {

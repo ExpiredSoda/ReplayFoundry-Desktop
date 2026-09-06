@@ -43,6 +43,7 @@ from ..request_validation import (
     _require_sha256,
 )
 from .qualification_lock import validate_qualification_lock
+from .grounded_packet_handoff import GroundingPacketHandoff
 from .grounded_knowledge_selection import (
     _knowledge_selection_messages,
     _knowledge_selection_prompt_text,
@@ -100,8 +101,8 @@ from .protocol import MODEL_MANIFEST_SHA256, MODEL_REPOSITORY, MODEL_REVISION
 from .structured_decoding import StructuredDecodingSession, model_vocab_size
 from .structured_decoding_policy import POLICY_VERSION, require_frozen_packages
 
-INPUT_SCHEMA = "grounded-editorial-metadata-input-batch-1.8"
-OUTPUT_SCHEMA = "grounded-editorial-metadata-output-batch-1.54"
+INPUT_SCHEMA = "grounded-editorial-metadata-input-batch-1.9"
+OUTPUT_SCHEMA = "grounded-editorial-metadata-output-batch-1.61"
 MAXIMUM_CASES = 30
 NO_DISTINCT_PRIMARY_VISUAL_EVENT = "NoDistinctPrimaryVisualEvent"
 
@@ -125,7 +126,7 @@ def _validate_batch(value: Any) -> tuple[list[dict[str, Any]], str]:
     require_json_whitespace_policy()
     batch = _require_object(value, "$")
     _require_exact_keys(batch, {"schemaVersion", "prompt", "model", "requests"}, "$")
-    if batch["schemaVersion"] != INPUT_SCHEMA:
+    if batch["schemaVersion"] not in {INPUT_SCHEMA, "grounded-editorial-metadata-input-batch-1.8"}:
         _fail(UsageOrInputError, "Grounded metadata input schema is unsupported.")
     prompt_text = _prompt_text()
     prompt = _require_object(batch["prompt"], "$.prompt")
@@ -173,6 +174,7 @@ def _infer_grouped_requests(
     torchcodec: Any,
     process_vision_info: Any,
     session: StructuredDecodingSession,
+    handoff: GroundingPacketHandoff | None = None,
 ) -> list[dict[str, Any]]:
     """Reuse in-memory grounding only across exactly compatible attempt inputs."""
     packet_cache: dict[str, tuple[str, Any]] = {}
@@ -193,6 +195,11 @@ def _infer_grouped_requests(
             ) as watchdog:
                 identity_sha256, canonical_identity = _grounding_reuse_identity(request)
                 cached = packet_cache.get(identity_sha256)
+                if cached is None and handoff is not None:
+                    restored = handoff.restore(request)
+                    if restored is not None:
+                        cached = (canonical_identity, restored)
+                        packet_cache[identity_sha256] = cached
                 if cached is None:
                     packet = _build_grounding_packet(
                         request,
@@ -238,6 +245,8 @@ def _infer_grouped_requests(
                     result["metadata"]["title"],
                 )
                 results.append(result)
+                if handoff is not None:
+                    handoff.retain(request, packet)
         except NoDistinctPrimaryVisualEventError as error:
             results.append(_case_failure_result(request, error))
             continue
@@ -264,6 +273,7 @@ def run_grounded_editorial_metadata_batch(
     requests, prompt_text = _validate_batch(batch_value)
     _validate_failure_output_against_media(failure_output_path, requests)
     lock = validate_qualification_lock(_load_strict_json(qualification_lock_path))
+    handoff = GroundingPacketHandoff(input_path, output_path, lock)
     require_frozen_packages()
     _set_failure_stage("RuntimeInitialization")
     torch, torchcodec, transformers, process_vision_info = _load_runtime(ffmpeg_directory)
@@ -294,6 +304,7 @@ def run_grounded_editorial_metadata_batch(
             torchcodec,
             process_vision_info,
             session,
+            handoff,
         )
         grounded_memory_policy = complete_grounded_cuda_memory(torch)
         output = {
@@ -313,6 +324,7 @@ def run_grounded_editorial_metadata_batch(
         _clear_failure_case()
         _set_failure_stage("OutputWrite")
         _write_json_atomic(output_path, output)
+        handoff.write()
     finally:
         del processor
         del model

@@ -197,7 +197,8 @@ public sealed class GenerationSetupOptions
         GenerationGameContextSettings? gameContextSettings = null,
         TimeSpan? maximumClipDuration = null,
         GenerationMetadataAuthoringMode metadataAuthoringMode =
-            GenerationMetadataAuthoringMode.AiRequired)
+            GenerationMetadataAuthoringMode.AiRequired,
+        GenerationDiscoveryIntent? discoveryIntent = null)
     {
         if (!Enum.IsDefined(typeof(GenerationMode), mode))
         {
@@ -315,6 +316,7 @@ public sealed class GenerationSetupOptions
             GenerationGameContextSettings.Empty;
         MaximumClipDuration = resolvedMaximumClipDuration;
         MetadataAuthoringMode = metadataAuthoringMode;
+        DiscoveryIntent = discoveryIntent ?? GenerationDiscoveryIntent.Default;
     }
 
     public GenerationMode Mode { get; }
@@ -342,6 +344,8 @@ public sealed class GenerationSetupOptions
     public GenerationMetadataAuthoringMode MetadataAuthoringMode { get; }
 
     public GenerationGameContextSettings GameContextSettings { get; }
+
+    public GenerationDiscoveryIntent DiscoveryIntent { get; }
 
     public TimeSpan MaximumClipDuration { get; }
 
@@ -428,7 +432,7 @@ public sealed class GenerationSetupOptions
         " • " + MetadataAuthoringDisplayName +
         $" • up to {MaximumClipDurationDisplayName}" +
         (CaptionSettings.IsEnabled
-            ? $" • {CaptionSettings.Style} captions"
+            ? $" • {CaptionSettings.SavedLookName ?? CaptionSettings.Style.ToString()} captions"
             : string.Empty);
 }
 

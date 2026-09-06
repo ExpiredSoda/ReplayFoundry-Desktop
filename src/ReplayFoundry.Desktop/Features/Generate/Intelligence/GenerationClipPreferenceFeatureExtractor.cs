@@ -1,4 +1,5 @@
 using ReplayFoundry.Desktop.Features.Generate.Moments;
+using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Media.Intelligence.Preferences;
 using ReplayFoundry.Desktop.Media.Moments;
 
@@ -9,15 +10,18 @@ public static class GenerationClipPreferenceFeatureExtractor
     private const double DurationNormalizationSeconds = 180;
 
     public static ClipPreferenceFeatureVector Create(
-        GenerationMomentCandidate candidate)
+        GenerationMomentCandidate candidate,
+        GenerationSetupOptions? setup = null)
     {
         ArgumentNullException.ThrowIfNull(candidate);
-        return Create(candidate.Candidate, candidate.Refinement);
+        return Create(candidate.Candidate, candidate.Refinement,
+            setup is null ? null : CreateContext(setup, candidate.AnalyzedSource.PreparedSource.Media.FullPath));
     }
 
     public static ClipPreferenceFeatureVector Create(
         MomentCandidate moment,
-        GenerationCandidateRefinement? refinement)
+        GenerationCandidateRefinement? refinement,
+        ClipPreferenceContext? context = null)
     {
         ArgumentNullException.ThrowIfNull(moment);
         var features = new List<ClipPreferenceFeature>
@@ -75,7 +79,14 @@ public static class GenerationClipPreferenceFeatureExtractor
             refinement,
             GenerationCandidateRefinementComponentCode.VisualSemanticEditorialPenalty,
             ClipPreferenceFeatureCode.VisualSemanticRejection);
-        return new ClipPreferenceFeatureVector(features);
+        return new ClipPreferenceFeatureVector(features, context);
+    }
+
+    public static ClipPreferenceContext CreateContext(GenerationSetupOptions setup, string sourcePath)
+    {
+        GenerationSourceGameContext? game = setup.GameContextSettings.Find(sourcePath);
+        return new(game?.IsUserGrounded == true ? game.GameName : "Unspecified game",
+            setup.Mode.ToString(), setup.ContentEmphasis.ToString(), setup.DiscoveryIntent.MomentType.ToString());
     }
 
     private static void AddRefinement(

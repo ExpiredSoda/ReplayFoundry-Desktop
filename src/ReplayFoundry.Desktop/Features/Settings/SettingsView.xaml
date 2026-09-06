@@ -6,19 +6,20 @@
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:sections="clr-namespace:ReplayFoundry.Desktop.Features.Settings.Sections"
     Background="Transparent">
-    <Grid MaxWidth="1500" Margin="20">
+    <Grid MaxWidth="1500" Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <controls:UnavailableBanner
-            Title="Your choices apply immediately"
-            Description="{Binding PersistenceBannerText}" />
+        <StackPanel Margin="0,0,0,8">
+            <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="Settings" />
+            <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Body}" Text="{Binding PersistenceBannerText}" />
+        </StackPanel>
 
         <DockPanel Grid.Row="1" Margin="0,12,0,0" LastChildFill="True">
             <Border
-                Width="270"
+                Width="240"
                 Margin="0,0,12,0"
                 DockPanel.Dock="Left">
                 <Border.Style>
@@ -37,12 +38,12 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="SETTINGS" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Preferences" />
                     <TextBlock
                         Grid.Row="1"
                         Margin="0,5,0,18"
                         Style="{DynamicResource Text.Meta}"
-                        Text="Only controls that work in this build are shown."
+                        Text="Your workspace, tools and connections."
                         TextWrapping="Wrap" />
                     <ListBox
                         Grid.Row="2"
@@ -61,7 +62,7 @@
                                         <ColumnDefinition Width="26" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <controls:IconPath Width="16" Height="16" Margin="0,2,8,0" IconKey="{Binding Glyph}" Stroke="{DynamicResource Brush.StatusInfo}" />
+                                    <controls:IconPath Width="16" Height="16" Margin="0,2,8,0" IconKey="{Binding Glyph}" Stroke="{DynamicResource Brush.TextSecondary}" />
                                     <StackPanel Grid.Column="1">
                                         <TextBlock FontWeight="SemiBold" Text="{Binding Label}" />
                                         <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Description}" TextWrapping="Wrap" />

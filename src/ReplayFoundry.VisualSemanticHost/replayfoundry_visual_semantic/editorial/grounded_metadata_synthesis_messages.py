@@ -3,7 +3,14 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .grounded_metadata_rephrase_messages import SYNTHESIS_STORY_SHAPING_GATE
+from .grounded_metadata_creator_authority import (
+    _draft_temporal_role,
+    _safe_automatic_commentary_angle,
+    _requires_balanced_copy,
+    _scoped_retry_authority,
+    _without_automatic_commentary,
+)
+from .grounded_metadata_rephrase_messages import BALANCED_COPY_GATE, SYNTHESIS_STORY_SHAPING_GATE, _compact_balanced_messages
 from .grounded_metadata_reroll_similarity import REROLL_DIVERSITY_POLICY_VERSION
 from .grounded_metadata_draft_validation import _title_scope_draft_ordinals
 from .grounded_metadata_output_schema import title_body_maximum
@@ -13,6 +20,7 @@ from .grounded_metadata_synthesis import (
     _model_context,
     _stable_readable_text,
     _synthesis_draft,
+    _typed_retry_authority_anchor,
     _variant_intent_guidance,
 )
 from .grounded_metadata_synthesis_retry_messages import (
@@ -43,6 +51,29 @@ def _metadata_messages(
         raise ValueError("Metadata synthesis requires at least one visual draft.")
     if not 1 <= primary_visual_draft_ordinal <= len(grounded_drafts):
         raise ValueError("Metadata synthesis primary draft is out of range.")
+    if withhold_unreviewed_transcripts or primary_only_evidence:
+        request = _without_automatic_commentary(request)
+        typed_retry_authority_anchor = _scoped_retry_authority(
+            typed_retry_authority_anchor, withhold_unreviewed_transcripts, primary_only_evidence,
+        )
+    if primary_only_evidence:
+        frame = request.get("_editorialFraming")
+        if isinstance(frame, dict):
+            request = {**request, "_editorialFraming": {
+                **frame, "supportingDraftOrdinals": [primary_visual_draft_ordinal],
+                "supportingPresentationKinds": [],
+            }}
+    balanced_copy = _requires_balanced_copy(request)
+    field_expansion_gate = (
+        "The attributed field supplies the nominated thought, not extra visible "
+        "scene details. Keep it distinct from the grounded visual field and never "
+        "use I watch or I see. "
+        if balanced_copy else
+        "Begin a cutscene description directly with the supported setting or action, "
+        "not I watch or I see. The description must not contain the complete "
+        "titleBody phrase and must add at least two grounded content words absent "
+        "from titleBody through a distinct visible action, result, setting, or concrete detail. "
+    )
     context = json.dumps(
         _model_context(
             request,
@@ -100,6 +131,10 @@ def _metadata_messages(
         {
             "ordinal": ordinal,
             "isPrimary": ordinal == primary_visual_draft_ordinal,
+            **_draft_temporal_role(
+                draft, grounded_drafts[primary_visual_draft_ordinal - 1],
+                ordinal, primary_visual_draft_ordinal,
+            ),
             "draft": _synthesis_draft(draft, stable_readable_text),
         }
         for ordinal, draft in draft_items
@@ -164,25 +199,19 @@ def _metadata_messages(
         for item in request.get("transcripts", [])
     )
     editorial_brief = request.get("editorialBrief") or {}
-    has_safe_automatic_creator_angle = bool(
-        editorial_brief.get("safeCommentaryAngle")
-        if has_automatic_creator_commentary
-        and "AutomaticCreatorReactionAngleAvailable"
-        in editorial_brief.get("qualityFlags", [])
-        else None
-    )
+    has_safe_automatic_creator_angle = _safe_automatic_commentary_angle(request) is not None
     automatic_creator_angle_gate = (
         "\nAutomatic creator-angle gate: AutomaticUnreviewed CreatorSpeech may "
         "nominate which concrete subject, oddity, or payoff deserves emphasis only "
         "when the same subject is independently established by the bounded visual "
-        "drafts, stable readable text, or authorized game knowledge. Derive every "
+        "drafts, stable readable text, or authorized game knowledge, except for the separately attributed comparison subject permitted below. Derive every "
         "objective event fact from that independent evidence. "
         + (
             "editorialBrief marks AutomaticCreatorReactionAngleAvailable, so "
             "safeCommentaryAngle is a host-curated reaction-shaped passage from a "
             "human-confirmed CreatorSpeech track. It may shape only a clearly "
             "creator-attributed reaction, analogy, question, or joke such as I "
-            "compared, I wondered, or this gave me vibes; it never establishes that a "
+            "compared or I wondered whether/if/about; do not coordinate another creator action with that attribution. It never establishes that a "
             "comparison, outside work, program, person, cause, or story detail exists "
             "in the game. An isolated distinctive comparison name from "
             "safeCommentaryAngle may remain only inside that explicit attribution. "
@@ -194,7 +223,7 @@ def _metadata_messages(
         + "Do not quote or copy any four-word automatic-transcript sequence, and "
         "never use the passage to authorize another person's body, dialogue, action, "
         "or creator embodiment."
-        if has_automatic_creator_commentary
+        if has_automatic_creator_commentary and not withhold_unreviewed_transcripts and not primary_only_evidence
         else ""
     )
     variant_intent = request["profile"]["variantIntent"]
@@ -235,7 +264,7 @@ def _metadata_messages(
         "\nStrict chronological visual drafts from this exact bounded review are "
         "supplied below as fallible visual evidence, ordered earliest to latest. "
         "Synthesize one clip-wide result without reinterpreting unseen frames. Preserve "
-        "their chronology. The deterministic title factual scope is the following "
+        "their chronology. Measured reviewStartSeconds/reviewEndSeconds are relative to the current cut; sourceStartSeconds/sourceEndSeconds use the recording clock. These are evidence coordinates, never audience copy. A LeadIn ends before the primary window starts; a FollowThrough starts after the primary window ends. Never describe a LeadIn action as a later result of the primary action. OverlapsPrimary means the windows do not establish their internal event order. Use no before/after/then link for overlapping or temporally unestablished events. Window order establishes no cause, successful arrival, completion, disappearance, or other outcome. Prefer one primary action and one compatible detail when the event sequence is uncertain. The deterministic title factual scope is the following "
         "validated draft-ordinal array: "
         + json.dumps(title_scope_ordinals, separators=(",", ":"))
         + ". The title may combine only facts from those drafts plus supplied stable "
@@ -350,24 +379,22 @@ def _metadata_messages(
                         "clip-evidence ID. Leave grounding empty when no knowledge claim "
                         "is used. Citations never appear in the audience copy."
                         + SYNTHESIS_STORY_SHAPING_GATE
+                        + (BALANCED_COPY_GATE if balanced_copy else "")
                         + "\nMandatory audience-copy gate: For DirectAction, "
                         "SpecificCuriosity, OutcomeFocused, and ConcreteDetail, "
-                        "describe the gameplay event and omit routine "
-                        "presenter movement. Use I or my only for the creator-controlled "
-                        "viewpoint. If an unidentified cutscene human needs an actor "
+                        "retain the grounded gameplay event while a permitted attributed question/comparison may supply its human angle, and omit routine "
+                        "presenter movement. Gameplay first-person action requires creator control; "
+                        "the separate safe automatic question/comparison gate does not grant it. If an unidentified cutscene human needs an actor "
                         "reference, use only the neutral noun person, including as the "
                         "subject when that is the clearest literal description. The title "
                         "and description must not contain the words "
-                        "player, character, streamer, or creator. Begin a cutscene "
-                        "description directly with the supported setting or action, not "
-                        "I watch or I see. The description must not contain the complete "
-                        "titleBody phrase and must add at least two grounded content words "
-                        "absent from titleBody through a distinct visible action, result, "
-                        "setting, or concrete detail. When another person performs the primary "
-                        "action, omit the presenter entirely. Use an exact canonical identity "
+                        "player, character, streamer, or creator. "
+                        + field_expansion_gate
+                        + "When another person performs the primary "
+                        "action, omit routine presenter description; a safe attributed commentary angle may remain. Use an exact canonical identity "
                         "only when authorized by UserConfirmed or ReusedUserMemory notes plus "
                         "this bounded review, or by selected authorized game knowledge plus its "
-                        "required grounding binding; otherwise begin with the supported completed "
+                        "required grounding binding; otherwise begin the visual field with the supported completed "
                         "action, an accurate passive past construction, a visible result, or "
                         "the visible setting or state. Do not label movement a reaction or assign an "
                         "unseen cause. Apply the same generic-role and reaction ban to tags."
@@ -383,6 +410,16 @@ def _metadata_messages(
             ],
         },
     ]
+    if balanced_copy:
+        authority = _typed_retry_authority_anchor(
+            request, grounded_drafts, primary_visual_draft_ordinal,
+            primary_actor_authority, primary_creator_experience_relation,
+        )
+        messages = _compact_balanced_messages(
+            authority, request["profile"]["variantIntent"],
+            title_maximum=title_body_maximum(request["game"]["hashtag"]),
+            prior_titles=prior_accepted_title_bodies,
+        )
     if not retry_plan.requested:
         return messages
     messages.extend(build_retry_messages(

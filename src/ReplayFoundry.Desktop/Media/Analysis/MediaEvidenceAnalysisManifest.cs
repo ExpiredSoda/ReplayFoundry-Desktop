@@ -201,12 +201,12 @@ public sealed class MediaEvidenceAnalysisManifest
                 "Manifest effective-display dimensions must be positive and even.");
         }
 
-        if (visualPassCount != 2)
+        if (visualPassCount is < 1 or > 2)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(visualPassCount),
                 visualPassCount,
-                "Deterministic evidence analysis requires exactly two visual passes.");
+                "Deterministic evidence analysis requires one combined or two separate visual passes.");
         }
 
         if (audioPassCount < 0)

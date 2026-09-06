@@ -5,7 +5,11 @@ import hashlib
 from typing import Any
 
 from ..commands import HOST_DIRECTORY, UsageOrInputError, _fail
-from .grounded_metadata_creator_authority import build_typed_editorial_authority
+from .grounded_metadata_creator_authority import (
+    build_typed_editorial_authority,
+    _requires_balanced_copy,
+    _without_automatic_commentary,
+)
 from .grounded_metadata_rephrase_messages import (
     EDITORIAL_FRAME_VARIANT_PRIORITY,
 )
@@ -22,8 +26,8 @@ from .grounded_metadata_lexical import (
 )
 
 PROMPT_NAME = "ReplayFoundry Grounded Editorial Metadata"
-PROMPT_VERSION = "1.40"
-PROMPT_SHA256 = "241086ff61f2e10108fc5c09c3e0a00381af102ee5b97534d2a1314dd892b72a"
+PROMPT_VERSION = "1.46"
+PROMPT_SHA256 = "61ad677ba7cb97a250df90bf77aa0fcaeb27dcd226af871b7226d89b1cf6b2d0"
 STABLE_READABLE_TEXT_POLICY_VERSION = "1.0"
 SYNTHESIS_EVIDENCE_POLICY_VERSION = (
     "grounded-editorial-synthesis-evidence-1.0"
@@ -125,7 +129,7 @@ def _synthesis_draft(
 
 
 def _prompt_text() -> str:
-    path = HOST_DIRECTORY / "replayfoundry-editorial-metadata-prompt-1.40.txt"
+    path = HOST_DIRECTORY / "replayfoundry-editorial-metadata-prompt-1.46.txt"
     text = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n").strip()
     if hashlib.sha256(text.encode("utf-8")).hexdigest() != PROMPT_SHA256:
         _fail(UsageOrInputError, "Grounded metadata prompt source changed.")
@@ -143,6 +147,8 @@ def _model_context(
     primary_creator_experience_relation: str = "Unestablished",
 ) -> dict[str, Any]:
     """Return only audience-facing grounding, never analysis bookkeeping."""
+    if not include_unreviewed_transcripts or not include_clip_context:
+        request = _without_automatic_commentary(request)
     game = request["game"]
     game_source = game.get("source", "UserConfirmed")
     has_confirmed_identity = game_source in {
@@ -240,6 +246,7 @@ def _model_context(
             }
         ),
         "profile": {
+            "copyObjective": "BalancedActionAndCommentary" if _requires_balanced_copy(request) else "FollowVariant",
             "audienceAddress": request["profile"]["audienceAddress"],
             "namingGuidance": request["profile"]["namingGuidance"],
             "defaultTags": request["profile"]["defaultTags"],
@@ -284,12 +291,18 @@ def _typed_retry_authority_anchor(
     stays on the same facts while retaining useful document and objective names.
     """
     stable_readable_text = _stable_readable_text(grounded_drafts)
+    synthesis_drafts = [
+        _synthesis_draft(draft, stable_readable_text)
+        for draft in grounded_drafts
+    ]
+    if _requires_balanced_copy(request):
+        # Retain the existence of caution without turning speculative free-text
+        # alternatives (names, intentions, unseen events) into authoring facts.
+        for source, projected in zip(grounded_drafts, synthesis_drafts):
+            projected["hasUncertainties"] = bool(source.get("uncertainties"))
     return build_typed_editorial_authority(
         request,
-        [
-            _synthesis_draft(draft, stable_readable_text)
-            for draft in grounded_drafts
-        ],
+        synthesis_drafts,
         primary_visual_draft_ordinal,
         primary_actor_authority,
         primary_creator_experience_relation,

@@ -4,6 +4,8 @@ using ReplayFoundry.Desktop.Media.Intelligence.Moments;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic;
 using ReplayFoundry.Desktop.Platform.Processes;
 
+using ReplayFoundry.Desktop.Platform.Media;
+
 namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal sealed class Qwen3VlBatchProcessExecutor
@@ -103,11 +105,11 @@ internal sealed class Qwen3VlBatchProcessExecutor
                     workspace);
             DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
             ProcessRunResult processResult =
-                await _processRunner.RunAsync(
+                await MediaWorkBudget.RunAsync(_processRunner,
                     CreateProcessRequest(
                         command,
                         workspace.DirectoryPath),
-                    cancellationToken);
+                    MediaWorkPriority.FinalOutput, MediaWorkKind.HeavyAi, cancellationToken);
             DateTimeOffset completedAtUtc = DateTimeOffset.UtcNow;
             bool providerCaseFailuresDetected =
                 processResult.ExitCode == 9;

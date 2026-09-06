@@ -1,6 +1,7 @@
 using System.Text;
 using ReplayFoundry.Desktop.Features.Generate.Captions;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
+using ReplayFoundry.Desktop.Features.Studio.Editing;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Moments;
 using ReplayFoundry.Desktop.Media.Transcription;
@@ -44,6 +45,13 @@ internal static class RetainedCaptionEditorialTranscriptProjector
         int retainedTextLength = 0;
         foreach (AudioTranscriptionSegment segment in track.Segments)
         {
+            if (HasApplicableForeignStreamAlignment(track, segment))
+            {
+                // A per-phrase alignment can use a different voice track from
+                // the original transcript. Do not label that text with the
+                // original stream's confirmed speech role.
+                continue;
+            }
             SegmentProjection? projection = ProjectSegment(
                 segment,
                 projectionStart,
@@ -96,6 +104,20 @@ internal static class RetainedCaptionEditorialTranscriptProjector
                     : ClipEditorialTranscriptAuthority.AutomaticUnreviewed,
                 spans),
         ];
+    }
+
+    private static bool HasApplicableForeignStreamAlignment(GenerationCandidateCaptionTrack track, AudioTranscriptionSegment segment)
+    {
+        string sourceIdentity = StudioCaptionAlignmentProvenance.TextIdentity(
+            System.IO.Path.GetFullPath(track.SourceSelection.SourceFullPath).ToUpperInvariant());
+        string textIdentity = StudioCaptionAlignmentProvenance.TextIdentity(segment.Text);
+        return segment.Warnings.Where(warning => warning.Code == AudioTranscriptionWarningCode.CorrectedTextAlignment)
+            .SelectMany(warning => StudioCaptionAlignmentProvenance.ReadAll(warning.Message))
+            .Any(alignment => alignment.AudioStreamIndex != track.SourceSelection.AbsoluteAudioStreamIndex &&
+                alignment.SourceIdentitySha256 == sourceIdentity &&
+                alignment.SourceStart < segment.AbsoluteSourceEnd && alignment.SourceEnd > segment.AbsoluteSourceStart &&
+                (alignment.TextSha256 == textIdentity || segment.Words.Any(word =>
+                    alignment.ScoreFor(word.Text, word.AbsoluteSourceStart, word.AbsoluteSourceEnd).HasValue)));
     }
 
     private static SegmentProjection? ProjectSegment(

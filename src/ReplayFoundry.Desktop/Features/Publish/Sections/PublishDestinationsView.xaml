@@ -11,7 +11,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YOUTUBE" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="YouTube" />
                     <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Connect directly in your browser. Replay Foundry never asks for your Google password." TextWrapping="Wrap" />
                 </StackPanel>
                 <controls:StatusBadge
@@ -61,6 +61,7 @@
                 </Grid>
             </Border>
 
+            <Expander Margin="0,8,0,0" Header="Connection &amp; privacy" Style="{DynamicResource Control.QuietExpander}">
             <TextBlock
                 Margin="0,12,0,0"
                 Style="{DynamicResource Text.Meta}"
@@ -69,6 +70,7 @@
                 <Run Text="Enabling permission sends nothing by itself. Google grants access only after Connect; " />
                 <Run Text="the refresh credential stays in Windows Credential Manager, and Disconnect removes it from this PC." />
             </TextBlock>
+            </Expander>
         </StackPanel>
     </Border>
 </UserControl>

@@ -7,7 +7,7 @@
         <StackPanel>
             <Grid>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="CUSTOM THUMBNAIL" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Custom thumbnail" />
                     <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Optional. The video player at left shows the finished Studio file that will upload." TextWrapping="Wrap" />
                 </StackPanel>
                 <controls:StatusBadge HorizontalAlignment="Right" VerticalAlignment="Top" Text="{Binding ThumbnailValidationMessage}" />

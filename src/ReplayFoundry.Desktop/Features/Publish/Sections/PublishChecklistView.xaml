@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Border Style="{DynamicResource Control.SectionCard}" AutomationProperties.Name="Publish review and upload">
         <StackPanel>
-            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="REVIEW" />
+            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Review" />
             <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding ReadinessSummary}" TextWrapping="Wrap" />
 
             <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding Checklist}">

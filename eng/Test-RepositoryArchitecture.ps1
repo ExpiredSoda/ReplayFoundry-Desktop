@@ -83,6 +83,28 @@ foreach ($relative in $manifest.PublicSource.ProjectRoots) {
     }
 }
 
+$buildPropertiesPath = Join-Path $root 'Directory.Build.props'
+if (Test-Path -LiteralPath $buildPropertiesPath -PathType Leaf) {
+    [xml]$buildProperties = Get-Content -Raw -LiteralPath $buildPropertiesPath
+    $channelRules = @($buildProperties.SelectNodes('/Project/PropertyGroup/ReplayFoundryDataChannel') |
+        ForEach-Object { $_.GetAttribute('Condition') + ' => ' + $_.InnerText })
+    $expectedChannelRules = @(
+        '$([System.String]::Copy(''$(MSBuildProjectName)'').EndsWith(''Tests'')) => Test'
+        '''$(ReplayFoundryDataChannel)'' == '''' and ''$(Configuration)'' == ''Debug'' => Development'
+        '''$(ReplayFoundryDataChannel)'' == '''' => Production'
+    )
+    if (($channelRules -join "`n") -cne ($expectedChannelRules -join "`n")) {
+        Add-Failure 'The production build must retain the ordered Test, Debug and Production storage-channel rules.'
+    }
+    $channelMetadata = @($buildProperties.SelectNodes('/Project/ItemGroup/AssemblyMetadata') | Where-Object {
+        $_.GetAttribute('Include') -eq 'ReplayFoundry.DataChannel' -and
+        $_.GetAttribute('Value') -eq '$(ReplayFoundryDataChannel)'
+    })
+    if ($channelMetadata.Count -ne 1) {
+        Add-Failure 'The production build must stamp its selected storage channel into assembly metadata.'
+    }
+}
+
 $declaredProjects = @(Get-ManifestProjects)
 $actualProjects = @(Get-ChildItem `
     (Join-Path $root 'src'),
@@ -141,11 +163,11 @@ $actualWorkflowFiles = @(Get-ChildItem `
 Assert-SameSet 'Production workflow files' `
     @($manifest.PublicSource.WorkflowFiles) $actualWorkflowFiles
 
-$actualDevelopmentDocs = @(Get-ChildItem `
-    -LiteralPath (Join-Path $root 'docs\development') `
+$actualPublicationDocs = @(Get-ChildItem `
+    -LiteralPath (Join-Path $root 'docs') `
     -Recurse -File | ForEach-Object { Get-RepositoryPath $_.FullName })
-Assert-SameSet 'Production development documentation' `
-    @($manifest.PublicSource.DevelopmentDocs) $actualDevelopmentDocs
+Assert-SameSet 'Production publication documentation' `
+    @($manifest.PublicSource.PublicationDocs) $actualPublicationDocs
 
 $hostManifest = Import-PowerShellDataFile -LiteralPath `
     (Join-Path $root $manifest.ProductionVisualHostManifest)

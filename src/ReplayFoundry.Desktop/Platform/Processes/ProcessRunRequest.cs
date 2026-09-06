@@ -19,7 +19,8 @@ internal sealed class ProcessRunRequest
         int maxStandardOutputCharacters = 8 * 1024 * 1024,
         int maxStandardErrorCharacters = 1024 * 1024,
         IReadOnlyDictionary<string, string>? environmentVariables = null,
-        bool inheritParentEnvironment = true)
+        bool inheritParentEnvironment = true,
+        Action<string>? standardOutputLine = null)
     {
         if (string.IsNullOrWhiteSpace(executablePath))
         {
@@ -99,6 +100,7 @@ internal sealed class ProcessRunRequest
         MaxStandardErrorCharacters =
             maxStandardErrorCharacters;
         InheritParentEnvironment = inheritParentEnvironment;
+        StandardOutputLine = standardOutputLine;
     }
 
     public string ExecutablePath { get; }
@@ -118,4 +120,5 @@ internal sealed class ProcessRunRequest
         _environmentVariables;
 
     public bool InheritParentEnvironment { get; }
+    public Action<string>? StandardOutputLine { get; }
 }

@@ -43,6 +43,7 @@ internal static class WhisperCppOutputParser
                     vadTimeMap,
                     warnings))
                 .ToArray();
+            segments = WhisperCppSegmentSequenceNormalizer.Normalize(segments, warnings);
             AudioTranscriptionLanguage? detectedLanguage =
                 WhisperCppJsonReader.ReadDetectedLanguage(root);
             AddRootWarnings(segments, detectedLanguage, warnings);

@@ -46,11 +46,11 @@
             </Grid.RowDefinitions>
 
             <StackPanel>
-                <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="BROWSER" />
+                <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Project clips" />
                 <TextBlock
                     Margin="0,4,0,0"
                     Style="{DynamicResource Text.Meta}"
-                    Text="Choose a clip to preview and edit. Add it to the queue when it is ready."
+                    Text="Select, edit, then add to export."
                     TextWrapping="Wrap" />
             </StackPanel>
 
@@ -97,7 +97,7 @@
                 VerticalScrollBarVisibility="Auto">
                 <ListBox
                     x:Name="BrowserItems"
-                    Margin="4,4,11,20"
+                    Margin="0,2,6,16"
                     AutomationProperties.Name="Studio clips"
                     Background="Transparent"
                     BorderThickness="0"
@@ -124,7 +124,7 @@
                                     </Grid.ColumnDefinitions>
                                     <Border
                                         Background="{DynamicResource Brush.StatusInfo}"
-                                        CornerRadius="12,0,0,3"
+                                        CornerRadius="3,0,0,3"
                                         IsHitTestVisible="False"
                                         Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}" />
 
@@ -172,7 +172,7 @@
                                             </Grid>
                                         </Grid>
 
-                                        <WrapPanel Grid.Row="1" Margin="32,7,0,0" Orientation="Horizontal">
+                                        <WrapPanel Grid.Row="1" Margin="0,7,0,0" Orientation="Horizontal">
                                             <Border
                                                 Margin="0,0,7,4"
                                                 Padding="7,2"
@@ -204,33 +204,29 @@
 
                                         <Border
                                             Grid.Row="2"
-                                            Margin="0,4,0,0"
-                                            Padding="8,7"
-                                            Background="{DynamicResource Brush.SurfaceElevated}"
-                                            CornerRadius="6"
+                                            Margin="0,6,0,0"
+                                            Padding="0"
+                                            Background="Transparent"
                                             Visibility="{Binding HasClipRationale, Converter={StaticResource BoolToVisibility}}">
-                                            <StackPanel>
+                                            <Expander Header="Why this clip" IsExpanded="{Binding IsSelected, Mode=OneWay}"
+                                                Style="{DynamicResource Control.QuietExpander}">
                                                 <TextBlock
-                                                    FontSize="10"
-                                                    FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource Brush.StatusInfo}"
-                                                    Text="WHY THIS CLIP" />
-                                                <TextBlock
-                                                    Margin="0,2,0,0"
+                                                    Margin="0,6,0,0"
                                                     FontSize="11"
                                                     Foreground="{DynamicResource Brush.TextSecondary}"
                                                     Text="{Binding WhyThisClip}"
                                                     TextWrapping="Wrap" />
-                                            </StackPanel>
+                                            </Expander>
                                         </Border>
 
                                         <Grid Grid.Row="3" Margin="0,9,0,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <Button
                                                 MinWidth="0"
+                                                Padding="6,6"
                                                 AutomationProperties.Name="{Binding QueueActionAutomationName}"
                                                 AutomationProperties.HelpText="Adds this exact clip with its latest visible edits. Review is optional."
                                                 Command="{Binding DataContext.QueueBrowserAssetCommand, ElementName=Root}"
@@ -254,12 +250,13 @@
                                             <Button
                                                 Grid.Column="1"
                                                 MinWidth="0"
+                                                Padding="6,6"
                                                 Margin="7,0,0,0"
                                                 AutomationProperties.Name="Remove clip from Studio"
                                                 AutomationProperties.HelpText="Moves this clip out of Studio and the render queue without deleting its saved edits."
                                                 Command="{Binding DataContext.RemoveBrowserAssetCommand, ElementName=Root}"
                                                 CommandParameter="{Binding AssetId}"
-                                                Content="Exclude clip"
+                                                Content="Exclude"
                                                 ToolTip="Exclude from Studio and the render queue. Saved edits and source files are kept.">
                                                 <Button.Style>
                                                     <Style TargetType="Button" BasedOn="{StaticResource Control.StudioDestructiveButton}">

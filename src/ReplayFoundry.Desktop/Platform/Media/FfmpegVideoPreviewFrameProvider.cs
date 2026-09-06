@@ -99,9 +99,9 @@ internal sealed class FfmpegVideoPreviewFrameProvider :
             try
             {
                 result =
-                    await _processRunner.RunAsync(
+                    await MediaWorkBudget.RunAsync(_processRunner,
                         processRequest,
-                        cancellationToken);
+                        MediaWorkPriority.Foreground, cancellationToken);
             }
             catch (OperationCanceledException)
             {

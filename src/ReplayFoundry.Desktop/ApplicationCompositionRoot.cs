@@ -5,6 +5,7 @@ using ReplayFoundry.Desktop.Features.Studio.Projects;
 using ReplayFoundry.Desktop.Platform.Dialogs;
 using ReplayFoundry.Desktop.Platform.RuntimePacks;
 using ReplayFoundry.Desktop.Shell;
+using ReplayFoundry.Desktop.Shell.Navigation;
 
 namespace ReplayFoundry.Desktop;
 
@@ -131,7 +132,7 @@ internal sealed class ApplicationComposition : IDisposable
 
 internal static class ApplicationCompositionRoot
 {
-    public static ApplicationComposition Create()
+    public static ApplicationComposition Create(string? debugProjectPath = null)
     {
         var localDataMaintenance = LocalDataComposition.Initialize();
         GenerationSourceSelectionPlatform sourceSelectionPlatform =
@@ -200,6 +201,27 @@ internal static class ApplicationCompositionRoot
             experience.GameKnowledgePermissionStatus,
             visualReview.RuntimeCapabilities);
 
+#if DEBUG
+        if (debugProjectPath is not null)
+        {
+            var file = new System.IO.FileInfo(System.IO.Path.GetFullPath(debugProjectPath));
+            if (!file.Exists || file.Length > 64 * 1024 * 1024)
+                throw new System.IO.InvalidDataException("Debug project must be an existing Studio JSON file under 64 MiB.");
+            var jsonOptions = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                MaxDepth = 128,
+            };
+            jsonOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            var document = System.Text.Json.JsonSerializer.Deserialize<StudioProjectDocument>(
+                System.IO.File.ReadAllText(file.FullName), jsonOptions)
+                ?? throw new System.IO.InvalidDataException("Debug project is empty.");
+            if (document.SchemaVersion != StudioProjectDocument.CurrentSchemaVersion)
+                throw new System.IO.InvalidDataException("Debug project requires the current Studio schema.");
+            workspace.OutputSession.Publish(StudioProjectDocumentMapper.Restore(document));
+            mainWindowViewModel.NavigateCommand.Execute(ShellDestination.Studio);
+        }
+#endif
         return new ApplicationComposition(
             mainWindowViewModel,
             workspace.LibraryCatalog,

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Collections.ObjectModel;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Presentation.Commands;
@@ -16,10 +17,120 @@ internal sealed record StudioClipEditorDraftSnapshot(
     double CaptionMaximumWidthPercent,
     double CaptionFontScalePercent,
     StudioVideoEffectPreset VideoEffect,
-    double VideoEffectIntensityPercent);
+    double VideoEffectIntensityPercent,
+    StudioCaptionTypography? CaptionTypography = null);
 
 public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
 {
+    private StudioCaptionTypography _captionTypography = StudioCaptionTypography.Default;
+    private readonly IStudioCaptionLookStore _captionLookStore = StudioEditorPreferences.CreateCaptionLooks();
+    private readonly DelegateCommand _saveNamedLookCommand;
+    private StudioNamedCaptionLook? _selectedNamedLook;
+    public ObservableCollection<StudioNamedCaptionLook> NamedCaptionLooks { get; } = [];
+    public string CaptionLookName { get; set; } = "My captions";
+    public IReadOnlyList<string> CaptionFontFamilies => StudioCaptionFontResolver.Resolve(CaptionFontFamily).IsFallback
+        ? new[] { CaptionFontFamily }.Concat(StudioCaptionFontResolver.InstalledFamilies).ToArray() : StudioCaptionFontResolver.InstalledFamilies;
+    public string? CaptionFontWarning => StudioCaptionFontResolver.Resolve(CaptionFontFamily).Warning;
+    public bool HasCaptionFontWarning => CaptionFontWarning is not null;
+    public IReadOnlyList<StudioCaptionSafeArea> CaptionSafeAreas { get; } = Enum.GetValues<StudioCaptionSafeArea>();
+    public StudioCaptionTypography CaptionTypography
+    {
+        get => _captionTypography;
+        set
+        {
+            if (_captionTypography == value) return;
+            _captionTypography = value; NotifyTypography(); NotifyDraftProperties();
+            DraftAppearanceChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+    public string CaptionFontFamily { get => CaptionTypography.FontFamily; set => ChangeTypography(font: value); }
+    public string CaptionTextColor { get => CaptionTypography.TextColor; set => ChangeTypography(text: value); }
+    public string CaptionAccentColor { get => CaptionTypography.AccentColor; set => ChangeTypography(accent: value); }
+    public string CaptionOutlineColor { get => CaptionTypography.OutlineColor; set => ChangeTypography(outline: value); }
+    public bool CaptionBold { get => CaptionTypography.Bold; set => ChangeTypography(bold: value); }
+    public bool CaptionRightToLeft { get => CaptionTypography.RightToLeft; set => ChangeTypography(rtl: value); }
+    public double CaptionOutlineWidth { get => CaptionTypography.OutlineWidth; set => ChangeTypography(outlineWidth: value); }
+    public double CaptionShadowDepth { get => CaptionTypography.ShadowDepth; set => ChangeTypography(shadow: value); }
+    public StudioCaptionSafeArea CaptionSafeArea { get => CaptionTypography.SafeArea; set => ChangeTypography(safeArea: value); }
+    public bool UseCustomCaptionSafeArea
+    {
+        get => CaptionTypography.SafeAreaInsets is not null;
+        set => ChangeTypography(insets: value ? CaptionTypography.GetSafeAreaInsets() : null, replaceInsets: true);
+    }
+    public double CaptionSafeLeftPercent { get => CaptionTypography.GetSafeAreaInsets().LeftPercent; set => ChangeSafeInsets(left: value); }
+    public double CaptionSafeTopPercent { get => CaptionTypography.GetSafeAreaInsets().TopPercent; set => ChangeSafeInsets(top: value); }
+    public double CaptionSafeRightPercent { get => CaptionTypography.GetSafeAreaInsets().RightPercent; set => ChangeSafeInsets(right: value); }
+    public double CaptionSafeBottomPercent { get => CaptionTypography.GetSafeAreaInsets().BottomPercent; set => ChangeSafeInsets(bottom: value); }
+    private void ChangeSafeInsets(double? left = null, double? top = null, double? right = null, double? bottom = null)
+    {
+        var current = CaptionTypography.GetSafeAreaInsets();
+        ChangeTypography(insets: new(left ?? current.LeftPercent, top ?? current.TopPercent,
+            right ?? current.RightPercent, bottom ?? current.BottomPercent), replaceInsets: true);
+    }
+    public IReadOnlyList<SelectionOption<StudioCaptionBackground>> CaptionBackgrounds { get; } =
+    [
+        new(StudioCaptionBackground.StyleDefault, "Use effect default", "Keep the selected caption effect's usual background."),
+        new(StudioCaptionBackground.None, "No background", "Show caption letters without a background panel."),
+        new(StudioCaptionBackground.Panel, "Custom panel", "Use the background color and opacity below."),
+    ];
+    public IReadOnlyList<StudioCaptionAlignment> CaptionAlignments { get; } = Enum.GetValues<StudioCaptionAlignment>();
+    public IReadOnlyList<StudioCaptionCasing> CaptionCasings { get; } = Enum.GetValues<StudioCaptionCasing>();
+    public StudioCaptionBackground CaptionBackground { get => CaptionTypography.Background; set => ChangeTypography(background: value); }
+    public string CaptionBackgroundColor { get => CaptionTypography.BackgroundColor; set => ChangeTypography(backgroundColor: value); }
+    public double CaptionBackgroundOpacityPercent { get => CaptionTypography.BackgroundOpacityPercent; set => ChangeTypography(opacity: value); }
+    public StudioCaptionAlignment CaptionAlignment { get => CaptionTypography.Alignment; set => ChangeTypography(alignment: value); }
+    public StudioCaptionCasing CaptionCasing { get => CaptionTypography.Casing; set => ChangeTypography(casing: value); }
+    public double CaptionAnimationIntensityPercent { get => CaptionTypography.AnimationIntensityPercent; set => ChangeTypography(intensity: value); }
+    public double CaptionLineSpacingPercent { get => CaptionTypography.LineSpacingPercent; set => ChangeTypography(lineSpacing: value); }
+    public ICommand SaveNamedCaptionLookCommand => _saveNamedLookCommand;
+    public StudioNamedCaptionLook? SelectedNamedCaptionLook
+    {
+        get => _selectedNamedLook;
+        set
+        {
+            if (value is null) return; _selectedNamedLook = value;
+            var look = value.Look;
+            SelectedCaptionStyle = _captionStyleOptions.Single(o => o.Value == look.CaptionStyle);
+            SelectedCaptionWordLimit = _captionWordLimitOptions.Single(o => o.Value == look.CaptionWordLimit);
+            CaptionVerticalPositionPercent = look.CaptionVerticalPositionPercent;
+            CaptionMaximumWidthPercent = look.CaptionMaximumWidthPercent; CaptionFontScalePercent = look.CaptionFontScalePercent;
+            CaptionTypography = look.CaptionTypography; OnPropertyChanged();
+        }
+    }
+    private void ChangeTypography(string? font = null, string? text = null, string? accent = null, string? outline = null,
+        bool? bold = null, bool? rtl = null, double? outlineWidth = null, double? shadow = null, StudioCaptionSafeArea? safeArea = null,
+        StudioCaptionBackground? background = null, string? backgroundColor = null, double? opacity = null,
+        StudioCaptionAlignment? alignment = null, StudioCaptionCasing? casing = null, double? intensity = null, double? lineSpacing = null,
+        StudioCaptionSafeAreaInsets? insets = null, bool replaceInsets = false)
+    {
+        var t = CaptionTypography;
+        CaptionTypography = new(font ?? t.FontFamily, text ?? t.TextColor, accent ?? t.AccentColor, outline ?? t.OutlineColor,
+            bold ?? t.Bold, outlineWidth ?? t.OutlineWidth, shadow ?? t.ShadowDepth, safeArea ?? t.SafeArea, rtl ?? t.RightToLeft,
+            background ?? t.Background, backgroundColor ?? t.BackgroundColor, opacity ?? t.BackgroundOpacityPercent,
+            alignment ?? t.Alignment, casing ?? t.Casing, intensity ?? t.AnimationIntensityPercent, lineSpacing ?? t.LineSpacingPercent,
+            replaceInsets ? insets : t.SafeAreaInsets);
+    }
+    private void NotifyTypography()
+    {
+        foreach (string property in new[] { nameof(CaptionTypography), nameof(CaptionFontFamily), nameof(CaptionTextColor), nameof(CaptionAccentColor),
+            nameof(CaptionOutlineColor), nameof(CaptionBold), nameof(CaptionRightToLeft), nameof(CaptionOutlineWidth), nameof(CaptionShadowDepth), nameof(CaptionSafeArea),
+            nameof(CaptionBackground), nameof(CaptionBackgroundColor), nameof(CaptionBackgroundOpacityPercent), nameof(CaptionAlignment), nameof(CaptionCasing),
+            nameof(CaptionAnimationIntensityPercent), nameof(CaptionLineSpacingPercent), nameof(CaptionFontFamilies), nameof(CaptionFontWarning), nameof(HasCaptionFontWarning),
+            nameof(UseCustomCaptionSafeArea), nameof(CaptionSafeLeftPercent), nameof(CaptionSafeRightPercent),
+            nameof(CaptionSafeTopPercent), nameof(CaptionSafeBottomPercent) }) OnPropertyChanged(property);
+    }
+    private void SaveNamedLook()
+    {
+        try
+        {
+            _captionLookStore.Save(CaptionLookName, StudioCaptionLook.FromAppearance(DraftAppearance));
+            NamedCaptionLooks.Clear(); foreach (var look in _captionLookStore.Load()) NamedCaptionLooks.Add(look);
+            _status = "Caption look saved for reuse in any project.";
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
+        { _status = "Caption look was not saved: " + e.Message; }
+        NotifyDraftProperties();
+    }
     private readonly IGenerationOutputEditor? _outputEditor;
     private readonly IReadOnlyList<SelectionOption<GenerationCaptionStylePreset>>
         _captionStyleOptions = StudioSurfaceCatalog.CaptionStyles;
@@ -56,6 +167,10 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
 
     public StudioClipEditorViewModel(IGenerationOutputEditor? outputEditor)
     {
+        _saveNamedLookCommand = new DelegateCommand(SaveNamedLook, () => _asset is not null && !_isHostBusy);
+        try { foreach (var look in _captionLookStore.Load()) NamedCaptionLooks.Add(look); }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
+        { _status = "Saved caption looks could not be read: " + e.Message; }
         _outputEditor = outputEditor;
         _selectedCaptionStyle = _captionStyleOptions[0];
         _selectedCaptionWordLimit = _captionWordLimitOptions.Single(
@@ -200,7 +315,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
               _asset.Appearance.CaptionMaximumWidthPercent) > 0.05 ||
           Math.Abs(
               CaptionFontScalePercent -
-              _asset.Appearance.CaptionFontScalePercent) > 0.5) ||
+              _asset.Appearance.CaptionFontScalePercent) > 0.5 || CaptionTypography != _asset.Appearance.CaptionTypography) ||
          SelectedVideoEffect.Value != _asset.Appearance.VideoEffect ||
          Math.Abs(
              VideoEffectIntensityPercent -
@@ -268,42 +383,9 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         }
     }
 
-    public string SelectedCaptionPhraseSizeDescription
-    {
-        get
-        {
-            GenerationCaptionStylePreset style =
-                SelectedCaptionStyle.Value;
-            if (StudioCaptionPresentationPolicy.RequiresTimedWords(style) &&
-                _asset?.Captions is { } track &&
-                !StudioCaptionPresentationPolicy
-                    .HasCompleteTimedWordCoverage(track))
-            {
-                return "Word timing is unavailable for this clip, so this " +
-                    "effect uses each whole phrase.";
-            }
-
-            return style switch
-            {
-                GenerationCaptionStylePreset.Clean =>
-                    SelectedCaptionWordLimit.Description +
-                    " Clean replaces the complete phrase as one static caption.",
-                GenerationCaptionStylePreset.WordFocus =>
-                    SelectedCaptionWordLimit.Description +
-                    " Word focus keeps the phrase visible while the active word animates.",
-                GenerationCaptionStylePreset.KaraokeSweep =>
-                    SelectedCaptionWordLimit.Description +
-                    " Karaoke keeps the phrase visible while its word sweep animates.",
-                GenerationCaptionStylePreset.HighContrast =>
-                    SelectedCaptionWordLimit.Description +
-                    " High contrast replaces the complete phrase as one static panel.",
-                GenerationCaptionStylePreset.Pop =>
-                    "Pop shows one spoken word at a time. Your saved phrase " +
-                    "size returns when you choose another effect.",
-                _ => throw new ArgumentOutOfRangeException(),
-            };
-        }
-    }
+    public string SelectedCaptionPhraseSizeDescription =>
+        StudioCaptionEditorPresentation.PhraseSizeDescription(
+            _asset, SelectedCaptionStyle.Value, SelectedCaptionWordLimit);
     public bool IsCaptionPhraseSizeEditorEnabled =>
         _project is { IsFinalized: false } &&
         _asset?.HasCaptions == true &&
@@ -312,11 +394,17 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         SelectedCaptionStyle.Value != GenerationCaptionStylePreset.Pop;
     public bool IsPopCaptionPhraseSizeLocked =>
         SelectedCaptionStyle.Value == GenerationCaptionStylePreset.Pop;
-    public string PopCaptionPhraseSizeText =>
-        _asset?.Captions is { } track &&
-        !StudioCaptionPresentationPolicy.HasCompleteTimedWordCoverage(track)
-            ? "Whole phrase · word timing unavailable"
-            : "One word · set by Pop";
+    public string PopCaptionPhraseSizeText
+    {
+        get
+        {
+            if (_asset?.Captions is not { } track) return "One word · set by Pop";
+            var visible = StudioCaptionCutProjection.Project(track, _asset.SourceStart, _asset.SourceEnd).Track;
+            var coverage = StudioCaptionPresentationPolicy.GetTimingCoverage(visible, StudioCaptionWordLimitPreset.FullSegment);
+            return coverage.PhrasePages == 0 ? "One word · set by Pop"
+                : coverage.TimedPages > 0 ? "One word where timed · phrases where needed" : "Whole phrase · word timing unavailable";
+        }
+    }
 
     public double CaptionMaximumWidthPercent
     {
@@ -405,12 +493,13 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         $"{CaptionVerticalPositionPercent:0.#}% from top";
     public string? CaptionPresentationWarning =>
         StudioCaptionPresentationPolicy.GetPresentationWarning(
-            _asset?.Captions,
+            _asset?.Captions is { } track
+                ? StudioCaptionCutProjection.Project(track, _asset.SourceStart, _asset.SourceEnd).Track : null,
             DraftAppearance);
     public bool HasCaptionPresentationWarning =>
         CaptionPresentationWarning is not null;
     public int CaptionedClipCount =>
-        _project?.Assets.Count(static asset => asset.HasCaptions) ?? 0;
+        _project?.Assets.Count(static asset => asset.Captions?.HasRenderableSegments == true) ?? 0;
     public string ApplyCaptionLookToAllText => CaptionedClipCount switch
     {
         0 => "No captioned clips in this project",
@@ -500,7 +589,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         _asset?.Appearance.GraphicOverlays,
         SelectedCaptionWordLimit.Value,
         CaptionMaximumWidthPercent,
-        CaptionFontScalePercent);
+        CaptionFontScalePercent, CaptionTypography);
     public ICommand ApplyBoundaryEditCommand => _applyCommand;
     public ICommand ResetBoundaryDraftCommand => _resetCommand;
     public ICommand NudgeStartEarlierCommand => _nudgeStartEarlierCommand;
@@ -543,7 +632,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
                 CaptionMaximumWidthPercent,
                 CaptionFontScalePercent,
                 SelectedVideoEffect.Value,
-                VideoEffectIntensityPercent)
+                VideoEffectIntensityPercent, CaptionTypography)
             : null;
 
     internal void RestorePendingDraft(
@@ -566,6 +655,8 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         _captionMaximumWidthPercent =
             draft.CaptionMaximumWidthPercent;
         _captionFontScalePercent = draft.CaptionFontScalePercent;
+        _captionTypography = draft.CaptionTypography ?? StudioCaptionTypography.Default;
+        NotifyTypography();
         _selectedVideoEffect = _videoEffectOptions.Single(
             option => option.Value == draft.VideoEffect);
         _videoEffectIntensityPercent = draft.VideoEffectIntensityPercent;
@@ -605,7 +696,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
             _asset.Appearance.GraphicOverlays,
             SelectedCaptionWordLimit.Value,
             CaptionMaximumWidthPercent,
-            CaptionFontScalePercent);
+            CaptionFontScalePercent, CaptionTypography);
         StudioClipBoundaryPolicy.Validate(
             _asset,
             DraftSourceStart,
@@ -626,7 +717,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         _project is { IsFinalized: false } project &&
         !_isHostBusy &&
         _asset?.HasCaptions == true &&
-        project.Assets.Count(static asset => asset.HasCaptions) > 1;
+        project.Assets.Count(static asset => asset.Captions?.HasRenderableSegments == true) > 1;
 
     private void ApplyCaptionLookToAll()
     {
@@ -643,9 +734,9 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
             CaptionVerticalPositionPercent,
             SelectedCaptionWordLimit.Value,
             CaptionMaximumWidthPercent,
-            CaptionFontScalePercent);
+            CaptionFontScalePercent, CaptionTypography);
         GenerationOutputAsset[] replacements = _project.Assets
-            .Where(static asset => asset.HasCaptions)
+            .Where(static asset => asset.Captions?.HasRenderableSegments == true)
             .Select(asset => asset.WithStudioEdits(
                 asset.SourceStart,
                 asset.SourceEnd,
@@ -776,6 +867,8 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
             _asset.Appearance.CaptionMaximumWidthPercent;
         _captionFontScalePercent =
             _asset.Appearance.CaptionFontScalePercent;
+        _captionTypography = _asset.Appearance.CaptionTypography;
+        NotifyTypography();
         _selectedVideoEffect = _videoEffectOptions.Single(
             option => option.Value == _asset.Appearance.VideoEffect);
         _videoEffectIntensityPercent =

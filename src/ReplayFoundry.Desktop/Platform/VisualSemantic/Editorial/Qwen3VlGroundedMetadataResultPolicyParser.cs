@@ -10,6 +10,13 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
     internal static bool UsesGenerationWatchdog(string outputSchema) =>
         outputSchema is
             OutputSchema or
+            PreviousResponsibilitySplitOutputSchema or
+            PreviousCompactIsolatedFieldAuthoringOutputSchema or
+            PreviousIsolatedFieldAuthoringOutputSchema or
+            PreviousSchemaEnforcedBalancedCopyOutputSchema or
+            PreviousCompactBalancedCopyOutputSchema or
+            PreviousBalancedCopyOutputSchema or
+            PreviousCommentaryTimingOutputSchema or
             PreviousCreatorVoiceOutputSchema or
             PreviousEditorialFrameAdherenceOutputSchema or
             PreviousEditorialFramingOutputSchema or
@@ -46,7 +53,25 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
         string outputSchema) =>
         outputSchema switch
         {
-            OutputSchema => (PromptVersion, PromptSha256),
+            OutputSchema or PreviousResponsibilitySplitOutputSchema => (PromptVersion, PromptSha256),
+            PreviousCompactIsolatedFieldAuthoringOutputSchema =>
+                (PreviousCompactIsolatedFieldAuthoringPromptVersion,
+                    PreviousCompactIsolatedFieldAuthoringPromptSha256),
+            PreviousIsolatedFieldAuthoringOutputSchema =>
+                (PreviousIsolatedFieldAuthoringPromptVersion,
+                    PreviousIsolatedFieldAuthoringPromptSha256),
+            PreviousSchemaEnforcedBalancedCopyOutputSchema =>
+                (PreviousSchemaEnforcedBalancedCopyPromptVersion,
+                    PreviousSchemaEnforcedBalancedCopyPromptSha256),
+            PreviousCompactBalancedCopyOutputSchema =>
+                (PreviousCompactBalancedCopyPromptVersion,
+                    PreviousCompactBalancedCopyPromptSha256),
+            PreviousBalancedCopyOutputSchema =>
+                (PreviousBalancedCopyPromptVersion,
+                    PreviousBalancedCopyPromptSha256),
+            PreviousCommentaryTimingOutputSchema =>
+                (PreviousCommentaryTimingPromptVersion,
+                    PreviousCommentaryTimingPromptSha256),
             PreviousCreatorVoiceOutputSchema =>
                 (PreviousCreatorVoicePromptVersion,
                     PreviousCreatorVoicePromptSha256),
@@ -187,8 +212,8 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
         JsonElement result,
         ClipEditorialMetadataRequest request,
         Qwen3VlGroundedMetadataGenerationValidation validation,
-        IDictionary<string, (string RequestSha256, int SourceAttempt,
-            string CandidateId, string FactWitness)> packets)
+        IDictionary<string, Qwen3VlGroundingPacketReceipt> packets,
+        IReadOnlyDictionary<string, Qwen3VlGroundingPacketReceipt>? verifiedPriorPackets = null)
     {
         if (validation.GroundingPacketFactSha256 is not string factSha256)
         {
@@ -225,6 +250,18 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
                 generation,
                 "knowledgeSelectionAssessments").GetRawText());
 
+        ValidatePacketReceipt(factSha256,
+            new(requestSha256, sourceAttempt, request.Context.CandidateId, factWitness),
+            reused, packets, verifiedPriorPackets);
+    }
+
+    internal static void ValidatePacketReceipt(
+        string factSha256,
+        Qwen3VlGroundingPacketReceipt receipt,
+        bool reused,
+        IDictionary<string, Qwen3VlGroundingPacketReceipt> packets,
+        IReadOnlyDictionary<string, Qwen3VlGroundingPacketReceipt>? verifiedPriorPackets = null)
+    {
         if (!reused)
         {
             if (packets.ContainsKey(factSha256))
@@ -234,20 +271,21 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
             }
             packets.Add(
                 factSha256,
-                (requestSha256, sourceAttempt, request.Context.CandidateId,
-                    factWitness));
+                receipt);
             return;
         }
 
-        if (!packets.TryGetValue(factSha256, out var source) ||
+        if ((!packets.TryGetValue(factSha256, out var source) &&
+             !(verifiedPriorPackets?.TryGetValue(factSha256, out source) ?? false)) ||
+            source is null ||
             !source.RequestSha256.Equals(
-                requestSha256,
+                receipt.RequestSha256,
                 StringComparison.OrdinalIgnoreCase) ||
-            source.SourceAttempt != sourceAttempt ||
+            source.SourceAttempt != receipt.SourceAttempt ||
             !source.CandidateId.Equals(
-                request.Context.CandidateId,
+                receipt.CandidateId,
                 StringComparison.Ordinal) ||
-            !source.FactWitness.Equals(factWitness, StringComparison.Ordinal))
+            !source.FactWitness.Equals(receipt.FactWitness, StringComparison.Ordinal))
         {
             throw new Qwen3VlOutputParseException(
                 "Grounded Qwen reused a packet without identical prior facts.");

@@ -2,6 +2,26 @@ using System.Collections.ObjectModel;
 
 namespace ReplayFoundry.Desktop.Media.Intelligence.Preferences;
 
+public sealed record ClipPreferenceContext
+{
+    public ClipPreferenceContext(string game, string outputKind, string emphasis, string intent)
+    {
+        if (new[] { game, outputKind, emphasis, intent }.Any(value =>
+                string.IsNullOrWhiteSpace(value) || value.Length > 160))
+            throw new ArgumentException("Preference contexts require bounded game, output, emphasis and intent values.");
+        Game = game.Trim();
+        OutputKind = outputKind.Trim();
+        Emphasis = emphasis.Trim();
+        Intent = intent.Trim();
+    }
+    public string Game { get; }
+    public string OutputKind { get; }
+    public string Emphasis { get; }
+    public string Intent { get; }
+    public string Key => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.UTF8.GetBytes(string.Join("\u001f", Game, OutputKind, Emphasis, Intent).ToUpperInvariant())));
+}
+
 public enum ClipPreferenceRating
 {
     Dislike = -1,
@@ -52,7 +72,8 @@ public sealed class ClipPreferenceFeatureVector
     private readonly ReadOnlyCollection<ClipPreferenceFeature> _features;
 
     public ClipPreferenceFeatureVector(
-        IEnumerable<ClipPreferenceFeature> features)
+        IEnumerable<ClipPreferenceFeature> features,
+        ClipPreferenceContext? context = null)
     {
         ArgumentNullException.ThrowIfNull(features);
         ClipPreferenceFeature[] snapshot = features
@@ -69,9 +90,11 @@ public sealed class ClipPreferenceFeatureVector
         }
 
         _features = Array.AsReadOnly(snapshot);
+        Context = context;
     }
 
     public IReadOnlyList<ClipPreferenceFeature> Features => _features;
+    public ClipPreferenceContext? Context { get; }
 
     public double? Find(ClipPreferenceFeatureCode code) =>
         _features.FirstOrDefault(feature => feature.Code == code)
@@ -230,13 +253,14 @@ public sealed class ClipPreferenceProfile
             true,
             contribution,
             signals.Count,
-            $"Local game-agnostic preference history compared {signals.Count} normalized clip features at {balanceConfidence:P0} sample confidence.");
+            $"Local preference history compared {signals.Count} normalized clip features at {balanceConfidence:P0} sample confidence.");
     }
 }
 
 public interface IClipPreferenceProfileProvider
 {
     ClipPreferenceProfile Current { get; }
+    ClipPreferenceProfile ForContext(ClipPreferenceContext? context) => Current;
 }
 
 public interface IClipPreferenceFeedbackStore :

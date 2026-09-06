@@ -23,7 +23,13 @@ internal static class TestMediaFactory
         double? rotationDegrees = null,
         int videoStreamIndex = 0,
         bool hasAudio = false,
-        int audioStreamCount = 1)
+        int audioStreamCount = 1,
+        MediaRational? frameRate = null,
+        string? pixelFormat = "yuv420p",
+        string? colorRange = "tv",
+        string? colorPrimaries = "bt709",
+        string? colorTransfer = "bt709",
+        string? colorMatrix = "bt709")
     {
         if (hasAudio && audioStreamCount <= 0)
         {
@@ -62,9 +68,9 @@ internal static class TestMediaFactory
                 height,
                 width,
                 height,
-                new MediaRational(60, 1),
-                new MediaRational(60, 1),
-                "yuv420p",
+                frameRate ?? new MediaRational(60, 1),
+                frameRate ?? new MediaRational(60, 1),
+                pixelFormat,
                 8,
                 MediaValueSource.ReportedByProbe,
                 new MediaRational(1, 1),
@@ -73,10 +79,10 @@ internal static class TestMediaFactory
                 displayAspectRatioSource,
                 rotationDegrees,
                 null,
-                "tv",
-                "bt709",
-                "bt709",
-                "bt709",
+                colorRange,
+                colorPrimaries,
+                colorTransfer,
+                colorMatrix,
                 "left",
                 null,
                 actualDuration,

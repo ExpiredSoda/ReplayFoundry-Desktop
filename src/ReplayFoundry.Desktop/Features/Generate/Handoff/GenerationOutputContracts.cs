@@ -129,3 +129,8 @@ public interface IGenerationOutputEditor
         ClipEditorialMetadataDraft? editorialMetadata = null,
         StudioClipAppearance? appearance = null);
 }
+
+public interface IGenerationManualClipEditor
+{
+    void AddManualSourceClip(string projectId, string sourceFullPath, TimeSpan start, TimeSpan end);
+}

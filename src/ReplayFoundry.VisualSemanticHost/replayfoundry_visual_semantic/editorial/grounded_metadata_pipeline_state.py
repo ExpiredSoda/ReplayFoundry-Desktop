@@ -48,6 +48,28 @@ class SynthesisContext:
     grounded_metadata_module_identities: list[dict[str, str]]
     all_prior_accepted_titles: tuple[Any, ...]
     prior_title_bodies: tuple[str, ...]
+    metadata_grammar_cache: dict[str, tuple[Any, Any]] = field(default_factory=dict)
+
+
+def scoped_metadata_grammar(context: Any, request: dict[str, Any]) -> tuple[Any, Any]:
+    """Match the decoder to this pass's authority without changing its evidence."""
+    from .grounded_metadata_output_schema import metadata_schema
+    from .grounded_metadata_pipeline_contract import METADATA_SCHEMA_VERSION
+    from .grounded_metadata_json_whitespace import ANY_WHITESPACE
+
+    canonical, schema_hash = metadata_schema(request)
+    _, original_hash = metadata_schema(context.synthesis_request)
+    if schema_hash == original_hash:
+        return context.grammar, context.base_audit
+    cache = getattr(context, "metadata_grammar_cache", None)
+    if cache is not None and schema_hash in cache:
+        return cache[schema_hash]
+    grammar = context.session.compile_json_schema(
+        canonical, METADATA_SCHEMA_VERSION, schema_hash, any_whitespace=ANY_WHITESPACE,
+    )
+    if cache is not None:
+        cache[schema_hash] = grammar
+    return grammar
 
 
 @dataclass
@@ -100,3 +122,4 @@ class SynthesisProgress:
     editorial_rephrase_source_json_sha256: str | None = None
     editorial_rephrase_output_json_sha256: str | None = None
     editorial_rephrase_attestation: dict[str, Any] | None = None
+    isolated_field_authoring: dict[str, Any] | None = None

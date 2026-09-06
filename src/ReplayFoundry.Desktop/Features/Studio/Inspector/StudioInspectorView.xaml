@@ -8,7 +8,7 @@
         <ScrollViewer
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Auto">
-            <Grid Margin="0,0,8,28">
+            <Grid Margin="0,0,4,20">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -22,11 +22,11 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="EDIT" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Edit clip" />
                     <TextBlock
                         Margin="0,4,0,0"
                         Style="{DynamicResource Text.Meta}"
-                        Text="Choose a section to edit the selected clip."
+                        Text="Changes stay with the selected clip."
                         TextWrapping="Wrap" />
                 </StackPanel>
 
@@ -43,38 +43,35 @@
                     Style="{DynamicResource Control.SectionList}">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <UniformGrid Columns="2" />
+                            <UniformGrid Columns="3" />
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource Control.StudioNavigationItem}">
-                            <Setter Property="Margin" Value="0,0,6,6" />
+                            <Setter Property="Margin" Value="0,0,4,4" />
+                            <Setter Property="Padding" Value="6,7" />
+                            <Setter Property="AutomationProperties.HelpText" Value="{Binding Description}" />
+                            <Setter Property="ToolTip" Value="{Binding Description}" />
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         </Style>
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="0,1">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="18" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <controls:IconPath
-                                    Grid.RowSpan="2"
                                     Width="14"
                                     Height="14"
-                                    Margin="0,0,6,0"
+                                    Margin="0,0,4,0"
                                     VerticalAlignment="Center"
                                     IconKey="{Binding Glyph}"
                                     Stretch="Uniform"
-                                    Stroke="{DynamicResource Brush.StatusInfo}"
+                                    Stroke="{DynamicResource Brush.TextSecondary}"
                                     StrokeThickness="1.2" />
-                                <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{Binding Label}" TextWrapping="Wrap" />
-                                <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding Description}" TextWrapping="Wrap" />
+                                <TextBlock Grid.Column="1" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Label}" TextWrapping="Wrap" />
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -87,43 +84,15 @@
                     Text="{Binding SelectedInspectorDescription}"
                     TextWrapping="Wrap" />
 
-                <editors:StudioClipEditorView Grid.Row="3" />
-                <Border
-                    Grid.Row="4"
-                    Margin="0,12,0,8"
-                    Padding="12"
-                    Background="{DynamicResource Brush.SurfaceInset}"
-                    BorderBrush="{DynamicResource Brush.BorderSubtle}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Visibility="{Binding IsAudioEditorVisible, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel>
-                        <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Audio" />
-                        <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="{Binding AudioMixSummary}" TextWrapping="Wrap" />
-                        <ItemsControl ItemsSource="{Binding AudioStreams}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,0,0,7" Padding="9" Background="{DynamicResource Brush.SurfaceElevated}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="7">
-                                        <StackPanel>
-                                            <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="{Binding StreamLabel}" />
-                                            <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Format}" />
-                                            <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding MetadataHint}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Border Margin="0,4,0,0" Padding="9" Background="{DynamicResource Brush.InteractiveSelected}" CornerRadius="7">
-                            <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding CaptionAudioSummary}" TextWrapping="Wrap" />
-                        </Border>
-                    </StackPanel>
-                </Border>
+                <StackPanel Grid.Row="3"><editors:StudioClipEditorView /><editors:StudioTimelineEditView /><editors:StudioOutputEditorView /><editors:StudioFrameEditsView /></StackPanel>
+                <editors:StudioAudioEditorView Grid.Row="4" />
                 <editors:StudioCaptionEditorView Grid.Row="5" />
                 <editors:StudioEffectEditorView Grid.Row="6" />
                 <Border
                     Grid.Row="7"
                     Margin="0,12,0,8"
                     Style="{DynamicResource Control.CanvasInsetCard}"
+                    Background="Transparent" BorderThickness="0" Padding="0"
                     Visibility="{Binding IsGraphicsEditorVisible, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel DataContext="{Binding Graphics}">
                         <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Graphics overlay" />

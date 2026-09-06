@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 import hashlib
-import json
 
-from ..commands import InferenceError, _add_failure_diagnostic
+from .grounded_metadata_creator_authority import (
+    _scoped_retry_authority,
+    _without_automatic_commentary,
+)
+
+from ..commands import InferenceError
 from ..errors import RerollTitleTooSimilarError
 from .grounded_metadata_pipeline_attestation import (
     _anchor_sha256,
+    _require_completed_failure_attestation,
     _finish_synthesis_attestation,
     _requires_primary_only_synthesis_evidence,
     _require_synthesis_attestation,
@@ -17,7 +22,6 @@ from .grounded_metadata_pipeline_contract import (
     MAXIMUM_NEW_TOKENS,
     MAXIMUM_ORDINARY_REFINEMENT_PASSES,
     STICKY_RETRY_INVALIDATING_RULES,
-    _combined_prior_title_references,
     _retry_correction_envelope,
     _retry_guidance,
     _reroll_title_reference,
@@ -68,8 +72,6 @@ def run_ordinary_refinement(
     torchcodec = context.torchcodec
     process_vision_info = context.process_vision_info
     session = context.session
-    grammar = context.grammar
-    base_audit = context.base_audit
     rejected_rules = progress.rejected_rules
     correction_rule_codes = progress.correction_rule_codes
     validation_feedback = progress.validation_feedback
@@ -123,6 +125,19 @@ def run_ordinary_refinement(
     completed_json = progress.completed_json
     metadata_review_issues = progress.metadata_review_issues
     for refinement_pass in range(1, MAXIMUM_ORDINARY_REFINEMENT_PASSES + 1):
+        pass_request = (
+            _without_automatic_commentary(synthesis_request)
+            if withhold_unreviewed_transcripts or primary_only_synthesis_evidence
+            else synthesis_request
+        )
+        from .grounded_metadata_pipeline_state import scoped_metadata_grammar
+        grammar, base_audit = scoped_metadata_grammar(context, pass_request)
+        scoped_anchor = _scoped_retry_authority(
+            sticky_retry_authority, withhold_unreviewed_transcripts, primary_only_synthesis_evidence,
+        )
+        if scoped_anchor is not sticky_retry_authority:
+            sticky_retry_authority = scoped_anchor
+            sticky_retry_authority_sha256 = _anchor_sha256(scoped_anchor)
         previous_rejection_code = rejected_rules[-1] if rejected_rules else None
         withhold_rejected_audience_copy, rejected_copy_source_reason = (
             rejected_audience_copy_withholding(
@@ -162,10 +177,10 @@ def run_ordinary_refinement(
                 completed_json,
                 synthesis_attestation,
             ) = functions.generate_json_once(
-                synthesis_request,
+                pass_request,
                 case_ordinal,
                 _metadata_messages(
-                    synthesis_request,
+                    pass_request,
                     prompt_text,
                     validation_feedback,
                     visual_drafts,
@@ -194,7 +209,7 @@ def run_ordinary_refinement(
                 MAXIMUM_NEW_TOKENS,
                 lambda value: _reviewable_metadata(
                     value,
-                    synthesis_request,
+                    pass_request,
                     visual_drafts,
                     primary_visual_draft_ordinal,
                     primary_actor_authority,
@@ -226,25 +241,8 @@ def run_ordinary_refinement(
                 raise error
         except InferenceError as error:
             previous_json = getattr(error, "schema_valid_rejected_json", None)
-            raw_error_attestation = getattr(
-                error,
-                "synthesis_attestation",
-                None,
-            )
-            if raw_error_attestation is None:
-                _add_failure_diagnostic(
-                    "Grounded synthesis terminated before a completed output "
-                    "attestation "
-                    + json.dumps(
-                        attestation_context,
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    )
-                )
-                raise
-            error_attestation = _require_synthesis_attestation(
-                raw_error_attestation,
-                attestation_context,
+            error_attestation = _require_completed_failure_attestation(
+                error, attestation_context,
             )
             if not isinstance(previous_json, str) or not previous_json:
                 code = functions.validation_failure_code(error)
@@ -330,7 +328,7 @@ def run_ordinary_refinement(
                 )
                 if candidate_sticky_envelope is not None:
                     candidate_authority = _typed_retry_authority_anchor(
-                        synthesis_request,
+                        pass_request,
                         visual_drafts,
                         primary_visual_draft_ordinal,
                         primary_actor_authority,

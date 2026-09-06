@@ -57,7 +57,12 @@ public partial class App : Application
             AsyncDelegateCommand_UnhandledExecutionFailure;
         try
         {
+#if DEBUG
+            string? debugProjectPath = e.Args is ["--debug-project", var path] ? path : null;
+            _composition = ApplicationCompositionRoot.Create(debugProjectPath);
+#else
             _composition = ApplicationCompositionRoot.Create();
+#endif
         }
         catch (Exception exception)
         {

@@ -18,10 +18,7 @@
     <SolidColorBrush x:Key="Brush.PlatformYouTube" Color="{DynamicResource Color.PlatformYouTube}" />
     <SolidColorBrush x:Key="Brush.PlatformYouTubeGlyph" Color="{DynamicResource Color.PlatformYouTubeGlyph}" />
     <SolidColorBrush x:Key="Brush.TextOnAccent" Color="{DynamicResource Color.TextOnAccent}" />
-    <LinearGradientBrush x:Key="Brush.PrimaryAction" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="{DynamicResource Color.BrandBlue}" />
-        <GradientStop Offset="1" Color="{DynamicResource Color.BrandCyan}" />
-    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Brush.PrimaryAction" Color="{DynamicResource Color.BrandCyan}" />
 
     <SolidColorBrush x:Key="Brush.WindowOverlay" Color="{DynamicResource Color.WindowOverlay}" />
     <SolidColorBrush x:Key="Brush.ModalScrim" Color="{DynamicResource Color.ModalScrim}" />

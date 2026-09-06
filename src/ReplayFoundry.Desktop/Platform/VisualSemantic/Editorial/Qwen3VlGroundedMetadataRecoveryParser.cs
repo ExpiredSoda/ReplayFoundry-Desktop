@@ -12,7 +12,8 @@ internal static class Qwen3VlGroundedMetadataRecoveryParser
         JsonElement generation,
         ClipEditorialMetadataRequest request,
         string outputSchema,
-        Qwen3VlGroundedMetadataGenerationSchemaProfile profile)
+        Qwen3VlGroundedMetadataGenerationSchemaProfile profile,
+        bool isolatedFieldAuthoringVerified = false)
     {
         int generated = Qwen3VlEditorialJson.Integer(
             generation,
@@ -33,19 +34,8 @@ internal static class Qwen3VlGroundedMetadataRecoveryParser
         string decodedTextSha256 = Qwen3VlEditorialJson.Sha256(
             generation,
             "decodedTextSha256");
-        bool metadataReviewRequired = profile.ReviewableAudienceCopy &&
-            Boolean(generation, "metadataReviewRequired");
-        string[] metadataReviewIssues = profile.ReviewableAudienceCopy
-            ? TextArray(generation, "metadataReviewIssues", 8)
-            : [];
-        if (profile.ReviewableAudienceCopy &&
-            (metadataReviewRequired != (metadataReviewIssues.Length > 0) ||
-             metadataReviewIssues.Any(code =>
-                 !Qwen3VlGroundedMetadataSelection.IsKnownValidationRule(code))))
-        {
-            throw new Qwen3VlOutputParseException(
-                "Grounded Qwen metadata-review provenance is invalid.");
-        }
+        (bool metadataReviewRequired, string[] metadataReviewIssues) =
+            ParseMetadataReview(generation, profile.ReviewableAudienceCopy);
         int generationPassCount = Qwen3VlEditorialJson.Integer(
             generation,
             "generationPassCount");
@@ -285,7 +275,13 @@ internal static class Qwen3VlGroundedMetadataRecoveryParser
                     profile.ReviewableAudienceCopy,
                     profile.EditorialFraming,
                     profile.EditorialFrameAdherence,
-                    profile.EditorialRephraseEligibilitySkip)
+                    profile.EditorialRephraseEligibilitySkip,
+                    Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCommentaryTiming(outputSchema),
+                    Qwen3VlGroundedMetadataSchemaCapabilities.SupportsBalancedCopy(outputSchema),
+                    Qwen3VlGroundedMetadataSchemaCapabilities.SupportsCompactBalancedCopy(outputSchema),
+                    Qwen3VlGroundedMetadataSchemaCapabilities.SupportsSchemaEnforcedBalancedCopy(outputSchema),
+                    Qwen3VlGroundedMetadataSchemaCapabilities.SupportsIsolatedFieldAuthoring(outputSchema),
+                    isolatedFieldAuthoringVerified)
                 : null;
         if (profile.PacketReuse)
         {
@@ -462,25 +458,8 @@ internal static class Qwen3VlGroundedMetadataRecoveryParser
         }
     }
 
-    private static string[] TextArray(
-        JsonElement value,
-        string name,
-        int maximum)
-    {
-        JsonElement[] array = Qwen3VlEditorialJson.Array(value, name);
-        string[] results = array.Select(item =>
-                item.ValueKind == JsonValueKind.String &&
-                !string.IsNullOrWhiteSpace(item.GetString())
-                    ? item.GetString()!
-                    : throw new Qwen3VlOutputParseException(
-                        $"Grounded Qwen '{name}' entries must be text."))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        if (results.Length != array.Length || results.Length > maximum)
-        {
-            throw new Qwen3VlOutputParseException(
-                $"Grounded Qwen '{name}' is invalid.");
-        }
-        return results;
-    }
+    internal static (bool Required, string[] Issues) ParseMetadataReview(
+        JsonElement generation,
+        bool reviewableAudienceCopySupported) =>
+        Qwen3VlGroundedMetadataReviewParser.Parse(generation, reviewableAudienceCopySupported);
 }

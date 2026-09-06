@@ -9,6 +9,7 @@ using ReplayFoundry.Desktop.Features.Generate.Workflow;
 using ReplayFoundry.Desktop.Features.Generate.Captions;
 using ReplayFoundry.Desktop.Features.Generate.Editorial;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
+using ReplayFoundry.Desktop.Features.Studio.Editorial;
 using ReplayFoundry.Desktop.Media.Inspection;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Moments;
@@ -22,8 +23,9 @@ public enum GenerationOutputAssetDisposition
     ExcludeFromFinalRender,
 }
 
-public sealed class GenerationOutputAsset
+public sealed partial class GenerationOutputAsset
 {
+    private readonly string? _retainedEditorialContextRevision;
     public GenerationOutputAsset(
         string id,
         int rank,
@@ -42,7 +44,8 @@ public sealed class GenerationOutputAsset
         ClipPreferenceFeatureVector? preferenceFeatures = null,
         string? thumbnailFullPath = null,
         GenerationOutputAssetDisposition disposition =
-            GenerationOutputAssetDisposition.IncludeInFinalRender)
+            GenerationOutputAssetDisposition.IncludeInFinalRender,
+        StudioRenderSettings? renderSettings = null)
     {
         if (string.IsNullOrWhiteSpace(id) ||
             string.IsNullOrWhiteSpace(explanation))
@@ -93,6 +96,16 @@ public sealed class GenerationOutputAsset
         Id = id.Trim();
         Rank = rank;
         SourceMedia = sourceMedia;
+        RenderSettings = renderSettings ?? new StudioRenderSettings();
+        foreach (StudioSourceCropTrack track in RenderSettings.SourceCropTracks) track.RequireSource(sourceMedia, checkFile: false);
+        if (RenderSettings.AudioTracks.Any(track => !sourceMedia.AudioStreams.Any(
+                stream => stream.Index == track.StreamIndex)) ||
+            RenderSettings.VoiceAudioStreamIndex is int voice &&
+            !sourceMedia.AudioStreams.Any(stream => stream.Index == voice))
+            throw new ArgumentException("Audio mix references an unavailable source stream.", nameof(renderSettings));
+        if (RenderSettings.FrameKeyframes.Any(frame => frame.SourcePosition > sourceMedia.Duration) ||
+            RenderSettings.TimedTextOverlays.Any(text => text.SourceEnd > sourceMedia.Duration))
+            throw new ArgumentException("Framing and text timing must remain inside the source recording.", nameof(renderSettings));
         OutputFullPath = outputFullPath is null
             ? null
             : Path.GetFullPath(outputFullPath);
@@ -149,6 +162,7 @@ public sealed class GenerationOutputAsset
         }
         EditorialContext = editorialContext;
         EditorialMetadata = editorialMetadata;
+        _retainedEditorialContextRevision = editorialContext is null ? null : StudioEditorialContextRevision.CreateDurable(editorialContext);
         PreferenceFeatures = preferenceFeatures;
         Disposition = disposition;
     }
@@ -160,6 +174,7 @@ public sealed class GenerationOutputAsset
 
     public override string ToString() => DisplayName;
     public MediaProbeResult SourceMedia { get; }
+    public StudioRenderSettings RenderSettings { get; private init; }
     public string SourceFullPath => SourceMedia.FullPath;
     public TimeSpan SourceDuration => SourceMedia.Duration;
     public string? OutputFullPath { get; }
@@ -184,6 +199,8 @@ public sealed class GenerationOutputAsset
     public StudioClipAppearance Appearance { get; }
     public ClipEditorialContext? EditorialContext { get; }
     public ClipEditorialMetadataDraft? EditorialMetadata { get; }
+    /// <summary>The complete persisted context used when this wording was authored or explicitly reviewed; null for older unknown provenance.</summary>
+    public string? EditorialAuthoredContextRevision { get; private init; }
     public bool HasEditorialMetadata => EditorialMetadata is not null;
     public bool HasWorkingEditorialMetadata =>
         EditorialMetadata?.Readiness ==
@@ -200,6 +217,8 @@ public sealed class GenerationOutputAsset
     public bool IsEditorialMetadataCurrentForCut =>
         EditorialContext is not null &&
         EditorialMetadata is not null &&
+        EditorialAuthoredContextRevision is not null &&
+        EditorialAuthoredContextRevision.Equals(_retainedEditorialContextRevision, StringComparison.Ordinal) &&
         EditorialContext.SourceStart == SourceStart &&
         EditorialContext.SourceEnd == SourceEnd &&
         (EditorialMetadata.GroundingAudit is not { } audit ||
@@ -242,6 +261,21 @@ public sealed class GenerationOutputAsset
         {
             OriginalSourceStart = OriginalSourceStart,
             OriginalSourceEnd = OriginalSourceEnd,
+            RenderSettings = RenderSettings,
+            EditorialAuthoredContextRevision = EditorialAuthoredContextRevision,
+        };
+    }
+
+    internal GenerationOutputAsset WithRenderSettings(StudioRenderSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return new GenerationOutputAsset(Id, Rank, SourceMedia, null, SourceStart, SourceEnd,
+            Score, QualityTarget, SelectionReason, Explanation, Captions, Appearance,
+            EditorialContext, EditorialMetadata, PreferenceFeatures, null, Disposition, settings)
+        {
+            OriginalSourceStart = OriginalSourceStart,
+            OriginalSourceEnd = OriginalSourceEnd,
+            EditorialAuthoredContextRevision = EditorialAuthoredContextRevision,
         };
     }
 
@@ -264,7 +298,9 @@ public sealed class GenerationOutputAsset
         ClipEditorialContext? editorialContext,
         ClipEditorialMetadataDraft? editorialMetadata,
         ClipPreferenceFeatureVector? preferenceFeatures,
-        GenerationOutputAssetDisposition disposition)
+        GenerationOutputAssetDisposition disposition,
+        StudioRenderSettings? renderSettings = null,
+        string? editorialAuthoredContextRevision = null)
     {
         if (originalSourceStart < TimeSpan.Zero ||
             originalSourceEnd <= originalSourceStart ||
@@ -272,6 +308,10 @@ public sealed class GenerationOutputAsset
         {
             throw new ArgumentOutOfRangeException(nameof(originalSourceStart));
         }
+        if (editorialAuthoredContextRevision is not null &&
+            (editorialContext is null || editorialAuthoredContextRevision.Length != 64 ||
+                editorialAuthoredContextRevision.Any(static character => !char.IsAsciiHexDigit(character))))
+            throw new ArgumentException("The retained authored-context identity must be a complete SHA-256 revision.", nameof(editorialAuthoredContextRevision));
 
         return new GenerationOutputAsset(
             id,
@@ -290,10 +330,12 @@ public sealed class GenerationOutputAsset
             editorialMetadata,
             preferenceFeatures,
             thumbnailFullPath,
-            disposition)
+            disposition,
+            renderSettings)
         {
             OriginalSourceStart = originalSourceStart,
             OriginalSourceEnd = originalSourceEnd,
+            EditorialAuthoredContextRevision = editorialAuthoredContextRevision,
         };
     }
 
@@ -322,12 +364,15 @@ public sealed class GenerationOutputAsset
         {
             OriginalSourceStart = OriginalSourceStart,
             OriginalSourceEnd = OriginalSourceEnd,
+            RenderSettings = RenderSettings,
+            EditorialAuthoredContextRevision = EditorialAuthoredContextRevision,
         };
     }
 
     internal GenerationOutputAsset WithCurrentCutEditorialMetadata(
         ClipEditorialContext editorialContext,
-        ClipEditorialMetadataDraft editorialMetadata)
+        ClipEditorialMetadataDraft editorialMetadata,
+        bool markAuthoredForCurrentContext = true)
     {
         ArgumentNullException.ThrowIfNull(editorialContext);
         ArgumentNullException.ThrowIfNull(editorialMetadata);
@@ -365,6 +410,9 @@ public sealed class GenerationOutputAsset
         {
             OriginalSourceStart = OriginalSourceStart,
             OriginalSourceEnd = OriginalSourceEnd,
+            RenderSettings = RenderSettings,
+            EditorialAuthoredContextRevision = markAuthoredForCurrentContext
+                ? StudioEditorialContextRevision.CreateDurable(editorialContext) : EditorialAuthoredContextRevision,
         };
     }
 
@@ -375,7 +423,7 @@ public sealed class GenerationOutputAsset
             throw new InvalidOperationException(
                 "The generated asset has no retained editorial context.");
         }
-        if (IsEditorialMetadataCurrentForCut)
+        if (EditorialContext.SourceStart == SourceStart && EditorialContext.SourceEnd == SourceEnd)
         {
             return EditorialContext;
         }
@@ -400,7 +448,7 @@ public sealed class GenerationOutputAsset
         ClipEditorialContext? editorialContext = EditorialContext;
         if (editorialContext is not null)
         {
-            ClipEditorialTranscriptContext[] transcripts =
+            ClipEditorialTranscriptContext[] transcripts = SourceMedia.AudioStreams.Count == 0 ? [] :
                 RetainedCaptionEditorialTranscriptProjector.Project(
                     retainedCaptions,
                     SourceStart,
@@ -427,7 +475,7 @@ public sealed class GenerationOutputAsset
                 Appearance.GraphicOverlays,
                 Appearance.CaptionWordLimit,
                 Appearance.CaptionMaximumWidthPercent,
-                Appearance.CaptionFontScalePercent),
+                Appearance.CaptionFontScalePercent, Appearance.CaptionTypography),
             editorialContext,
             EditorialMetadata,
             PreferenceFeatures,
@@ -436,12 +484,14 @@ public sealed class GenerationOutputAsset
         {
             OriginalSourceStart = OriginalSourceStart,
             OriginalSourceEnd = OriginalSourceEnd,
+            RenderSettings = RenderSettings,
+            EditorialAuthoredContextRevision = EditorialAuthoredContextRevision,
         };
     }
 
     private ClipEditorialTranscriptContext[] BuildCurrentCutTranscripts()
     {
-        if (Captions is null)
+        if (Captions is null || SourceMedia.AudioStreams.Count == 0)
         {
             // Untimed transcript summaries cannot be safely clipped to a
             // changed Studio window.
@@ -482,6 +532,8 @@ public sealed class GenerationOutputAsset
         {
             OriginalSourceStart = OriginalSourceStart,
             OriginalSourceEnd = OriginalSourceEnd,
+            RenderSettings = RenderSettings,
+            EditorialAuthoredContextRevision = EditorialAuthoredContextRevision,
         };
     }
 }

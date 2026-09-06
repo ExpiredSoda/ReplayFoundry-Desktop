@@ -10,17 +10,18 @@
 
     <Grid>
 
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*" />
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="2*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0">
+        <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
 
             <TextBlock
                 Foreground="{DynamicResource Brush.TextPrimary}"
-                FontSize="26"
+                FontSize="23"
                 FontWeight="SemiBold"
                 Text="Scan detail" />
 
@@ -113,6 +114,9 @@
                 Text="Local AI is recommended. Choose Simple titles when you prefer not to use AI."
                 TextWrapping="Wrap" />
 
+            <TextBlock Text="{Binding GpuReadiness}" TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" AutomationProperties.LiveSetting="Polite" />
+            <Button Content="Refresh GPU readiness" Command="{Binding RefreshGpuReadinessCommand}" HorizontalAlignment="Left" Margin="0,6,0,12" />
+
             <ListBox
                 x:Name="MetadataOptionsList"
                 AutomationProperties.Name="Title writing method"
@@ -180,9 +184,7 @@
 
         </StackPanel>
 
-        <Border
-            Grid.Column="2"
-            Style="{DynamicResource GenerationSetup.SectionCard}">
+        <Border Style="{DynamicResource GenerationSetup.SummaryCard}">
 
             <StackPanel>
 

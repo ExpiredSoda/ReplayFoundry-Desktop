@@ -88,7 +88,8 @@ internal static class Qwen3VlGroundedMetadataRules
         bool requireLiteralActionEntailment = false,
         bool requireInterfaceAttributionAuthority = false,
         bool allowNeutralPersonSubject = false,
-        bool creatorAuthorityUsesAudienceFieldsOnly = false)
+        bool creatorAuthorityUsesAudienceFieldsOnly = false,
+        bool allowAutomaticCommentaryAttribution = false)
     {
         string hashtag = request.Context.GameContext.AudienceGameHashtag;
         var failures = new List<string>();
@@ -189,7 +190,8 @@ internal static class Qwen3VlGroundedMetadataRules
                 primaryActorAuthority.Value,
                 primaryCreatorExperienceRelation.Value,
                 failures,
-                creatorAuthorityUsesAudienceFieldsOnly);
+                creatorAuthorityUsesAudienceFieldsOnly,
+                allowAutomaticCommentaryAttribution);
         }
         bool reviewedCommentarySupportsTitle =
             HasReviewedCommentaryWordingSupport(request, title);
@@ -286,14 +288,16 @@ internal static class Qwen3VlGroundedMetadataRules
         Qwen3VlGroundedMetadataActorAuthority actorAuthority,
         Qwen3VlGroundedMetadataCreatorExperienceRelation creatorRelation,
         ICollection<string> failures,
-        bool audienceFieldsOnly)
+        bool audienceFieldsOnly,
+        bool allowAutomaticCommentaryAttribution)
     {
         string audienceCopy = audienceFieldsOnly
             ? string.Join('\n', [title, description])
             : string.Join('\n', [title, description, .. tags]);
         if (!FirstPersonReference.IsMatch(audienceCopy) ||
             request.VariantIntent == ClipEditorialVariantIntent.CommentaryLed &&
-            HasReviewedFirstPersonCommentarySupport(request, audienceCopy))
+            HasReviewedFirstPersonCommentarySupport(request, audienceCopy) ||
+            allowAutomaticCommentaryAttribution && HasSafeAutomaticCommentarySupport(request, audienceCopy))
         {
             return;
         }
@@ -389,6 +393,12 @@ internal static class Qwen3VlGroundedMetadataRules
                         StringComparison.Ordinal));
             });
     }
+
+    internal static bool HasSafeAutomaticCommentarySupport(
+        ClipEditorialMetadataRequest request,
+        string audienceCopy) =>
+        Qwen3VlGroundedAutomaticCommentaryAuthority.HasSafeAutomaticCommentarySupport(
+            request, audienceCopy);
 
     private static bool HasReviewedFirstPersonCommentarySupport(
         ClipEditorialMetadataRequest request,

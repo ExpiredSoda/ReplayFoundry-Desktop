@@ -33,11 +33,25 @@ using ReplayFoundry.Desktop.Presentation.Commands;
 
 namespace ReplayFoundry.PreparationTests;
 
-internal static class EditorialMetadataTests
+internal static partial class EditorialMetadataTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
         new("Editorial profile snapshots reusable tags", ProfileIsImmutable),
+        new("Editorial copy objectives remain typed and independent of custom guidance", CopyObjectiveIsTypedAndIndependentOfGuidance),
+        new("Editorial copy objectives survive session and request clones", CopyObjectiveSurvivesSessionAndRequestClones),
+        new("Studio rerolls preserve the typed editorial copy objective", StudioRerollPreservesTypedCopyObjective),
+        new("Grounded Qwen serializes the typed editorial copy objective", GroundedQwenSerializesTypedCopyObjective),
+        new("Balance review retains its source code and user-facing explanation", BalanceReviewRetainsItsTypedSourceAndExplanation),
+        new("Provider balance findings cross the production metadata-review parser", BalanceReviewCrossesProviderParser),
+        new("Balanced schema audits preserve current and historical contracts", BalancedSchemaAuditPreservesHistoricalContracts),
+        new("Isolated audience fields bind both component witnesses to the mechanical merge", IsolatedFieldsBindBothComponentsToTheirMechanicalMerge),
+        new("Isolated audience fields reject witness and merge tampering", IsolatedFieldsRejectWitnessAndMergeTampering),
+        new("Isolated authoring counts only actual component and grounding passes", IsolatedFieldsCountOnlyActualComponentPasses),
+        new("Actual isolated generation retains a verified rephrase non-attempt", ActualIsolatedGenerationRetainsVerifiedRephraseNonAttempt),
+        new("Studio shows actionable copy review without blocking edits or queue readiness", StudioCopyReviewIsVisibleAndNonBlocking),
+        new("Studio explains safe local AI startup failures at the rewrite action", StudioShowsSafeAiUnavailableReason),
+        new("Balance review alone retains AI copy without repeating inference", BalanceReviewAloneDoesNotRepeatProviderInference),
         new("Editorial variant intent never treats unreviewed ASR as commentary authority", VariantIntentRequiresReviewedTranscript),
         new("AI rerolls preserve four distinct provider-authored metadata packages", AiRerollsKeepDistinctProviderPackages),
         new("Historical Qwen metadata retains its exact prompt identity", HistoricalQwenPromptIdentityIsPreserved),
@@ -57,11 +71,22 @@ internal static class EditorialMetadataTests
         new("Optional AI metadata batch failures propagate without hidden reruns", OptionalAiBatchFailurePropagatesOnce),
         new("Grounded metadata rejects a batch with one typed case failure", FailSoftBatchRejectsFailedCase),
         new("AI batches retry only abstract or colliding titles", AiBatchRetriesOnlyNoveltyFailures),
+        new("Editorial retry diagnostics match submitted cases and attempts", RetryDiagnosticsMatchProviderCalls),
+        new("Editorial retry captures restore scopes and cannot change generation", RetryDiagnosticCapturesAreScoped),
+        new("Grounded executor pass timing is opt-in and preserves provider failures", GroundedExecutorPassDiagnosticsAreOptIn),
+        new("Grounding reuse requires identical verified prior packet witnesses", PacketReceiptsRequireVerifiedIdenticalPriorFacts),
+        new("Grounding handoff promotes only bounded parsed packets", PacketHandoffPromotesOnlyParsedBoundedPackets),
+        new("Grounding handoff cleans child files after parse failure and cancellation", GroundedExecutorCleansHandoffAfterParseFailureAndCancellation),
+        new("Editorial automatic retries retain only operation-scoped provider state", EditorialRetrySessionsAreOperationScoped),
+        new("Grounded sessions reject concurrent use and clean cancelled workspaces", GroundedSessionRejectsConcurrentUseAndCleansCancellation),
+        new("Reconciled reroll provenance alone does not repeat inference", ReconciledProvenanceDoesNotTriggerRetry),
+        new("Reconciled provenance does not suppress substantive retries", ReconciledProvenancePreservesRealRetries),
         new("AI batches retry literal and redundant metadata packages", AiBatchRetriesCurrentMetadataRegressions),
         new("Single AI requests use the shared audience-copy review", SingleAiRequestsUseSharedQualityReview),
         new("Description-only AI retries may retain their grounded title", DescriptionOnlyRetryRetainsTitle),
         new("AI rewrite exhaustion retains the best grounded draft", AiBatchRetryExhaustionRetainsBestGroundedDraft),
         new("AI rewrite exhaustion rejects a later incomplete title", AiBatchRetryExhaustionRejectsLaterIncompleteTitle),
+        new("AI retention prefers a complete draft over an unflagged unfinished modifier", IncompleteModifierCannotOutrankCompleteDraft),
         new("AI rewrite exhaustion retains readable-text review findings", AiBatchRetryExhaustionRetainsReadableTextReview),
         new("AI rewrite exhaustion retains incomplete-title review findings", AiBatchRetryExhaustionRetainsIncompleteTitleReview),
         new("AI rewrite exhaustion ranks typed review risk", AiBatchRetryExhaustionRanksTypedReviewRisk),
@@ -82,6 +107,15 @@ internal static class EditorialMetadataTests
         new("Confirmed local Wikidata identity survives context retrieval failure", ConfirmedIdentitySurvivesMissingKnowledge),
         new("Stable local OCR authorizes literal facts without public identity", StableLocalOcrAuthorizesLiteralFacts),
         new("Automatic creator reactions shape attributed angles without factual authority", AutomaticCreatorReactionSuppliesSafeAngle),
+        new("Recorded cuts nominate complete creator thoughts without asserting game facts", RecordedCutsNominateCompleteCreatorThoughts),
+        new("Automatic commentary joins the recorded incomplete thought without adding authority", CommentaryNominationCompletesRecordedThought),
+        new("Automatic commentary declines uncertain and disconnected fragments", CommentaryNominationDeclinesUncertainFragments),
+        new("Automatic commentary retains negation and ignores filler", CommentaryNominationPreservesNegationAndFiltersFiller),
+        new("New commentary nominations preserve older authored context", CommentaryNominationRefreshPreservesHistoricalContext),
+        new("Balanced defaults preserve custom guidance and reviewed speech", BalancedGuidancePreservesCustomProfileAndReviewedSpeech),
+        new("Title punctuation review preserves quotations and apostrophes", DanglingTitlePunctuationNeedsReview),
+        new("Observed dangling title punctuation triggers a bounded rewrite", DanglingTitlePunctuationRetries),
+        new("Automatic commentary authority stays bounded and explicitly opted in", AutomaticCommentaryAuthorityIsBoundedAndOptIn),
         new("Exact mission claims require licensed guide authority and local corroboration", GroundedMissionRequiresLicensedGuideAuthority),
         new("Grounded CUDA OOM telemetry propagates without rerolls or isolation", GroundedCudaOomTelemetryStopsRetryAndIsolation),
         new("Typed Qwen resource failures propagate without retry or isolation", TypedQwenResourceFailuresDoNotRetry),
@@ -112,6 +146,13 @@ internal static class EditorialMetadataTests
         new("Studio metadata changes preserve newer clip edits", StudioMetadataPreservesNewerEdits),
         new("Studio AI rerolls use the shared audience-copy review", StudioAiRerollUsesSharedQualityReview),
         new("Caption edits stale grounded copy until a fresh Studio reroll", CaptionEditsStaleGroundedCopyUntilReroll),
+        new("Caption edits during a rewrite reject obsolete generated copy", CaptionEditsDuringRerollArePreserved),
+        new("Late transcript corrections and timing edits invalidate a pending rewrite", CompleteCaptionContextGuardsReroll),
+        new("Complete editorial revision projects OCR context without serializing frame buffers", CompleteRevisionProjectsRetainedVisualText),
+        new("Earlier copy retains its original context when reroll enrichment changes the brief", RerollHistoryRetainsPreEnrichmentContext),
+        new("Earlier copy restoration requires the complete current context revision", CopyRestorationRequiresCompleteRevision),
+        new("Saving after a caption edit preserves the earlier authored context", CaptionEditBeforeSaveKeepsAuthoredHistory),
+        new("Rerolling after an unbounded-brief caption edit preserves authored context", CaptionEditBeforeRerollKeepsAuthoredHistory),
         new("Manual metadata saves clear stale grounding without staying stale", ManualMetadataSaveClearsStaleGrounding),
         new("Studio metadata rerolls use the current saved cut", StudioMetadataRerollUsesCurrentCut),
         new("Studio rejects metadata completed for a superseded cut", StudioMetadataRejectsSupersededCut),
@@ -525,6 +566,65 @@ internal static class EditorialMetadataTests
             Qwen3VlGroundedMetadataGenerator.PromptSha256,
             currentHash,
             "Current prompt hash.");
+        TestAssert.Equal(
+            (currentVersion, currentHash),
+            Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
+                Qwen3VlGroundedMetadataGenerator.PreviousResponsibilitySplitOutputSchema),
+            "The 1.61 responsibility split must retain the exact 1.60 prompt identity.");
+
+        (string previousCompactIsolatedVersion, string previousCompactIsolatedHash) =
+            Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
+                Qwen3VlGroundedMetadataGenerator.PreviousCompactIsolatedFieldAuthoringOutputSchema);
+        TestAssert.Equal("1.45", previousCompactIsolatedVersion, "Output 1.59 retains its original isolated authoring prompt.");
+        TestAssert.Equal("6fa6e96a7a33d28e4c1fdd8ee4a806f57d23cb267aab04aedc3ba591f9f1249d",
+            previousCompactIsolatedHash, "The compact authoring revision cannot relabel a saved 1.59 prompt identity.");
+
+        (string previousIsolatedVersion, string previousIsolatedHash) =
+            Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
+                Qwen3VlGroundedMetadataGenerator.PreviousIsolatedFieldAuthoringOutputSchema);
+        TestAssert.Equal("1.44", previousIsolatedVersion, "Output 1.58 retains its original full-object prompt.");
+        TestAssert.Equal("b09ae948487a8cb447076eb72ae22e7736eb43e249ca46f82e2d33a727a75c28",
+            previousIsolatedHash, "A saved full-object generation cannot be relabeled as isolated authoring.");
+
+        (string previousSchemaEnforcedVersion, string previousSchemaEnforcedHash) =
+            Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
+                Qwen3VlGroundedMetadataGenerator.PreviousSchemaEnforcedBalancedCopyOutputSchema);
+        TestAssert.Equal("1.43", previousSchemaEnforcedVersion,
+            "Output 1.57 retains the exact prompt used for saved generation.");
+        TestAssert.Equal(
+            "defb5c76573252699c548200ad86a73d1c1d62bb74fbdc8b9980f5e225de1ec6",
+            previousSchemaEnforcedHash,
+            "Output 1.57 must not be relabeled with the schema-enforced prompt hash.");
+
+        (string previousCompactVersion, string previousCompactHash) =
+            Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
+                Qwen3VlGroundedMetadataGenerator.PreviousCompactBalancedCopyOutputSchema);
+        TestAssert.Equal("1.42", previousCompactVersion,
+            "Output 1.56 retains the exact prompt used for saved generation.");
+        TestAssert.Equal(
+            "688ed574ae46fb8155070b6d6cc340d9e42847db15eb0fd9935228ecaaae2e58",
+            previousCompactHash,
+            "Output 1.56 must not be relabeled with the compact-brief prompt hash.");
+
+        (string previousBalancedVersion, string previousBalancedHash) =
+            Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
+                Qwen3VlGroundedMetadataGenerator.PreviousBalancedCopyOutputSchema);
+        TestAssert.Equal("1.41", previousBalancedVersion,
+            "Output 1.55 retains the exact prompt used for saved generation.");
+        TestAssert.Equal(
+            "3cad54f5a7aa47b59e1979aa2d41ac85ac6fe0338d18574cff35527102276b53",
+            previousBalancedHash,
+            "Output 1.55 must not be relabeled with the balanced-copy prompt hash.");
+
+        (string previousTimingVersion, string previousTimingHash) =
+            Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
+                Qwen3VlGroundedMetadataGenerator.PreviousCommentaryTimingOutputSchema);
+        TestAssert.Equal("1.40", previousTimingVersion,
+            "Output 1.54 retains the exact prompt used for saved generation.");
+        TestAssert.Equal(
+            "241086ff61f2e10108fc5c09c3e0a00381af102ee5b97534d2a1314dd892b72a",
+            previousTimingHash,
+            "Output 1.54 must not be relabeled with the new prompt hash.");
 
         (string previousCreatorVoiceVersion,
             string previousCreatorVoiceHash) =
@@ -5424,7 +5524,7 @@ internal static class EditorialMetadataTests
             string.Empty,
             requireAi: false,
             CancellationToken.None);
-        await generator.Started;
+        await generator.Started.WaitAsync(TimeSpan.FromSeconds(5));
         GenerationOutputAsset newerCut = original.WithStudioEdits(
             original.SourceStart + TimeSpan.FromSeconds(3),
             original.SourceEnd,
@@ -5445,6 +5545,144 @@ internal static class EditorialMetadataTests
             newerCut,
             session.Current!.Assets[0],
             "The latest cut must survive the rejected metadata result.");
+    }
+
+    private static async Task CaptionEditsDuringRerollArePreserved()
+    {
+        GenerationOutputAsset original = await CreateGroundedAiAssetAsync();
+        var project = new GenerationOutputProject("caption-reroll-race", GenerationMode.IndividualClips,
+            Path.GetFullPath("caption-reroll-race-output"), 1, ClipFulfillmentPreference.FillRequestedCount,
+            GenerationClipFulfillmentOutcome.RequestedCountMetAtQualityTarget, [original], DateTimeOffset.UtcNow);
+        var session = new GenerationOutputSession(); session.Publish(project);
+        var generator = new DeferredMetadataGenerator();
+        var service = new StudioEditorialMetadataService(session, generator, new ClipEditorialProfileSession());
+        var pending = service.RerollAsync(project, original, "Chat", "", "", false, CancellationToken.None);
+        await generator.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        var corrected = original.WithCaptionTrack(CreateCaptionTrack(original, "We reached a different bridge."));
+        session.ReplaceAsset(project.Id, corrected);
+        generator.Complete();
+        await TestAssert.ThrowsAsync<InvalidOperationException>(async () => await pending,
+            "Copy generated from obsolete captions must not be applied to a corrected clip.");
+        TestAssert.Same(corrected, session.Current!.PrimaryAsset, "The saved correction and its current context must survive.");
+    }
+
+    private static async Task CompleteCaptionContextGuardsReroll()
+    {
+        foreach (bool timingOnly in new[] { false, true })
+        {
+            (GenerationOutputAsset original, _) = await CreateAssetAsync(hasAudio: true);
+            GenerationCandidateCaptionTrack Track(bool changed)
+            {
+                const string neighborhood = "complete-caption-revision";
+                var segments = Enumerable.Range(0, 13).Select(index =>
+                {
+                    TimeSpan start = TimeSpan.FromSeconds(1 + index * 2 + (changed && timingOnly && index == 0 ? 0.1 : 0));
+                    TimeSpan end = TimeSpan.FromSeconds(2 + index * 2);
+                    string text = changed && !timingOnly && index == 12 ? "The final door was closed." : $"Sentence {index + 1} stays here.";
+                    return new AudioTranscriptionSegment($"segment-{index}", neighborhood, text, start, end,
+                        original.SourceStart + start, original.SourceStart + end);
+                }).ToArray();
+                return GenerationCandidateCaptionTrack.RestoreStudioHandoff(original.Id, neighborhood,
+                    new GenerationCaptionSourceSelection(original.SourceFullPath, original.SourceMedia.AudioStreams.Single().Index,
+                        CaptionAudioContentRole.CreatorCommentary, GenerationCaptionLanguagePolicy.English),
+                    original.Appearance.CaptionStyle, original.SourceStart, original.Duration, original.SourceDuration,
+                    segments, isUserEdited: true, GenerationCaptionSuppressionReason.None);
+            }
+            original = original.WithCaptionTrack(Track(false));
+            var project = new GenerationOutputProject("complete-caption-revision", GenerationMode.IndividualClips,
+                Path.GetFullPath("complete-caption-revision-output"), 1, ClipFulfillmentPreference.FillRequestedCount,
+                GenerationClipFulfillmentOutcome.RequestedCountMetAtQualityTarget, [original], DateTimeOffset.UtcNow);
+            var session = new GenerationOutputSession(); session.Publish(project);
+            var generator = new DeferredMetadataGenerator();
+            var service = new StudioEditorialMetadataService(session, generator, new ClipEditorialProfileSession());
+            var pending = service.RerollAsync(project, original, "Chat", "", "", false, CancellationToken.None);
+            await generator.Started.WaitAsync(TimeSpan.FromSeconds(5));
+            var corrected = original.WithCaptionTrack(Track(true));
+            TestAssert.Equal(original.EditorialContext!.EditorialBrief.Fingerprint, corrected.EditorialContext!.EditorialBrief.Fingerprint,
+                "This regression must exercise an edit omitted by the bounded brief identity.");
+            session.ReplaceAsset(project.Id, corrected);
+            generator.Complete();
+            await TestAssert.ThrowsAsync<InvalidOperationException>(async () => await pending,
+                "All retained transcript content and timing must participate in pending rewrite concurrency checks.");
+            TestAssert.Same(corrected, session.Current!.PrimaryAsset, "Rejected copy must preserve the corrected transcript and captions.");
+        }
+    }
+
+    private static Task CompleteRevisionProjectsRetainedVisualText()
+    {
+        using var fixture = new ModelFreeGroundedExecutorFixture();
+        ClipEditorialContext context = fixture.CreateRequestWithVisualText().Context;
+        string revision = StudioEditorialContextRevision.Create(context);
+        TestAssert.Equal(64, revision.Length, "A complete retained context must create a bounded revision identity.");
+        TestAssert.Equal(revision, StudioEditorialContextRevision.Create(context), "The explicit value projection must be deterministic.");
+        TestAssert.True(revision != StudioEditorialContextRevision.Create(context.WithVisualText(null)),
+            "Removing retained OCR facts must invalidate pending copy independently of its bounded brief.");
+        return Task.CompletedTask;
+    }
+
+    private static async Task RerollHistoryRetainsPreEnrichmentContext()
+    {
+        (GenerationOutputAsset original, _) = await CreateAssetAsync();
+        var source = new GameKnowledgeSource("history-source", GameKnowledgeSourceKind.Wikipedia, "Example Game",
+            new Uri("https://example.invalid/example-game"), "revision-1", DateTimeOffset.UnixEpoch,
+            "CC-BY-SA-4.0", new Uri("https://creativecommons.org/licenses/by-sa/4.0/"), "Example contributors", new string('a', 64));
+        const string knowledgeText = "The game includes a bridge and an arch.";
+        var passage = new GameKnowledgePassage("history-passage", source.Id, "Overview", knowledgeText,
+            GameKnowledgePassage.ComputeSha256(knowledgeText));
+        var snapshot = new GameKnowledgeSnapshot(original.EditorialContext!.GameContext.GameName,
+            new GameKnowledgeProviderIdentity("fixture", "1.0"), DateTimeOffset.UnixEpoch, [source], [passage]);
+        var match = new GameKnowledgeMatch(passage, GameKnowledgeMatchStrength.GeneralContext, 0.8,
+            ["bridge"], [], GameKnowledgeTemporalRelation.CurrentEventCandidate);
+        var knowledge = new RecordingGameKnowledgeContextService
+        {
+            Enrichment = context => context.WithGameKnowledge(new ClipGameKnowledgeContext(context.GameContext.GameName, snapshot, [match])),
+        };
+        var project = new GenerationOutputProject("copy-history-enrichment", GenerationMode.IndividualClips,
+            Path.GetFullPath("copy-history-enrichment-output"), 1, ClipFulfillmentPreference.FillRequestedCount,
+            GenerationClipFulfillmentOutcome.RequestedCountMetAtQualityTarget, [original], DateTimeOffset.UtcNow);
+        var session = new GenerationOutputSession(); session.Publish(project);
+        var service = new StudioEditorialMetadataService(session, new RecordingRequestMetadataGenerator(), new ClipEditorialProfileSession(), knowledge);
+        await service.RerollAsync(project, original, "Chat", "", "", true, CancellationToken.None);
+        GenerationOutputAsset result = session.Current!.PrimaryAsset;
+        TestAssert.True(original.EditorialContext.EditorialBrief.Fingerprint != result.EditorialContext!.EditorialBrief.Fingerprint,
+            "The fixture must add context during enrichment.");
+        TestAssert.Equal(StudioEditorialContextRevision.CreateDurable(original.EditorialContext), result.EditorialMetadata!.CopyVersions.Single().ContextFingerprint,
+            "Old wording must retain the identity under which it was authored, rather than acquiring new grounding through reroll enrichment.");
+    }
+
+    private static async Task CopyRestorationRequiresCompleteRevision()
+    {
+        (GenerationOutputAsset asset, _) = await CreateAssetAsync();
+        ClipEditorialContext Context(bool corrected)
+        {
+            var spans = Enumerable.Range(0, 13).Select(index => new ClipEditorialTranscriptSpan(
+                asset.SourceStart + TimeSpan.FromSeconds(index * 2), asset.SourceStart + TimeSpan.FromSeconds(index * 2 + 1),
+                corrected && index == 12 ? "The last door was closed." : $"Sentence {index + 1} stays here.")).ToArray();
+            return asset.EditorialContext!.WithTranscripts([new ClipEditorialTranscriptContext(1,
+                new AudioContentRoleAssignment(AudioContentRole.CreatorSpeech, AudioContentRoleSource.UserConfirmed),
+                string.Join(" ", spans.Select(static span => span.Text)), ClipEditorialTranscriptAuthority.UserCorrected, spans)]);
+        }
+        ClipEditorialContext original = Context(false), corrected = Context(true);
+        TestAssert.Equal(original.EditorialBrief.Fingerprint, corrected.EditorialBrief.Fingerprint,
+            "The restore regression must exercise content outside the brief's bounded claims.");
+        var currentMetadata = await new HeuristicClipEditorialMetadataGenerator().GenerateAsync(
+            new ClipEditorialMetadataRequest(original, ClipEditorialProfile.Default, 0), CancellationToken.None);
+        var draft = currentMetadata.WithUserEdits("A different title", currentMetadata.Description, currentMetadata.Tags)
+            .RememberPreviousCopy(currentMetadata, StudioEditorialContextRevision.CreateDurable(original));
+        asset = asset.WithCurrentCutEditorialMetadata(original, draft);
+        var project = new GenerationOutputProject("copy-restore-context", GenerationMode.IndividualClips,
+            Path.GetFullPath("copy-restore-context-output"), 1, ClipFulfillmentPreference.FillRequestedCount,
+            GenerationClipFulfillmentOutcome.RequestedCountMetAtQualityTarget, [asset], DateTimeOffset.UtcNow);
+        var session = new GenerationOutputSession(); session.Publish(project);
+        using var editor = new StudioEditorialMetadataViewModel(session, new RecordingRequestMetadataGenerator(), new ClipEditorialProfileSession());
+        editor.Bind(project, asset);
+        TestAssert.True(editor.RestoreCopyCommand.CanExecute(null), "Exact current-context wording must be restorable.");
+        editor.Bind(project, asset.WithCurrentCutEditorialMetadata(corrected, draft));
+        TestAssert.False(editor.RestoreCopyCommand.CanExecute(null), "A correction beyond the first twelve claims must invalidate restoration.");
+        var legacy = draft.RememberPreviousCopy(asset.EditorialMetadata!, original.EditorialBrief.Fingerprint);
+        editor.Bind(project, asset.WithCurrentCutEditorialMetadata(original, legacy));
+        TestAssert.True(editor.HasCopyVersions, "Earlier brief-only versions remain available for comparison.");
+        TestAssert.False(editor.RestoreCopyCommand.CanExecute(null), "A legacy brief-only identity cannot claim complete current-context validity.");
     }
 
     private static async Task AcceptedHiddenMomentRefreshesEditorialMetadata()
@@ -6607,7 +6845,7 @@ internal static class EditorialMetadataTests
             context.DeterministicReason,
             editorialContext: context,
             editorialMetadata: metadata);
-        return (asset, metadata);
+        return (asset.WithCurrentCutEditorialMetadata(context, metadata), metadata);
     }
 
     private static async Task<GenerationOutputAsset>
@@ -7800,6 +8038,8 @@ internal static class EditorialMetadataTests
     {
         private bool _removed;
 
+        public Func<ClipEditorialContext, ClipEditorialContext>? Enrichment { get; init; }
+
         public int RefreshCalls { get; private set; }
 
         public int RemoveCalls { get; private set; }
@@ -7809,7 +8049,7 @@ internal static class EditorialMetadataTests
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(context);
+            return Task.FromResult(Enrichment?.Invoke(context) ?? context);
         }
 
         public Task<ClipEditorialContext> RefreshAsync(

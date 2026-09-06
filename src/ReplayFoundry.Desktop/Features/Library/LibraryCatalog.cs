@@ -3,6 +3,7 @@ using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
 using ReplayFoundry.Desktop.Features.Generate.Rendering;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
+using ReplayFoundry.Desktop.Features.Publish.YouTube;
 
 namespace ReplayFoundry.Desktop.Features.Library;
 
@@ -24,7 +25,8 @@ public sealed class LibraryMediaAsset
         DateTimeOffset addedAtUtc,
         int contributingCandidateCount = 1,
         IEnumerable<string>? sourceCandidateIds = null,
-        string? libraryLabel = null)
+        string? libraryLabel = null,
+        YouTubePublishProvenance? sourceProvenance = null)
     {
         if (string.IsNullOrWhiteSpace(id) ||
             string.IsNullOrWhiteSpace(projectId) ||
@@ -84,6 +86,7 @@ public sealed class LibraryMediaAsset
         AddedAtUtc = addedAtUtc;
         ContributingCandidateCount = contributingCandidateCount;
         SourceCandidateIds = Array.AsReadOnly(sourceCandidateSnapshot);
+        SourceProvenance = sourceProvenance;
     }
 
     public string Id { get; }
@@ -120,6 +123,7 @@ public sealed class LibraryMediaAsset
     public DateTimeOffset AddedAtUtc { get; }
     public int ContributingCandidateCount { get; }
     public IReadOnlyList<string> SourceCandidateIds { get; }
+    public YouTubePublishProvenance? SourceProvenance { get; }
     public bool IsAvailable => File.Exists(OutputFullPath);
     public string DisplayName => LibraryLabel;
 
@@ -142,7 +146,8 @@ public sealed class LibraryMediaAsset
             AddedAtUtc,
             ContributingCandidateCount,
             SourceCandidateIds.Count == 0 ? null : SourceCandidateIds,
-            LibraryLabel);
+            LibraryLabel,
+            SourceProvenance);
 
     public override string ToString() => DisplayName;
 }
@@ -643,8 +648,7 @@ public sealed class GenerationLibraryCatalog :
         IEnumerable<string> sourceCandidateIds)
     {
         GenerationClipOutputProfile profile =
-            GenerationClipOutputProfile.FromReference(
-                asset.SourceMedia.PrimaryVideoStream);
+            GenerationClipOutputProfile.FromAsset(asset);
         string? title = asset.EditorialMetadata?.Title;
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -666,6 +670,7 @@ public sealed class GenerationLibraryCatalog :
             added,
             contributingCount,
             sourceCandidateIds,
-            libraryLabel);
+            libraryLabel,
+            YouTubePublishProvenance.CaptureSequence(project.Mode == GenerationMode.Montage ? project.IncludedAssets : [asset], duration));
     }
 }

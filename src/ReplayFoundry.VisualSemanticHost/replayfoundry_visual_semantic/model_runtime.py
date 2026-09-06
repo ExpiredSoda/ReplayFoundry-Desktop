@@ -1,6 +1,10 @@
 """ReplayFoundry local visual-semantic host implementation module."""
 from __future__ import annotations
 
+import json as _diagnostic_json
+import sys as _diagnostic_sys
+import time as _diagnostic_time
+
 from .request_validation import *  # noqa: F401,F403
 
 def _assert_cuda_only_model(model: Any, torch: Any) -> None:
@@ -443,6 +447,7 @@ def _load_model_and_processor(
     placement_finalizer: Any | None = None,
     placement_validator: Any | None = None,
 ) -> tuple[Any, Any]:
+    load_started = _diagnostic_time.perf_counter()
     try:
         model = transformers.AutoModelForImageTextToText.from_pretrained(
             str(model_path),
@@ -472,7 +477,27 @@ def _load_model_and_processor(
         _assert_cuda_only_model(model, torch)
     else:
         placement_validator(model, torch)
+    # A bounded diagnostic on stderr leaves the frozen inference output and
+    # its canonical hash unchanged. It includes processor load and placement
+    # validation, but not runtime import, media decoding, or generation.
+    _report_model_load_time(_diagnostic_time.perf_counter() - load_started)
     return model, processor
+
+
+def _report_model_load_time(elapsed: float) -> None:
+    if not math.isfinite(elapsed) or not 0 <= elapsed <= 86_400:
+        return
+    try:
+        print(
+            "replayfoundry-model-load: " + _diagnostic_json.dumps({
+                "schemaVersion": "model-load-diagnostic-1.0",
+                "modelLoadSeconds": round(elapsed, 6),
+            }, separators=(",", ":")),
+            file=_diagnostic_sys.stderr,
+            flush=True,
+        )
+    except OSError:
+        pass  # Observational diagnostics cannot change inference behavior.
 
 
 

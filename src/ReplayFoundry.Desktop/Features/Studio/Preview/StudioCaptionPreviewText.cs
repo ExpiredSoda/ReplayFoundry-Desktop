@@ -3,18 +3,46 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
+using ReplayFoundry.Desktop.Features.Studio.Editing;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Preview;
 
 public sealed class StudioCaptionPreviewText : Control
 {
+    public static readonly DependencyProperty CaptionTypographyProperty = DependencyProperty.Register(
+        nameof(CaptionTypography), typeof(StudioCaptionTypography), typeof(StudioCaptionPreviewText),
+        new FrameworkPropertyMetadata(StudioCaptionTypography.Default, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender));
+    public StudioCaptionTypography CaptionTypography
+    {
+        get => (StudioCaptionTypography)GetValue(CaptionTypographyProperty);
+        set => SetValue(CaptionTypographyProperty, value);
+    }
+    public string ResolvedCaptionFontFamily => StudioCaptionFontResolver.Resolve(CaptionTypography.FontFamily).Family;
+    public static readonly DependencyProperty EmphasisSpansProperty = DependencyProperty.Register(
+        nameof(EmphasisSpans), typeof(IReadOnlyList<StudioCaptionWordSpan>), typeof(StudioCaptionPreviewText),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+    public IReadOnlyList<StudioCaptionWordSpan>? EmphasisSpans
+    {
+        get => (IReadOnlyList<StudioCaptionWordSpan>?)GetValue(EmphasisSpansProperty);
+        set => SetValue(EmphasisSpansProperty, value);
+    }
+    private Brush ConfiguredTextBrush => ColorBrush(CaptionTypography.TextColor);
+    private Brush ConfiguredAccentBrush => ColorBrush(CaptionTypography.AccentColor);
+    private Brush ConfiguredOutlineBrush => ColorBrush(CaptionTypography.OutlineColor);
+    private static Brush ColorBrush(string color) { var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); brush.Freeze(); return brush; }
     private static readonly Brush WhiteBrush = CreateBrush(0xFF, 0xFF, 0xFF);
     private static readonly Brush FocusBaseBrush = CreateBrush(0xD7, 0xD9, 0xDE);
     private static readonly Brush FutureWordBrush = CreateBrush(0x98, 0x9E, 0xA5);
     private static readonly Brush AccentBrush = CreateBrush(0xFF, 0xC7, 0x5E);
     private static readonly Brush TransparentBrush = CreateBrush(0, 0, 0, 0);
-    private static readonly Brush AccentGlowBrush = CreateBrush(0xFF, 0xC7, 0x5E, 0x72);
-    private static readonly Brush OutlineBrush = CreateBrush(0x10, 0x10, 0x10);
+    private Brush AccentGlowBrush
+    {
+        get
+        {
+            Color color = (Color)ColorConverter.ConvertFromString(CaptionTypography.AccentColor);
+            return CreateBrush(color.R, color.G, color.B, 0x72);
+        }
+    }
     private static readonly Brush ShadowBrush = CreateBrush(0x00, 0x00, 0x00, 0x87);
     private static readonly Brush HighContrastPanelBrush =
         CreateBrush(0x00, 0x00, 0x00, 0xEC);
@@ -142,110 +170,111 @@ public sealed class StudioCaptionPreviewText : Control
         set => SetValue(CaptionScaleProperty, value);
     }
 
+    private string DisplayText => CaptionTypography.DisplayText(CaptionText);
+    private int DisplayIndex(int index) => StudioCaptionDisplayText.MapIndex(CaptionText, index, CaptionTypography);
+    private (string Text, StudioCaptionTypography Typography, double Font, double Width, double Dpi)? _lineKey;
+    private StudioCaptionLineLayoutResult? _lineLayout;
+    private StudioCaptionLineLayoutResult ExplicitLines(double width)
+    {
+        var key = (DisplayText, CaptionTypography, CaptionFontSize, width, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        if (_lineKey != key)
+        {
+            _lineLayout = StudioCaptionLineLayout.Create(key.Item1, key.Item2, key.Item3, key.Item4, key.Item5);
+            _lineKey = key;
+        }
+        return _lineLayout!;
+    }
+    private double PanelPadding => CaptionTypography.HasBackground(CaptionStyle)
+        ? CaptionTypography.HasCustomBackground(CaptionStyle) ? 16 : 20 : 0;
+    private bool UsesExplicitLines => CaptionTypography.SafeAreaInsets is not null || CaptionTypography.LineSpacingPercent != 100 ||
+        CaptionTypography.HasCustomBackground(CaptionStyle);
+
     protected override Size MeasureOverride(Size constraint)
     {
-        if (string.IsNullOrWhiteSpace(CaptionText))
-        {
-            return new Size(0, 0);
-        }
-
-        double width = double.IsFinite(constraint.Width)
-            ? Math.Max(1, constraint.Width)
-            : Math.Max(1, Width);
-        FormattedText text = CreateFormattedText(width);
-        double panelPadding =
-            CaptionStyle == GenerationCaptionStylePreset.HighContrast
-                ? 20
-                : 0;
-        return new Size(width, text.Height + panelPadding);
+        if (string.IsNullOrWhiteSpace(CaptionText)) return new Size(0, 0);
+        double width = double.IsFinite(constraint.Width) ? Math.Max(1, constraint.Width) : Math.Max(1, Width);
+        double height = !UsesExplicitLines
+            ? CreateFormattedText(width).Height : ExplicitLines(width).Height;
+        return new Size(width, height + PanelPadding);
     }
 
     protected override void OnRender(DrawingContext drawingContext)
     {
         base.OnRender(drawingContext);
-        if (string.IsNullOrWhiteSpace(CaptionText) ||
-            ActualWidth <= 0 ||
-            ActualHeight <= 0)
-        {
-            return;
-        }
-
-        double outline = GetOutlinePixels(CaptionStyle);
-        double shadow = GetShadowPixels(CaptionStyle);
-        FormattedText text = CreateFormattedText(ActualWidth);
-        var origin = new Point(
-            0,
-            CaptionStyle == GenerationCaptionStylePreset.HighContrast
-                ? 10
-                : 0);
-        Geometry glyphs = text.BuildGeometry(origin);
-
-        double scale = double.IsFinite(CaptionScale)
-            ? Math.Clamp(CaptionScale, 0.5, 1.5)
-            : 1;
+        if (string.IsNullOrWhiteSpace(CaptionText) || ActualWidth <= 0 || ActualHeight <= 0) return;
+        double outline = CaptionTypography.OutlineWidth == 3 ? GetOutlinePixels(CaptionStyle) : CaptionTypography.OutlineWidth;
+        double shadow = CaptionTypography.ShadowDepth == 2 ? GetShadowPixels(CaptionStyle) : CaptionTypography.ShadowDepth;
+        double scale = double.IsFinite(CaptionScale) ? CaptionTypography.MotionScale(Math.Clamp(CaptionScale, 0.5, 1.5)) : 1;
         if (Math.Abs(scale - 1) > 0.0001)
+            drawingContext.PushTransform(new ScaleTransform(scale, scale, ActualWidth / 2, ActualHeight / 2));
+        if (!UsesExplicitLines)
+            DrawLine(drawingContext, DisplayText, 0, PanelPadding / 2, outline, shadow);
+        else
+            foreach (var line in ExplicitLines(ActualWidth).Lines)
+                if (!string.IsNullOrWhiteSpace(line.Text))
+                    DrawLine(drawingContext, line.Text, line.StartIndex, line.Top + PanelPadding / 2, outline, shadow);
+        if (Math.Abs(scale - 1) > 0.0001) drawingContext.Pop();
+        if (CaptionTypography.SafeArea != StudioCaptionSafeArea.None || CaptionTypography.SafeAreaInsets is not null)
         {
-            drawingContext.PushTransform(new ScaleTransform(
-                scale,
-                scale,
-                ActualWidth / 2,
-                ActualHeight / 2));
-        }
-
-        if (CaptionStyle == GenerationCaptionStylePreset.HighContrast)
-        {
-            Rect panel = glyphs.Bounds;
-            panel.Inflate(outline + 12, outline + 8);
-            drawingContext.DrawRoundedRectangle(
-                HighContrastPanelBrush,
-                null,
-                panel,
-                10,
-                10);
-        }
-
-        if (shadow > 0)
-        {
-            drawingContext.PushTransform(
-                new TranslateTransform(shadow, shadow));
-            drawingContext.DrawGeometry(ShadowBrush, null, glyphs);
-            drawingContext.Pop();
-        }
-
-        var outlinePen = new Pen(
-            CaptionStyle == GenerationCaptionStylePreset.HighContrast
-                ? Brushes.Black
-                : OutlineBrush,
-            outline * 2)
-        {
-            LineJoin = PenLineJoin.Round,
-        };
-        outlinePen.Freeze();
-        drawingContext.DrawGeometry(null, outlinePen, glyphs);
-        drawingContext.DrawText(text, origin);
-
-        if ((CaptionStyle is
-                 GenerationCaptionStylePreset.WordFocus or
-                 GenerationCaptionStylePreset.KaraokeSweep) &&
-            AccentStartIndex >= 0 &&
-            AccentLength > 0)
-        {
-            DrawActiveWordPulse(
-                drawingContext,
-                origin,
-                outline);
-        }
-
-        if (Math.Abs(scale - 1) > 0.0001)
-        {
-            drawingContext.Pop();
+            // Preview-only at-rest bounds make narrow margins and tall phrases reviewable.
+            double width = UsesExplicitLines ? ExplicitLines(ActualWidth).Lines.Select(static line => line.Width).DefaultIfEmpty(0).Max()
+                : CreateFormattedText(ActualWidth).WidthIncludingTrailingWhitespace;
+            double left = CaptionTypography.Alignment switch
+            {
+                StudioCaptionAlignment.Left => 0,
+                StudioCaptionAlignment.Right => ActualWidth - width,
+                _ => (ActualWidth - width) / 2,
+            };
+            var bounds = new Rect(left, 0, width, ActualHeight);
+            bounds.Inflate(outline + shadow, outline + shadow);
+            var pen = new Pen(Brushes.LightSkyBlue, 1) { DashStyle = DashStyles.Dash };
+            pen.Freeze(); drawingContext.DrawRectangle(null, pen, bounds);
         }
     }
 
+    private void DrawLine(DrawingContext drawingContext, string content, int displayOffset, double top, double outline, double shadow)
+    {
+        FormattedText text = CreateFormattedText(ActualWidth, content: content, displayOffset: displayOffset);
+        var origin = new Point(0, top);
+        Geometry glyphs = text.BuildGeometry(origin);
+        if (CaptionTypography.HasBackground(CaptionStyle))
+        {
+            bool custom = CaptionTypography.HasCustomBackground(CaptionStyle);
+            double panelLeft = CaptionTypography.Alignment switch
+            {
+                StudioCaptionAlignment.Left => 0,
+                StudioCaptionAlignment.Right => ActualWidth - text.WidthIncludingTrailingWhitespace,
+                _ => (ActualWidth - text.WidthIncludingTrailingWhitespace) / 2,
+            };
+            Rect panel = custom ? new Rect(panelLeft, top, text.WidthIncludingTrailingWhitespace, text.Height) : glyphs.Bounds;
+            panel.Inflate(custom ? 8 : outline + 12, custom ? 8 : outline + 8);
+            Color color = (Color)ColorConverter.ConvertFromString(CaptionTypography.BackgroundColor);
+            var brush = custom ? CreateBrush(color.R, color.G, color.B, (byte)Math.Round(255 * CaptionTypography.BackgroundOpacityPercent / 100)) : HighContrastPanelBrush;
+            drawingContext.DrawRoundedRectangle(brush, null, panel, custom ? 0 : 10, custom ? 0 : 10);
+        }
+        if (shadow > 0)
+        {
+            drawingContext.PushTransform(new TranslateTransform(shadow, shadow));
+            drawingContext.DrawGeometry(ShadowBrush, null, glyphs);
+            drawingContext.Pop();
+        }
+        var outlinePen = new Pen(CaptionStyle == GenerationCaptionStylePreset.HighContrast &&
+            CaptionTypography.OutlineColor == "#101010" && !CaptionTypography.HasCustomBackground(CaptionStyle)
+            ? Brushes.Black : ConfiguredOutlineBrush, outline * 2) { LineJoin = PenLineJoin.Round };
+        outlinePen.Freeze();
+        drawingContext.DrawGeometry(null, outlinePen, glyphs);
+        drawingContext.DrawText(text, origin);
+        if ((CaptionStyle == GenerationCaptionStylePreset.KaraokeSweep ||
+             CaptionStyle == GenerationCaptionStylePreset.WordFocus && CaptionTypography.AnimationIntensityPercent > 0) && AccentStartIndex >= 0 && AccentLength > 0)
+            DrawActiveWordPulse(drawingContext, origin, outline, content, displayOffset);
+    }
     private FormattedText CreateFormattedText(
         double maximumTextWidth,
-        bool applyAccent = true)
+        bool applyAccent = true,
+        string? content = null,
+        int displayOffset = 0)
     {
+        content ??= DisplayText;
         Brush baseBrush = CaptionStyle switch
         {
             GenerationCaptionStylePreset.WordFocus => FocusBaseBrush,
@@ -253,47 +282,53 @@ public sealed class StudioCaptionPreviewText : Control
             GenerationCaptionStylePreset.Pop => AccentBrush,
             _ => WhiteBrush,
         };
+        if (CaptionStyle == GenerationCaptionStylePreset.Pop) baseBrush = ConfiguredAccentBrush;
+        else if (CaptionTypography.TextColor != "#FFFFFF") baseBrush = ConfiguredTextBrush;
         var text = new FormattedText(
-            CaptionText,
+            content,
             CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight,
+            CaptionTypography.RightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
             new Typeface(
-                new FontFamily("Segoe UI"),
+                new FontFamily(ResolvedCaptionFontFamily),
                 FontStyles.Normal,
-                FontWeights.Bold,
+                CaptionTypography.Bold ? FontWeights.Bold : FontWeights.Normal,
                 FontStretches.Normal),
             Math.Max(1, CaptionFontSize),
             baseBrush,
             VisualTreeHelper.GetDpi(this).PixelsPerDip)
         {
             MaxTextWidth = maximumTextWidth,
-            TextAlignment = TextAlignment.Center,
+            TextAlignment = CaptionTypography.Alignment switch
+            {
+                StudioCaptionAlignment.Left => TextAlignment.Left,
+                StudioCaptionAlignment.Right => TextAlignment.Right,
+                _ => TextAlignment.Center,
+            },
             Trimming = TextTrimming.None,
         };
-        int start = applyAccent
-            ? Math.Clamp(
-                AccentStartIndex,
-                -1,
-                CaptionText.Length)
-            : -1;
-        int length = applyAccent
-            ? Math.Clamp(
-                AccentLength,
-                0,
-                start < 0 ? 0 : CaptionText.Length - start)
-            : 0;
+        int rawStart = AccentStartIndex < 0 ? -1 : DisplayIndex(AccentStartIndex) - displayOffset;
+        int rawEnd = AccentStartIndex < 0 ? -1 : DisplayIndex(AccentStartIndex + AccentLength) - displayOffset;
+        int start = applyAccent && rawStart >= 0 ? Math.Clamp(rawStart, 0, content.Length) : -1;
+        int length = applyAccent && rawEnd > 0 ? Math.Max(0, Math.Min(content.Length, rawEnd) - Math.Max(0, rawStart)) : 0;
+        if (applyAccent && rawStart < 0 && rawEnd > 0) start = 0;
         if (applyAccent &&
             CaptionStyle == GenerationCaptionStylePreset.KaraokeSweep &&
-            start >= 0)
+            rawStart >= 0)
         {
             if (start > 0)
             {
-                text.SetForegroundBrush(WhiteBrush, 0, start);
+                text.SetForegroundBrush(ConfiguredTextBrush, 0, start);
             }
         }
         else if (applyAccent && start >= 0 && length > 0)
         {
-            text.SetForegroundBrush(AccentBrush, start, length);
+            text.SetForegroundBrush(ConfiguredAccentBrush, start, length);
+        }
+        foreach (var span in EmphasisSpans ?? [])
+        {
+            int left = Math.Max(0, DisplayIndex(span.StartIndex) - displayOffset);
+            int right = Math.Min(content.Length, DisplayIndex(span.StartIndex + span.Length) - displayOffset);
+            if (right > left) text.SetTextDecorations(TextDecorations.Underline, left, right - left);
         }
         return text;
     }
@@ -301,13 +336,13 @@ public sealed class StudioCaptionPreviewText : Control
     private void DrawActiveWordPulse(
         DrawingContext drawingContext,
         Point origin,
-        double outline)
+        double outline,
+        string content,
+        int displayOffset)
     {
-        int start = Math.Clamp(AccentStartIndex, 0, CaptionText.Length);
-        int length = Math.Clamp(
-            AccentLength,
-            0,
-            CaptionText.Length - start);
+        int start = Math.Clamp(DisplayIndex(AccentStartIndex) - displayOffset, 0, content.Length);
+        int end = Math.Clamp(DisplayIndex(AccentStartIndex + AccentLength) - displayOffset, 0, content.Length);
+        int length = end - start;
         if (length == 0)
         {
             return;
@@ -315,12 +350,14 @@ public sealed class StudioCaptionPreviewText : Control
 
         FormattedText active = CreateFormattedText(
             ActualWidth,
-            applyAccent: false);
+            applyAccent: false,
+            content: content,
+            displayOffset: displayOffset);
         active.SetForegroundBrush(
             TransparentBrush,
             0,
-            CaptionText.Length);
-        active.SetForegroundBrush(AccentBrush, start, length);
+            content.Length);
+        active.SetForegroundBrush(ConfiguredAccentBrush, start, length);
         Geometry highlight = active.BuildHighlightGeometry(
             origin,
             start,
@@ -338,6 +375,7 @@ public sealed class StudioCaptionPreviewText : Control
         double pulse = progress <= 0.35
             ? 1 + (peak - 1) * progress / 0.35
             : peak + (settled - peak) * (progress - 0.35) / 0.65;
+        pulse = CaptionTypography.MotionScale(pulse);
         drawingContext.PushTransform(new ScaleTransform(
             pulse,
             pulse,
@@ -359,7 +397,7 @@ public sealed class StudioCaptionPreviewText : Control
         };
         glowPen.Freeze();
         drawingContext.DrawGeometry(null, glowPen, activeGlyphs);
-        var outlinePen = new Pen(OutlineBrush, outline * 2)
+        var outlinePen = new Pen(ConfiguredOutlineBrush, outline * 2)
         {
             LineJoin = PenLineJoin.Round,
         };

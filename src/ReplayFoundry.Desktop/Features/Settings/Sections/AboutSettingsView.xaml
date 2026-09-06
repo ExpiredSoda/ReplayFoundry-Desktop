@@ -5,7 +5,7 @@
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
     <Border Style="{DynamicResource Control.CanvasPane}">
         <StackPanel>
-            <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="ABOUT" />
+            <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="About Replay Foundry" />
             <TextBlock
                 Margin="0,10,0,0"
                 Foreground="{DynamicResource Brush.TextPrimary}"
@@ -29,21 +29,21 @@
                 </Grid.ColumnDefinitions>
                 <Border Margin="0,0,8,0" Style="{DynamicResource Control.CanvasInsetCard}">
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="APPLICATION" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Application" />
                         <TextBlock Margin="0,5,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Free to use" />
                         <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="No trial clock or payment needed for core features" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Margin="4,0" Style="{DynamicResource Control.CanvasInsetCard}">
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="PROCESSING" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Processing" />
                         <TextBlock Margin="0,5,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Local by design" />
                         <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="Installed tools and local AI stay on this PC" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Margin="8,0,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
                     <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="CREATIVE EXTRAS" />
+                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Creative extras" />
                         <TextBlock Margin="0,5,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Optional content" />
                         <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="Future stickers, sounds, and templates never unlock core features" TextWrapping="Wrap" />
                     </StackPanel>

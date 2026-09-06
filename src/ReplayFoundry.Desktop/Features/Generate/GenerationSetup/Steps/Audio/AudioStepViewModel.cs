@@ -4,8 +4,16 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
+using ReplayFoundry.Desktop.Features.Studio.Editing;
+using ReplayFoundry.Desktop.Platform.Storage;
+using ReplayFoundry.Desktop.Media.Transcription;
 
 namespace ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.Audio;
+
+public sealed record GenerationCaptionLookOption(string Name, StudioCaptionLook? Look)
+{
+    public override string ToString() => Name;
+}
 
 public sealed class AudioStepViewModel :
     INotifyPropertyChanged,
@@ -25,15 +33,28 @@ public sealed class AudioStepViewModel :
     private bool _isCaptioningEnabled;
     private SelectionOption<GenerationCaptionStylePreset>
         _selectedCaptionStyle;
+    private GenerationCaptionLookOption _selectedCaptionLook;
 
     public AudioStepViewModel(
         GenerationSetupDraft draft,
         IGenerationAudioRoleMemory? audioRoleMemory = null,
-        IAudioStreamAuditionService? auditionService = null)
+        IAudioStreamAuditionService? auditionService = null,
+        IReadOnlyList<StudioNamedCaptionLook>? captionLooks = null,
+        AudioTranscriptionModelLanguageCapabilities? languageCapabilities = null)
     {
         ArgumentNullException.ThrowIfNull(draft);
 
         _draft = draft;
+        var looks = new List<GenerationCaptionLookOption> { new("Use effect defaults", null) };
+        try { looks.AddRange((captionLooks ?? new JsonStudioCaptionLookStore().Load()).Select(look => new GenerationCaptionLookOption(look.Name, look.Look))); }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
+        { CaptionLookHint = "Saved looks could not be read. Effect defaults remain available."; }
+        _selectedCaptionLook = looks.FirstOrDefault(option => option.Look == draft.CaptionSettings.SavedLook &&
+            option.Name.Equals(draft.CaptionSettings.SavedLookName, StringComparison.Ordinal)) ??
+            looks.FirstOrDefault(option => option.Look == draft.CaptionSettings.SavedLook) ??
+            new GenerationCaptionLookOption(draft.CaptionSettings.SavedLookName ?? "Saved project look", draft.CaptionSettings.SavedLook);
+        if (!looks.Contains(_selectedCaptionLook)) looks.Add(_selectedCaptionLook);
+        CaptionLooks = looks.AsReadOnly();
 
         _options =
         [
@@ -74,7 +95,8 @@ public sealed class AudioStepViewModel :
                         draft.CaptionSettings.FindForSource(
                             source.Media.FullPath),
                         audioRoleMemory?.Find(source),
-                        auditionService))
+                        auditionService,
+                        languageCapabilities))
             .ToArray();
         foreach (CaptionAudioSelectionViewModel source in _captionSources)
         {
@@ -141,7 +163,8 @@ public sealed class AudioStepViewModel :
             ? null
             : !SelectedOption.IsAvailable
                 ? SelectedOption.UnavailableReason
-                : "For each video with audio, choose the track and type of speech to caption.";
+                : _captionSources.FirstOrDefault(static source => source.LanguageValidationMessage is not null)?.LanguageValidationMessage ??
+                    "For each video with audio, choose the track and type of speech to caption.";
 
     public string ReferenceSourceName =>
         _draft.Request.ReferenceSource.FileName;
@@ -158,6 +181,23 @@ public sealed class AudioStepViewModel :
 
     public IReadOnlyList<SelectionOption<GenerationCaptionStylePreset>>
         CaptionStyles => _captionStyles;
+    public IReadOnlyList<GenerationCaptionLookOption> CaptionLooks { get; }
+    public string CaptionLookHint { get; private set; } =
+        "Reuse fonts, colors, phrase size, placement and spacing saved in Studio. " +
+        "The selected look is captured for this generation run.";
+    public bool IsCaptionStyleSelectable => IsCaptioningEnabled && SelectedCaptionLook.Look is null;
+    public GenerationCaptionLookOption SelectedCaptionLook
+    {
+        get => _selectedCaptionLook;
+        set
+        {
+            if (value is null || ReferenceEquals(value, _selectedCaptionLook)) return;
+            if (!CaptionLooks.Contains(value)) throw new ArgumentException("Choose an available caption look.");
+            _selectedCaptionLook = value;
+            if (value.Look is { } look) _selectedCaptionStyle = _captionStyles.Single(option => option.Value == look.CaptionStyle);
+            UpdateCaptionDraft(); OnPropertyChanged(); OnPropertyChanged(nameof(SelectedCaptionStyle)); OnPropertyChanged(nameof(IsCaptionStyleSelectable));
+        }
+    }
 
     public bool IsCaptioningEnabled
     {
@@ -167,6 +207,7 @@ public sealed class AudioStepViewModel :
             if (_isCaptioningEnabled == value) return;
             _isCaptioningEnabled = value;
             UpdateCaptionDraft();
+            OnPropertyChanged(nameof(IsCaptionStyleSelectable));
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsValid));
             OnPropertyChanged(nameof(ValidationMessage));
@@ -191,6 +232,7 @@ public sealed class AudioStepViewModel :
                     nameof(value));
             }
             if (ReferenceEquals(_selectedCaptionStyle, value)) return;
+            if (SelectedCaptionLook.Look is not null) return;
             _selectedCaptionStyle = value;
             UpdateCaptionDraft();
             OnPropertyChanged();
@@ -245,7 +287,9 @@ public sealed class AudioStepViewModel :
             new GenerationCaptionSettings(
                 isEnabled: true,
                 SelectedCaptionStyle.Value,
-                selections));
+                selections,
+                SelectedCaptionLook.Look,
+                SelectedCaptionLook.Look is null ? null : SelectedCaptionLook.Name));
     }
 
     private void OnPropertyChanged(

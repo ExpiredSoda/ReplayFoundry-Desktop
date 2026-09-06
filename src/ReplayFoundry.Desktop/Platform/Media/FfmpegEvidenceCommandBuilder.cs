@@ -36,6 +36,23 @@ internal static class FfmpegEvidenceCommandBuilder
     internal const string AudioSignalRecordKind =
         "audio_signal";
 
+    public static IReadOnlyList<string> BuildCombinedVisualArguments(
+        MediaEvidenceAnalysisRequest request, IReadOnlyList<VisualEvidenceTarget> targets)
+    {
+        FfmpegEvidenceArgumentBuilder.ValidateTargets(request, targets);
+        var graph = new System.Text.StringBuilder();
+        FfmpegVisualTargetFilterGraphBuilder.AppendNormalizedSplit(graph, request, targets);
+        foreach (var target in targets)
+            graph.Append(';').Append(FfmpegEvidenceFilterLabels.Input(target.TargetKey)).Append("split=2")
+                .Append(FfmpegEvidenceFilterLabels.Input(target.TargetKey, "scene"))
+                .Append(FfmpegEvidenceFilterLabels.Input(target.TargetKey, "interval"));
+        graph.Append(FfmpegSceneFilterGraphBuilder.Build(request, targets, "scene"));
+        graph.Append(FfmpegVisualIntervalFilterGraphBuilder.Build(request, targets, "interval"));
+        string key = targets.Single(target => target.Kind == VisualEvidenceTargetKind.FullFrame).TargetKey;
+        return FfmpegEvidenceArgumentBuilder.BuildVideoArguments(graph.ToString(),
+            [FfmpegEvidenceFilterLabels.SceneOutput(key), FfmpegEvidenceFilterLabels.VisualOutput(key)]);
+    }
+
     public static IReadOnlyList<string> BuildSceneDetectionArguments(
         MediaEvidenceAnalysisRequest request,
         IReadOnlyList<VisualEvidenceTarget> targets)

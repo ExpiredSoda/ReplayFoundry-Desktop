@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using ReplayFoundry.Desktop.Features.Studio.Editing;
 
 namespace ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 
@@ -25,6 +26,106 @@ public enum GenerationCaptionLanguagePolicy
     Auto,
     English,
     Spanish,
+    French,
+    German,
+    Italian,
+    Portuguese,
+    Japanese,
+    Korean,
+    Chinese,
+    Arabic,
+    Hindi,
+    Russian,
+    Ukrainian,
+    Polish,
+    Dutch,
+    Turkish,
+    Vietnamese,
+    Indonesian,
+    Thai,
+    Swedish,
+    Danish,
+    Norwegian,
+    Finnish,
+    Greek,
+    Hebrew,
+    Czech,
+    Romanian,
+    Hungarian,
+    EnglishTranslation,
+    // Append only: existing persisted numeric language values must remain stable.
+    Catalan,
+    Malay,
+    Tamil,
+    Urdu,
+    Croatian,
+    Bulgarian,
+    Lithuanian,
+    Latin,
+    Maori,
+    Malayalam,
+    Welsh,
+    Slovak,
+    Telugu,
+    Persian,
+    Latvian,
+    Bengali,
+    Serbian,
+    Azerbaijani,
+    Slovenian,
+    Kannada,
+    Estonian,
+    Macedonian,
+    Breton,
+    Basque,
+    Icelandic,
+    Armenian,
+    Nepali,
+    Mongolian,
+    Bosnian,
+    Kazakh,
+    Albanian,
+    Swahili,
+    Galician,
+    Marathi,
+    Punjabi,
+    Sinhala,
+    Khmer,
+    Shona,
+    Yoruba,
+    Somali,
+    Afrikaans,
+    Occitan,
+    Georgian,
+    Belarusian,
+    Tajik,
+    Sindhi,
+    Gujarati,
+    Amharic,
+    Yiddish,
+    Lao,
+    Uzbek,
+    Faroese,
+    HaitianCreole,
+    Pashto,
+    Turkmen,
+    Nynorsk,
+    Maltese,
+    Sanskrit,
+    Luxembourgish,
+    Burmese,
+    Tibetan,
+    Tagalog,
+    Malagasy,
+    Assamese,
+    Tatar,
+    Hawaiian,
+    Lingala,
+    Hausa,
+    Bashkir,
+    Javanese,
+    Sundanese,
+    Cantonese,
 }
 
 public sealed class GenerationCaptionSourceSelection
@@ -76,7 +177,9 @@ public sealed class GenerationCaptionSettings
     public GenerationCaptionSettings(
         bool isEnabled,
         GenerationCaptionStylePreset style,
-        IEnumerable<GenerationCaptionSourceSelection>? sourceSelections = null)
+        IEnumerable<GenerationCaptionSourceSelection>? sourceSelections = null,
+        StudioCaptionLook? savedLook = null,
+        string? savedLookName = null)
     {
         if (!Enum.IsDefined(style))
         {
@@ -98,12 +201,18 @@ public sealed class GenerationCaptionSettings
         }
 
         IsEnabled = isEnabled;
-        Style = style;
+        if (savedLookName is not null && (savedLook is null || string.IsNullOrWhiteSpace(savedLookName) || savedLookName.Trim().Length > 80))
+            throw new ArgumentException("A named caption look requires its complete saved settings and a valid name.", nameof(savedLookName));
+        Style = savedLook?.CaptionStyle ?? style;
+        SavedLook = savedLook;
+        SavedLookName = savedLookName?.Trim();
         _sourceSelections = Array.AsReadOnly(snapshot);
     }
 
     public bool IsEnabled { get; }
     public GenerationCaptionStylePreset Style { get; }
+    public StudioCaptionLook? SavedLook { get; }
+    public string? SavedLookName { get; }
     public IReadOnlyList<GenerationCaptionSourceSelection>
         SourceSelections => _sourceSelections;
 

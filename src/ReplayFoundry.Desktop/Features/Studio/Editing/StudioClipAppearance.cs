@@ -33,7 +33,7 @@ public sealed record StudioCaptionLook
         double captionVerticalPositionPercent,
         StudioCaptionWordLimitPreset captionWordLimit,
         double captionMaximumWidthPercent,
-        double captionFontScalePercent)
+        double captionFontScalePercent, StudioCaptionTypography? captionTypography = null)
     {
         // Reuse the complete appearance contract as the single validation
         // boundary for caption positioning and sizing.
@@ -45,13 +45,14 @@ public sealed record StudioCaptionLook
             graphicOverlays: null,
             captionWordLimit,
             captionMaximumWidthPercent,
-            captionFontScalePercent);
+            captionFontScalePercent, captionTypography);
 
         CaptionStyle = captionStyle;
         CaptionVerticalPositionPercent = captionVerticalPositionPercent;
         CaptionWordLimit = captionWordLimit;
         CaptionMaximumWidthPercent = captionMaximumWidthPercent;
         CaptionFontScalePercent = captionFontScalePercent;
+        CaptionTypography = captionTypography ?? StudioCaptionTypography.Default;
     }
 
     public GenerationCaptionStylePreset CaptionStyle { get; }
@@ -63,6 +64,7 @@ public sealed record StudioCaptionLook
     public double CaptionMaximumWidthPercent { get; }
 
     public double CaptionFontScalePercent { get; }
+    public StudioCaptionTypography CaptionTypography { get; }
 
     public static StudioCaptionLook FromAppearance(
         StudioClipAppearance appearance)
@@ -73,7 +75,7 @@ public sealed record StudioCaptionLook
             appearance.CaptionVerticalPositionPercent,
             appearance.CaptionWordLimit,
             appearance.CaptionMaximumWidthPercent,
-            appearance.CaptionFontScalePercent);
+            appearance.CaptionFontScalePercent, appearance.CaptionTypography);
     }
 
     public StudioClipAppearance ApplyTo(StudioClipAppearance appearance)
@@ -87,7 +89,7 @@ public sealed record StudioCaptionLook
             appearance.GraphicOverlays,
             CaptionWordLimit,
             CaptionMaximumWidthPercent,
-            CaptionFontScalePercent);
+            CaptionFontScalePercent, CaptionTypography);
     }
 
     public StudioClipAppearance CreateAppearance() => ApplyTo(
@@ -215,7 +217,7 @@ public sealed class StudioClipAppearance
         double captionMaximumWidthPercent =
             DefaultCaptionMaximumWidthPercent,
         double captionFontScalePercent =
-            DefaultCaptionFontScalePercent)
+            DefaultCaptionFontScalePercent, StudioCaptionTypography? captionTypography = null)
     {
         if (!Enum.IsDefined(captionStyle))
         {
@@ -260,6 +262,7 @@ public sealed class StudioClipAppearance
         CaptionWordLimit = captionWordLimit;
         CaptionMaximumWidthPercent = captionMaximumWidthPercent;
         CaptionFontScalePercent = captionFontScalePercent;
+        CaptionTypography = captionTypography ?? StudioCaptionTypography.Default;
         VideoEffect = videoEffect;
         VideoEffectIntensityPercent =
             videoEffectIntensityPercent;
@@ -284,6 +287,7 @@ public sealed class StudioClipAppearance
     public double CaptionMaximumWidthPercent { get; }
 
     public double CaptionFontScalePercent { get; }
+    public StudioCaptionTypography CaptionTypography { get; }
 
     public StudioVideoEffectPreset VideoEffect { get; }
 

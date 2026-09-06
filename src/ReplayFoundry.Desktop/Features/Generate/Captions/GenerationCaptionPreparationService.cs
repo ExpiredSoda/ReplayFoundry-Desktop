@@ -12,12 +12,14 @@ public sealed class GenerationCaptionPreparationService :
     private readonly IAudioTranscriptionProvider _transcriptionProvider;
     private readonly AudioTranscriptionOptions _options;
     private readonly AudioTranscriptionModelSettings _model;
+    private readonly ISourceAudioTranscriptionService? _sourceTranscription;
 
     public GenerationCaptionPreparationService(
         IAudioSegmentExtractor audioExtractor,
         IAudioTranscriptionProvider transcriptionProvider,
         AudioTranscriptionOptions options,
-        AudioTranscriptionModelSettings model)
+        AudioTranscriptionModelSettings model,
+        ISourceAudioTranscriptionService? sourceTranscription = null)
     {
         _audioExtractor = audioExtractor ??
             throw new ArgumentNullException(nameof(audioExtractor));
@@ -27,6 +29,7 @@ public sealed class GenerationCaptionPreparationService :
             throw new ArgumentNullException(nameof(options));
         _model = model ??
             throw new ArgumentNullException(nameof(model));
+        _sourceTranscription = sourceTranscription;
         if (!_options.RequestWordTimestamps)
         {
             throw new ArgumentException(
@@ -83,7 +86,9 @@ public sealed class GenerationCaptionPreparationService :
                           "enough clear speech, so Replay Foundry left out " +
                           "its spoken captions and did not use those words " +
                           "in the title or description."
-                        : $"Caption timing is ready for clip {index + 1} of {total}.",
+                        : track.HasRenderableSegments
+                            ? $"Caption timing is ready for clip {index + 1} of {total}."
+                            : $"No timed speech was returned for clip {index + 1} of {total}. Review the selected voice track or regenerate captions in Studio.",
                     index + 1,
                     total));
         }
@@ -181,6 +186,15 @@ public sealed class GenerationCaptionPreparationService :
         cancellationToken.ThrowIfCancellationRequested();
         AudioTranscriptionOptions options = ResolveOptions(selection);
         string neighborhoodId = "caption-" + candidateId;
+        if (_sourceTranscription is not null)
+        {
+            AudioTranscriptionResult cached = await _sourceTranscription.TranscribeWindowAsync(
+                neighborhoodId, sourceMedia, selection.AbsoluteAudioStreamIndex,
+                sourceStart, sourceEnd, options, cancellationToken);
+            return new PreparedCandidateCaption(cached,
+                GenerationCaptionTranscriptQuality.SelectRenderableSegments(cached),
+                GenerationCaptionTranscriptQuality.Assess(cached));
+        }
         using ExtractedAudioSegment audio =
             await _audioExtractor.ExtractAsync(
                 new AudioSegmentExtractionRequest(
@@ -215,24 +229,13 @@ public sealed class GenerationCaptionPreparationService :
             suppressionReason);
     }
 
-    private AudioTranscriptionOptions ResolveOptions(
-        GenerationSetup.GenerationCaptionSourceSelection selection) =>
-        selection.LanguagePolicy switch
-        {
-            GenerationSetup.GenerationCaptionLanguagePolicy.Auto =>
-                _options.WithLanguage(
-                    AudioTranscriptionLanguageMode.Auto,
-                    requestedLanguage: null),
-            GenerationSetup.GenerationCaptionLanguagePolicy.English =>
-                _options.WithLanguage(
-                    AudioTranscriptionLanguageMode.Explicit,
-                    new AudioTranscriptionLanguage("en", "English")),
-            GenerationSetup.GenerationCaptionLanguagePolicy.Spanish =>
-                _options.WithLanguage(
-                    AudioTranscriptionLanguageMode.Explicit,
-                    new AudioTranscriptionLanguage("es", "Spanish")),
-            _ => throw new ArgumentOutOfRangeException(nameof(selection)),
-        };
+    internal AudioTranscriptionOptions ResolveOptions(
+        GenerationSetup.GenerationCaptionSourceSelection selection)
+    {
+        AudioTranscriptionOptions options = GenerationSetup.GenerationCaptionLanguageCatalog.ResolveOptions(
+            _options, selection.LanguagePolicy, _model.LanguageCapabilities);
+        return options.WithInitialPrompt(new Platform.Storage.JsonCaptionVocabularyStore().ReadPrompt());
+    }
 
     private sealed record PreparedCandidateCaption(
         AudioTranscriptionResult Transcription,

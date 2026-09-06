@@ -5,9 +5,10 @@ namespace ReplayFoundry.Desktop.Platform.Media;
 internal static class FfmpegEvidenceFilterLabels
 {
     internal static string Input(
-        string targetKey)
+        string targetKey,
+        string? branch = null)
     {
-        return $"[rf_in_{targetKey}]";
+        return branch is null ? $"[rf_in_{targetKey}]" : $"[rf_in_{branch}_{targetKey}]";
     }
 
     internal static string SceneOutput(

@@ -43,6 +43,8 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
         IGenerationGameKnowledgeService? gameKnowledge = null)
     {
         Clip = new StudioClipEditorViewModel(outputEditor);
+        Output = new StudioOutputEditorViewModel(outputEditor);
+        FrameEdits = new StudioFrameEditsViewModel(outputEditor);
         Graphics = new StudioGraphicOverlayEditorViewModel(outputEditor);
         Caption = new StudioCaptionTrackEditorViewModel(outputEditor);
         Preference = new StudioClipPreferenceViewModel(
@@ -57,6 +59,8 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
             editorialRerollPreference,
             editorialPreferenceRecorder,
             gameKnowledge);
+        TimelineEdits = new StudioTimelineEditViewModel(outputEditor, () => !Clip.HasPendingEdit &&
+            !Caption.HasUnsavedChanges && !Graphics.HasUnsavedChanges && !Editorial.HasUnsavedChanges && !Editorial.IsGenerating);
         _selectCommand = new DelegateCommand<StudioInspectorSection>(
             value => SelectedInspector = value);
     }
@@ -65,6 +69,9 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
     public event EventHandler? SelectedAssetChanged;
 
     public StudioClipEditorViewModel Clip { get; }
+    public StudioOutputEditorViewModel Output { get; }
+    public StudioFrameEditsViewModel FrameEdits { get; }
+    public StudioTimelineEditViewModel TimelineEdits { get; }
     public StudioGraphicOverlayEditorViewModel Graphics { get; }
     public StudioCaptionTrackEditorViewModel Caption { get; }
     public StudioClipPreferenceViewModel Preference { get; }
@@ -125,7 +132,7 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
     public bool IsCaptionStyleEditorVisible =>
         _hasProject &&
         SelectedInspector == StudioInspectorSection.Captions &&
-        SelectedAsset?.HasCaptions == true;
+        SelectedAsset is not null;
     public bool IsCaptionTrackMissing =>
         _hasProject &&
         SelectedInspector == StudioInspectorSection.Captions &&
@@ -175,6 +182,9 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
     public void SetHostBusy(bool isBusy)
     {
         Clip.SetHostBusy(isBusy);
+        Output.SetHostBusy(isBusy);
+        FrameEdits.SetHostBusy(isBusy);
+        TimelineEdits.SetHostBusy(isBusy);
         Caption.SetHostBusy(isBusy);
         Graphics.SetHostBusy(isBusy);
         Preference.SetHostBusy(isBusy);
@@ -250,16 +260,26 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
         }
 
         _isDisposed = true;
+        Caption.Dispose();
+        Output.Dispose();
         Editorial.Dispose();
     }
 
-    internal Task StopAsync(CancellationToken cancellationToken) =>
-        Editorial.StopAsync(cancellationToken);
+    internal async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await Caption.AudioAudition.StopAsync(cancellationToken);
+        await Output.MixAudition.StopAsync(cancellationToken);
+        await Output.Tracking.StopAsync(cancellationToken);
+        await Editorial.StopAsync(cancellationToken);
+    }
 
     private void BindSelectedAsset(GenerationOutputAsset? asset)
     {
         _selectedAsset = asset;
         Clip.Bind(_project, asset);
+        Output.Bind(_project, asset);
+        FrameEdits.Bind(_project, asset);
+        TimelineEdits.Bind(_project, asset);
         Graphics.Bind(_project, asset);
         Caption.Bind(_project, asset);
         Preference.Bind(_project, asset);

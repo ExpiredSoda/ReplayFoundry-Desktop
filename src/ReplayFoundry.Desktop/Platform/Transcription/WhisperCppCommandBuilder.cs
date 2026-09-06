@@ -24,16 +24,17 @@ internal sealed record WhisperCppCliCapabilities(
     string? VadMinimumSpeechOption,
     string? VadMinimumSilenceOption,
     string? VadSpeechPadOption,
-    string? VadSamplesOverlapOption)
+    string? VadSamplesOverlapOption,
+    string? PromptOption = null)
 {
-    public AudioTranscriptionProviderCapabilities ToPublic() =>
+    public AudioTranscriptionProviderCapabilities ToPublic(AudioTranscriptionModelLanguageCapabilities? model = null) =>
         new(
             supportsAutomaticLanguage:
-                LanguageOption is not null,
+                LanguageOption is not null && model?.SupportsAutomaticLanguage != false,
             supportsExplicitLanguage:
-                LanguageOption is not null,
+                LanguageOption is not null && model?.IsKnown != false,
             supportsTranslationToEnglish:
-                TranslateOption is not null,
+                TranslateOption is not null && model?.SupportsTranslationToEnglish != false,
             supportsSegmentTimestamps: true,
             supportsWordTimestamps:
                 OutputJsonFullOption is not null &&
@@ -95,7 +96,8 @@ internal sealed record WhisperCppCliCapabilities(
             FindOption(helpOutput, "--vad-min-speech-duration-ms"),
             FindOption(helpOutput, "--vad-min-silence-duration-ms"),
             FindOption(helpOutput, "--vad-speech-pad-ms"),
-            FindOption(helpOutput, "--vad-samples-overlap"));
+            FindOption(helpOutput, "--vad-samples-overlap"),
+            FindOption(helpOutput, "--prompt"));
     }
 
     private static string RequireOption(
@@ -147,6 +149,8 @@ internal static class WhisperCppCommandBuilder
 
         AudioTranscriptionOptions options =
             request.Options;
+        if (request.ModelSettings.LanguageCapabilities?.GetBlockingReason(options) is string modelLanguageReason)
+            throw new WhisperCppInitializationException(modelLanguageReason);
         string structuredOutputOption =
             options.RequestWordTimestamps
                 ? capabilities.OutputJsonFullOption ??
@@ -189,6 +193,12 @@ internal static class WhisperCppCommandBuilder
                         ? "true"
                         : "false",
             };
+        if (request.ModelSettings.LanguageCapabilities is { } modelLanguages)
+        {
+            normalized["modelLanguageKind"] = modelLanguages.Kind.ToString();
+            normalized["modelLanguageCount"] = modelLanguages.LanguageCount.ToString(CultureInfo.InvariantCulture);
+            normalized["modelTranslationToEnglish"] = modelLanguages.SupportsTranslationToEnglish ? "true" : "false";
+        }
 
         if (vadModelPath is not null)
         {
@@ -264,6 +274,15 @@ internal static class WhisperCppCommandBuilder
             AudioTranscriptionLanguageMode.Auto
                 ? "auto"
                 : options.RequestedLanguage!.Code);
+
+        if (options.InitialPrompt is { } prompt)
+        {
+            if (capabilities.PromptOption is null)
+                throw new WhisperCppInitializationException("This whisper.cpp runtime does not support saved vocabulary (--prompt).");
+            arguments.Add(capabilities.PromptOption);
+            arguments.Add(prompt);
+            normalized["vocabularySha256"] = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(prompt)));
+        }
 
         if (options.TranslateToEnglish)
         {

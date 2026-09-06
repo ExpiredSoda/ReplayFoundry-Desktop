@@ -11,7 +11,9 @@ namespace ReplayFoundry.Desktop.Features.Publish.Editorial;
 public sealed record PublishEditorialProfileSnapshot(
     string AudienceAddress,
     string NamingGuidance,
-    string DescriptionSignature);
+    string DescriptionSignature,
+    ClipEditorialCopyObjective CopyObjective =
+        ClipEditorialCopyObjective.BalancedActionAndCommentary);
 
 public sealed record PublishEditorialRerollResult(
     string Title,
@@ -80,7 +82,8 @@ internal sealed class PublishEditorialMetadataService :
         return new PublishEditorialProfileSnapshot(
             profile.AudienceAddress,
             profile.NamingGuidance ?? string.Empty,
-            profile.ReusableDescriptionSignature ?? string.Empty);
+            profile.ReusableDescriptionSignature ?? string.Empty,
+            profile.CopyObjective);
     }
 
     public bool CanReroll(LibraryMediaAsset asset)
@@ -122,7 +125,7 @@ internal sealed class PublishEditorialMetadataService :
                 retainedDraft.Attempt,
                 previousCompletedAttempt ?? retainedDraft.Attempt) + 1);
         ClipEditorialContext currentCutContext =
-            source.CreateCurrentCutEditorialContext();
+            source.CreateCurrentCutEditorialContext().PrepareForEditorialGeneration();
         if (requireAi && _gameKnowledge is not null)
         {
             currentCutContext = await _gameKnowledge.EnrichAsync(
@@ -133,13 +136,19 @@ internal sealed class PublishEditorialMetadataService :
             audienceAddress,
             namingGuidance,
             descriptionSignature,
-            _profileEditor.Current.DefaultTags);
-        IReadOnlyList<string> titleHistory =
-            ClipEditorialPriorTitleExclusion.MergeTitleHistory(
+            _profileEditor.Current.DefaultTags,
+            _profileEditor.Current.VoicePerspective,
+            _profileEditor.Current.CopyObjective);
+        // A valid immutable cut may outlive the old wording's authored-context
+        // receipt. That permits fresh generation, not assigning the old title
+        // history to the newly resolved context.
+        IReadOnlyList<string> titleHistory = source.IsEditorialMetadataCurrentForCut
+            ? ClipEditorialPriorTitleExclusion.MergeTitleHistory(
                 retainedDraft.PriorAcceptedTitles
                     .Concat([retainedDraft.Title])
                     .Concat(priorAcceptedTitles),
-                currentTitle);
+                currentTitle)
+            : [];
         ClipEditorialPriorTitleExclusion[] exclusions = titleHistory
             .Select(title => ClipEditorialPriorTitleExclusion.ForContext(
                 currentCutContext,
@@ -221,24 +230,16 @@ internal sealed class PublishEditorialMetadataService :
             return null;
         }
 
-        string candidateId = asset.SourceCandidateIds[0];
-        GenerationOutputAsset? source = project.Assets.SingleOrDefault(
-            candidate =>
-                candidate.Id.Equals(candidateId, StringComparison.Ordinal) &&
-                candidate.EditorialContext is not null &&
-                candidate.EditorialMetadata is not null &&
-                candidate.IsEditorialMetadataCurrentForCut);
-        return source is not null && File.Exists(source.SourceMedia.FullPath)
-            ? source
-            : null;
+        return Resolve(project, asset, sourceProjectId);
     }
 
     private static GenerationOutputAsset? Resolve(
         GenerationOutputProject? project,
-        LibraryMediaAsset asset)
+        LibraryMediaAsset asset,
+        string? expectedProjectId = null)
     {
         if (project?.IsFinalized != true ||
-            !project.Id.Equals(asset.ProjectId, StringComparison.Ordinal) ||
+            !project.Id.Equals(expectedProjectId ?? asset.ProjectId, StringComparison.Ordinal) ||
             asset.ContributingCandidateCount != 1 ||
             !asset.IsAvailable)
         {
@@ -257,7 +258,8 @@ internal sealed class PublishEditorialMetadataService :
                  StringComparer.Ordinal)) &&
             candidate.EditorialContext is not null &&
             candidate.EditorialMetadata is not null &&
-            candidate.IsEditorialMetadataCurrentForCut);
+            candidate.EditorialContext.SourceStart == candidate.SourceStart &&
+            candidate.EditorialContext.SourceEnd == candidate.SourceEnd);
         return source is not null && File.Exists(source.SourceMedia.FullPath)
             ? source
             : null;

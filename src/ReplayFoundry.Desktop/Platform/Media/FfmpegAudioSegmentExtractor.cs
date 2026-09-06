@@ -69,9 +69,9 @@ internal sealed class FfmpegAudioSegmentExtractor :
                     maxStandardErrorCharacters:
                         1024 * 1024);
             ProcessRunResult result =
-                await _processRunner.RunAsync(
+                await MediaWorkBudget.RunAsync(_processRunner,
                     processRequest,
-                    cancellationToken);
+                    MediaWorkPriority.Foreground, cancellationToken);
             DateTimeOffset completedAtUtc =
                 DateTimeOffset.UtcNow;
 

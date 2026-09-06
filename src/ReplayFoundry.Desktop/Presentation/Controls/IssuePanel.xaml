@@ -14,11 +14,11 @@
 
         <StackPanel HorizontalAlignment="Center">
             <Border
-                Width="58"
-                Height="58"
+                Width="48"
+                Height="48"
                 HorizontalAlignment="Center"
                 Background="{DynamicResource Brush.SurfaceInset}"
-                BorderBrush="{DynamicResource Brush.StatusInfo}"
+                BorderBrush="Transparent"
                 BorderThickness="1"
                 CornerRadius="8">
                 <controls:IconPath
@@ -34,7 +34,7 @@
             <TextBlock
                 Margin="0,12,0,0"
                 HorizontalAlignment="Center"
-                FontSize="22"
+                FontFamily="{DynamicResource Font.Display}" FontSize="24"
                 FontWeight="SemiBold"
                 Foreground="{DynamicResource Brush.TextPrimary}"
                 Text="{Binding Summary, ElementName=Root}"
@@ -52,12 +52,12 @@
 
         <Border
             Grid.Row="1"
-            Margin="0,24,0,0"
-            Padding="18,14"
+            Margin="0,20,0,0"
+            Padding="0,14"
             Background="{DynamicResource Brush.SurfaceInset}"
             BorderBrush="{DynamicResource Brush.BorderSubtle}"
-            BorderThickness="1"
-            CornerRadius="10">
+            BorderThickness="0,1,0,0"
+            CornerRadius="0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />

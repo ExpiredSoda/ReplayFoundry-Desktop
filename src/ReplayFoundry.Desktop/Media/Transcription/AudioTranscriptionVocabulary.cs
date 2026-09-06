@@ -33,6 +33,8 @@ public enum AudioTranscriptionWarningCode
     ProviderReportedWarning,
     BoundaryClamped,
     WordTimingCanonicalized,
+    SegmentTimingCanonicalized,
+    CorrectedTextAlignment,
 }
 
 public sealed record AudioTranscriptionWarning

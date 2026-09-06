@@ -10,10 +10,11 @@ internal static class Qwen3VlGroundedMetadataResultParser
         string json,
         IReadOnlyList<ClipEditorialMetadataRequest> requests,
         Qwen3VlQualifiedEditorialRuntime runtime,
-        ClipEditorialMetadataGeneratorIdentity identity)
+        ClipEditorialMetadataGeneratorIdentity identity,
+        Dictionary<string, Qwen3VlGroundingPacketReceipt>? verifiedPacketReceipts = null)
     {
         IReadOnlyList<ClipEditorialMetadataBatchOutcome> outcomes =
-            ParseOutcomes(json, requests, runtime, identity);
+            ParseOutcomes(json, requests, runtime, identity, verifiedPacketReceipts);
         if (outcomes.Any(static outcome => !outcome.IsAccepted))
         {
             throw new Qwen3VlOutputParseException(
@@ -27,7 +28,8 @@ internal static class Qwen3VlGroundedMetadataResultParser
             string json,
             IReadOnlyList<ClipEditorialMetadataRequest> requests,
             Qwen3VlQualifiedEditorialRuntime runtime,
-            ClipEditorialMetadataGeneratorIdentity identity)
+            ClipEditorialMetadataGeneratorIdentity identity,
+            Dictionary<string, Qwen3VlGroundingPacketReceipt>? verifiedPacketReceipts = null)
     {
         using JsonDocument document = JsonDocument.Parse(
             json,
@@ -135,10 +137,8 @@ internal static class Qwen3VlGroundedMetadataResultParser
         var acceptedTitles = new Dictionary<
             Qwen3VlGroundedMetadataRerollTitleScope,
             List<Qwen3VlGroundedMetadataRerollTitleReference>>();
-        var groundingPackets = new Dictionary<
-            string,
-            (string RequestSha256, int SourceAttempt, string CandidateId,
-                string FactWitness)>(StringComparer.OrdinalIgnoreCase);
+        var groundingPackets = new Dictionary<string, Qwen3VlGroundingPacketReceipt>(
+            StringComparer.OrdinalIgnoreCase);
         int index = 0;
         foreach (JsonElement result in results.EnumerateArray())
         {
@@ -195,7 +195,8 @@ internal static class Qwen3VlGroundedMetadataResultParser
                 result,
                 request,
                 validation,
-                groundingPackets);
+                groundingPackets,
+                verifiedPacketReceipts);
             JsonElement metadata = Qwen3VlEditorialJson.Object(result, "metadata");
             Qwen3VlEditorialJson.Exact(
                 metadata,
@@ -257,7 +258,10 @@ internal static class Qwen3VlGroundedMetadataResultParser
                             .SupportsNeutralPersonRecovery(outputSchema),
                     creatorAuthorityUsesAudienceFieldsOnly:
                         Qwen3VlGroundedMetadataSchemaCapabilities
-                            .SupportsNeutralPersonRecovery(outputSchema));
+                            .SupportsNeutralPersonRecovery(outputSchema),
+                    allowAutomaticCommentaryAttribution:
+                        Qwen3VlGroundedMetadataSchemaCapabilities
+                            .SupportsCommentaryTiming(outputSchema));
             }
             Qwen3VlGroundedMetadataRerollTitleReference? acceptedTitle = null;
             IReadOnlyList<string> retainedPriorTitles =
@@ -369,6 +373,11 @@ internal static class Qwen3VlGroundedMetadataResultParser
             }
         }
 
+        if (verifiedPacketReceipts is not null)
+        {
+            foreach (var packet in groundingPackets)
+                verifiedPacketReceipts[packet.Key] = packet.Value;
+        }
         return outcomes.AsReadOnly();
     }
 

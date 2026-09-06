@@ -26,10 +26,8 @@ public static class StudioProjectDocumentMapper
             throw new ArgumentOutOfRangeException(nameof(revision));
         }
 
-        StudioProjectSourceSnapshot[] sources = project.Assets
-            .Select(static asset => asset.SourceFullPath)
-            .Concat(project.HiddenMoments.Select(
-                static hidden => hidden.SourceFullPath))
+        StudioProjectSourceSnapshot[] sources = project.SourceMedia
+            .Select(static source => source.FullPath)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(CaptureSource)
             .ToArray();
@@ -51,7 +49,8 @@ public static class StudioProjectDocumentMapper
             sources,
             project.Assets.Select(MapAsset).ToArray(),
             project.HiddenMoments.Select(MapHiddenMoment).ToArray(),
-            recovery);
+            recovery,
+            project.SourceMedia.Select(MapMedia).ToArray());
     }
 
     public static GenerationOutputProject Restore(
@@ -76,7 +75,8 @@ public static class StudioProjectDocumentMapper
             document.FinalizedAtUtc,
             document.ResultCountMode,
             hidden,
-            document.CandidateSetFingerprint);
+            document.CandidateSetFingerprint,
+            document.SourceMedia.Select(RestoreMedia));
     }
 
     private static StudioProjectSourceSnapshot CaptureSource(string fullPath)
@@ -121,7 +121,9 @@ public static class StudioProjectDocumentMapper
             asset.PreferenceFeatures is null
                 ? null
                 : MapPreferenceVector(asset.PreferenceFeatures),
-            asset.Disposition);
+            asset.Disposition,
+            asset.RenderSettings,
+            asset.EditorialAuthoredContextRevision);
 
     private static StudioCaptionTrackDocument MapCaption(
         GenerationCandidateCaptionTrack track) =>
@@ -153,7 +155,7 @@ public static class StudioProjectDocumentMapper
                     overlay.ImageFullPath,
                     overlay.CenterXPercent,
                     overlay.CenterYPercent,
-                    overlay.WidthPercent)).ToArray());
+                    overlay.WidthPercent)).ToArray(), appearance.CaptionTypography);
 
     private static StudioHiddenMomentDocument MapHiddenMoment(
         GenerationHiddenMoment hidden) =>
@@ -208,7 +210,9 @@ public static class StudioProjectDocumentMapper
             asset.PreferenceFeatures is null
                 ? null
                 : RestorePreferenceVector(asset.PreferenceFeatures),
-            asset.Disposition);
+            asset.Disposition,
+            asset.RenderSettings,
+            asset.EditorialAuthoredContextRevision);
 
     private static GenerationCandidateCaptionTrack RestoreCaption(
         StudioCaptionTrackDocument caption) =>
@@ -240,7 +244,7 @@ public static class StudioProjectDocumentMapper
                     overlay.WidthPercent)),
             appearance.CaptionWordLimit,
             appearance.CaptionMaximumWidthPercent,
-            appearance.CaptionFontScalePercent);
+            appearance.CaptionFontScalePercent, appearance.CaptionTypography);
 
     private static GenerationHiddenMoment RestoreHiddenMoment(
         StudioHiddenMomentDocument hidden) =>
@@ -267,7 +271,7 @@ public static class StudioProjectDocumentMapper
             hidden.CaptionSourceSelection,
             hidden.CaptionStyle);
 
-    private static StudioEditorialContextDocument MapEditorialContext(
+    internal static StudioEditorialContextDocument MapEditorialContext(
         ClipEditorialContext context) =>
         new(
             context.CandidateId,
@@ -624,7 +628,7 @@ public static class StudioProjectDocumentMapper
                     word.RelativeEnd,
                     word.AbsoluteSourceStart,
                     word.AbsoluteSourceEnd,
-                    word.ProviderReportedProbability)).ToArray(),
+                    word.ProviderReportedProbability, word.IsEmphasized)).ToArray(),
             segment.ProviderReportedConfidence,
             segment.Language is null
                 ? null
@@ -635,7 +639,7 @@ public static class StudioProjectDocumentMapper
                 new StudioTranscriptionWarningDocument(
                     warning.Code,
                     warning.Message,
-                    warning.SegmentId)).ToArray());
+                    warning.SegmentId)).ToArray(), segment.Speaker, segment.SecondaryText);
 
     private static AudioTranscriptionSegment RestoreTranscriptionSegment(
         StudioTranscriptionSegmentDocument segment) =>
@@ -654,7 +658,7 @@ public static class StudioProjectDocumentMapper
                     word.RelativeEnd,
                     word.AbsoluteSourceStart,
                     word.AbsoluteSourceEnd,
-                    word.ProviderReportedProbability)),
+                    word.ProviderReportedProbability, word.IsEmphasized)),
             segment.ProviderReportedConfidence,
             segment.Language is null
                 ? null
@@ -665,7 +669,7 @@ public static class StudioProjectDocumentMapper
                 new AudioTranscriptionWarning(
                     warning.Code,
                     warning.Message,
-                    warning.SegmentId)));
+                    warning.SegmentId)), segment.Speaker, segment.SecondaryText);
 
     private static StudioEditorialMetadataDocument MapEditorialMetadata(
         ClipEditorialMetadataDraft metadata) =>
@@ -708,7 +712,8 @@ public static class StudioProjectDocumentMapper
                     value.Message,
                     value.SourceRuleCode)).ToArray(),
             metadata.PriorAcceptedTitles.ToArray(),
-            metadata.GroundingAudit);
+            metadata.GroundingAudit,
+            metadata.CopyVersions.ToArray());
 
     private static ClipEditorialMetadataDraft RestoreEditorialMetadata(
         StudioEditorialMetadataDocument metadata) =>
@@ -749,7 +754,8 @@ public static class StudioProjectDocumentMapper
                     value.Message,
                     value.SourceRuleCode)),
             metadata.PriorAcceptedTitles ?? [],
-            metadata.GroundingAudit);
+            metadata.GroundingAudit,
+            metadata.CopyVersions ?? []);
 
     private static StudioPreferenceVectorDocument MapPreferenceVector(
         ClipPreferenceFeatureVector vector) =>
@@ -757,7 +763,7 @@ public static class StudioProjectDocumentMapper
             vector.Features.Select(static value =>
                 new StudioPreferenceFeatureDocument(
                     value.Code,
-                    value.NormalizedValue)).ToArray());
+                    value.NormalizedValue)).ToArray(), vector.Context);
 
     private static ClipPreferenceFeatureVector RestorePreferenceVector(
         StudioPreferenceVectorDocument vector) =>
@@ -765,5 +771,5 @@ public static class StudioProjectDocumentMapper
             vector.Features.Select(static value =>
                 new ClipPreferenceFeature(
                     value.Code,
-                    value.NormalizedValue)));
+                    value.NormalizedValue)), vector.Context);
 }

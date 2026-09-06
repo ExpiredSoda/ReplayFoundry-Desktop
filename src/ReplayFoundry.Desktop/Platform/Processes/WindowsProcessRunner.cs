@@ -116,7 +116,8 @@ internal sealed class WindowsProcessRunner : IProcessRunner
                 process.StandardOutput,
                 request.MaxStandardOutputCharacters,
                 "standard output",
-                linkedSource.Token);
+                linkedSource.Token,
+                request.StandardOutputLine);
 
         Task<string> standardErrorTask =
             ReadBoundedAsync(
@@ -204,7 +205,8 @@ internal sealed class WindowsProcessRunner : IProcessRunner
         StreamReader reader,
         int maximumCharacters,
         string streamName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string>? lineObserver = null)
     {
         char[] buffer =
             ArrayPool<char>.Shared.Rent(
@@ -215,6 +217,7 @@ internal sealed class WindowsProcessRunner : IProcessRunner
                 Math.Min(
                     maximumCharacters,
                     64 * 1024));
+        var pendingLine = lineObserver is null ? null : new StringBuilder();
 
         try
         {
@@ -244,7 +247,22 @@ internal sealed class WindowsProcessRunner : IProcessRunner
                     buffer,
                     0,
                     charactersRead);
+                if (lineObserver is not null)
+                {
+                    for (int index = 0; index < charactersRead; index++)
+                    {
+                        char character = buffer[index];
+                        if (character == '\n')
+                        {
+                            lineObserver(pendingLine!.ToString().TrimEnd('\r'));
+                            pendingLine.Clear();
+                        }
+                        else pendingLine!.Append(character);
+                    }
+                }
             }
+
+            if (pendingLine?.Length > 0) lineObserver!(pendingLine.ToString());
 
             return builder.ToString();
         }

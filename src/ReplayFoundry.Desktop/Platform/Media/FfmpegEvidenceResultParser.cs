@@ -22,7 +22,8 @@ internal static class FfmpegEvidenceResultParser
             IReadOnlyList<VisualEvidenceTarget> targets,
             TimeSpan? visualSignalSampleInterval = null,
             int signalBitDepth =
-                MediaSignalEvidencePolicy.VisualAnalysisBitDepth)
+                MediaSignalEvidencePolicy.VisualAnalysisBitDepth,
+            bool combinedOutput = false)
     {
         ArgumentNullException.ThrowIfNull(targets);
 
@@ -64,16 +65,19 @@ internal static class FfmpegEvidenceResultParser
         var rootWarnings =
             new List<MediaEvidenceWarning>();
 
+        IReadOnlyList<FfmpegMetadataRecord> sceneRecords = FfmpegMetadataParser.Parse(sceneOutput);
+        IReadOnlyList<FfmpegMetadataRecord> intervalRecords = combinedOutput
+            ? sceneRecords.Where(IsIntervalRecord).ToArray()
+            : FfmpegMetadataParser.Parse(visualIntervalOutput);
+        if (combinedOutput) sceneRecords = sceneRecords.Where(record => !IsIntervalRecord(record)).ToArray();
         FfmpegVisualEvidenceRecordParser.ParseSceneProcessRecords(
-            FfmpegMetadataParser.Parse(
-                sceneOutput),
+            sceneRecords,
             accumulators,
             rootWarnings,
             signalBitDepth);
 
         FfmpegVisualEvidenceRecordParser.ParseVisualIntervalProcessRecords(
-            FfmpegMetadataParser.Parse(
-                visualIntervalOutput),
+            intervalRecords,
             accumulators,
             rootWarnings);
 
@@ -91,6 +95,10 @@ internal static class FfmpegEvidenceResultParser
             results,
             rootWarnings);
     }
+
+    private static bool IsIntervalRecord(FfmpegMetadataRecord record) =>
+        record.Tags.TryGetValue(FfmpegEvidenceCommandBuilder.RecordKindMetadataKey, out string? kind) &&
+        kind is FfmpegEvidenceCommandBuilder.BlackRecordKind or FfmpegEvidenceCommandBuilder.FreezeRecordKind;
 
     public static FfmpegAudioEvidenceParseResult
         ParseAudioEvidence(

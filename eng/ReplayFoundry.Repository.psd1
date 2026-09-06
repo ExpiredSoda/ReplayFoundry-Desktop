@@ -47,6 +47,7 @@
         RequiredFiles = @(
             '.replayfoundry-public-source'
             'CHANGELOG.md'
+            'Directory.Build.props'
             'README.md'
             'ReplayFoundry.slnx'
             '.github/workflows/desktop-ci.yml'
@@ -104,9 +105,10 @@
             '.github/workflows/redistributable-ffmpeg.yml'
         )
 
-        DevelopmentDocs = @(
-            'docs/development/brand-assets.md'
-            'docs/development/media-tools.md'
+        PublicationDocs = @(
+            'docs/README.md'
+            'docs/distribution/windows.md'
+            'docs/distribution/third-party-compliance.md'
         )
     }
 }

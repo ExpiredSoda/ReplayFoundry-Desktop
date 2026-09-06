@@ -14,16 +14,17 @@
     </UserControl.Resources>
 
     <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="280" />
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0">
+        <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
             <TextBlock
                 Foreground="{DynamicResource Brush.TextPrimary}"
-                FontSize="26"
+                FontSize="23"
                 FontWeight="SemiBold"
                 Text="Game details" />
             <TextBlock
@@ -57,9 +58,7 @@
             </ListBox>
         </StackPanel>
 
-        <Border
-            Grid.Column="2"
-            Style="{DynamicResource GenerationSetup.SectionCard}">
+        <Border Style="{DynamicResource GenerationSetup.SummaryCard}">
             <StackPanel>
                 <TextBlock
                     Foreground="{DynamicResource Brush.TextPrimary}"

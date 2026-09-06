@@ -16,22 +16,21 @@ internal static class FfmpegVisualIntervalFilterGraphBuilder
     ];
     internal static string Build(
         MediaEvidenceAnalysisRequest request,
-        IReadOnlyList<VisualEvidenceTarget> targets)
+        IReadOnlyList<VisualEvidenceTarget> targets,
+        string? sharedInputBranch = null)
     {
         var graph =
             new StringBuilder();
 
-        FfmpegVisualTargetFilterGraphBuilder.AppendNormalizedSplit(
-            graph,
-            request,
-            targets);
+        if (sharedInputBranch is null)
+            FfmpegVisualTargetFilterGraphBuilder.AppendNormalizedSplit(graph, request, targets);
 
         foreach (VisualEvidenceTarget target in targets)
         {
             graph.Append(';');
             graph.Append(
                 FfmpegEvidenceFilterLabels.Input(
-                    target.TargetKey));
+                    target.TargetKey, sharedInputBranch));
 
             FfmpegVisualTargetFilterGraphBuilder.AppendTargetScope(
                 graph,

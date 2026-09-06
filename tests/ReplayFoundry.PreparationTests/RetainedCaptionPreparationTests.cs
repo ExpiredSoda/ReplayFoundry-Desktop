@@ -148,6 +148,7 @@ internal static partial class GenerationClipRenderingTests
     private sealed class RecordingRetainedTranscriptionProvider :
         IAudioTranscriptionProvider
     {
+        public bool EmitWords { get; init; } = true;
         public InferenceProviderIdentity Identity { get; } =
             new("retained-caption-test", "1.0", "1.0");
 
@@ -197,7 +198,7 @@ internal static partial class GenerationClipRenderingTests
                 relativeEnd,
                 request.AbsoluteSourceOffset + relativeStart,
                 request.AbsoluteSourceOffset + relativeEnd,
-                words);
+                EmitWords ? words : []);
             DateTimeOffset started = DateTimeOffset.UnixEpoch;
             var model = new ModelArtifactManifest(
                 request.ModelSettings.DisplayName,

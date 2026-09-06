@@ -3,6 +3,7 @@ using ReplayFoundry.Desktop.Features.Generate.Rendering;
 using ReplayFoundry.Desktop.Features.Studio.Preview;
 using ReplayFoundry.Desktop.Platform.Processes;
 using ReplayFoundry.Desktop.Platform.Storage;
+using ReplayFoundry.Desktop.Media.Subtitles;
 
 namespace ReplayFoundry.Desktop.Platform.Media;
 
@@ -20,17 +21,20 @@ internal sealed class FfmpegStudioPreviewMediaService :
     private readonly IFfmpegToolLocator _toolLocator;
     private readonly string _cacheRoot;
     private readonly long _maximumCacheBytes;
+    private readonly FfmpegEncodingExecutor? _encoding;
 
     public FfmpegStudioPreviewMediaService(
         IProcessRunner processRunner,
         IFfmpegToolLocator toolLocator,
         string? cacheRoot = null,
-        long maximumCacheBytes = 2L * 1024 * 1024 * 1024)
+        long maximumCacheBytes = 2L * 1024 * 1024 * 1024,
+        bool hardwareEncoding = false)
     {
         _processRunner = processRunner ??
             throw new ArgumentNullException(nameof(processRunner));
         _toolLocator = toolLocator ??
             throw new ArgumentNullException(nameof(toolLocator));
+        if (hardwareEncoding) _encoding = new FfmpegEncodingExecutor(processRunner);
         _cacheRoot = ReplayFoundryLocalDataPaths.Resolve(
             cacheRoot,
             Path.Combine("Cache", "StudioPreview"));
@@ -66,8 +70,11 @@ internal sealed class FfmpegStudioPreviewMediaService :
 
         using (KeyLockLease gate = await AcquireKeyLockAsync(
                    cacheKey.Hash,
+                   request.WorkIntent,
                    cancellationToken))
         {
+            CancellationToken workToken = gate.WorkToken;
+            workToken.ThrowIfCancellationRequested();
             if (TryRetainComplete(
                     finalRoot,
                     finalOutput,
@@ -84,7 +91,7 @@ internal sealed class FfmpegStudioPreviewMediaService :
                 cacheKey,
                 finalRoot,
                 finalOutput,
-                cancellationToken);
+                workToken);
         }
     }
 
@@ -106,9 +113,16 @@ internal sealed class FfmpegStudioPreviewMediaService :
         try
         {
             GenerationClipOutputProfile full =
-                GenerationClipOutputProfile.FromReference(
-                    request.Asset.SourceMedia.PrimaryVideoStream);
+                GenerationClipOutputProfile.FromAsset(request.Asset);
             GenerationClipOutputProfile preview = FitPreview(full);
+            string? timedTextFileName = null;
+            if (request.Asset.RenderSettings.TimedTextOverlays.Count > 0)
+            {
+                timedTextFileName = "timed-text.ass";
+                await File.WriteAllTextAsync(Path.Combine(root, timedTextFileName), StudioTimedTextScript.Build(
+                    request.Asset.RenderSettings.TimedTextOverlays, preview, request.SourceStart, request.SourceEnd),
+                    new System.Text.UTF8Encoding(true), cancellationToken);
+            }
             FfmpegClipRenderCommand command =
                 FfmpegClipRenderCommandBuilder.BuildSegment(
                     request.Asset.SourceMedia,
@@ -120,16 +134,24 @@ internal sealed class FfmpegStudioPreviewMediaService :
                     root,
                     request.Asset.Appearance.VideoEffect,
                     request.Asset.Appearance.VideoEffectIntensityPercent,
-                    request.Asset.Appearance.GraphicOverlays);
-            ProcessRunResult process = await _processRunner.RunAsync(
-                new ProcessRunRequest(
+                    request.Asset.Appearance.GraphicOverlays,
+                    request.Asset.RenderSettings,
+                    timedTextFileName);
+            bool cpuPreview = StudioCpuPreviewPolicy.IsEligible(request);
+            MediaWorkPriority priority = request.WorkIntent == StudioPreviewWorkIntent.BackgroundPrewarm
+                ? MediaWorkPriority.Background : MediaWorkPriority.Foreground;
+            using IDisposable mediaSlot = await MediaWorkBudget.AcquireAsync(cancellationToken, priority,
+                cpuPreview ? MediaWorkKind.CpuForegroundPreview : MediaWorkKind.MediaProcess);
+            var processRequest = new ProcessRunRequest(
                     _toolLocator.LocateFfmpeg(),
-                    command.Arguments,
-                    command.Timeout,
+                    cpuPreview ? StudioCpuPreviewPolicy.ConstrainArguments(command.Arguments) : command.Arguments,
+                    cpuPreview ? TimeSpan.FromSeconds(Math.Min(90, command.Timeout.TotalSeconds)) : command.Timeout,
                     command.WorkingDirectory,
                     64 * 1024,
-                    2 * 1024 * 1024),
-                cancellationToken);
+                    2 * 1024 * 1024);
+            ProcessRunResult process = cpuPreview || _encoding is null
+                ? await _processRunner.RunAsync(processRequest, cancellationToken)
+                : await _encoding.RunAsync(processRequest, cancellationToken);
             if (!process.Succeeded ||
                 !File.Exists(output) ||
                 new FileInfo(output).Length <= 0)
@@ -151,6 +173,7 @@ internal sealed class FfmpegStudioPreviewMediaService :
                 cacheKey.CanonicalInput,
                 System.Text.Encoding.UTF8,
                 cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             Directory.CreateDirectory(_cacheRoot);
             Directory.CreateDirectory(QuarantineRoot);
             StudioPreviewMediaLease lease;
@@ -421,9 +444,14 @@ internal sealed class FfmpegStudioPreviewMediaService :
 
     private async ValueTask<KeyLockLease> AcquireKeyLockAsync(
         string key,
+        StudioPreviewWorkIntent intent,
         CancellationToken cancellationToken)
     {
         KeyLockEntry entry;
+        CancellationTokenSource? background = intent == StudioPreviewWorkIntent.BackgroundPrewarm
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken) : null;
+        CancellationToken workToken = background?.Token ?? cancellationToken;
+        CancellationTokenSource[] superseded;
         lock (_keyLockSync)
         {
             if (!_keyLocks.TryGetValue(key, out entry!))
@@ -432,42 +460,62 @@ internal sealed class FfmpegStudioPreviewMediaService :
                 _keyLocks.Add(key, entry);
             }
             entry.ReferenceCount++;
+            if (background is not null)
+            {
+                entry.BackgroundRequests.Add(background);
+                superseded = entry.ForegroundReferences > 0 ? [background] : [];
+            }
+            else
+            {
+                entry.ForegroundReferences++;
+                superseded = entry.BackgroundRequests.ToArray();
+            }
         }
-
         try
         {
-            await entry.Gate.WaitAsync(cancellationToken);
-            return new KeyLockLease(this, key, entry);
+            // Cancellation can invoke process termination callbacks; never invoke them under the key lock.
+            foreach (var pending in superseded)
+            {
+                try { pending.Cancel(); }
+                catch (ObjectDisposedException) { /* Its owner completed between the snapshot and cancellation. */ }
+            }
+            await entry.Gate.WaitAsync(workToken);
+            return new KeyLockLease(this, key, entry, background, workToken);
         }
         catch
         {
-            ReleaseKeyLockReference(key, entry);
+            ReleaseKeyLockReference(key, entry, background);
             throw;
         }
     }
 
     private void ReleaseKeyLock(
         string key,
-        KeyLockEntry entry)
+        KeyLockEntry entry,
+        CancellationTokenSource? background)
     {
         entry.Gate.Release();
-        ReleaseKeyLockReference(key, entry);
+        ReleaseKeyLockReference(key, entry, background);
     }
 
     private void ReleaseKeyLockReference(
         string key,
-        KeyLockEntry entry)
+        KeyLockEntry entry,
+        CancellationTokenSource? background)
     {
         bool dispose;
         lock (_keyLockSync)
         {
             entry.ReferenceCount--;
+            if (background is not null) entry.BackgroundRequests.Remove(background);
+            else entry.ForegroundReferences--;
             dispose = entry.ReferenceCount == 0;
             if (dispose)
             {
                 _keyLocks.Remove(key);
             }
         }
+        background?.Dispose();
         if (dispose)
         {
             entry.Gate.Dispose();
@@ -478,6 +526,8 @@ internal sealed class FfmpegStudioPreviewMediaService :
     {
         internal SemaphoreSlim Gate { get; } = new(1, 1);
         internal int ReferenceCount { get; set; }
+        internal int ForegroundReferences { get; set; }
+        internal HashSet<CancellationTokenSource> BackgroundRequests { get; } = [];
     }
 
     private sealed class KeyLockLease : IDisposable
@@ -485,20 +535,26 @@ internal sealed class FfmpegStudioPreviewMediaService :
         private FfmpegStudioPreviewMediaService? _owner;
         private readonly string _key;
         private readonly KeyLockEntry _entry;
+        private readonly CancellationTokenSource? _background;
+        internal CancellationToken WorkToken { get; }
 
         internal KeyLockLease(
             FfmpegStudioPreviewMediaService owner,
             string key,
-            KeyLockEntry entry)
+            KeyLockEntry entry,
+            CancellationTokenSource? background,
+            CancellationToken workToken)
         {
             _owner = owner;
             _key = key;
             _entry = entry;
+            _background = background;
+            WorkToken = workToken;
         }
 
         public void Dispose() =>
             Interlocked.Exchange(ref _owner, null)?
-                .ReleaseKeyLock(_key, _entry);
+                .ReleaseKeyLock(_key, _entry, _background);
     }
 
     private sealed record CacheEntry(
@@ -506,7 +562,7 @@ internal sealed class FfmpegStudioPreviewMediaService :
         long Length,
         DateTime LastAccessTimeUtc);
 
-    private static GenerationClipOutputProfile FitPreview(
+    internal static GenerationClipOutputProfile FitPreview(
         GenerationClipOutputProfile full)
     {
         const int maximumLongEdge = 720;
@@ -555,5 +611,5 @@ public static class StudioPreviewMediaFactory
     public static IStudioPreviewMediaService CreateDefault() =>
         new FfmpegStudioPreviewMediaService(
             new WindowsProcessRunner(),
-            new FfmpegToolLocator());
+            new FfmpegToolLocator(), hardwareEncoding: true);
 }

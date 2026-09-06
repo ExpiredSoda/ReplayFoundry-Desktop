@@ -21,7 +21,8 @@ public sealed class AudioTranscriptionOptions
         AudioTranscriptionProcessorHint processorHint,
         TimeSpan maximumProcessDuration,
         AudioTranscriptionOutputFormatPolicy outputFormatPolicy,
-        string policyVersion = CurrentPolicyVersion)
+        string policyVersion = CurrentPolicyVersion,
+        string? initialPrompt = null)
     {
         if (!Enum.IsDefined(languageMode) ||
             !Enum.IsDefined(processorHint) ||
@@ -83,6 +84,9 @@ public sealed class AudioTranscriptionOptions
         MaximumProcessDuration = maximumProcessDuration;
         OutputFormatPolicy = outputFormatPolicy;
         PolicyVersion = policyVersion.Trim();
+        if (initialPrompt?.Length > 2048 || initialPrompt?.Contains('\0') == true)
+            throw new ArgumentException("Transcription vocabulary must be at most 2,048 characters.", nameof(initialPrompt));
+        InitialPrompt = string.IsNullOrWhiteSpace(initialPrompt) ? null : initialPrompt.Trim();
     }
 
     public AudioTranscriptionLanguageMode LanguageMode { get; }
@@ -106,6 +110,7 @@ public sealed class AudioTranscriptionOptions
     public AudioTranscriptionOutputFormatPolicy OutputFormatPolicy { get; }
 
     public string PolicyVersion { get; }
+    public string? InitialPrompt { get; }
 
     public AudioTranscriptionOptions WithLanguage(
         AudioTranscriptionLanguageMode languageMode,
@@ -121,7 +126,7 @@ public sealed class AudioTranscriptionOptions
             ProcessorHint,
             MaximumProcessDuration,
             OutputFormatPolicy,
-            PolicyVersion);
+            PolicyVersion, InitialPrompt);
 
     public static AudioTranscriptionOptions CreateDefaults() =>
         new(
@@ -135,6 +140,14 @@ public sealed class AudioTranscriptionOptions
             AudioTranscriptionProcessorHint.Auto,
             TimeSpan.FromMinutes(10),
             AudioTranscriptionOutputFormatPolicy.StructuredJson);
+
+    public AudioTranscriptionOptions WithTranslationToEnglish(bool translate) => new(
+        LanguageMode, RequestedLanguage, translate, RequireSegmentTimestamps, RequestWordTimestamps,
+        Temperature, ThreadCount, ProcessorHint, MaximumProcessDuration, OutputFormatPolicy, PolicyVersion, InitialPrompt);
+
+    public AudioTranscriptionOptions WithInitialPrompt(string? prompt) => new(
+        LanguageMode, RequestedLanguage, TranslateToEnglish, RequireSegmentTimestamps, RequestWordTimestamps,
+        Temperature, ThreadCount, ProcessorHint, MaximumProcessDuration, OutputFormatPolicy, PolicyVersion, prompt);
 }
 
 public sealed record AudioTranscriptionModelSettings
@@ -145,7 +158,8 @@ public sealed record AudioTranscriptionModelSettings
         string modelFormat,
         string? licenseIdentifier = null,
         string? sourceUrlOrNote = null,
-        string? languageCapabilityDescription = null)
+        string? languageCapabilityDescription = null,
+        AudioTranscriptionModelLanguageCapabilities? languageCapabilities = null)
     {
         if (string.IsNullOrWhiteSpace(modelPath) ||
             !Path.IsPathFullyQualified(modelPath))
@@ -169,6 +183,7 @@ public sealed record AudioTranscriptionModelSettings
         SourceUrlOrNote = Optional(sourceUrlOrNote);
         LanguageCapabilityDescription =
             Optional(languageCapabilityDescription);
+        LanguageCapabilities = languageCapabilities;
     }
 
     public string ModelPath { get; }
@@ -182,6 +197,7 @@ public sealed record AudioTranscriptionModelSettings
     public string? SourceUrlOrNote { get; }
 
     public string? LanguageCapabilityDescription { get; }
+    public AudioTranscriptionModelLanguageCapabilities? LanguageCapabilities { get; }
 
     private static string? Optional(string? value) =>
         string.IsNullOrWhiteSpace(value)

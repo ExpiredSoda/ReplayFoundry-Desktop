@@ -133,6 +133,7 @@ def build_synthesis_result(
     audit = progress.audit
     decoded_sha256 = progress.decoded_sha256
     editorial_rephrase_attestation = progress.editorial_rephrase_attestation
+    isolated_field_count = 2 if progress.isolated_field_authoring is not None else 0
 
     if synthesis_pass_count > MAXIMUM_SYNTHESIS_GENERATIONS:
         raise AssertionError("Grounded synthesis exceeded its bounded generation count.")
@@ -142,7 +143,7 @@ def build_synthesis_result(
         raise AssertionError("Grounded synthesis accepted no complete metadata result.")
     generation_pass_count = synthesis_pass_count + (
         0 if grounding_packet_reused else packet.grounding_pass_count
-    ) + (1 if progress.editorial_rephrase_attempted else 0)
+    ) + (1 if progress.editorial_rephrase_attempted else 0) + isolated_field_count
     return {
         "candidateId": request["candidateId"],
         "attempt": request["attempt"],
@@ -202,6 +203,8 @@ def build_synthesis_result(
             "generationPassCount": generation_pass_count,
             "groundingPassCount": packet.grounding_pass_count,
             "synthesisPassCount": synthesis_pass_count,
+            "isolatedFieldAuthoringPassCount": isolated_field_count,
+            "isolatedFieldAuthoring": progress.isolated_field_authoring,
             "nonRetrospectiveRetryAnchorApplied":
                 sticky_retry_anchor_applied,
             "nonRetrospectiveRetryAnchorSourcePassOrdinal":

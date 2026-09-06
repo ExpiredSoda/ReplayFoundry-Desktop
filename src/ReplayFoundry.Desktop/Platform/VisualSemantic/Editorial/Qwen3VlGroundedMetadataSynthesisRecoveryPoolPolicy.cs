@@ -160,6 +160,8 @@ internal static class Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
             string FileName)>(
         [
             ("pipeline", "grounded_metadata_pipeline.py"),
+            ("isolatedFieldAuthoring", "grounded_metadata_isolated_fields.py"),
+            ("groundingPacketHandoff", "grounded_packet_handoff.py"),
             ("pipelineContract", "grounded_metadata_pipeline_contract.py"),
             ("pipelineAttestation", "grounded_metadata_pipeline_attestation.py"),
             ("pipelineGrounding", "grounded_metadata_pipeline_grounding.py"),
@@ -190,13 +192,31 @@ internal static class Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
             ("groundingValidation", "grounded_metadata_grounding_validation.py"),
             ("structuredDecoding", "structured_decoding.py"),
             ("recoveryPoolPolicy", "grounded_metadata_synthesis_decoding.py"),
+            ("automaticCommentary", "grounded_metadata_automatic_commentary.py"),
+            ("editorialFraming", "grounded_metadata_editorial_framing.py"),
+            ("rephraseCorrections", "grounded_metadata_rephrase_corrections.py"),
+            ("rephraseFrame", "grounded_metadata_rephrase_frame.py"),
         ]);
+
+    internal static IReadOnlyList<(string ModuleName, string FileName)>
+        PreviousResponsibilitySplitGroundedMetadataModules
+    { get; } = Array.AsReadOnly(GroundedMetadataModules
+        .Where(static value => value.ModuleName is not (
+            "automaticCommentary" or "editorialFraming" or "rephraseCorrections" or "rephraseFrame"))
+        .ToArray());
+
+    internal static IReadOnlyList<(string ModuleName, string FileName)>
+        PreviousIsolatedFieldAuthoringGroundedMetadataModules
+    { get; } = Array.AsReadOnly(GroundedMetadataModules
+        .Where(static value => value.ModuleName is not ("isolatedFieldAuthoring" or "groundingPacketHandoff" or
+            "automaticCommentary" or "editorialFraming" or "rephraseCorrections" or "rephraseFrame"))
+        .ToArray());
 
     internal static IReadOnlyList<(string ModuleName, string FileName)>
         PreviousRecoveryCandidateSelectionGroundedMetadataModules
     { get; } =
             Array.AsReadOnly(
-                GroundedMetadataModules
+                PreviousIsolatedFieldAuthoringGroundedMetadataModules
                     .Where(static value => !value.ModuleName.Equals(
                         "pipelineRecoveryCandidateSelection",
                         StringComparison.Ordinal))

@@ -76,7 +76,8 @@ public sealed record StudioClipAppearanceDocument(
     double CaptionFontScalePercent,
     StudioVideoEffectPreset VideoEffect,
     double VideoEffectIntensityPercent,
-    IReadOnlyList<StudioGraphicOverlayDocument> GraphicOverlays);
+    IReadOnlyList<StudioGraphicOverlayDocument> GraphicOverlays,
+    StudioCaptionTypography? CaptionTypography = null);
 
 public sealed record StudioTranscriptionWordDocument(
     string Text,
@@ -84,7 +85,8 @@ public sealed record StudioTranscriptionWordDocument(
     TimeSpan RelativeEnd,
     TimeSpan AbsoluteSourceStart,
     TimeSpan AbsoluteSourceEnd,
-    double? ProviderReportedProbability);
+    double? ProviderReportedProbability,
+    bool IsEmphasized = false);
 
 public sealed record StudioTranscriptionWarningDocument(
     AudioTranscriptionWarningCode Code,
@@ -106,7 +108,9 @@ public sealed record StudioTranscriptionSegmentDocument(
     IReadOnlyList<StudioTranscriptionWordDocument> Words,
     double? ProviderReportedConfidence,
     StudioTranscriptionLanguageDocument? Language,
-    IReadOnlyList<StudioTranscriptionWarningDocument> Warnings);
+    IReadOnlyList<StudioTranscriptionWarningDocument> Warnings,
+    string? Speaker = null,
+    string? SecondaryText = null);
 
 public sealed record StudioCaptionTrackDocument(
     string CandidateId,
@@ -225,14 +229,16 @@ public sealed record StudioEditorialMetadataDocument(
     ClipEditorialMetadataReadiness Readiness,
     IReadOnlyList<StudioEditorialQualityIssueDocument> QualityIssues,
     IReadOnlyList<string>? PriorAcceptedTitles = null,
-    GameKnowledgeInfluenceAudit? GroundingAudit = null);
+    GameKnowledgeInfluenceAudit? GroundingAudit = null,
+    IReadOnlyList<ClipEditorialCopyVersion>? CopyVersions = null);
 
 public sealed record StudioPreferenceFeatureDocument(
     ClipPreferenceFeatureCode Code,
     double NormalizedValue);
 
 public sealed record StudioPreferenceVectorDocument(
-    IReadOnlyList<StudioPreferenceFeatureDocument> Features);
+    IReadOnlyList<StudioPreferenceFeatureDocument> Features,
+    ClipPreferenceContext? Context = null);
 
 public sealed record StudioMediaRationalDocument(
     long Numerator,
@@ -332,7 +338,9 @@ public sealed record StudioProjectAssetDocument(
     StudioEditorialContextDocument? EditorialContext,
     StudioEditorialMetadataDocument? EditorialMetadata,
     StudioPreferenceVectorDocument? PreferenceFeatures,
-    GenerationOutputAssetDisposition Disposition);
+    GenerationOutputAssetDisposition Disposition,
+    StudioRenderSettings? RenderSettings = null,
+    string? EditorialAuthoredContextRevision = null);
 
 public sealed record StudioHiddenMomentDocument(
     string Id,
@@ -421,7 +429,8 @@ public sealed class StudioProjectDocument
         IReadOnlyList<StudioProjectSourceSnapshot> sources,
         IReadOnlyList<StudioProjectAssetDocument> assets,
         IReadOnlyList<StudioHiddenMomentDocument> hiddenMoments,
-        StudioProjectRecoveryState? recovery = null)
+        StudioProjectRecoveryState? recovery = null,
+        IReadOnlyList<StudioMediaDocument>? sourceMedia = null)
     {
         if (schemaVersion is not CurrentSchemaVersion and
                 not LegacySchemaVersion and
@@ -498,8 +507,13 @@ public sealed class StudioProjectDocument
         _sources = Array.AsReadOnly(sourceSnapshot);
         _assets = Array.AsReadOnly(assetSnapshot);
         _hiddenMoments = Array.AsReadOnly(hiddenSnapshot);
+        SourceMedia = Array.AsReadOnly((sourceMedia ?? []).ToArray());
+        if (SourceMedia.Any(static source => source is null))
+            throw new ArgumentException("Studio source media cannot contain null entries.", nameof(sourceMedia));
         Recovery = recovery;
     }
+
+    public IReadOnlyList<StudioMediaDocument> SourceMedia { get; }
 
     private static bool IsBoundedSelectedKnowledge(
         StudioSelectedGameKnowledgeDocument? knowledge)

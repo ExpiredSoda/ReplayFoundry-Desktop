@@ -276,18 +276,24 @@ def validate_request(
     )
 
     profile = _require_object(request["profile"], f"{location}.profile")
-    _require_exact_keys(
-        profile,
-        {
+    profile_keys = {
             "audienceAddress",
             "namingGuidance",
             "reusableDescriptionSignature",
             "defaultTags",
             "voicePerspective",
             "variantIntent",
-        },
+        }
+    if "copyObjective" in profile:
+        profile_keys.add("copyObjective")
+    _require_exact_keys(
+        profile,
+        profile_keys,
         f"{location}.profile",
     )
+    copy_objective = profile.get("copyObjective", "FollowVariant")
+    if not isinstance(copy_objective, str) or copy_objective not in {"FollowVariant", "BalancedActionAndCommentary"}:
+        _fail(UsageOrInputError, f"{location}.profile.copyObjective is unsupported.")
     tags_value = _require_array(
         profile["defaultTags"], f"{location}.profile.defaultTags", maximum=12
     )
@@ -319,6 +325,7 @@ def validate_request(
         "transcripts": transcripts,
         "evidence": evidence,
         "profile": {
+            "copyObjective": copy_objective,
             "audienceAddress": bounded_text(
                 profile["audienceAddress"], f"{location}.profile.audienceAddress", 40
             ),

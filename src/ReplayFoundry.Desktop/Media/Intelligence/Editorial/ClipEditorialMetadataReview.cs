@@ -21,8 +21,30 @@ public static class ClipEditorialMetadataReview
             .ToArray();
     }
 
+    public static string Describe(ClipEditorialMetadataQualityIssue issue)
+    {
+        ArgumentNullException.ThrowIfNull(issue);
+        // Refresh known explanations for older saved drafts without mutating
+        // their retained findings or replacing provider-specific messages.
+        return issue.SourceRuleCode is "UnsupportedCreatorEmbodiment" or
+            "UnsupportedMentalState" or "UnsupportedInterfaceAttribution" or
+            "NonRetrospectiveVoice" or "BalanceNotSatisfied"
+                ? Message(issue.SourceRuleCode)
+                : issue.Message;
+    }
+
     private static string Message(string code) => code switch
     {
+        "UnsupportedCreatorEmbodiment" =>
+            "Check this attribution: it may reuse unreviewed speech or add an action or thought your commentary does not support.",
+        "UnsupportedMentalState" =>
+            "This wording adds a thought that your commentary does not support. Check what it claims you thought.",
+        "UnsupportedInterfaceAttribution" =>
+            "This wording may treat game dialogue or screen text as your own commentary. Check who said it.",
+        "NonRetrospectiveVoice" =>
+            "This draft reads as a scene report. Rewrite it as your perspective on what happened in the clip.",
+        "BalanceNotSatisfied" =>
+            "This draft did not balance your commentary with the visible action. Review and edit the wording; the automatic transcript has not been marked as reviewed.",
         "RerollTitleTooSimilar" =>
             "This reroll stayed too close to earlier copy. Try another reroll for a different narrative angle.",
         "RerollDiversityProvenanceRecomputed" =>

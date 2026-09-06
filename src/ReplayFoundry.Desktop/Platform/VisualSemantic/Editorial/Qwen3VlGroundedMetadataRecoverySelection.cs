@@ -32,7 +32,9 @@ internal static class Qwen3VlGroundedMetadataRecoverySelection
         bool synthesisSanitizationModuleSupported,
         bool editorialRephraseSupported,
         bool rephraseMessageModuleSupported,
-        Qwen3VlGroundedMetadataEditorialRephraseValidation? editorialRephrase)
+        Qwen3VlGroundedMetadataEditorialRephraseValidation? editorialRephrase,
+        bool isolatedFieldAuthoringSupported,
+        bool editorialResponsibilityModulesSupported)
     {
         ArgumentNullException.ThrowIfNull(rejectedValidationRules);
         ArgumentNullException.ThrowIfNull(decodedTextSha256);
@@ -44,8 +46,11 @@ internal static class Qwen3VlGroundedMetadataRecoverySelection
 
         IReadOnlyList<(string ModuleName, string FileName)> expectedModules =
             recoveryCandidateSelectionModuleSupported
-                ? Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
-                    .GroundedMetadataModules
+                ? isolatedFieldAuthoringSupported
+                    ? editorialResponsibilityModulesSupported
+                        ? Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy.GroundedMetadataModules
+                        : Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy.PreviousResponsibilitySplitGroundedMetadataModules
+                    : Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy.PreviousIsolatedFieldAuthoringGroundedMetadataModules
             : synthesisSanitizationModuleSupported
                 ? Qwen3VlGroundedMetadataSynthesisRecoveryPoolPolicy
                     .PreviousRecoveryCandidateSelectionGroundedMetadataModules

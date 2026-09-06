@@ -182,10 +182,14 @@ internal static partial class GenerationClipRenderingTests
         int audioStreamCount = 1,
         string sourceName = "render-source.mkv",
         IReadOnlyList<IReadOnlyList<double>>? scoreSets = null,
-        bool captionsEnabled = false)
+        bool captionsEnabled = false,
+        bool createPhysicalSource = false)
     {
         string root = CreateRoot();
-        string source = TestMediaFactory.CreateSourcePath(sourceName);
+        string source = createPhysicalSource
+            ? Path.Combine(root, sourceName)
+            : TestMediaFactory.CreateSourcePath(sourceName);
+        if (createPhysicalSource) File.WriteAllBytes(source, [1, 2, 3, 4]);
         var selected = new SelectedVideoSource(
             source,
             isReference: true);
@@ -201,7 +205,10 @@ internal static partial class GenerationClipRenderingTests
                             source,
                             hasAudio: hasAudio,
                             audioStreamCount: audioStreamCount),
-                        TestMediaFactory.CreateSnapshot(source)),
+                        createPhysicalSource
+                            ? TestMediaFactory.CreateSnapshot(source, new FileInfo(source).Length,
+                                new DateTimeOffset(File.GetLastWriteTimeUtc(source), TimeSpan.Zero))
+                            : TestMediaFactory.CreateSnapshot(source)),
                 ]);
         GenerationSetupOptions setup =
             PreparedGenerationWorkflowTests.CreateOptions(

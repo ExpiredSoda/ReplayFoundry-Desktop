@@ -156,9 +156,9 @@ internal static partial class GenerationClipRenderingTests
             new StudioPreviewMediaRequest(effect));
 
         TestAssert.Equal(
-            "1.1",
+            "1.3",
             StudioPreviewCacheKey.PolicyVersion,
-            "The gain-preserving audio-mix policy must invalidate previews rendered by the prior cache policy.");
+            "Current frame-clock handling must invalidate previews rendered by the prior cache policy.");
         TestAssert.Equal(
             baseline.Hash,
             captionKey.Hash,
@@ -651,8 +651,7 @@ internal static partial class GenerationClipRenderingTests
             appearance);
         project = project.ReplaceAsset(asset);
         GenerationClipOutputProfile profile =
-            GenerationClipOutputProfile.FromReference(
-                asset.SourceMedia.PrimaryVideoStream);
+            GenerationClipOutputProfile.FromAsset(asset);
         StudioCaptionFrameLayout expectedLayout =
             StudioCaptionPresentationPolicy.CalculateFrameLayout(
                 profile.Width,

@@ -126,7 +126,7 @@ FinishedLabel=Setup finished installing [name]. Select Finish to open it.
 [Tasks]
 Name: "desktopicon"; Description: "Add a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 #if OfferAdvancedAi == "1"
-Name: "advancedai"; Description: "Add Advanced AI (about 12.5 GB download; NVIDIA graphics recommended)"; GroupDescription: "Optional local tools:"; Flags: unchecked
+Name: "advancedai"; Description: "Add Advanced AI (about 12.7 GB download)"; GroupDescription: "Optional local tools (visual AI needs a compatible 16 GB NVIDIA GPU):"; Flags: unchecked
 #endif
 
 [Files]

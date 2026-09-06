@@ -36,7 +36,7 @@ MAXIMUM_ORDINARY_REFINEMENT_PASSES = 3
 MAXIMUM_SYNTHESIS_GENERATIONS = (
     MAXIMUM_ORDINARY_REFINEMENT_PASSES + SYNTHESIS_RECOVERY_POOL_SIZE
 )
-METADATA_SCHEMA_VERSION = "grounded-editorial-metadata-json-schema-1.8"
+METADATA_SCHEMA_VERSION = "grounded-editorial-metadata-json-schema-1.9"
 METADATA_VIDEO_FPS = CORE_FRAMES_PER_SECOND
 METADATA_VIDEO_MIN_FRAMES = CORE_MINIMUM_FRAMES
 METADATA_VIDEO_MAX_FRAMES = CORE_MAXIMUM_FRAMES
@@ -58,6 +58,8 @@ STICKY_RETRY_INVALIDATING_RULES = frozenset({
 })
 GROUNDED_METADATA_MODULE_FILES = (
     ("pipeline", "grounded_metadata_pipeline.py"),
+    ("isolatedFieldAuthoring", "grounded_metadata_isolated_fields.py"),
+    ("groundingPacketHandoff", "grounded_packet_handoff.py"),
     ("pipelineContract", "grounded_metadata_pipeline_contract.py"),
     ("pipelineAttestation", "grounded_metadata_pipeline_attestation.py"),
     ("pipelineGrounding", "grounded_metadata_pipeline_grounding.py"),
@@ -89,6 +91,10 @@ GROUNDED_METADATA_MODULE_FILES = (
     ("groundingValidation", "grounded_metadata_grounding_validation.py"),
     ("structuredDecoding", "structured_decoding.py"),
     ("recoveryPoolPolicy", "grounded_metadata_synthesis_decoding.py"),
+    ("automaticCommentary", "grounded_metadata_automatic_commentary.py"),
+    ("editorialFraming", "grounded_metadata_editorial_framing.py"),
+    ("rephraseCorrections", "grounded_metadata_rephrase_corrections.py"),
+    ("rephraseFrame", "grounded_metadata_rephrase_frame.py"),
 )
 @dataclass(frozen=True)
 class GroundingPacket:

@@ -231,7 +231,7 @@ public sealed class StudioGraphicOverlayEditorViewModel : INotifyPropertyChanged
             overlays,
             current.CaptionWordLimit,
             current.CaptionMaximumWidthPercent,
-            current.CaptionFontScalePercent);
+            current.CaptionFontScalePercent, current.CaptionTypography);
         _outputEditor!.ReplaceAsset(
             _project!.Id,
             _asset.WithStudioEdits(_asset.SourceStart, _asset.SourceEnd, appearance));

@@ -6,6 +6,8 @@ using ReplayFoundry.Desktop.Features.Generate.Editorial.GameKnowledge;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Settings;
 using ReplayFoundry.Desktop.Presentation.Commands;
+// Immutable saved wording for display/restore; never supplies inference authority.
+using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialCopyVersion;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 
@@ -24,6 +26,9 @@ public sealed class StudioEditorialMetadataViewModel :
     private readonly AsyncDelegateCommand _refreshGameContextCommand;
     private readonly DelegateCommand _removeCachedGameContextCommand;
     private readonly DelegateCommand _saveProfileCommand;
+    private readonly DelegateCommand _restoreCopyCommand;
+    private ClipEditorialCopyVersion? _selectedCopyVersion;
+    private string? _copyContextRevision;
     private GenerationOutputProject? _project;
     private GenerationOutputAsset? _asset;
     private CancellationTokenSource? _generationCancellation;
@@ -72,21 +77,7 @@ public sealed class StudioEditorialMetadataViewModel :
         _rerollPreference = rerollPreference ??
             new EditorialRerollPreferenceState(
                 new InMemoryEditorialRerollPreferenceStore());
-        VariantChoices =
-        [
-            new(
-                StudioEditorialVariant.DirectAction,
-                "Straightforward",
-                "Say clearly what happens in the clip."),
-            new(
-                StudioEditorialVariant.SpecificCuriosity,
-                "Curiosity",
-                "Create interest without giving away the result."),
-            new(
-                StudioEditorialVariant.OutcomeFocused,
-                "Lead with the result",
-                "Start with the clearest visible result."),
-        ];
+        VariantChoices = StudioEditorialVariantCatalog.CreateChoices();
         _selectedVariantChoice = VariantChoices[0];
         _preferenceRecorder = preferenceRecorder;
         _saveCommand = new DelegateCommand(Save, CanSave);
@@ -109,6 +100,7 @@ public sealed class StudioEditorialMetadataViewModel :
             SaveProfile,
             () => !_isHostBusy &&
                   !IsGenerating);
+        _restoreCopyCommand = new DelegateCommand(RestoreCopy, CanRestoreCopy);
         _rerollPreference.Changed += RerollPreference_Changed;
         LoadProfile();
     }
@@ -217,7 +209,48 @@ public sealed class StudioEditorialMetadataViewModel :
     public string DescriptionCharacterCount =>
         $"{Description.Length}/{_service.MaximumDescriptionLength}";
 
+    public string PackagingGuidance =>
+        StudioGameContextPresentation.PackagingGuidance(Title, Description);
+
+    public IReadOnlyList<ClipEditorialCopyVersion> CopyVersions =>
+        _asset?.EditorialMetadata?.CopyVersions.Reverse().ToArray() ?? [];
+
+    public bool HasCopyVersions => CopyVersions.Count > 0;
+
+    public ClipEditorialCopyVersion? SelectedCopyVersion
+    {
+        get => _selectedCopyVersion;
+        set
+        {
+            _selectedCopyVersion = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedCopyPreview));
+            _restoreCopyCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string SelectedCopyPreview => SelectedCopyVersion?.Preview ?? "Select an earlier version to compare.";
+    public ICommand RestoreCopyCommand => _restoreCopyCommand;
+
+    private bool CanRestoreCopy() => _project?.IsFinalized == false &&
+        !_isHostBusy && !IsGenerating && SelectedCopyVersion is { } version &&
+        _asset?.EditorialContext is not null &&
+        version.ContextFingerprint == _copyContextRevision;
+
+    private void RestoreCopy()
+    {
+        if (!CanRestoreCopy() || SelectedCopyVersion is not { } version) return;
+        _title = version.Title;
+        _description = version.Description;
+        _tags = string.Join(", ", version.Tags);
+        _status = "Earlier wording loaded for comparison. Save to use it.";
+        NotifyState();
+    }
+
     public string Status => _status;
+
+    public bool HasCopyReview =>
+        _asset?.EditorialMetadata?.QualityIssues.Count > 0;
 
     public string DraftState => HasUnsavedChanges
         ? "Unsaved"
@@ -242,19 +275,10 @@ public sealed class StudioEditorialMetadataViewModel :
     public string ContextAuthoritySummary =>
         StudioGameContextPresentation.BuildContextAuthoritySummary(_asset);
 
-    public bool ContextNeedsReview =>
-        StudioGameContextPresentation.IsGroundingReceiptStale(_asset) ||
-        _asset?.EditorialMetadata?.GroundingAudit?.NeedsReview == true ||
-        _asset?.EditorialContext?.EditorialBrief?.CandidateClaimCount > 0;
+    public bool ContextNeedsReview => StudioGameContextPresentation.ContextNeedsReview(_asset);
 
     public string ContextReviewSummary =>
-        StudioGameContextPresentation.IsGroundingReceiptStale(_asset)
-            ? "The clip, captions, or saved game info changed after this was written. Your wording is unchanged; refresh it when you want it to use the update."
-            : _asset?.EditorialMetadata?.GroundingAudit?.NeedsReview == true
-            ? "This title and description are broad. Check them or try another angle; the clip is still ready to use."
-            : _asset?.EditorialContext?.EditorialBrief?.CandidateClaimCount > 0
-                ? "Unconfirmed game details, speech hints, and screen text were left out."
-                : "Only verified details were used.";
+        StudioGameContextPresentation.BuildContextReviewSummary(_asset);
 
     public string CanonicalGameContextText =>
         _gameContextReceipt.CanonicalGameTitle;
@@ -274,38 +298,17 @@ public sealed class StudioEditorialMetadataViewModel :
         _gameContextReceipt.SupportedClaims.Count > 0;
 
     public string SupportedGameContextClaimsText =>
-        _gameContextReceipt.SupportedClaims.Count == 0
-            ? "No verified public game details were used."
-            : string.Join(Environment.NewLine,
-                _gameContextReceipt.SupportedClaims.Take(4).Select(claim =>
-                    $"{claim.Label}: " +
-                    $"{StudioGameContextPresentation.BoundDisplay(claim.Value, 180)} " +
-                    $"({claim.SourceTitle})"));
+        StudioGameContextPresentation.BuildSupportedGameContextClaimsText(_gameContextReceipt);
 
     public bool HasAmbiguousGameContextSuggestions =>
         StudioGameContextPresentation
             .AmbiguousKnowledgeClaims(_asset).Count > 0;
 
     public string AmbiguousGameContextSuggestionsText =>
-        StudioGameContextPresentation
-            .AmbiguousKnowledgeClaims(_asset).Count == 0
-            ? "No unconfirmed mission, location, or story detail is waiting."
-            : string.Join(Environment.NewLine,
-                StudioGameContextPresentation
-                    .AmbiguousKnowledgeClaims(_asset)
-                    .Take(4)
-                    .Select(claim =>
-                        $"Likely {StudioGameContextPresentation.ClaimLabel(claim.Kind)}: " +
-                        StudioGameContextPresentation.BoundDisplay(
-                            claim.Value,
-                            180)));
+        StudioGameContextPresentation.BuildAmbiguousGameContextSuggestionsText(_asset);
 
     public string GameContextComponentsText =>
-        _gameContextReceipt.Components.Count == 0
-            ? "No saved game-info sections."
-            : string.Join(" · ", _gameContextReceipt.Components.Select(
-                static component =>
-                    $"{component.Kind}: {component.Completeness}"));
+        StudioGameContextPresentation.BuildGameContextComponentsText(_gameContextReceipt);
 
     public bool CanRefreshPublicGameContext =>
         _gameContextReceipt.CanRefresh;
@@ -337,11 +340,8 @@ public sealed class StudioEditorialMetadataViewModel :
 
     public string SaveButtonText => "Save changes";
 
-    public string SaveGuidance => HasUnsavedChanges
-        ? "Add to queue will save these changes too."
-        : _asset?.HasApprovedEditorialMetadata == true
-            ? "Reviewed. You can still make changes."
-            : "Ready to use. Review is optional.";
+    public string SaveGuidance => StudioGameContextPresentation.SaveGuidance(
+        HasUnsavedChanges, _asset?.HasApprovedEditorialMetadata == true, HasCopyReview);
 
     public bool IsGenerating => _isGenerating || _isGameContextUpdating;
 
@@ -362,7 +362,8 @@ public sealed class StudioEditorialMetadataViewModel :
         : UsesLocalAiForRerolls
             ? IsAiAvailable
                 ? "Local AI will write a different version. Your current draft stays in place if it cannot finish."
-                : "Local AI is not ready. Check Advanced AI in Settings before trying again."
+                : _service.AiUnavailableReason ??
+                    "Local AI is not ready. Check Advanced AI in Settings before trying again."
             : "Replay Foundry will create a quick local rewrite.";
 
     public IReadOnlyList<StudioEditorialVariantChoice> VariantChoices
@@ -416,6 +417,9 @@ public sealed class StudioEditorialMetadataViewModel :
     {
         _project = project;
         _asset = asset;
+        _copyContextRevision = asset?.EditorialContext is not null && asset.EditorialMetadata?.CopyVersions.Count > 0
+            ? StudioEditorialContextRevision.CreateDurable(asset.CreateCurrentCutEditorialContext()) : null;
+        _selectedCopyVersion = CopyVersions.FirstOrDefault();
         LoadProfile();
         LoadDraft();
     }
@@ -927,7 +931,13 @@ public sealed class StudioEditorialMetadataViewModel :
             nameof(DescriptionSignature),
             nameof(TitleCharacterCount),
             nameof(DescriptionCharacterCount),
+            nameof(PackagingGuidance),
+            nameof(CopyVersions),
+            nameof(HasCopyVersions),
+            nameof(SelectedCopyVersion),
+            nameof(SelectedCopyPreview),
             nameof(Status),
+            nameof(HasCopyReview),
             nameof(DraftState),
             nameof(MetadataOriginText),
             nameof(WhyThisTitleText),
@@ -976,6 +986,7 @@ public sealed class StudioEditorialMetadataViewModel :
         _refreshGameContextCommand.RaiseCanExecuteChanged();
         _removeCachedGameContextCommand.RaiseCanExecuteChanged();
         _saveProfileCommand.RaiseCanExecuteChanged();
+        _restoreCopyCommand.RaiseCanExecuteChanged();
     }
 
     private void OnPropertyChanged(

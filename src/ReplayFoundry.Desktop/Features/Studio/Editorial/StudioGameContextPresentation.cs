@@ -7,6 +7,14 @@ namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 
 internal static class StudioGameContextPresentation
 {
+    internal static string SaveGuidance(bool hasUnsavedChanges, bool isApproved, bool hasCopyReview) => hasUnsavedChanges
+        ? "Add to queue will save these changes too."
+        : isApproved
+            ? "Reviewed. You can still make changes."
+        : hasCopyReview
+            ? "Copy needs review. You can still add this clip to the queue."
+            : "Ready to use. Review is optional.";
+
     internal static string BuildContextUsedSummary(
         GenerationOutputAsset? asset)
     {
@@ -255,4 +263,51 @@ internal static class StudioGameContextPresentation
             labels.Add("spoken dialogue");
         }
     }
+
+    internal static string BuildContextReviewSummary(GenerationOutputAsset? asset) =>
+        StudioGameContextPresentation.IsGroundingReceiptStale(asset)
+            ? "The clip, captions, or saved game info changed after this was written. Your wording is unchanged; refresh it when you want it to use the update."
+            : asset?.EditorialMetadata?.GroundingAudit?.NeedsReview == true
+            ? "This title and description are broad. Check them or try another angle; the clip is still ready to use."
+            : asset?.EditorialContext?.EditorialBrief?.CandidateClaimCount > 0
+                ? "Unconfirmed game details, speech hints, and screen text were left out."
+                : "Only verified details were used.";
+
+    internal static string BuildSupportedGameContextClaimsText(GameKnowledgeContextReceipt receipt) =>
+        receipt.SupportedClaims.Count == 0
+            ? "No verified public game details were used."
+            : string.Join(Environment.NewLine,
+                receipt.SupportedClaims.Take(4).Select(claim =>
+                    $"{claim.Label}: " +
+                    $"{StudioGameContextPresentation.BoundDisplay(claim.Value, 180)} " +
+                    $"({claim.SourceTitle})"));
+
+    internal static string BuildAmbiguousGameContextSuggestionsText(GenerationOutputAsset? asset) =>
+        StudioGameContextPresentation
+            .AmbiguousKnowledgeClaims(asset).Count == 0
+            ? "No unconfirmed mission, location, or story detail is waiting."
+            : string.Join(Environment.NewLine,
+                StudioGameContextPresentation
+                    .AmbiguousKnowledgeClaims(asset)
+                    .Take(4)
+                    .Select(claim =>
+                        $"Likely {StudioGameContextPresentation.ClaimLabel(claim.Kind)}: " +
+                        StudioGameContextPresentation.BoundDisplay(
+                            claim.Value,
+                            180)));
+
+    internal static string BuildGameContextComponentsText(GameKnowledgeContextReceipt receipt) =>
+        receipt.Components.Count == 0
+            ? "No saved game-info sections."
+            : string.Join(" · ", receipt.Components.Select(
+                static component =>
+                    $"{component.Kind}: {component.Completeness}"));
+
+    internal static string PackagingGuidance(string title, string description) =>
+        ClipAudiencePackagingAssessment.Evaluate(title, description).Summary;
+    internal static bool ContextNeedsReview(GenerationOutputAsset? asset) =>
+        IsGroundingReceiptStale(asset) ||
+        asset?.EditorialMetadata?.GroundingAudit?.NeedsReview == true ||
+        asset?.EditorialContext?.EditorialBrief?.CandidateClaimCount > 0;
+
 }

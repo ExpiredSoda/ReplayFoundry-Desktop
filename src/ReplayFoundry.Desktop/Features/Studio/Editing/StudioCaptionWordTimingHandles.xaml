@@ -1,0 +1,24 @@
+<UserControl x:Class="ReplayFoundry.Desktop.Features.Studio.Editing.StudioCaptionWordTimingHandles"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Height="32" MinWidth="90">
+    <UserControl.Resources>
+        <Style x:Key="TimingHandle" TargetType="Thumb">
+            <Setter Property="Width" Value="12" /><Setter Property="Height" Value="28" />
+            <Setter Property="Focusable" Value="True" /><Setter Property="Cursor" Value="SizeWE" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Thumb">
+                <Border Background="{DynamicResource Brush.StatusInfo}" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Brush.TextPrimary}">
+                    <Border Width="2" Height="12" Background="{DynamicResource Brush.SurfaceInset}" />
+                </Border>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+    </UserControl.Resources>
+    <Canvas x:Name="TrackCanvas" SizeChanged="OnTrackSizeChanged" Background="Transparent">
+        <Border x:Name="Track" Height="6" Canvas.Top="12" Canvas.Left="6" CornerRadius="3" Background="{DynamicResource Brush.SurfaceInset}" />
+        <Border x:Name="SelectedRange" Height="6" Canvas.Top="12" CornerRadius="3" Background="{DynamicResource Brush.StatusInfo}" Opacity="0.5" />
+        <Thumb x:Name="StartHandle" Canvas.Top="1" Style="{StaticResource TimingHandle}" AutomationProperties.Name="Drag word start time"
+            DragStarted="OnDragStarted" DragDelta="OnDragDelta" DragCompleted="OnDragCompleted" KeyDown="OnHandleKeyDown" />
+        <Thumb x:Name="EndHandle" Canvas.Top="1" Style="{StaticResource TimingHandle}" AutomationProperties.Name="Drag word end time"
+            DragStarted="OnDragStarted" DragDelta="OnDragDelta" DragCompleted="OnDragCompleted" KeyDown="OnHandleKeyDown" />
+        <TextBlock x:Name="UnsetHint" Canvas.Top="7" Style="{DynamicResource Text.Meta}" Text="Set both times or realign to use the handles." />
+    </Canvas>
+</UserControl>

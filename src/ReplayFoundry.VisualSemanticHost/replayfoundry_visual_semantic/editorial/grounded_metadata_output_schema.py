@@ -28,6 +28,12 @@ def title_body_maximum(hashtag: str) -> int:
 
 
 def metadata_schema(request: dict[str, Any]) -> tuple[str, str]:
+    # Creator authority uses title_body_maximum for its typed profile. Resolve
+    # these runtime policy helpers here without a module-initialization cycle.
+    from .grounded_metadata_creator_authority import (
+        _requires_balanced_copy, balanced_copy_field_plan,
+    )
+
     linked_matches = [
         item
         for item in (request.get("gameKnowledge") or {}).get("matches", [])
@@ -98,6 +104,19 @@ def metadata_schema(request: dict[str, Any]) -> tuple[str, str]:
         ],
         "additionalProperties": False,
     }
+    if _requires_balanced_copy(request):
+        plan = balanced_copy_field_plan(
+            request["profile"]["variantIntent"], title_body_maximum(request["game"]["hashtag"]),
+        )
+        field = plan["attributedThoughtField"]
+        maximum = schema["properties"][field]["maxLength"]
+        # XGrammar 0.2.2 uses pattern instead of separate min/maxLength.
+        # Bound every alternative itself; no lookaround or semantic assertions.
+        branches = [
+            opening + " " + r'[^"\\\r\n]' + "{1," + str(maximum - len(opening) - 1) + "}"
+            for opening in plan["allowedAttributionOpenings"]
+        ]
+        schema["properties"][field]["pattern"] = "^(" + "|".join(branches) + ")$"
     canonical = json.dumps(
         schema,
         ensure_ascii=False,

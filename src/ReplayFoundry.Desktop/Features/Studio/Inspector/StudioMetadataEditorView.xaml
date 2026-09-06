@@ -5,7 +5,7 @@
     <Border
         Margin="0,12,0,8"
         AutomationProperties.Name="Clip title and description editor"
-        Style="{DynamicResource Control.CanvasInsetCard}"
+        Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
         Visibility="{Binding IsMetadataEditorVisible, Converter={StaticResource BoolToVisibility}}">
         <StackPanel>
             <Grid>
@@ -33,8 +33,25 @@
             <TextBlock
                 Margin="0,4,0,12"
                 Style="{DynamicResource Text.Meta}"
-                Text="Edit what viewers will see. Adding this clip to the queue also saves valid changes. Review is optional."
+                Text="Edit what viewers will see. Adding this clip to the queue also saves valid changes."
                 TextWrapping="Wrap" />
+
+            <TextBlock
+                Margin="0,0,0,12"
+                AutomationProperties.Name="Title and description review status"
+                AutomationProperties.LiveSetting="Polite"
+                Text="{Binding Editorial.Status}"
+                TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Meta}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Editorial.HasCopyReview}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.StatusWarning}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
 
             <Border
                 Margin="0,0,0,12"
@@ -98,6 +115,13 @@
                 Text="{Binding Editorial.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 TextWrapping="Wrap" />
 
+            <TextBlock
+                Margin="0,8,0,0"
+                AutomationProperties.Name="Title and description writing guidance"
+                Style="{DynamicResource Text.Meta}"
+                Text="{Binding Editorial.PackagingGuidance}"
+                TextWrapping="Wrap" />
+
             <TextBlock Margin="0,10,0,0" Style="{DynamicResource Text.FormLabel}" Text="Tags" />
             <TextBox
                 Margin="0,4,0,0"
@@ -107,12 +131,6 @@
                 Style="{DynamicResource Control.FormTextBox}"
                 Text="{Binding Editorial.Tags, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-            <TextBlock
-                Margin="0,10,0,0"
-                AutomationProperties.LiveSetting="Polite"
-                Style="{DynamicResource Text.Meta}"
-                Text="{Binding Editorial.Status}"
-                TextWrapping="Wrap" />
             <TextBlock
                 Margin="0,5,0,0"
                 FontWeight="SemiBold"
@@ -165,6 +183,22 @@
                         Style="{DynamicResource Control.StudioSecondaryButton}" />
                 </StackPanel>
             </Border>
+
+            <Expander Margin="0,12,0,0" Header="Compare earlier versions"
+                      Visibility="{Binding Editorial.HasCopyVersions, Converter={StaticResource BoolToVisibility}}"
+                      Style="{DynamicResource Control.QuietExpander}">
+                <StackPanel Margin="0,8,0,0">
+                    <ComboBox AutomationProperties.Name="Earlier title and description"
+                              DisplayMemberPath="Title" ItemsSource="{Binding Editorial.CopyVersions}"
+                              SelectedItem="{Binding Editorial.SelectedCopyVersion, Mode=TwoWay}" />
+                    <TextBlock Margin="0,8,0,0" Text="{Binding Editorial.SelectedCopyPreview}"
+                               TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                    <Button Margin="0,8,0,0" Content="Load this version" Command="{Binding Editorial.RestoreCopyCommand}"
+                            Style="{DynamicResource Control.StudioSecondaryButton}" />
+                    <TextBlock Margin="0,6,0,0" Text="Earlier wording can be loaded when the clip and captions still match."
+                               TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                </StackPanel>
+            </Expander>
 
             <Expander
                 Margin="0,12,0,0"

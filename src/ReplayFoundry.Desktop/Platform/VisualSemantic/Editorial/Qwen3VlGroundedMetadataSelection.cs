@@ -9,6 +9,7 @@ internal static class Qwen3VlGroundedMetadataSelection
         new(StringComparer.Ordinal)
         {
             "EditorialFrameDrift",
+            "BalanceNotSatisfied",
             "ThirdPersonCreatorFraming",
             "UnsupportedCreatorEmbodiment",
             "GenericOpening",
@@ -305,7 +306,9 @@ internal static class Qwen3VlGroundedMetadataSelection
         bool synthesisSanitizationModuleSupported = true,
         bool editorialRephraseSupported = true,
         bool rephraseMessageModuleSupported = true,
-        Qwen3VlGroundedMetadataEditorialRephraseValidation? editorialRephrase = null)
+        Qwen3VlGroundedMetadataEditorialRephraseValidation? editorialRephrase = null,
+        bool isolatedFieldAuthoringSupported = true,
+        bool editorialResponsibilityModulesSupported = true)
         => Qwen3VlGroundedMetadataRecoverySelection.Validate(
             synthesisPassCount,
             rejectedValidationRules,
@@ -335,7 +338,9 @@ internal static class Qwen3VlGroundedMetadataSelection
             synthesisSanitizationModuleSupported,
             editorialRephraseSupported,
             rephraseMessageModuleSupported,
-            editorialRephrase);
+            editorialRephrase,
+            isolatedFieldAuthoringSupported,
+            editorialResponsibilityModulesSupported);
 
     internal static bool IsKnownValidationRule(string value) =>
         ValidationRuleCodes.Contains(value);

@@ -140,11 +140,11 @@ internal static partial class UiUxApplicationSurfaceTests
 
             string[] filterLabelNames =
             [
-                "SEARCH TITLES",
-                "STATUS",
-                "FROM",
-                "TO",
-                "ORDER",
+                "Search titles",
+                "Status",
+                "From",
+                "To",
+                "Order",
             ];
             TextBlock[] filterLabels = EnumerateVisualDescendants<TextBlock>(
                     historyContent)

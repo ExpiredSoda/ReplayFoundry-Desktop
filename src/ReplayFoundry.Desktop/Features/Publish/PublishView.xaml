@@ -7,7 +7,7 @@
     xmlns:sections="clr-namespace:ReplayFoundry.Desktop.Features.Publish.Sections"
     Background="Transparent">
     <controls:WorkspaceScrollViewport CueText="More publishing activity below">
-        <Grid MaxWidth="1600" Margin="20" HorizontalAlignment="Stretch">
+        <Grid MaxWidth="1600" Margin="8" HorizontalAlignment="Stretch">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />

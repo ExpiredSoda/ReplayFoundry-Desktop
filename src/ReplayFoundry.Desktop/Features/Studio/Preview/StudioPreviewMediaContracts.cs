@@ -10,23 +10,29 @@ public enum StudioPreviewRangeMode
     ExactSelection,
 }
 
+public enum StudioPreviewWorkIntent { Foreground, BackgroundPrewarm }
+
 public sealed class StudioPreviewMediaRequest
 {
     public StudioPreviewMediaRequest(
         GenerationOutputAsset asset,
         StudioPreviewRangeMode rangeMode =
-            StudioPreviewRangeMode.EditableEnvelope)
+            StudioPreviewRangeMode.EditableEnvelope,
+        StudioPreviewWorkIntent workIntent = StudioPreviewWorkIntent.Foreground)
     {
         Asset = asset ?? throw new ArgumentNullException(nameof(asset));
-        if (!Enum.IsDefined(rangeMode))
+        if (!Enum.IsDefined(rangeMode) || !Enum.IsDefined(workIntent))
         {
             throw new ArgumentOutOfRangeException(nameof(rangeMode));
         }
-        RangeMode = rangeMode;
-        SourceStart = rangeMode == StudioPreviewRangeMode.ExactSelection
+        WorkIntent = workIntent;
+        // Loudness processing depends on the input window. Match the final cut exactly
+        // when it is enabled instead of normalizing the wider trim envelope differently.
+        RangeMode = asset.RenderSettings.AudioMastering.NormalizeLoudness ? StudioPreviewRangeMode.ExactSelection : rangeMode;
+        SourceStart = RangeMode == StudioPreviewRangeMode.ExactSelection
             ? asset.SourceStart
             : StudioClipBoundaryPolicy.GetEarliestStart(asset);
-        SourceEnd = rangeMode == StudioPreviewRangeMode.ExactSelection
+        SourceEnd = RangeMode == StudioPreviewRangeMode.ExactSelection
             ? asset.SourceEnd
             : StudioClipBoundaryPolicy.GetLatestEnd(asset);
         if (SourceEnd <= SourceStart)
@@ -39,6 +45,7 @@ public sealed class StudioPreviewMediaRequest
 
     public GenerationOutputAsset Asset { get; }
     public StudioPreviewRangeMode RangeMode { get; }
+    public StudioPreviewWorkIntent WorkIntent { get; }
     public TimeSpan SourceStart { get; }
     public TimeSpan SourceEnd { get; }
     public TimeSpan Duration => SourceEnd - SourceStart;

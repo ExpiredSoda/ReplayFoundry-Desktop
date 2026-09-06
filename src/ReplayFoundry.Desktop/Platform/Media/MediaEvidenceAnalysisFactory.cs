@@ -15,6 +15,7 @@ public static class MediaEvidenceAnalysisFactory
 
         return new FfmpegEvidenceAnalyzer(
             processRunner,
-            toolLocator);
+            toolLocator,
+            useCombinedVisualPass: true);
     }
 }

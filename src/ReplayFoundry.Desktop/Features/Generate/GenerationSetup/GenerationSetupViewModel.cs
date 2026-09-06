@@ -80,7 +80,8 @@ public sealed class GenerationSetupViewModel :
             new AudioStepViewModel(
                 Draft,
                 audioRoleMemory,
-                audioAuditionService);
+                audioAuditionService,
+                languageCapabilities: effectiveCapabilities.CaptionLanguageCapabilities);
 
         ClipGoalsStep =
             new ClipGoalsStepViewModel(Draft);

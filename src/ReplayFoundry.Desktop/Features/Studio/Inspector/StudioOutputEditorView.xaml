@@ -1,0 +1,136 @@
+<UserControl x:Class="ReplayFoundry.Desktop.Features.Studio.Inspector.StudioOutputEditorView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Inspector">
+    <Border Margin="0,12,0,8" Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
+        AutomationProperties.Name="Output frame and composition"
+        Visibility="{Binding IsClipBoundaryEditorVisible, Converter={StaticResource BoolToVisibility}}">
+        <Expander Header="Canvas &amp; export" Style="{DynamicResource Control.DisclosureExpander}">
+        <StackPanel DataContext="{Binding Output}" IsEnabled="{Binding CanEdit}">
+            <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Frame &amp; composition" />
+            <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="Set the output shape and source regions. Changes save automatically and update the preview." TextWrapping="Wrap" />
+            <Expander Margin="0,0,0,8" Header="Saved game layouts" Style="{DynamicResource Control.DisclosureExpander}">
+                <StackPanel Margin="0,6,0,0">
+                    <ComboBox ItemsSource="{Binding LayoutPresets}" SelectedItem="{Binding SelectedLayoutPreset}" AutomationProperties.Name="Reusable game layout" />
+                    <TextBlock Margin="0,7,0,0" Style="{DynamicResource Text.Meta}" Text="Layout name" />
+                    <TextBox Text="{Binding LayoutPresetName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Layout preset name" />
+                    <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="Game or series (optional)" />
+                    <TextBox Text="{Binding LayoutPresetGame, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Layout preset game" />
+                    <Button Margin="0,7,0,0" Content="Save this layout" Command="{Binding SaveLayoutPresetCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" />
+                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="Saves the canvas, gameplay, facecam, background and HUD positions for reuse. Verify source regions on each recording." TextWrapping="Wrap" />
+                </StackPanel>
+            </Expander>
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Publishing preset" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Publishing platform preset" ItemsSource="{Binding PlatformPresets}"
+                DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding PlatformPreset, Mode=TwoWay}" />
+            <TextBlock Margin="0,0,0,8"
+                Style="{DynamicResource Text.Meta}"
+                Text="Platform presets use portrait video and a caption safe area. Export includes editable publishing text and subtitle files beside the video."
+                TextWrapping="Wrap" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Output canvas" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Output canvas" ItemsSource="{Binding Canvases}" SelectedItem="{Binding Canvas, Mode=TwoWay}" />
+            <TextBlock Style="{DynamicResource Text.Meta}"
+                Text="Fit keeps the full region; Fill crops to the frame. FacecamTop stacks and fills gameplay; FacecamTopFit keeps the whole gameplay region below the facecam."
+                TextWrapping="Wrap" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Composition layout" ItemsSource="{Binding Layouts}" SelectedItem="{Binding Layout, Mode=TwoWay}" />
+            <Expander Header="Gameplay crop" Margin="0,8,0,8" Style="{DynamicResource Control.DisclosureExpander}">
+                <StackPanel Margin="0,8,0,0">
+            <TextBlock Margin="0,5,0,4" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Gameplay source region (%)" />
+            <UniformGrid Columns="2">
+                <StackPanel Margin="0,0,4,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Left" /><TextBox AutomationProperties.Name="Gameplay crop left percent" Text="{Binding CropX, Mode=TwoWay, StringFormat=F1}" /></StackPanel>
+                <StackPanel Margin="4,0,0,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Top" /><TextBox AutomationProperties.Name="Gameplay crop top percent" Text="{Binding CropY, Mode=TwoWay, StringFormat=F1}" /></StackPanel>
+                <StackPanel Margin="0,0,4,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Width" />
+<TextBox AutomationProperties.Name="Gameplay crop width percent" Text="{Binding CropWidth, Mode=TwoWay, StringFormat=F1}" />
+</StackPanel>
+                <StackPanel Margin="4,0,0,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Height" />
+<TextBox AutomationProperties.Name="Gameplay crop height percent" Text="{Binding CropHeight, Mode=TwoWay, StringFormat=F1}" />
+</StackPanel>
+            </UniformGrid>
+                </StackPanel>
+            </Expander>
+            <Expander Margin="0,8,0,8" Header="Facecam source region" Style="{DynamicResource Control.DisclosureExpander}">
+                <StackPanel Margin="0,8,0,0">
+                    <TextBlock Style="{DynamicResource Text.Meta}" Text="Used by both facecam layouts. These coordinates refer to the original recording." TextWrapping="Wrap" />
+                    <UniformGrid Columns="2" Margin="0,6,0,0">
+                        <StackPanel Margin="0,0,4,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Left %" />
+<TextBox AutomationProperties.Name="Facecam crop left percent" Text="{Binding FaceX, Mode=TwoWay, StringFormat=F1}" />
+</StackPanel>
+                        <StackPanel Margin="4,0,0,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Top %" />
+<TextBox AutomationProperties.Name="Facecam crop top percent" Text="{Binding FaceY, Mode=TwoWay, StringFormat=F1}" />
+</StackPanel>
+                        <StackPanel Margin="0,0,4,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Width %" />
+<TextBox AutomationProperties.Name="Facecam crop width percent" Text="{Binding FaceWidth, Mode=TwoWay, StringFormat=F1}" />
+</StackPanel>
+                        <StackPanel Margin="4,0,0,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Height %" />
+<TextBox AutomationProperties.Name="Facecam crop height percent" Text="{Binding FaceHeight, Mode=TwoWay, StringFormat=F1}" />
+</StackPanel>
+                    </UniformGrid>
+                    <TextBlock Style="{DynamicResource Text.Meta}" Text="Facecam share of the output height (%)" />
+                    <TextBox AutomationProperties.Name="Facecam output height percent" Text="{Binding FacecamHeightPercent, Mode=TwoWay, StringFormat=F1}" />
+                </StackPanel>
+            </Expander>
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Background color (#RRGGBB)" />
+            <TextBox Margin="0,4,0,8" Text="{Binding BackgroundColor, Mode=TwoWay}" AutomationProperties.Name="Output background color" />
+            <Expander Margin="0,0,0,8" Header="Preserve a HUD region" Style="{DynamicResource Control.DisclosureExpander}">
+                <StackPanel Margin="0,7,0,0">
+                    <CheckBox Content="Add a separate HUD layer" IsChecked="{Binding HasHudLayer, Mode=TwoWay}" AutomationProperties.Name="Enable HUD overlay" />
+                    <StackPanel IsEnabled="{Binding HasHudLayer}">
+                        <TextBlock Margin="0,7,0,4" Style="{DynamicResource Text.Meta}" Text="Region in the original recording (%)" />
+                        <UniformGrid Columns="2">
+                            <StackPanel Margin="0,0,4,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Left" /><TextBox Text="{Binding HudSourceX, StringFormat=F1}" AutomationProperties.Name="HUD source left percent" /></StackPanel>
+                            <StackPanel Margin="4,0,0,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Top" /><TextBox Text="{Binding HudSourceY, StringFormat=F1}" AutomationProperties.Name="HUD source top percent" /></StackPanel>
+                            <StackPanel Margin="0,0,4,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Width" />
+<TextBox Text="{Binding HudSourceWidth, StringFormat=F1}" AutomationProperties.Name="HUD source width percent" />
+</StackPanel>
+                            <StackPanel Margin="4,0,0,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Height" />
+<TextBox Text="{Binding HudSourceHeight, StringFormat=F1}" AutomationProperties.Name="HUD source height percent" />
+</StackPanel>
+                        </UniformGrid>
+                        <TextBlock Margin="0,5,0,4" Style="{DynamicResource Text.Meta}" Text="Position and size in the output canvas (%)" />
+                        <UniformGrid Columns="2">
+                            <StackPanel Margin="0,0,4,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Left" /><TextBox Text="{Binding HudCanvasX, StringFormat=F1}" AutomationProperties.Name="HUD canvas left percent" /></StackPanel>
+                            <StackPanel Margin="4,0,0,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Top" /><TextBox Text="{Binding HudCanvasY, StringFormat=F1}" AutomationProperties.Name="HUD canvas top percent" /></StackPanel>
+                            <StackPanel Margin="0,0,4,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Width" />
+<TextBox Text="{Binding HudCanvasWidth, StringFormat=F1}" AutomationProperties.Name="HUD canvas width percent" />
+</StackPanel>
+                            <StackPanel Margin="4,0,0,6">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Height" />
+<TextBox Text="{Binding HudCanvasHeight, StringFormat=F1}" AutomationProperties.Name="HUD canvas height percent" />
+</StackPanel>
+                        </UniformGrid>
+                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Copies this source region above the gameplay and facecam. Check that it does not cover important action or captions." TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </Expander>
+            <local:StudioSourceTrackingView />
+            <Expander Header="Delivery settings" Margin="0,8,0,8" Style="{DynamicResource Control.DisclosureExpander}">
+                <StackPanel Margin="0,8,0,0">
+            <CheckBox Margin="0,4,0,8" Content="Burn captions into the video" IsChecked="{Binding BurnCaptions, Mode=TwoWay}" AutomationProperties.Name="Burn captions into final video" />
+            <TextBlock Margin="0,0,0,8" Style="{DynamicResource Text.Meta}" Text="Turn off for clean video with separate SRT/VTT subtitle files. The saved caption track remains editable." TextWrapping="Wrap" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Export quality" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Export quality" ItemsSource="{Binding Qualities}" SelectedItem="{Binding Quality, Mode=TwoWay}" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Export resolution" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Export resolution" ItemsSource="{Binding Resolutions}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Resolution, Mode=TwoWay}" />
+            <TextBlock Margin="0,0,0,8"
+                Style="{DynamicResource Text.Meta}"
+        Text="Higher resolution increases file size and render work; enlarging a recording does not add captured detail. Source canvas keeps its original size up to this limit. Canvas and resolution changes apply to every montage cut."
+                TextWrapping="Wrap" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Color output" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Color output" ItemsSource="{Binding ColorOutputs}" SelectedItem="{Binding ColorOutput, Mode=TwoWay}" />
+            <TextBlock Margin="0,0,0,8" Style="{DynamicResource Text.Meta}" Text="AutomaticSdr converts HDR recordings for SDR displays. PreserveSdr retains an already-SDR recording's color." TextWrapping="Wrap" />
+                </StackPanel>
+            </Expander>
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
+        </Expander>
+    </Border>
+</UserControl>

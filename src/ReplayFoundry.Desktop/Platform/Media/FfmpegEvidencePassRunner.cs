@@ -106,9 +106,9 @@ internal sealed class FfmpegEvidencePassRunner
         ProcessRunResult result;
         try
         {
-            result = await _processRunner.RunAsync(
+            result = await MediaWorkBudget.RunAsync(_processRunner,
                 processRequest,
-                cancellationToken);
+                MediaWorkPriority.Background, cancellationToken);
         }
         catch (OperationCanceledException)
         {

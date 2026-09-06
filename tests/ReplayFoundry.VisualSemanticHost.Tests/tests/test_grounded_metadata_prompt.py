@@ -1203,9 +1203,13 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            ["LeadIn", "VisibleFollowThrough"],
+            ["EarlierDraft", "LaterDraft"],
             [item["phase"] for item in authority["chronologicalProgression"]],
         )
+        self.assertTrue(all(
+            "reviewStartSeconds" not in item and "sourceStartSeconds" not in item
+            for item in authority["chronologicalProgression"]
+        ), "Ordered drafts without recorded clocks must not invent event timing.")
         self.assertEqual(
             "I thought the route was finally clear.",
             authority["reviewedCreatorSpeech"][0]["excerpt"],
@@ -2641,9 +2645,13 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         self.assertIn("game identity belongs in separate tags", lowered)
         self.assertIn("reviewed creatorspeech is the preferred voice", lowered)
         self.assertIn(
-            "automatic transcript selects an angle but supplies no copy authority",
+            "automatic transcript selects an angle but supplies no objective factual or quotation authority",
             lowered,
         )
+        self.assertIn("narrowly scoped automatic-commentary exception", lowered)
+        self.assertIn("no exact quotation, four-word automatic-transcript sequence", lowered)
+        self.assertIn("no first-person gameplay, body, possession or outcome claim", lowered)
+        self.assertNotIn("authorizes no first-person reference in titlebody or description", lowered)
         self.assertIn("not like a surveillance log", lowered)
         self.assertIn("sole authority for creator embodiment", lowered)
         self.assertIn("automaticunreviewed", lowered)

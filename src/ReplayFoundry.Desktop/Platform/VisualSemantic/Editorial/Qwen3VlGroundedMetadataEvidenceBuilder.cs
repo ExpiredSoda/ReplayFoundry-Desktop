@@ -107,6 +107,12 @@ internal static class Qwen3VlGroundedMetadataEvidenceBuilder
             .Concat(knowledgeEvidence)
             .Concat(selectedKnowledgeEvidence)
             .Concat(generalContextEvidence)
+            .Concat(validation.IsolatedFieldMergedJsonSha256 is string mergedHash
+                ? new[] { new ClipEditorialEvidenceReference(
+                    "qwen-isolated-field-authoring", ClipEditorialEvidenceKind.VisualObservation,
+                    "Visual copy and attributed commentary were generated in two separately constrained component passes. " +
+                    "Their mechanical merge was verified against the returned metadata; merged JSON SHA-256=" + mergedHash + ".") }
+                : Array.Empty<ClipEditorialEvidenceReference>())
             .Append(new ClipEditorialEvidenceReference(
                 "qwen-editorial-frame",
                 ClipEditorialEvidenceKind.VisualObservation,

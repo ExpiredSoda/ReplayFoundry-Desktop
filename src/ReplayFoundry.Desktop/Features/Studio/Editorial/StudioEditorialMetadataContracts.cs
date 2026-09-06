@@ -15,6 +15,8 @@ public enum StudioEditorialVariant
     DirectAction,
     SpecificCuriosity,
     OutcomeFocused,
+    ConcreteDetail,
+    CommentaryLed,
 }
 
 public sealed record StudioEditorialVariantChoice(

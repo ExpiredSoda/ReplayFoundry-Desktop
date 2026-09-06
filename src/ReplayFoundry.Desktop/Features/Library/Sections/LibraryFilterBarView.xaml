@@ -16,11 +16,11 @@
 
             <Grid>
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="FIND IN LIBRARY" />
+                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Find in library" />
                     <TextBlock
-                        Margin="0,3,100,0"
+                        Margin="0,3,48,0"
                         Style="{DynamicResource Text.Meta}"
-                        Text="Search finished videos, then narrow or reorganize the view without changing files."
+                        Text="Find a finished clip by title, game or filename."
                         TextWrapping="Wrap" />
                 </StackPanel>
                 <Button
@@ -62,9 +62,11 @@
                 </TextBlock>
             </Grid>
 
-            <WrapPanel Grid.Row="2" Margin="0,12,0,0">
+            <Expander Grid.Row="2" Margin="0,8,0,0" Header="Filters &amp; organization" IsExpanded="False"
+                      AutomationProperties.Name="Library filters and organization" Style="{DynamicResource Control.QuietExpander}">
+            <WrapPanel Margin="0,4,0,0">
                 <StackPanel Width="128" Margin="0,0,10,10">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="TYPE" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Type" />
                     <ComboBox
                         AutomationProperties.Name="Library mode filter"
                         ItemsSource="{Binding Modes}"
@@ -72,7 +74,7 @@
                         Style="{DynamicResource Control.InlineSelectorComboBox}" />
                 </StackPanel>
                 <StackPanel Width="118" Margin="0,0,10,10">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="STATUS" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Status" />
                     <ComboBox
                         AutomationProperties.Name="Library status filter"
                         ItemsSource="{Binding Statuses}"
@@ -80,7 +82,7 @@
                         Style="{DynamicResource Control.InlineSelectorComboBox}" />
                 </StackPanel>
                 <StackPanel Width="116" Margin="0,0,10,10">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="CREATED" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Created" />
                     <ComboBox
                         AutomationProperties.Name="Library date filter"
                         ItemsSource="{Binding Dates}"
@@ -88,7 +90,7 @@
                         Style="{DynamicResource Control.InlineSelectorComboBox}" />
                 </StackPanel>
                 <StackPanel Width="152" Margin="0,0,10,10">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="SORT" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Sort" />
                     <ComboBox
                         Width="152"
                         AutomationProperties.Name="Library sort order"
@@ -97,7 +99,7 @@
                         Style="{DynamicResource Control.InlineSelectorComboBox}" />
                 </StackPanel>
                 <StackPanel Width="128" Margin="0,0,0,10">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="GROUP BY" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Group by" />
                     <ComboBox
                         AutomationProperties.Name="Organize Library by"
                         ItemsSource="{Binding OrganizationOptions}"
@@ -113,19 +115,15 @@
                 </StackPanel>
             </WrapPanel>
 
-            <Border Grid.Row="3" Padding="10,8" Background="{DynamicResource Brush.SurfaceInset}" CornerRadius="7">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+            </Expander>
+            <Border Grid.Row="3" Padding="0,6,0,0" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="0,1,0,0">
+                <DockPanel LastChildFill="True">
                     <Button
-                        Grid.Row="1"
-                        Margin="20,8,0,0"
-                        HorizontalAlignment="Left"
+                        DockPanel.Dock="Right"
+                        Margin="8,0,0,0"
                         AutomationProperties.Name="Refresh known Library entries"
                         Command="{Binding RefreshLibraryCommand}"
-                        Content="Refresh Library"
+                        Content="Refresh"
                         Style="{DynamicResource Control.GhostButton}" />
                     <WrapPanel VerticalAlignment="Center">
                         <controls:IconPath
@@ -141,7 +139,7 @@
                         <TextBlock Margin="8,0,0,0" Style="{DynamicResource Text.Meta}" Text="·" />
                         <TextBlock Margin="8,0,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding OrganizationSummary}" />
                     </WrapPanel>
-                </Grid>
+                </DockPanel>
             </Border>
         </Grid>
     </Border>

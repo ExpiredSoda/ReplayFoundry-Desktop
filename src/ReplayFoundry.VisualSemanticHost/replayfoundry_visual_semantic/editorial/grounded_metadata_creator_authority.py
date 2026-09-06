@@ -9,36 +9,39 @@ from .grounded_metadata_lexical import (
     _CENTER_TOKEN_STOP_WORDS,
     _case_fact_terms,
     normalize_lexical,
-    shared_token_windows,
 )
+from .grounded_metadata_output_schema import title_body_maximum
 
 
-_GENERIC_PERSON_SUBJECT_OPENING = re.compile(
-    r"^\s*(?:(?:a|an|the|this|that)\s+"
-    r"(?:[\w'’-]+\s+){0,4})?"
-    r"(?:man|woman|person|guy|player|character)\b",
-    re.IGNORECASE,
+from .grounded_metadata_automatic_commentary import (
+    _FIRST_PERSON_REFERENCE,
+    _automatic_commentary_words,
+    _automatic_commentary_normalize,
+    _automatic_commentary_stem,
+    _automatic_commentary_topic_terms,
+    _safe_automatic_commentary_angle,
+    _requires_balanced_copy,
+    balanced_copy_field_plan,
+    _balanced_copy_satisfied,
+    _without_automatic_commentary,
+    _scoped_retry_authority,
+    _automatic_commentary_authorizes_creator_voice,
 )
-_INVENTORY_CENTER_SUBJECT = re.compile(
-    r"\b(?:camera|display|interface|monitor|screen|text|title card)\b",
-    re.IGNORECASE,
+from .grounded_metadata_editorial_framing import (
+    _GENERIC_PERSON_SUBJECT_OPENING,
+    _INVENTORY_CENTER_SUBJECT,
+    _LEADING_SUBJECT_ARTICLE,
+    _FIRST_PERSON_GENERIC_OBSERVER_OPENING,
+    _timed_synthesis_drafts,
+    _draft_temporal_role,
+    _editorial_excerpt,
+    _action_linked_candidate_subjects,
+    _audience_frame,
+    _narrative_case_fact_terms,
+    narrative_presentation_has_distinct_fact,
+    validate_narrative_case_fact_retention,
 )
-_LEADING_SUBJECT_ARTICLE = re.compile(
-    r"^\s*(?:a|an|the|this|that)\s+",
-    re.IGNORECASE,
-)
-_FIRST_PERSON_GENERIC_OBSERVER_OPENING = re.compile(
-    r"^\s*(?:i|we)\s+"
-    r"(?:heard|noticed|observed|saw|spotted|watched)\s+"
-    r"(?:(?:a|an|the|this|that)\s+)?"
-    r"(?:[\w'’-]+\s+){0,4}"
-    r"(?:man|woman|person|guy|player|character)\b",
-    re.IGNORECASE,
-)
-_FIRST_PERSON_REFERENCE = re.compile(
-    r"\b(?:i|me|my|mine|we|us|our|ours)\b",
-    re.IGNORECASE,
-)
+
 _FIRST_PERSON_POSSESSIVE = re.compile(
     r"\b(?:my|mine|our|ours)\b",
     re.IGNORECASE,
@@ -58,122 +61,6 @@ _CREATOR_AFFECTED_ACTIONS = {
 }
 
 
-def _editorial_excerpt(value: str, maximum: int = 600) -> str:
-    normalized = " ".join(value.split())
-    if len(normalized) <= maximum:
-        return normalized
-    return normalized[:maximum].rsplit(" ", 1)[0].rstrip(" ,;:-")
-
-
-def _action_linked_candidate_subjects(primary: dict[str, Any]) -> list[str]:
-    action_tokens = {
-        token
-        for action in primary.get("actions", [])
-        if isinstance(action, str)
-        for token in normalize_lexical(action).split()
-        if len(token) >= 3 and token not in _CENTER_TOKEN_STOP_WORDS
-    }
-    candidates: list[str] = []
-    seen: set[str] = set()
-    for value in primary.get("subjectsAndObjects", []):
-        if not isinstance(value, str) or (
-            _GENERIC_PERSON_SUBJECT_OPENING.search(value)
-            or _INVENTORY_CENTER_SUBJECT.search(value)
-        ):
-            continue
-        normalized = " ".join(value.split()).strip(" ,;:-")
-        articleless = _LEADING_SUBJECT_ARTICLE.sub("", normalized).strip()
-        subject_tokens = {
-            token for token in normalize_lexical(articleless).split()
-            if len(token) >= 3 and token not in _CENTER_TOKEN_STOP_WORDS
-        }
-        key = articleless.casefold()
-        if (
-            articleless
-            and key not in seen
-            and subject_tokens.intersection(action_tokens)
-        ):
-            candidates.append(articleless)
-            seen.add(key)
-    return candidates[:4]
-
-
-def _audience_frame(
-    editorial_frame: dict[str, Any],
-    primary: dict[str, Any],
-    actor_authority: str,
-    creator_relation: str,
-) -> dict[str, Any]:
-    presentation = editorial_frame.get("primaryPresentationKind", "Unclear")
-    creator_controlled = (
-        actor_authority == "CreatorControlled"
-        and creator_relation == "CreatorActed"
-    )
-    center_kind = (
-        "NarrativePresentation"
-        if presentation in {"CinematicSequence", "InWorldRecording"}
-        else "DocumentPresentation"
-        if presentation == "DocumentOrLore"
-        else "InterfaceProgression"
-        if presentation in {"MenuOrLoadout", "ObjectiveOrInterface"}
-        else "CreatorAction"
-        if presentation == "InteractiveGameplay" and creator_controlled
-        else "NeutralGameplayEvent"
-    )
-    return {
-        "authorityKind": "GrammaticalShapeOnly",
-        "centerKind": center_kind,
-        "presentationKind": presentation,
-        "momentKind": editorial_frame.get("momentKind", "Unclear"),
-        "candidateSubjects": _action_linked_candidate_subjects(primary),
-        "primaryActionRole": (
-            "SupportingDetailOnly"
-            if center_kind == "NarrativePresentation"
-            else "FactualSupportOnly"
-        ),
-    }
-
-
-def _narrative_case_fact_terms(authority: dict[str, Any]) -> set[str]:
-    if authority.get("audienceFrame", {}).get("centerKind") != \
-            "NarrativePresentation":
-        return set()
-    primary = authority.get("primaryVisual", {})
-    values = [
-        *primary.get("actions", []),
-        *authority.get("audienceFrame", {}).get("candidateSubjects", []),
-        *authority.get("stableReadableText", []),
-    ]
-    facts = _case_fact_terms([value for value in values if isinstance(value, str)])
-    identity = authority.get("confirmedGameIdentity", {})
-    return facts.difference(_case_fact_terms([identity.get("name", "")]))
-
-
-def narrative_presentation_has_distinct_fact(authority: dict[str, Any]) -> bool:
-    return authority.get("audienceFrame", {}).get("centerKind") != \
-        "NarrativePresentation" or bool(_narrative_case_fact_terms(authority))
-
-
-def validate_narrative_case_fact_retention(
-    title: str,
-    description: str,
-    authority: dict[str, Any],
-) -> None:
-    facts = _narrative_case_fact_terms(authority)
-    if authority.get("audienceFrame", {}).get("centerKind") != \
-            "NarrativePresentation":
-        return
-    if not facts or any(
-        not facts.intersection(_case_fact_terms([field]))
-        for field in (title, description)
-    ):
-        _fail(
-            InferenceError,
-            "Grounded editorial rephrase did not retain a case-local primary "
-            "fact in both audience fields.",
-        )
-
-
 def build_typed_editorial_authority(
     request: dict[str, Any],
     drafts: list[dict[str, Any]],
@@ -189,6 +76,7 @@ def build_typed_editorial_authority(
         "authorityKind": "BoundedTypedRetryAuthority",
         "primaryVisual": {
             "ordinal": primary_ordinal,
+            **_draft_temporal_role(primary, primary, primary_ordinal, primary_ordinal),
             "environment": primary.get("environment"),
             "environmentUncertain": bool(primary.get("environmentUncertain")),
             "subjectsAndObjects": list(primary.get("subjectsAndObjects", [])),
@@ -198,11 +86,8 @@ def build_typed_editorial_authority(
         },
         "chronologicalProgression": [
             {
-                "phase": (
-                    "LeadIn"
-                    if ordinal < primary_ordinal
-                    else "VisibleFollowThrough"
-                ),
+                "ordinal": ordinal,
+                **_draft_temporal_role(draft, primary, ordinal, primary_ordinal),
                 "actions": list(draft.get("actions", [])),
             }
             for ordinal, draft in enumerate(drafts, start=1)
@@ -250,6 +135,48 @@ def build_typed_editorial_authority(
             "hashtag": game["hashtag"],
             "source": game["source"],
         }
+    automatic_angle = _safe_automatic_commentary_angle(request)
+    if automatic_angle is not None:
+        anchor["automaticCreatorCommentary"] = {
+            "authority": "AutomaticUnreviewed",
+            "authorityKind": "AttributedQuestionOrComparisonOnly",
+            "safeCommentaryAngle": automatic_angle,
+            "fieldAuthorizations": [],
+            "exactQuotationPermitted": False,
+            "creatorEmbodimentPermitted": False,
+        }
+        if _requires_balanced_copy(request):
+            anchor["copyObjective"] = "BalancedActionAndCommentary"
+            profile = request["profile"]
+            anchor["copyProfile"] = {
+                "audienceAddress": profile.get("audienceAddress"),
+                "namingGuidance": profile.get("namingGuidance"),
+                "defaultTags": list(profile.get("defaultTags", [])),
+                "titleBodyMaximumCharacters": title_body_maximum(request["game"]["hashtag"]),
+                "priorTitleExclusions": list(request.get("priorAcceptedTitles", [])),
+                "gameplayVoice": "CreatorFirstPerson" if (
+                    profile.get("voicePerspective") == "CreatorFirstPerson"
+                    and actor_authority == "CreatorControlled"
+                    and creator_relation == "CreatorActed"
+                ) else "NeutralNoSubject",
+            }
+            claims = [dict(claim) for claim in (request.get("editorialBrief") or {}).get("claims", [])
+                      if claim.get("state") in {"Confirmed", "Supported"}
+                      and claim.get("fieldAuthorizations")
+                      and claim.get("authority") != "AutomaticTranscriptCue"]
+            if claims:
+                anchor["groundedClaims"] = claims
+                claim_ids = {claim.get("id") for claim in claims}
+                anchor["groundedClaimBindings"] = [dict(binding)
+                    for binding in (request.get("editorialBrief") or {}).get("sourceBindings", [])
+                    if binding.get("claimId") in claim_ids]
+            anchor["primaryVisual"]["hasUncertainties"] = bool(
+                primary.get("hasUncertainties") or primary.get("uncertainties"))
+            for item in anchor["chronologicalProgression"]:
+                source = drafts[item["ordinal"] - 1]
+                item["hasUncertainties"] = bool(
+                    source.get("hasUncertainties") or source.get("uncertainties"))
+                item["environmentUncertain"] = bool(source.get("environmentUncertain"))
     reviewed_speech = [
         {"authority": item["authority"], "excerpt": _editorial_excerpt(item["text"])}
         for item in request.get("transcripts", [])
@@ -355,7 +282,9 @@ def validate_creator_actor_authority(
     audience_copy = "\n".join([title_body, description])
     if not _FIRST_PERSON_REFERENCE.search(audience_copy):
         return
-    if _reviewed_commentary_authorizes_creator_voice(request, audience_copy):
+    if _reviewed_commentary_authorizes_creator_voice(request, audience_copy) or (
+        _automatic_commentary_authorizes_creator_voice(request, audience_copy)
+    ):
         return
     if creator_experience_relation == "Unestablished":
         _fail(

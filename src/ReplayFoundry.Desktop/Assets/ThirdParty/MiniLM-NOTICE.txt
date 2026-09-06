@@ -1,0 +1,20 @@
+Replay Foundry optional local English semantic search
+
+Model: sentence-transformers/all-MiniLM-L6-v2
+ONNX INT8 conversion: Xenova/all-MiniLM-L6-v2
+Pinned conversion revision: 751bff37182d3f1213fa05d7196b954e230abad9
+https://huggingface.co/Xenova/all-MiniLM-L6-v2
+https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+License: Apache License, Version 2.0 (see MiniLM-LICENSE.txt)
+
+The optional model and BERT vocabulary are downloaded from the pinned conversion
+revision and verified by SHA-256 before use. Replay Foundry uses CPU inference,
+uncased BERT WordPiece tokenization, at most 256 tokens, attention-mask mean
+pooling and L2 normalization. Text similarity is retrieval relevance, not proof
+that a statement or game event occurred. Negation, hypothetical statements,
+sarcasm and languages other than English are not reliably distinguished.
+
+References:
+Reimers and Gurevych, Sentence-BERT (2019).
+Wang et al., MiniLM: Deep Self-Attention Distillation for Task-Agnostic
+Compression of Pre-Trained Transformers (2020).

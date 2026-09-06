@@ -316,7 +316,7 @@ public sealed class GroundedEditorialBrief
             momentKind);
 
     internal GroundedEditorialBrief WithSafeCommentaryAngle(
-        string safeCommentaryAngle,
+        string? safeCommentaryAngle,
         IEnumerable<string>? additionalQualityFlags = null) =>
         new(
             CandidateId,
@@ -329,7 +329,9 @@ public sealed class GroundedEditorialBrief
             VisibleFollowThrough,
             safeCommentaryAngle,
             CreatorControlRelation,
-            QualityFlags.Concat(additionalQualityFlags ?? []).ToArray(),
+            QualityFlags.Where(flag => safeCommentaryAngle is not null ||
+                flag != "AutomaticCreatorReactionAngleAvailable")
+                .Concat(additionalQualityFlags ?? []).ToArray(),
             PresentationKind,
             MomentKind);
 
@@ -590,6 +592,28 @@ internal static class GroundedEditorialBriefBuilder
                 : []);
     }
 
+    internal static GroundedEditorialBrief RefreshAutomaticCommentaryAngle(
+        GroundedEditorialBrief brief,
+        IReadOnlyList<ClipEditorialTranscriptContext> transcripts)
+    {
+        // Request preparation only: restoring a saved authored context must not
+        // silently change its historical fingerprint or reviewed wording.
+        if (!transcripts.Any(static transcript =>
+                transcript.Role.Role == AudioContentRole.CreatorSpeech &&
+                (transcript.Role.Source is AudioContentRoleSource.UserConfirmed or AudioContentRoleSource.ImportedHumanReview) &&
+                transcript.Authority == ClipEditorialTranscriptAuthority.AutomaticUnreviewed) ||
+            (brief.SafeCommentaryAngle is not null && !brief.QualityFlags.Contains(
+                "AutomaticCreatorReactionAngleAvailable", StringComparer.Ordinal))) return brief;
+        if (brief.Claims.Any(static claim => claim.Kind ==
+                GroundedGameContextClaimKind.CreatorCommentaryCue &&
+                claim.State == GroundedGameContextClaimState.Confirmed)) return brief;
+        string? angle = ResolveSafeCommentaryAngle(brief.Claims, transcripts);
+        return string.Equals(angle, brief.SafeCommentaryAngle, StringComparison.Ordinal) &&
+            (angle is not null || !brief.QualityFlags.Contains("AutomaticCreatorReactionAngleAvailable", StringComparer.Ordinal))
+            ? brief : brief.WithSafeCommentaryAngle(angle,
+                angle is null ? [] : ["AutomaticCommentaryNominatesOnly", "AutomaticCreatorReactionAngleAvailable"]);
+    }
+
     private static string? ResolveSafeCommentaryAngle(
         IReadOnlyList<GroundedGameContextClaim> claims,
         IReadOnlyList<ClipEditorialTranscriptContext> transcripts)
@@ -615,7 +639,7 @@ internal static class GroundedEditorialBriefBuilder
                     AudioContentRoleSource.ImportedHumanReview) &&
                 transcript.Authority ==
                     ClipEditorialTranscriptAuthority.AutomaticUnreviewed)
-            .SelectMany(AutomaticCommentaryCandidates)
+            .SelectMany(GroundedEditorialCommentaryThoughts.Candidates)
             .Select(static value => new
             {
                 Value = value,
@@ -628,36 +652,10 @@ internal static class GroundedEditorialBriefBuilder
             .FirstOrDefault();
     }
 
-    private static IEnumerable<string> AutomaticCommentaryCandidates(
-        ClipEditorialTranscriptContext transcript)
-    {
-        string[] parts = (transcript.Spans.Count > 0
-                ? transcript.Spans.Select(static span => span.Text)
-                : [transcript.Text])
-            .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .Select(static value => value.Trim())
-            .ToArray();
-        for (int start = 0; start < parts.Length; start++)
-        {
-            for (int count = 1;
-                 count <= Math.Min(3, parts.Length - start);
-                 count++)
-            {
-                string candidate = string.Join(
-                    ' ',
-                    parts.Skip(start).Take(count));
-                if (candidate.Length <= 320)
-                {
-                    yield return candidate;
-                }
-            }
-        }
-    }
-
     private static int AutomaticCommentaryScore(string value)
     {
         string lexical = " " + new string(
-            value.ToLowerInvariant()
+            GroundedEditorialCommentaryThoughts.ForScoring(value)
                 .Select(static character => char.IsLetterOrDigit(character) ||
                         character is '\'' or '’'
                     ? character

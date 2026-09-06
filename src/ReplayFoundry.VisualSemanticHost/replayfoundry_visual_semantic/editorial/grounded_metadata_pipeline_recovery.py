@@ -4,6 +4,11 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
+from .grounded_metadata_creator_authority import (
+    _scoped_retry_authority,
+    _without_automatic_commentary,
+)
+
 from .grounded_metadata_pipeline_attestation import _anchor_sha256
 from .grounded_metadata_pipeline_contract import _retry_guidance
 from .grounded_metadata_pipeline_state import (
@@ -160,7 +165,9 @@ def prepare_recovery_pool(
             )
         if sticky_retry_authority is None:
             sticky_retry_authority = _typed_retry_authority_anchor(
-                synthesis_request,
+                _without_automatic_commentary(synthesis_request)
+                if withhold_unreviewed_transcripts or primary_only_synthesis_evidence
+                else synthesis_request,
                 visual_drafts,
                 primary_visual_draft_ordinal,
                 primary_actor_authority,
@@ -169,6 +176,12 @@ def prepare_recovery_pool(
             sticky_retry_authority_sha256 = _anchor_sha256(
                 sticky_retry_authority
             )
+        scoped_anchor = _scoped_retry_authority(
+            sticky_retry_authority, withhold_unreviewed_transcripts, primary_only_synthesis_evidence,
+        )
+        if scoped_anchor is not sticky_retry_authority:
+            sticky_retry_authority = scoped_anchor
+            sticky_retry_authority_sha256 = _anchor_sha256(scoped_anchor)
         if (
             use_primary_only_cross_draft_source
             or use_creator_authority_withheld_source

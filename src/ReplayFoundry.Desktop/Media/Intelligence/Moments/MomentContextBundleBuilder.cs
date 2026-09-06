@@ -461,6 +461,7 @@ public sealed class MomentContextBundleBuilder :
         left.LanguageMode == right.LanguageMode &&
         Equals(left.RequestedLanguage?.Code, right.RequestedLanguage?.Code) &&
         left.TranslateToEnglish == right.TranslateToEnglish &&
+        left.InitialPrompt == right.InitialPrompt &&
         left.RequireSegmentTimestamps == right.RequireSegmentTimestamps &&
         left.RequestWordTimestamps == right.RequestWordTimestamps &&
         left.Temperature == right.Temperature &&

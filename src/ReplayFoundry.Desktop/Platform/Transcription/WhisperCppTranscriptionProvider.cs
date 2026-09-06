@@ -3,6 +3,8 @@ using ReplayFoundry.Desktop.Media.Intelligence;
 using ReplayFoundry.Desktop.Media.Transcription;
 using ReplayFoundry.Desktop.Platform.Processes;
 
+using ReplayFoundry.Desktop.Platform.Media;
+
 namespace ReplayFoundry.Desktop.Platform.Transcription;
 
 public sealed class WhisperCppTranscriptionProvider :
@@ -55,7 +57,7 @@ public sealed class WhisperCppTranscriptionProvider :
             await GetInitializationTask()
                 .WaitAsync(cancellationToken);
 
-        return initialization.Capabilities.ToPublic();
+        return initialization.Capabilities.ToPublic(_settings.Model.LanguageCapabilities);
     }
 
     public async Task<AudioTranscriptionResult>
@@ -65,6 +67,13 @@ public sealed class WhisperCppTranscriptionProvider :
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
+        if (_settings.Model.LanguageCapabilities?.GetBlockingReason(request.Options) is string languageReason)
+            throw new WhisperCppTranscriptionException(languageReason);
+        if (_settings.Model.LanguageCapabilities?.SourceIdentity is string expectedModelIdentity &&
+            !string.Equals(expectedModelIdentity,
+                WhisperGgmlLanguageCapabilities.Resolve(_settings.Model.ModelPath).SourceIdentity, StringComparison.Ordinal))
+            throw new WhisperCppTranscriptionException(
+                "The speech model changed after its language capabilities were inspected. Reopen Replay Foundry before transcribing.");
 
         if (!string.Equals(
                 request.ModelSettings.ModelPath,
@@ -93,7 +102,7 @@ public sealed class WhisperCppTranscriptionProvider :
             DateTimeOffset startedAtUtc =
                 DateTimeOffset.UtcNow;
             ProcessRunResult result =
-                await _processRunner.RunAsync(
+                await MediaWorkBudget.RunAsync(_processRunner,
                     new ProcessRunRequest(
                         _settings.ExecutablePath,
                         command.Arguments,
@@ -104,7 +113,7 @@ public sealed class WhisperCppTranscriptionProvider :
                             1024 * 1024,
                         maxStandardErrorCharacters:
                             1024 * 1024),
-                    cancellationToken);
+                    MediaWorkPriority.Foreground, MediaWorkKind.HeavyAi, cancellationToken);
             DateTimeOffset completedAtUtc =
                 DateTimeOffset.UtcNow;
 

@@ -6,11 +6,14 @@ public sealed class YouTubeOAuthClientConfiguration
 {
     public const string ManageYouTubeScope =
         "https://www.googleapis.com/auth/youtube";
+    public const string AnalyticsReadOnlyScope =
+        "https://www.googleapis.com/auth/yt-analytics.readonly";
 
     public YouTubeOAuthClientConfiguration(
         string clientId,
         string clientSecret,
-        string applicationName = "Replay Foundry")
+        string applicationName = "Replay Foundry",
+        bool analyticsOnly = false)
     {
         if (string.IsNullOrWhiteSpace(clientId) ||
             !clientId.Trim().EndsWith(
@@ -37,7 +40,7 @@ public sealed class YouTubeOAuthClientConfiguration
         ClientId = clientId.Trim();
         ClientSecret = clientSecret.Trim();
         ApplicationName = applicationName.Trim();
-        Scopes = Array.AsReadOnly([ManageYouTubeScope]);
+        Scopes = Array.AsReadOnly([analyticsOnly ? AnalyticsReadOnlyScope : ManageYouTubeScope]);
     }
 
     public string ClientId { get; }

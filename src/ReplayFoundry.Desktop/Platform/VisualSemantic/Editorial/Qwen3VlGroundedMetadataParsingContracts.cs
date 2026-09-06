@@ -60,7 +60,8 @@ internal sealed record Qwen3VlGroundedMetadataGenerationValidation(
     bool MetadataReviewRequired,
     IReadOnlyList<string> MetadataReviewIssues,
     Qwen3VlGroundedMetadataEditorialRephraseValidation?
-        EditorialRephrase = null);
+        EditorialRephrase = null,
+    string? IsolatedFieldMergedJsonSha256 = null);
 
 internal sealed record Qwen3VlGroundedMetadataModuleIdentity(
     string ModuleName,

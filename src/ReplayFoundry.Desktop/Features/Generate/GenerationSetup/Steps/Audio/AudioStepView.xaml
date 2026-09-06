@@ -11,17 +11,18 @@
 
     <Grid>
 
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*" />
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="2*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0">
+        <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
 
             <TextBlock
                 Foreground="{DynamicResource Brush.TextPrimary}"
-                FontSize="26"
+                FontSize="23"
                 FontWeight="SemiBold"
                 Text="Audio" />
 
@@ -74,6 +75,15 @@
                     <StackPanel
                         Margin="0,14,0,0"
                         IsEnabled="{Binding IsCaptioningEnabled}">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsCaptioningEnabled}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
                         <TextBlock
                             Foreground="{DynamicResource Brush.TextSecondary}"
                             FontSize="11"
@@ -82,9 +92,14 @@
                         <ComboBox
                             Margin="0,5,0,0"
                             AutomationProperties.Name="Caption effect"
+                            IsEnabled="{Binding IsCaptionStyleSelectable}"
                             DisplayMemberPath="Name"
                             ItemsSource="{Binding CaptionStyles}"
                             SelectedItem="{Binding SelectedCaptionStyle, Mode=TwoWay}" />
+                        <TextBlock Margin="0,12,0,4" Style="{DynamicResource Text.Meta}" Text="Saved caption look" />
+                        <ComboBox AutomationProperties.Name="Generate saved caption look" DisplayMemberPath="Name"
+                                  ItemsSource="{Binding CaptionLooks}" SelectedItem="{Binding SelectedCaptionLook, Mode=TwoWay}" />
+                        <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Text="{Binding CaptionLookHint}" />
 
                         <ItemsControl
                             Margin="0,12,0,0"
@@ -154,12 +169,16 @@
                                                 </Grid>
                                             </Border>
                                             <Grid Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     VerticalAlignment="Center"
                                                     Style="{DynamicResource Text.Meta}"
                                                     Text="{Binding AuditionSampleText}"
                                                     TextTrimming="CharacterEllipsis" />
-                                                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                                                <StackPanel Grid.Column="1" Margin="10,0,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
                                                     <Button
                                                         AutomationProperties.Name="Play prepared audio sample"
                                                         Command="{Binding AuditionCommand}"
@@ -206,6 +225,11 @@
                                                 Style="{DynamicResource Text.Meta}"
                                                 Text="{Binding SelectedLanguage.Description}"
                                                 TextWrapping="Wrap" />
+                                            <TextBlock
+                                                Margin="0,4,0,0"
+                                                Style="{DynamicResource Text.Meta}"
+                                                Text="{Binding LanguageCapabilitySummary}"
+                                                TextWrapping="Wrap" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -217,9 +241,7 @@
 
         </StackPanel>
 
-        <Border
-            Grid.Column="2"
-            Style="{DynamicResource GenerationSetup.SectionCard}">
+        <Border Style="{DynamicResource GenerationSetup.SummaryCard}">
 
             <StackPanel>
 

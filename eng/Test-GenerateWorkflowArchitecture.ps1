@@ -299,8 +299,14 @@ foreach ($removedName in $removedLinkIngressNames) {
 }
 
 $generateViewText = Get-Text $bindingFiles[0]
-if ($generateViewText -notmatch
-    '<Grid\s+Grid\.Row="1"[\s\S]*?<Border\s+Style="\{DynamicResource Control\.SectionCard\}"\s+Padding="12,9">[\s\S]*?Text="Recent Projects"') {
+$generateViewDocument = [xml]$generateViewText
+$recentFooter = $generateViewDocument.SelectSingleNode(
+    "/*[local-name()='UserControl']/*[local-name()='Grid']/*[local-name()='Border' and @*[name()='Grid.Row']='1']")
+if ($null -eq $recentFooter -or
+    $recentFooter.OuterXml -notmatch 'Header="Recent projects"' -or
+    $recentFooter.OuterXml -notmatch 'ItemsSource="\{Binding RecentProjects\}"' -or
+    $recentFooter.OuterXml -notmatch 'OpenRecentProjectCommand' -or
+    $recentFooter.HasAttribute('Grid.Column')) {
     Add-Failure `
         "Recent Projects must occupy the full Generate footer after link-ingress removal."
 }

@@ -23,7 +23,8 @@ public sealed class YouTubePublishHistoryEntry
         string? failureMessage = null,
         YouTubeRemoteVideoStatus remoteStatus =
             YouTubeRemoteVideoStatus.NotChecked,
-        DateTimeOffset? remoteCheckedAtUtc = null)
+        DateTimeOffset? remoteCheckedAtUtc = null,
+        YouTubePublishProvenance? provenance = null)
     {
         bool requiresFailure = outcome is
             YouTubePublishOutcome.Failed or
@@ -34,6 +35,7 @@ public sealed class YouTubePublishHistoryEntry
             !Enum.IsDefined(outcome) ||
             !Enum.IsDefined(visibility) ||
             !Enum.IsDefined(remoteStatus) ||
+            requiresFailure && provenance is not null ||
             attemptedAtUtc.Offset != TimeSpan.Zero ||
             scheduledForUtc.HasValue &&
             scheduledForUtc.Value.Offset != TimeSpan.Zero ||
@@ -70,6 +72,7 @@ public sealed class YouTubePublishHistoryEntry
         FailureMessage = failureMessage?.Trim();
         RemoteStatus = remoteStatus;
         RemoteCheckedAtUtc = remoteCheckedAtUtc;
+        Provenance = provenance;
     }
 
     public string Id { get; }
@@ -85,6 +88,7 @@ public sealed class YouTubePublishHistoryEntry
     public string? FailureMessage { get; }
     public YouTubeRemoteVideoStatus RemoteStatus { get; }
     public DateTimeOffset? RemoteCheckedAtUtc { get; }
+    public YouTubePublishProvenance? Provenance { get; }
 
     public YouTubePublishHistoryEntry WithRemoteStatus(
         YouTubeRemoteVideoStatus status,
@@ -101,7 +105,8 @@ public sealed class YouTubePublishHistoryEntry
             FailureCode,
             FailureMessage,
             status,
-            checkedAtUtc);
+            checkedAtUtc,
+            Provenance);
 }
 
 public interface IYouTubePublishHistoryStore

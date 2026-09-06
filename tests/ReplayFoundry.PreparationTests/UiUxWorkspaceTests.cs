@@ -120,6 +120,15 @@ internal static partial class UiUxApplicationSurfaceTests
             view.Arrange(new Rect(0, 0, 760, 180));
             view.UpdateLayout();
 
+            Expander filters = EnumerateVisualDescendants<Expander>(view)
+                .Single(expander =>
+                    System.Windows.Automation.AutomationProperties.GetName(expander)
+                        .Equals("Library filters and organization", StringComparison.Ordinal));
+            TestAssert.False(filters.IsExpanded,
+                "Advanced Library filters should initially leave room for the finished clips.");
+            filters.IsExpanded = true;
+            view.UpdateLayout();
+
             ComboBox selector = EnumerateVisualDescendants<ComboBox>(view)
                 .Single(combo =>
                     System.Windows.Automation.AutomationProperties.GetName(combo)

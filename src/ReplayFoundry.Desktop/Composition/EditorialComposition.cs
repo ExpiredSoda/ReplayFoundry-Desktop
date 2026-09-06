@@ -32,7 +32,8 @@ internal static class EditorialComposition
         var metadataGenerator = new ClipEditorialMetadataGenerationService(
             new HeuristicClipEditorialMetadataGenerator(),
             aiProvider,
-            dependencies.VisualReview.Materializer);
+            dependencies.VisualReview.Materializer,
+            dependencies.VisualReview.RuntimeCapabilities.EditorialAiUnavailableReason);
         var generationMetadata = new GenerationEditorialMetadataService(
             metadataGenerator,
             profileSession,

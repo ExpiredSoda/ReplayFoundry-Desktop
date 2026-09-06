@@ -139,7 +139,9 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         IStudioEditorialMetadataCorrectionRecorder?
             editorialPreferenceRecorder =
             null,
-        IGenerationGameKnowledgeService? gameKnowledge = null)
+        IGenerationGameKnowledgeService? gameKnowledge = null,
+        ICorrectedCaptionAlignmentService? captionAlignment = null,
+        StudioCaptionLanguageModel? captionLanguageCapabilities = null)
         : this(
             outputSession ??
                 throw new ArgumentNullException(nameof(outputSession)),
@@ -166,7 +168,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
                 : WorkspaceSurfaceState.ContentReady,
             editorialRerollPreference,
             editorialPreferenceRecorder,
-            gameKnowledge)
+            gameKnowledge, captionAlignment, captionLanguageCapabilities)
     {
     }
 
@@ -192,7 +194,9 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         IStudioEditorialMetadataCorrectionRecorder?
             editorialPreferenceRecorder =
             null,
-        IGenerationGameKnowledgeService? gameKnowledge = null)
+        IGenerationGameKnowledgeService? gameKnowledge = null,
+        ICorrectedCaptionAlignmentService? captionAlignment = null,
+        StudioCaptionLanguageModel? captionLanguageCapabilities = null)
     {
         _outputSession = outputSession;
         _outputSink = outputSession as IGenerationOutputSink;
@@ -226,6 +230,14 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
             editorialRerollPreference,
             editorialPreferenceRecorder,
             gameKnowledge);
+        Inspector.Caption.ConfigurePreparation(captionPreparation);
+        Inspector.Caption.ConfigureAlignment(captionAlignment);
+        Inspector.Caption.ConfigureLanguageCapabilities(captionLanguageCapabilities);
+        Inspector.Output.MixAudition.PlaybackStarting += (_, _) =>
+        {
+            if (Preview.IsPreviewPlaying) Preview.PlayCommand.Execute(null);
+            Inspector.Caption.AudioAudition.Stop();
+        };
         Inspector.SelectedAssetChanged += Inspector_SelectedAssetChanged;
         Inspector.Clip.DraftRangeChanged += Clip_DraftRangeChanged;
         Inspector.Clip.DraftAppearanceChanged += Clip_DraftAppearanceChanged;
@@ -245,6 +257,11 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
                 HiddenMoments.HasUnfinishedQueueItems,
             selectedAsset: () => Inspector.SelectedAsset,
             libraryCatalog: libraryCatalog);
+        ManualClips = new StudioManualClipViewModel(outputEditor as IGenerationManualClipEditor,
+            previewMediaService, () => !FinalRender.IsRendering && !Inspector.Editorial.IsGenerating &&
+                !Inspector.Editorial.HasUnsavedChanges && !Inspector.Clip.HasPendingEdit &&
+                !HiddenMoments.HasUnfinishedQueueItems);
+        ManualClips.ClipAdded += ManualClips_ClipAdded;
         _projectSwitcher = new StudioProjectSwitchCoordinator(this);
         Inspector.Editorial.PropertyChanged += Editorial_PropertyChanged;
         HiddenMoments.PropertyChanged += HiddenMoments_PropertyChanged;
@@ -279,6 +296,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         Preview.Bind(HasProject, CurrentProject, Inspector.SelectedAsset);
         FinalRender.Bind(CurrentProject);
         HiddenMoments.Bind(CurrentProject);
+        ManualClips.Bind(CurrentProject);
         WarmFirstAlternateWhenPreviewSettles();
         RestartPreviewPrewarming();
     }
@@ -294,6 +312,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     public StudioPreviewViewModel Preview { get; }
     public StudioFinalRenderViewModel FinalRender { get; }
     public StudioHiddenMomentsViewModel HiddenMoments { get; }
+    public StudioManualClipViewModel ManualClips { get; }
 
     public Task<StudioProjectSwitchResult> TrySwitchProjectAsync(
         GenerationOutputProject project,
@@ -328,48 +347,17 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         CurrentProject?.IsFinalized == true;
     public bool IsProjectDraft =>
         CurrentProject is not null && !CurrentProject.IsFinalized;
-    public string ProjectName => CurrentProject is null
-        ? HasProject
-            ? "Open Studio project"
-            : "No project open"
-        : CurrentProject.Assets
-            .Select(static asset => asset.SourceFullPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(2)
-            .ToArray() is { Length: 1 } sources
-                ? Path.GetFileNameWithoutExtension(sources[0])
-                : $"{CurrentProject.Assets.Select(static asset => asset.SourceFullPath).Distinct(StringComparer.OrdinalIgnoreCase).Count()} source project";
-    public string SaveStateText => _projectPersistence?.LastError is { } error
-        ? "Studio could not save your latest changes: " + error
-        : CurrentProject is null
-        ? HasProject
-            ? "Studio is ready"
-            : "No Studio project is open"
-        : CurrentProject.IsFinalized
-            ? "Final files saved in Library"
-            : "Changes and the queue are saved on this device";
+    public string ProjectName =>
+        StudioProjectStatusPresentation.ProjectName(CurrentProject, HasProject);
+    public string SaveStateText =>
+        StudioProjectStatusPresentation.SaveStateText(CurrentProject, HasProject, _projectPersistence?.LastError);
     public string ProjectPromptDescription => HasProject
         ? IsProjectFinalized
             ? "The finalized files are available in Library."
             : "Choose a clip, make your changes, add it to the queue, and save a Library copy."
         : "Generate a clip first, then return here to edit it.";
-    public string StatusText => _projectPersistence?.LastError is not null
-        ? "Studio could not save your latest changes"
-        : SurfaceState switch
-        {
-            WorkspaceSurfaceState.ContentReady => IsProjectFinalized
-                ? "Finished files in Library"
-                : CurrentProject is null
-                    ? "Studio project ready"
-                    : $"{CurrentProject.SelectedCount} " +
-                      (CurrentProject.SelectedCount == 1
-                          ? "clip ready to edit"
-                          : "clips ready to edit"),
-            WorkspaceSurfaceState.Loading => "Opening your Studio project…",
-            WorkspaceSurfaceState.Error => "Studio needs your attention",
-            WorkspaceSurfaceState.Unavailable => "Studio is unavailable right now",
-            _ => "Waiting for a project",
-        };
+    public string StatusText =>
+        StudioProjectStatusPresentation.StatusText(CurrentProject, SurfaceState, _projectPersistence?.LastError);
     public string ErrorSummary => "Studio could not load a project.";
     public string SurfaceSummary => IsEmpty ? "Studio is waiting for a project." : ErrorSummary;
     public string SurfaceSuggestion => IsEmpty
@@ -427,6 +415,8 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         FinalRender.Dispose();
         HiddenMoments.MomentAccepted -= HiddenMoments_MomentAccepted;
         HiddenMoments.Dispose();
+        ManualClips.ClipAdded -= ManualClips_ClipAdded;
+        ManualClips.Dispose();
         Inspector.Dispose();
         Preview.Dispose();
         Preview.GraphicFileDropped -= Preview_GraphicFileDropped;
@@ -457,6 +447,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
                 FinalRender.StopAsync(cancellationToken),
                 Inspector.StopAsync(cancellationToken),
                 HiddenMoments.StopAsync(cancellationToken),
+                ManualClips.StopAsync(cancellationToken),
                 Preview.StopAsync(cancellationToken))
             .ConfigureAwait(false);
     }
@@ -627,6 +618,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         }
         FinalRender.Bind(CurrentProject);
         HiddenMoments.Bind(CurrentProject);
+        ManualClips.Bind(CurrentProject);
         WarmFirstAlternateWhenPreviewSettles();
         RestartPreviewPrewarming();
 
@@ -710,6 +702,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         object? sender,
         PropertyChangedEventArgs e)
     {
+        ManualClips.RefreshAvailability();
         if (e.PropertyName is nameof(Inspector.Editorial.HasUnsavedChanges) or
             nameof(Inspector.Editorial.Title) or
             nameof(Inspector.Editorial.Description) or
@@ -729,6 +722,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         object? sender,
         PropertyChangedEventArgs e)
     {
+        ManualClips.RefreshAvailability();
         if (e.PropertyName is
             nameof(HiddenMoments.IsPreparingAcceptedMoment) or
             nameof(HiddenMoments.HasUnfinishedQueueItems))
@@ -772,11 +766,17 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         if (e.PropertyName is nameof(FinalRender.IsRendering))
         {
             HiddenMoments.SetProjectMutationBlocked(FinalRender.IsRendering);
+            ManualClips.RefreshAvailability();
             if (FinalRender.IsRendering)
             {
+                _previewPrewarming.Suspend();
                 _draftSaveCancellation?.Cancel();
                 _draftSaveCancellation?.Dispose();
                 _draftSaveCancellation = null;
+            }
+            else
+            {
+                RestartPreviewPrewarming();
             }
             _selectBrowserAssetCommand.RaiseCanExecuteChanged();
             _queueBrowserAssetCommand.RaiseCanExecuteChanged();
@@ -926,6 +926,12 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         }
     }
 
+    private void ManualClips_ClipAdded(object? sender, EventArgs e)
+    {
+        Inspector.SelectedAsset = CurrentProject?.Assets.LastOrDefault();
+        SelectedTool = StudioToolSection.MomentsClips;
+    }
+
     private bool CanCommitPendingClipEdit() =>
         !Inspector.Clip.HasPendingEdit ||
         Inspector.Clip.IsBoundaryDraftValid;
@@ -974,6 +980,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
 
     private void RefreshClipDraftCommandState()
     {
+        ManualClips.RefreshAvailability();
         FinalRender.RefreshReadiness();
         _selectBrowserAssetCommand.RaiseCanExecuteChanged();
         _queueBrowserAssetCommand.RaiseCanExecuteChanged();
