@@ -4,14 +4,14 @@ A Windows app for finding moments in gameplay recordings, editing clips, styling
 
 ## Download and install
 
-The current public release is **[1.0.0 Beta 3](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.3)**.
+The current public release is **[1.0.0 Beta 4](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.4)**.
 
-- [Download the Microsoft-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.3/ReplayFoundry-1.0.0-beta.3-Base-win-x64-setup.exe).
+- [Download the publisher-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.4/ReplayFoundry-1.0.0-beta.4-Base-win-x64-setup.exe).
 - Windows 10 or 11, x64. Setup installs for the current user.
-- Advanced AI is optional and unchecked by default. Its verified download is about 12.5 GB; the qualified visual AI configuration uses a compatible NVIDIA GPU with 16 GB VRAM. Readiness also depends on available memory.
+- Advanced AI is optional and unchecked by default. Its verified download is about 12.7 GB; the qualified visual AI configuration uses a compatible NVIDIA GPU with 16 GB VRAM. Readiness also depends on available memory.
 - The Base app works without the optional AI package. Use Settings or the installer to add, repair, or remove optional capabilities.
 
-**Beta 4 is in release validation.** Its changes include expanded caption styling and editing, output framing and audio controls, balanced title and description drafts, resumable rendering, and a refreshed workspace. [CHANGELOG.md](CHANGELOG.md) records the release scope. The public download above remains Beta 3 until the new installer is qualified and published.
+**Beta 4 adds** expanded caption styling and editing, output framing and audio controls, balanced title and description drafts, resumable rendering, and a refreshed workspace. Qualification includes Debug and Release tests, native workspace checks, verified runtime packs, installed local AI generation, and a freshly encoded caption styling test. AI wording can still require review; [CHANGELOG.md](CHANGELOG.md) records the release scope and measured performance limits.
 
 ## Prepare and publish
 

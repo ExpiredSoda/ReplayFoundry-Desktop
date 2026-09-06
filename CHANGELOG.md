@@ -2,9 +2,9 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 3](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.3).
+downloadable version is [1.0.0 Beta 4](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.4).
 
-## Unreleased
+## 1.0.0 Beta 4 — 2026-09-06
 
 - Refined the workspace with calmer surfaces, compact labeled navigation, clearer Generate steps, and Studio caption controls grouped into expandable sections. Short windows retain usable previews and full-size controls; setup navigation opens each step at its beginning, and compact layout review scrolls vertically.
 - Added saved portrait, square, and landscape output composition, gameplay/facecam regions, manual HUD placement, reusable game layouts, per-track gain/mute and voice ducking, optional loudness/true-peak controls and before/after audition. Preview and export share framing and audio settings. Existing portrait recordings retain their original composition by default.
@@ -17,7 +17,11 @@ downloadable version is [1.0.0 Beta 3](https://github.com/ExpiredSoda/ReplayFoun
 - Added qualified hardware encoding with software recovery, validated per-clip render checkpoints, live encoding progress, explicit SDR color handling and output probe/decode checks. Deterministic visual analysis now shares one decode; caption-only cache misses transcribe the requested cut.
 - Added 720p through 2160p output choices and validated montage timing recovery. Studio opens a proxy of the selected cut first and loads wider trim context when needed; a separate bounded CPU lane lets foreground previews proceed during AI work.
 - Expanded title/description angles and readability guidance, retained earlier copy through save/reopen for comparison, and rejected rewrites completed against superseded captions. Added separate opt-in read-only YouTube Analytics with immutable uploaded source/style context, matched comparison controls and sample counts.
-- Added isolated real-media validation commands, resource telemetry and performance comparisons. These changes are still under release validation; runtime packs and the public installer have not been replaced.
+- Added isolated real-media validation commands, resource telemetry and performance comparisons. Qualification passed 1,811 Debug and 1,807 Release .NET tests, 449 executed Python tests (3 optional skips), native workspace checks, runtime archive verification, and signed-installer package checks. The Windows installer carries a timestamped Expired Soda Studios LLC publisher signature.
+- Updated the optional local AI package pair to Qwen runtime `0.8.24` and model revision `4.0.20`, with about 12.7 GB of optional downloads.
+- The installed local AI title/description check took 522.38 seconds, 8.73% slower than the previous same-input run, and retained the same balanced wording with review findings. A separate caption styling check freshly encoded and validated a 39.4-second portrait clip in 8.08 seconds. These recording-specific observations do not establish a general speedup; generated copy and captions still need creator review.
+
+Production source: [v1.0.0-beta.4](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/tree/v1.0.0-beta.4), built from [`fac75e3d`](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/commit/fac75e3d2b89663925329da76ed5cb739f02b121). Later documentation updates do not change this tagged build.
 
 ## 1.0.0 Beta 3 — 2026-09-01
 
