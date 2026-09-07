@@ -8,12 +8,48 @@ using ReplayFoundry.Desktop.Features.Generate.RecentProjects;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
 using ReplayFoundry.Desktop.Features.Studio.Preview;
 using ReplayFoundry.Desktop.Media.Subtitles;
+using ReplayFoundry.Desktop.Media.Transcription;
 using ReplayFoundry.Desktop.Platform.Storage;
 
 namespace ReplayFoundry.PreparationTests;
 
 internal static partial class GenerationClipRenderingTests
 {
+    private static Task RegeneratedCaptionsFollowMovedStudioCut()
+    {
+        using var fixture = CreateFixture(GenerationMode.IndividualClips, hasAudio: true);
+        var original = fixture.CreateDraft().PrimaryAsset;
+        var start = original.SourceEnd + TimeSpan.FromSeconds(10);
+        var end = start + TimeSpan.FromSeconds(5);
+        var moved = original.WithStudioEdits(start, end, original.Appearance);
+        var selection = new GenerationCaptionSourceSelection(original.SourceFullPath,
+            original.SourceMedia.AudioStreams[0].Index, CaptionAudioContentRole.CreatorCommentary);
+        var track = GenerationCandidateCaptionTrack.RestoreStudioHandoff(original.Id, "moved-speech", selection,
+            GenerationCaptionStylePreset.Clean, start, end - start, original.SourceDuration,
+            [new AudioTranscriptionSegment("new-phrase", "moved-speech", "Speech in the new cut.",
+                TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3),
+                start + TimeSpan.FromSeconds(1), start + TimeSpan.FromSeconds(3))],
+            isUserEdited: false, GenerationCaptionSuppressionReason.None);
+
+        // Studio regeneration, subtitle import, and saved word edits all use
+        // this boundary after a trim; the old editorial cut remains retained.
+        var updated = moved.WithCaptionTrack(track);
+        TestAssert.Equal(start, updated.EditorialContext!.SourceStart,
+            "New speech must be validated against the edited cut, not the Generate-time window.");
+        TestAssert.Equal(end, updated.EditorialContext.SourceEnd,
+            "Caption updates must refresh both editorial boundaries.");
+        TestAssert.Equal("Speech in the new cut.", updated.EditorialContext.Transcripts.Single().Text,
+            "Newly reached speech must remain available for titles and descriptions.");
+        TestAssert.Equal(start + TimeSpan.FromSeconds(1), updated.Captions!.Segments.Single().AbsoluteSourceStart,
+            "Refreshing editorial context must not move measured speech timestamps.");
+        TestAssert.Equal(original.SourceStart, original.EditorialContext!.SourceStart,
+            "Updating captions must not mutate the retained original asset.");
+        var repeated = updated.WithCaptionTrack(track);
+        TestAssert.Equal(1, repeated.EditorialContext!.Transcripts.Count,
+            "Repeated caption saves must replace the stream rather than duplicate it.");
+        return Task.CompletedTask;
+    }
+
     private static Task ClearCaptionedRecentProjectWithMissingSource()
     {
         using var fixture = CreateFixture(GenerationMode.IndividualClips, hasAudio: true, captionsEnabled: true,

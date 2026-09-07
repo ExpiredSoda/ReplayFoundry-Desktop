@@ -445,7 +445,9 @@ public sealed partial class GenerationOutputAsset
         ArgumentNullException.ThrowIfNull(captions);
         GenerationCandidateCaptionTrack retainedCaptions =
             captions.ToStudioHandoff();
-        ClipEditorialContext? editorialContext = EditorialContext;
+        ClipEditorialContext? editorialContext = EditorialContext is null
+            ? null
+            : CreateCurrentCutEditorialContext();
         if (editorialContext is not null)
         {
             ClipEditorialTranscriptContext[] transcripts = SourceMedia.AudioStreams.Count == 0 ? [] :

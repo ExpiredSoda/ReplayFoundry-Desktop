@@ -26,6 +26,7 @@ internal static partial class GenerationClipRenderingTests
         new("Caption editor uses current cut and preserves measured words", CaptionEditingUsesCurrentCutAndPreservesMeasuredWords),
         new("Caption trim and extension round trips retain measured source clocks", CaptionCutRoundTripsKeepAbsoluteWordClocks),
         new("Clearing recent projects with captions and a deleted source releases Studio safely", ClearCaptionedRecentProjectWithMissingSource),
+        new("Regenerated captions follow a moved Studio cut", RegeneratedCaptionsFollowMovedStudioCut),
         new("Named caption look catalogs migrate legacy arrays explicitly", NamedCaptionLookCatalogMigratesExplicitly),
         new("Missing caption fonts resolve consistently in preview and export", MissingCaptionFontsResolveConsistently),
         new("Custom caption safe areas report measured text overflow", CustomCaptionSafeAreasReportMeasuredOverflow),
