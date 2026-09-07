@@ -24,7 +24,8 @@ public sealed class CompositionReviewSourceViewModel :
         PreparedGenerationSource preparedSource,
         bool isReference,
         IVideoPreviewFrameProvider previewFrameProvider,
-        PreparedSourceCompositionPlan? initialPlan = null)
+        PreparedSourceCompositionPlan? initialPlan = null,
+        ICompositionLayoutSuggestionService? layoutSuggestions = null)
     {
         ArgumentNullException.ThrowIfNull(preparedSource);
         ArgumentNullException.ThrowIfNull(previewFrameProvider);
@@ -48,6 +49,7 @@ public sealed class CompositionReviewSourceViewModel :
         RegionEditor = new CompositionRegionCollectionViewModel(
             MarkUnconfirmed);
         RegionEditor.PropertyChanged += OnRegionEditorPropertyChanged;
+        LayoutAssist = new CompositionLayoutAssistViewModel(Preview, RegionEditor, layoutSuggestions);
 
         if (initialPlan is null)
         {
@@ -103,6 +105,8 @@ public sealed class CompositionReviewSourceViewModel :
     public CompositionPreviewViewModel Preview { get; }
 
     public CompositionRegionCollectionViewModel RegionEditor { get; }
+
+    public CompositionLayoutAssistViewModel LayoutAssist { get; }
 
     public CompositionRegionDraftViewModel?
         SelectedRegion
@@ -349,6 +353,7 @@ public sealed class CompositionReviewSourceViewModel :
         }
 
         _isDisposed = true;
+        LayoutAssist.Dispose();
         RegionEditor.PropertyChanged -= OnRegionEditorPropertyChanged;
         Preview.PropertyChanged -= OnPreviewPropertyChanged;
         Preview.Dispose();

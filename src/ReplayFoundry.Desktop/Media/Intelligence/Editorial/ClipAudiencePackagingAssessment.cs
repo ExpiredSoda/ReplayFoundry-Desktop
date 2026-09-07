@@ -8,7 +8,7 @@ public sealed partial record ClipAudiencePackagingAssessment(
     IReadOnlyList<string> Suggestions)
 {
     public string Summary => Suggestions.Count == 0
-        ? "No mechanical readability issues found. Review the wording for specific details and accuracy against the clip."
+        ? "No wording problems were detected. Check names and facts against the clip before sharing."
         : string.Join("\n", Suggestions);
 
     public static ClipAudiencePackagingAssessment Evaluate(string? title, string? description)

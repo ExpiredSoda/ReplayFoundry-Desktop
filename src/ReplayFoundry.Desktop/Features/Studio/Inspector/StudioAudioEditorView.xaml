@@ -27,9 +27,9 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
             <StackPanel Visibility="{Binding HasAudio, Converter={StaticResource BoolToVisibility}}">
-                <Expander Header="Voice ducking" Margin="0,0,0,8" Style="{DynamicResource Control.DisclosureExpander}">
+                <Expander Header="Make your voice easier to hear" Margin="0,0,0,8" Style="{DynamicResource Control.DisclosureExpander}">
                     <StackPanel Margin="0,8,0,0">
-                <TextBlock Style="{DynamicResource Text.Meta}" Text="Voice track for automatic ducking" />
+                <TextBlock Style="{DynamicResource Text.Meta}" Text="Which track has your voice?" />
                 <ComboBox Margin="0,4,0,8"
                     AutomationProperties.Name="Ducking voice track"
                     ItemsSource="{Binding AudioTracks}"
@@ -39,17 +39,17 @@
                 <CheckBox Content="Lower other tracks while voice is speaking" AutomationProperties.Name="Duck gameplay under voice" IsChecked="{Binding DuckGameplay, Mode=TwoWay}" />
                     </StackPanel>
                 </Expander>
-                <Expander Header="Loudness and true peaks" Margin="0,10,0,0" Style="{DynamicResource Control.DisclosureExpander}">
+                <Expander Header="Even out the volume" Margin="0,10,0,0" Style="{DynamicResource Control.DisclosureExpander}">
                     <StackPanel Margin="0,7,0,0">
-                        <CheckBox Content="Normalize loudness" IsChecked="{Binding NormalizeLoudness, Mode=TwoWay}" AutomationProperties.Name="Normalize mix loudness" />
-                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="Integrated loudness target (LUFS, −30 to −5)" />
+                        <CheckBox Content="Keep the overall volume consistent" IsChecked="{Binding NormalizeLoudness, Mode=TwoWay}" AutomationProperties.Name="Normalize mix loudness" />
+                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="Overall volume target (LUFS): −14 is a useful starting point" />
                         <TextBox Text="{Binding IntegratedLufs, Mode=TwoWay, StringFormat=F1}" AutomationProperties.Name="Integrated loudness target LUFS" />
-                        <CheckBox Margin="0,8,0,0" Content="Limit true peaks without normalization" IsChecked="{Binding LimitTruePeak, Mode=TwoWay}" AutomationProperties.Name="Limit mix true peaks" />
-                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="True-peak ceiling (dBTP, −9 to 0)" />
+                        <CheckBox Margin="0,8,0,0" Content="Prevent sudden volume spikes" IsChecked="{Binding LimitTruePeak, Mode=TwoWay}" AutomationProperties.Name="Limit mix true peaks" />
+                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="Loudest allowed peak (dBTP): −1 leaves a little headroom" />
                         <TextBox Text="{Binding TruePeakDecibels, Mode=TwoWay, StringFormat=F1}" AutomationProperties.Name="True peak ceiling dBTP" />
                         <TextBlock Margin="0,6,0,0"
                             Style="{DynamicResource Text.Meta}"
-                            Text="Normalization includes the peak ceiling. A normalized preview covers the saved cut; save boundary changes to refresh it. Export compression can slightly change measured peaks."
+                            Text="Even volume also limits sudden peaks. Save changes to the clip length to hear the updated mix. Use Before and After to compare."
                             TextWrapping="Wrap" />
                     </StackPanel>
                 </Expander>

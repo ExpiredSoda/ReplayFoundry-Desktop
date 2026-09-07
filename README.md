@@ -4,14 +4,14 @@ A Windows app for finding moments in gameplay recordings, editing clips, styling
 
 ## Download and install
 
-The current public release is **[1.0.0 Beta 4](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.4)**.
+The current public release is **[1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5)**.
 
-- [Download the publisher-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.4/ReplayFoundry-1.0.0-beta.4-Base-win-x64-setup.exe).
+- [Download the publisher-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.5/ReplayFoundry-1.0.0-beta.5-Base-win-x64-setup.exe).
 - Windows 10 or 11, x64. Setup installs for the current user.
-- Advanced AI is optional and unchecked by default. Its verified download is about 12.7 GB; the qualified visual AI configuration uses a compatible NVIDIA GPU with 16 GB VRAM. Readiness also depends on available memory.
+- Advanced AI is optional and unchecked by default. Setup shows its download size before installation; the qualified visual AI configuration uses a compatible NVIDIA GPU with 16 GB VRAM. Readiness also depends on available memory.
 - The Base app works without the optional AI package. Use Settings or the installer to add, repair, or remove optional capabilities.
 
-**Beta 4 adds** expanded caption styling and editing, output framing and audio controls, balanced title and description drafts, resumable rendering, and a refreshed workspace. Qualification includes Debug and Release tests, native workspace checks, verified runtime packs, installed local AI generation, and a freshly encoded caption styling test. AI wording can still require review; [CHANGELOG.md](CHANGELOG.md) records the release scope and measured performance limits.
+**Beta 5 adds** full-recording timelines with suggested moments, draggable clip ranges, clearer controls, animated caption previews, and a local personal learning model in official downloads. The AI runtime has been upgraded and checked for known dependency advisories. New profiles start without trained preferences; feedback and quality checks are required before personal ranking activates. Review generated captions and wording before publishing. [CHANGELOG.md](CHANGELOG.md) records the release scope.
 
 ## Prepare and publish
 
@@ -23,6 +23,8 @@ Review the cut, captions, title, and description in Studio before exporting. Kee
 - [Release documentation](docs/README.md)
 - [Security reporting](SECURITY.md)
 
-The [Beta 3 workflow demonstration](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.3/ReplayFoundry-3-Minute-Workflow-Demo-1080p.mp4) shows installation through publishing; its interface predates Beta 4.
+Official Windows downloads include ReplayFoundry’s proprietary personal learning engine. The public source repository includes its integration interface and an unavailable adapter, without the neural training implementation, personal examples, or learned model files.
+
+The [workflow demonstration on the website](https://replayfoundry.com/) shows installation through publishing. Its displayed beta label identifies the version recorded.
 
 ReplayFoundry is a product of Expired Soda Studios LLC. For installation or release support, contact [support@replayfoundry.com](mailto:support@replayfoundry.com).

@@ -763,7 +763,7 @@ public static class StudioProjectDocumentMapper
             vector.Features.Select(static value =>
                 new StudioPreferenceFeatureDocument(
                     value.Code,
-                    value.NormalizedValue)).ToArray(), vector.Context);
+                    value.NormalizedValue)).ToArray(), vector.Context, vector.DetectedContent);
 
     private static ClipPreferenceFeatureVector RestorePreferenceVector(
         StudioPreferenceVectorDocument vector) =>
@@ -771,5 +771,5 @@ public static class StudioProjectDocumentMapper
             vector.Features.Select(static value =>
                 new ClipPreferenceFeature(
                     value.Code,
-                    value.NormalizedValue)), vector.Context);
+                    value.NormalizedValue)), vector.Context, vector.DetectedContent);
 }

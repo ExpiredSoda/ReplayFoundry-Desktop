@@ -75,6 +75,7 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         _captionPreparation = captionPreparation;
         _editorialMetadata = editorialMetadata;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        Filters = new(OnFiltersChanged);
         Preview = new StudioPreviewViewModel(
             previewMediaService,
             showCaptionControls: false,
@@ -103,6 +104,10 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
     public event EventHandler<StudioHiddenMomentAcceptedEventArgs>?
         MomentAccepted;
     public StudioPreviewViewModel Preview { get; }
+    public StudioMomentFilters Filters { get; }
+    private GenerationHiddenMoment[] VisiblePending => _pending.Where(moment => Filters.Matches(moment.PreferenceFeatures)).ToArray();
+    public string FilterSummary => $"{VisiblePending.Length} matching moments · {_pending.Length} available";
+    public string ContentLabel => _current is null ? string.Empty : StudioMomentFilters.Label(StudioMomentFilters.Profile(_current.PreferenceFeatures));
     public GenerationHiddenMoment? Current => _current;
     public bool IsOpen => _isOpen;
     public bool HasAvailableMoments => _pending.Length > 0;
@@ -120,9 +125,11 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         RemainingCount, QueueWorkCount);
     public string ProgressText => StudioHiddenMomentsPresentation.ProgressText(
         _current, HasQueueItems, QueueSummaryText, _reviewedCount, _sessionTotal);
-    public string MomentTitle => StudioHiddenMomentsPresentation.MomentTitle(
+    public string MomentTitle => _current is null && _pending.Length > 0 && !HasQueueItems ? "No moments match these filters"
+        : StudioHiddenMomentsPresentation.MomentTitle(
         _current, HasQueueItems, QueueFailureCount);
-    public string MomentDetail => StudioHiddenMomentsPresentation.MomentDetail(
+    public string MomentDetail => _current is null && _pending.Length > 0 && !HasQueueItems ? "Try another type or choose All moments above."
+        : StudioHiddenMomentsPresentation.MomentDetail(
         _current, HasQueueItems);
     public string EvidenceText => StudioHiddenMomentsPresentation.EvidenceText(
         _current, HasQueueItems);
@@ -168,7 +175,6 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
     public void Bind(GenerationOutputProject? project)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
-        _previewWarmup.Cancel();
         string? currentCandidateId = _current?.Id;
         bool newProject = !string.Equals(
             _projectId,
@@ -176,6 +182,7 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
             StringComparison.Ordinal);
         if (newProject)
         {
+            _previewWarmup.Cancel();
             CancelQueueForProjectChange();
         }
         _project = project;
@@ -219,7 +226,7 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         GenerationHiddenMoment? next = _isOpen
             ? FindPending(currentCandidateId) ??
               FindPending(_lastViewedCandidateId) ??
-              _pending.FirstOrDefault()
+              VisiblePending.FirstOrDefault()
             : null;
         SetCurrent(next);
         NotifyAll();
@@ -287,7 +294,7 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         _isOpen = true;
         SetCurrent(
             FindPending(_lastViewedCandidateId) ??
-            _pending.FirstOrDefault());
+            VisiblePending.FirstOrDefault());
         NotifyAll();
     }
 
@@ -321,13 +328,13 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         int currentIndex = CurrentPendingIndex;
         return CanNavigateMoments() &&
             currentIndex >= 0 &&
-            currentIndex + 1 < _pending.Length;
+            currentIndex + 1 < VisiblePending.Length;
     }
 
     private int CurrentPendingIndex => _current is null
         ? -1
         : Array.FindIndex(
-            _pending,
+            VisiblePending,
             value => value.Id.Equals(_current.Id, StringComparison.Ordinal));
 
     private void PreviousMoment() => NavigateToPendingOffset(-1);
@@ -339,14 +346,13 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         int destination = CurrentPendingIndex + offset;
         if (!CanNavigateMoments() ||
             destination < 0 ||
-            destination >= _pending.Length)
+            destination >= VisiblePending.Length)
         {
             return;
         }
 
         _error = null;
-        _previewWarmup.Cancel();
-        SetCurrent(_pending[destination]);
+        SetCurrent(VisiblePending[destination]);
         NotifyAll();
     }
 
@@ -385,9 +391,8 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
             StringComparison.Ordinal)).ToArray();
         RecalculateReviewedCount();
         GenerationHiddenMoment? next = FindPending(nextCandidateId) ??
-            _pending.FirstOrDefault();
+            VisiblePending.FirstOrDefault();
         _error = null;
-        _previewWarmup.Cancel();
         SetCurrent(next);
         NotifyAll();
         _queueSignal.Release();
@@ -397,23 +402,23 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
     private string? FindNextCandidateId(GenerationHiddenMoment current)
     {
         int currentIndex = Array.FindIndex(
-            _pending,
+            VisiblePending,
             value => value.Id.Equals(current.Id, StringComparison.Ordinal));
-        if (currentIndex < 0 || _pending.Length <= 1)
+        if (currentIndex < 0 || VisiblePending.Length <= 1)
         {
             return null;
         }
 
-        int nextIndex = currentIndex + 1 < _pending.Length
+        int nextIndex = currentIndex + 1 < VisiblePending.Length
             ? currentIndex + 1
             : 0;
-        return _pending[nextIndex].Id;
+        return VisiblePending[nextIndex].Id;
     }
 
     private GenerationHiddenMoment? FindPending(string? candidateId) =>
         candidateId is null
             ? null
-            : _pending.FirstOrDefault(value => value.Id.Equals(
+            : VisiblePending.FirstOrDefault(value => value.Id.Equals(
                 candidateId,
                 StringComparison.Ordinal));
 
@@ -716,7 +721,7 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         if (_isOpen && _current is null)
         {
             SetCurrent(
-                FindPending(item.CandidateId) ?? _pending.FirstOrDefault());
+                FindPending(item.CandidateId) ?? VisiblePending.FirstOrDefault());
         }
         if (QueueFailureCount == 0)
         {
@@ -801,9 +806,8 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
                 StringComparison.Ordinal)).ToArray();
             RecalculateReviewedCount();
             _error = null;
-            _previewWarmup.Cancel();
             SetCurrent(
-                FindPending(nextCandidateId) ?? _pending.FirstOrDefault());
+                FindPending(nextCandidateId) ?? VisiblePending.FirstOrDefault());
         }
         catch (Exception exception) when (
             exception is IOException or
@@ -884,6 +888,7 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
             ? null
             : StudioHiddenMomentPreviewAssetFactory.Create(_project, value);
         Preview.Bind(value is not null, _project, previewAsset);
+        if (value is not null) WarmNextAlternatePreview();
     }
 
     internal void WarmFirstAlternatePreview()
@@ -892,7 +897,7 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         {
             return;
         }
-        _previewWarmup.Restart(CreatePreviewAsset(_pending.FirstOrDefault()));
+        _previewWarmup.Restart(VisiblePending.Take(3).Select(CreatePreviewAsset).ToArray());
     }
 
     private void Preview_PropertyChanged(
@@ -910,13 +915,10 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
     private void WarmNextAlternatePreview()
     {
         int currentIndex = Array.FindIndex(
-            _pending,
+            VisiblePending,
             value => ReferenceEquals(value, _current));
-        GenerationHiddenMoment? next = currentIndex >= 0 &&
-            currentIndex + 1 < _pending.Length
-                ? _pending[currentIndex + 1]
-                : null;
-        _previewWarmup.Restart(CreatePreviewAsset(next));
+        _previewWarmup.Restart(VisiblePending.Skip(currentIndex + 1).Take(2)
+            .Select(CreatePreviewAsset).ToArray());
     }
 
     private GenerationOutputAsset? CreatePreviewAsset(
@@ -938,6 +940,8 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
 
     private void NotifyAll()
     {
+        OnPropertyChanged(nameof(FilterSummary));
+        OnPropertyChanged(nameof(ContentLabel));
         foreach (string propertyName in
                  StudioHiddenMomentsPresentation.NotificationPropertyNames)
         {
@@ -951,6 +955,13 @@ public sealed class StudioHiddenMomentsViewModel : ObservableObject, IDisposable
         _previousMomentCommand.RaiseCanExecuteChanged();
         _nextMomentCommand.RaiseCanExecuteChanged();
         _resetCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OnFiltersChanged()
+    {
+        _previewWarmup.Cancel();
+        if (_isOpen) SetCurrent(FindPending(_current?.Id) ?? VisiblePending.FirstOrDefault());
+        NotifyAll();
     }
 
 }

@@ -2,6 +2,7 @@
     x:Class="ReplayFoundry.Desktop.Features.Generate.Progress.GenerationProgressView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     d:DesignHeight="600" d:DesignWidth="980" mc:Ignorable="d">
@@ -18,12 +19,18 @@
         <Grid MinHeight="{Binding ViewportHeight, ElementName=GenerationProgressScrollViewer}">
             <Border Style="{StaticResource GenerationProgress.MainPanel}">
                 <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="140" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <controls:FoundryLoadingMark Width="120" Height="120" Margin="0,0,20,0" IsActive="{Binding IsRunning}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="GENERATE" />
                     <TextBlock Margin="0,10,0,0" FontFamily="{DynamicResource Font.Display}" FontSize="26" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Title}" TextWrapping="Wrap"
                                AutomationProperties.LiveSetting="Polite" />
                     <TextBlock Margin="0,10,0,0" FontSize="14" Foreground="{DynamicResource Brush.TextSecondary}"
                                Text="{Binding Detail}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
                     <WrapPanel Margin="0,20,0,0">
                         <TextBlock Style="{StaticResource GenerationProgress.MetaValue}" Text="{Binding ModeDisplayName}" Margin="0,0,20,6" />
                         <TextBlock Style="{StaticResource GenerationProgress.MetaLabel}" Text="{Binding SourceSummary}" Margin="0,0,0,6" />

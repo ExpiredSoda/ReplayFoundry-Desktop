@@ -261,7 +261,7 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
     {
         get
         {
-            string status = _status ?? "Times begin at the current cut. Retained rows outside this cut remain editable for boundary expansion. " +
+            string status = _status ?? "Times count from the start of this clip. Words outside the clip stay saved in case you extend it. " +
                 "Save corrections before regenerating; regeneration replaces the saved transcript.";
             if (_asset?.Captions is { } track)
                 status += " " + string.Join(" ", StudioCaptionCutProjection.Project(track, _asset.SourceStart, _asset.SourceEnd).Warnings);
@@ -580,10 +580,10 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
     public ICommand AlignCorrectedTextCommand => _alignCommand;
     public ICommand CancelAlignmentCommand => _cancelAlignmentCommand;
     public bool IsAligning => _alignmentCancellation is not null;
-    public string AlignmentAvailability => _alignmentService is null ? "Corrected-text alignment is unavailable in this session." :
+    public string AlignmentAvailability => _alignmentService is null ? "Automatic word timing is unavailable. You can still edit the words and times." :
         !HasSelectedAudioStream ? "This clip has no selected audio track to align. Manual captions and subtitle import remain available." :
         SelectedLanguage != GenerationCaptionLanguagePolicy.English
-            ? "Choose English in the voice/language settings to align corrected text. Automatic language detection is not treated as English."
+            ? "For automatic word timing, choose English above. Other languages can still use manually adjusted times."
             : "Align one corrected English phrase (up to 30 seconds). First use downloads a 91 MiB model; audio and text stay on this computer. " +
                 "Review the proposed times before Save.";
 

@@ -11,7 +11,10 @@ internal sealed class StudioHiddenMomentPreviewWarmup : IDisposable
     private readonly object _sync = new();
     private Task _tail = Task.CompletedTask;
     private CancellationTokenSource? _cancellation;
-    private string? _targetIdentity;
+    private string? _activeIdentity;
+    private StudioPreviewMediaRequest[] _pending = [];
+    private bool _running;
+    private readonly HashSet<string> _completed = new(StringComparer.Ordinal);
     private bool _isStopping;
     private bool _isDisposed;
 
@@ -19,34 +22,24 @@ internal sealed class StudioHiddenMomentPreviewWarmup : IDisposable
         IStudioPreviewMediaService? mediaService) =>
         _mediaService = mediaService;
 
-    public void Restart(GenerationOutputAsset? asset)
+    public void Restart(params GenerationOutputAsset?[] assets)
     {
-        if (asset is null || _mediaService is null)
-        {
-            Cancel();
-            return;
-        }
-
-        var request = new StudioPreviewMediaRequest(
-            asset,
-            StudioPreviewRangeMode.ExactSelection);
-        string identity = StudioPreviewCacheKey.CreateMediaIdentity(request);
+        if (_mediaService is null) return;
         lock (_sync)
         {
-            if (_isDisposed || _isStopping || identity == _targetIdentity)
-            {
-                return;
-            }
-
-            TryCancel(_cancellation);
-            var cancellation = new CancellationTokenSource();
-            Task predecessor = _tail;
-            _cancellation = cancellation;
-            _targetIdentity = identity;
-            _tail = Task.Run(() => WarmAfterAsync(
-                predecessor,
-                request,
-                cancellation));
+            if (_isDisposed || _isStopping) return;
+            // Keep the active encode when navigation selects it. Its foreground
+            // request shares the media-service key lock and consumes that cache
+            // entry, instead of killing FFmpeg and starting the same cut again.
+            _pending = assets.OfType<GenerationOutputAsset>()
+                .Select(asset => new StudioPreviewMediaRequest(asset, StudioPreviewRangeMode.ExactSelection))
+                .DistinctBy(StudioPreviewCacheKey.CreateMediaIdentity)
+                .Where(request => StudioPreviewCacheKey.CreateMediaIdentity(request) != _activeIdentity &&
+                    !_completed.Contains(StudioPreviewCacheKey.CreateMediaIdentity(request)))
+                .Take(3).ToArray();
+            if (_running || _pending.Length == 0) return;
+            _running = true;
+            _tail = Task.Run(WarmAsync);
         }
     }
 
@@ -54,7 +47,8 @@ internal sealed class StudioHiddenMomentPreviewWarmup : IDisposable
     {
         lock (_sync)
         {
-            _targetIdentity = null;
+            _pending = [];
+            _completed.Clear();
             TryCancel(_cancellation);
             _cancellation = null;
         }
@@ -70,7 +64,7 @@ internal sealed class StudioHiddenMomentPreviewWarmup : IDisposable
             }
 
             _isDisposed = true;
-            _targetIdentity = null;
+            _pending = [];
             TryCancel(_cancellation);
             _cancellation = null;
         }
@@ -82,7 +76,7 @@ internal sealed class StudioHiddenMomentPreviewWarmup : IDisposable
         lock (_sync)
         {
             _isStopping = true;
-            _targetIdentity = null;
+            _pending = [];
             TryCancel(_cancellation);
             _cancellation = null;
             completion = _tail;
@@ -90,37 +84,54 @@ internal sealed class StudioHiddenMomentPreviewWarmup : IDisposable
         await completion.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task WarmAfterAsync(
-        Task predecessor,
-        StudioPreviewMediaRequest request,
-        CancellationTokenSource cancellation)
+    private async Task WarmAsync()
     {
-        try
+        while (true)
         {
-            await predecessor.ConfigureAwait(false);
-            cancellation.Token.ThrowIfCancellationRequested();
-            using StudioPreviewMediaLease lease =
-                await _mediaService!.MaterializeAsync(
-                    request,
-                    cancellation.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-            when (cancellation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception) when (
-            exception is IOException or
-            UnauthorizedAccessException or
-            InvalidOperationException or
-            ArgumentException or
-            ObjectDisposedException)
-        {
-            // Warm-ahead is opportunistic. The foreground preview keeps its
-            // normal error and retry path if this cache fill is unavailable.
-        }
-        finally
-        {
-            cancellation.Dispose();
+            StudioPreviewMediaRequest request;
+            CancellationTokenSource cancellation;
+            lock (_sync)
+            {
+                if (_isDisposed || _isStopping || _pending.Length == 0)
+                { _running = false; return; }
+                request = _pending[0];
+                _pending = _pending.Skip(1).ToArray();
+                _activeIdentity = StudioPreviewCacheKey.CreateMediaIdentity(request);
+                _cancellation = cancellation = new CancellationTokenSource();
+            }
+            try
+            {
+                cancellation.Token.ThrowIfCancellationRequested();
+                using StudioPreviewMediaLease lease =
+                    await _mediaService!.MaterializeAsync(
+                        request,
+                        cancellation.Token).ConfigureAwait(false);
+                lock (_sync)
+                    if (!cancellation.IsCancellationRequested) _completed.Add(StudioPreviewCacheKey.CreateMediaIdentity(request));
+            }
+            catch (OperationCanceledException)
+                when (cancellation.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception) when (
+                exception is IOException or
+                UnauthorizedAccessException or
+                InvalidOperationException or
+                ArgumentException or
+                ObjectDisposedException)
+            {
+                // Warm-ahead is opportunistic. The foreground preview keeps its
+                // normal error and retry path if this cache fill is unavailable.
+            }
+            finally
+            {
+                lock (_sync)
+                {
+                    _activeIdentity = null;
+                    if (ReferenceEquals(_cancellation, cancellation)) _cancellation = null;
+                }
+                cancellation.Dispose();
+            }
         }
     }
 

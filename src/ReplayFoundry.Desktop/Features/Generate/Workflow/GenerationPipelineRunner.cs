@@ -13,6 +13,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
 {
     private readonly GenerationPreflightRunner _preflight;
     private readonly IGenerationMomentFindingService _momentFinder;
+    private readonly GenerationTasteRanking? _tasteRanking;
     private readonly IGenerationOutputPathProvider _outputPathProvider;
     private readonly IGenerationCaptionPreparationService?
         _captionPreparation;
@@ -36,7 +37,8 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
         IGenerationCandidateRefinementService? candidateRefinement = null,
         IGenerationVisualSemanticAnalysisService? visualSemantic = null,
         IGenerationTranscriptAnalysisService? transcriptAnalysis = null,
-        IGenerationCaptureContextScreeningService? captureScreening = null)
+        IGenerationCaptureContextScreeningService? captureScreening = null,
+        GenerationTasteRanking? tasteRanking = null)
     {
         ArgumentNullException.ThrowIfNull(preflight);
         ArgumentNullException.ThrowIfNull(momentFinder);
@@ -53,6 +55,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
         _visualSemantic = visualSemantic;
         _transcriptAnalysis = transcriptAnalysis;
         _captureScreening = captureScreening;
+        _tasteRanking = tasteRanking;
     }
 
     public async Task<GenerationResult> RunAsync(
@@ -192,6 +195,13 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                 }
             }
             cancellationToken.ThrowIfCancellationRequested();
+            if (_tasteRanking is not null)
+            {
+                moments = await _tasteRanking.ApplyAsync(moments, candidateIntelligence, cancellationToken);
+                if (candidateIntelligence is not null)
+                    candidateIntelligence = new(candidateIntelligence.BaseMoments, candidateIntelligence.SpeechActivity,
+                        candidateIntelligence.Refinements, moments, candidateIntelligence.VisualSemantic, candidateIntelligence.Transcripts);
+            }
             if (moments.SelectedCandidates.Count == 0)
             {
                 if (candidateIntelligence?.VisualSemantic?.Outcome == GenerationVisualSemanticOutcome.Completed)

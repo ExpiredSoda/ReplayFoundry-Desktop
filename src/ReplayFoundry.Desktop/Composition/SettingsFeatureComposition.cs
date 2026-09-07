@@ -18,8 +18,9 @@ internal sealed record SettingsFeatureDependencies(
 internal static class SettingsFeatureComposition
 {
     public static SettingsViewModel Create(
-        SettingsFeatureDependencies dependencies) =>
-        new(
+        SettingsFeatureDependencies dependencies)
+    {
+        var model = new SettingsViewModel(
             dependencies.Publish.ConnectionPermission,
             CreateRuntimeCapabilities(dependencies.Runtime),
             new RuntimePackMaintenanceLauncher(
@@ -39,6 +40,9 @@ internal static class SettingsFeatureComposition
                 new WindowsLocalDataCleanupConfirmation()),
             dependencies.Preferences.EditorialReroll,
             dependencies.Preferences.MetadataLearningConsent);
+        model.AttachTasteLearning(dependencies.Feedback.TasteLearning);
+        return model;
+    }
 
     private static SettingsRuntimeCapabilitySnapshot CreateRuntimeCapabilities(
         ReplayFoundryRuntimeEnvironment runtime) =>

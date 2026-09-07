@@ -5,10 +5,9 @@
     <Border Margin="0,12,0,8" Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
         AutomationProperties.Name="Output frame and composition"
         Visibility="{Binding IsClipBoundaryEditorVisible, Converter={StaticResource BoolToVisibility}}">
-        <Expander Header="Canvas &amp; export" Style="{DynamicResource Control.DisclosureExpander}">
         <StackPanel DataContext="{Binding Output}" IsEnabled="{Binding CanEdit}">
-            <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Frame &amp; composition" />
-            <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="Set the output shape and source regions. Changes save automatically and update the preview." TextWrapping="Wrap" />
+            <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Video shape and layout" />
+            <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="Choose the video shape and how your gameplay fits inside it. Changes save automatically." TextWrapping="Wrap" />
             <Expander Margin="0,0,0,8" Header="Saved game layouts" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,6,0,0">
                     <ComboBox ItemsSource="{Binding LayoutPresets}" SelectedItem="{Binding SelectedLayoutPreset}" AutomationProperties.Name="Reusable game layout" />
@@ -20,22 +19,20 @@
                     <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="Saves the canvas, gameplay, facecam, background and HUD positions for reuse. Verify source regions on each recording." TextWrapping="Wrap" />
                 </StackPanel>
             </Expander>
-            <TextBlock Style="{DynamicResource Text.Meta}" Text="Publishing preset" />
-            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Publishing platform preset" ItemsSource="{Binding PlatformPresets}"
-                DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding PlatformPreset, Mode=TwoWay}" />
+            <TextBlock Style="{DynamicResource Text.Meta}" Text="Format" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Output format and platform" ItemsSource="{Binding Formats}"
+                DisplayMemberPath="Label" SelectedItem="{Binding SelectedFormat, Mode=TwoWay}" />
             <TextBlock Margin="0,0,0,8"
                 Style="{DynamicResource Text.Meta}"
-                Text="Platform presets use portrait video and a caption safe area. Export includes editable publishing text and subtitle files beside the video."
+                Text="Platform formats include caption guides. Choose a custom shape for full control."
                 TextWrapping="Wrap" />
-            <TextBlock Style="{DynamicResource Text.Meta}" Text="Output canvas" />
-            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Output canvas" ItemsSource="{Binding Canvases}" SelectedItem="{Binding Canvas, Mode=TwoWay}" />
             <TextBlock Style="{DynamicResource Text.Meta}"
-                Text="Fit keeps the full region; Fill crops to the frame. FacecamTop stacks and fills gameplay; FacecamTopFit keeps the whole gameplay region below the facecam."
+                Text="Keep the whole picture, fill the frame, or put your camera above the gameplay."
                 TextWrapping="Wrap" />
-            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Composition layout" ItemsSource="{Binding Layouts}" SelectedItem="{Binding Layout, Mode=TwoWay}" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Composition layout" ItemTemplate="{DynamicResource StudioOptionTemplate}" ItemsSource="{Binding Layouts}" SelectedItem="{Binding Layout, Mode=TwoWay}" />
             <Expander Header="Gameplay crop" Margin="0,8,0,8" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,8,0,0">
-            <TextBlock Margin="0,5,0,4" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Gameplay source region (%)" />
+            <TextBlock Margin="0,5,0,4" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Part of the recording to show (%)" />
             <UniformGrid Columns="2">
                 <StackPanel Margin="0,0,4,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Left" /><TextBox AutomationProperties.Name="Gameplay crop left percent" Text="{Binding CropX, Mode=TwoWay, StringFormat=F1}" /></StackPanel>
                 <StackPanel Margin="4,0,0,6"><TextBlock Style="{DynamicResource Text.Meta}" Text="Top" /><TextBox AutomationProperties.Name="Gameplay crop top percent" Text="{Binding CropY, Mode=TwoWay, StringFormat=F1}" /></StackPanel>
@@ -50,7 +47,7 @@
             </UniformGrid>
                 </StackPanel>
             </Expander>
-            <Expander Margin="0,8,0,8" Header="Facecam source region" Style="{DynamicResource Control.DisclosureExpander}">
+            <Expander Margin="0,8,0,8" Header="Choose your camera area" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,8,0,0">
                     <TextBlock Style="{DynamicResource Text.Meta}" Text="Used by both facecam layouts. These coordinates refer to the original recording." TextWrapping="Wrap" />
                     <UniformGrid Columns="2" Margin="0,6,0,0">
@@ -77,9 +74,9 @@
             </Expander>
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Background color (#RRGGBB)" />
             <TextBox Margin="0,4,0,8" Text="{Binding BackgroundColor, Mode=TwoWay}" AutomationProperties.Name="Output background color" />
-            <Expander Margin="0,0,0,8" Header="Preserve a HUD region" Style="{DynamicResource Control.DisclosureExpander}">
+            <Expander Margin="0,0,0,8" Header="Keep a score or health bar visible" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,7,0,0">
-                    <CheckBox Content="Add a separate HUD layer" IsChecked="{Binding HasHudLayer, Mode=TwoWay}" AutomationProperties.Name="Enable HUD overlay" />
+                    <CheckBox Content="Copy part of the game interface on top" IsChecked="{Binding HasHudLayer, Mode=TwoWay}" AutomationProperties.Name="Enable HUD overlay" />
                     <StackPanel IsEnabled="{Binding HasHudLayer}">
                         <TextBlock Margin="0,7,0,4" Style="{DynamicResource Text.Meta}" Text="Region in the original recording (%)" />
                         <UniformGrid Columns="2">
@@ -112,12 +109,12 @@
                 </StackPanel>
             </Expander>
             <local:StudioSourceTrackingView />
-            <Expander Header="Delivery settings" Margin="0,8,0,8" Style="{DynamicResource Control.DisclosureExpander}">
+            <Expander Header="Export options" Margin="0,8,0,8" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,8,0,0">
-            <CheckBox Margin="0,4,0,8" Content="Burn captions into the video" IsChecked="{Binding BurnCaptions, Mode=TwoWay}" AutomationProperties.Name="Burn captions into final video" />
+            <CheckBox Margin="0,4,0,8" Content="Include visible captions in the video" IsChecked="{Binding BurnCaptions, Mode=TwoWay}" AutomationProperties.Name="Burn captions into final video" />
             <TextBlock Margin="0,0,0,8" Style="{DynamicResource Text.Meta}" Text="Turn off for clean video with separate SRT/VTT subtitle files. The saved caption track remains editable." TextWrapping="Wrap" />
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Export quality" />
-            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Export quality" ItemsSource="{Binding Qualities}" SelectedItem="{Binding Quality, Mode=TwoWay}" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Export quality" ItemTemplate="{DynamicResource StudioOptionTemplate}" ItemsSource="{Binding Qualities}" SelectedItem="{Binding Quality, Mode=TwoWay}" />
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Export resolution" />
             <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Export resolution" ItemsSource="{Binding Resolutions}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Resolution, Mode=TwoWay}" />
             <TextBlock Margin="0,0,0,8"
@@ -125,12 +122,12 @@
         Text="Higher resolution increases file size and render work; enlarging a recording does not add captured detail. Source canvas keeps its original size up to this limit. Canvas and resolution changes apply to every montage cut."
                 TextWrapping="Wrap" />
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Color output" />
-            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Color output" ItemsSource="{Binding ColorOutputs}" SelectedItem="{Binding ColorOutput, Mode=TwoWay}" />
-            <TextBlock Margin="0,0,0,8" Style="{DynamicResource Text.Meta}" Text="AutomaticSdr converts HDR recordings for SDR displays. PreserveSdr retains an already-SDR recording's color." TextWrapping="Wrap" />
+            <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Color output" ItemTemplate="{DynamicResource StudioOptionTemplate}" ItemsSource="{Binding ColorOutputs}" SelectedItem="{Binding ColorOutput, Mode=TwoWay}" />
+            <TextBlock Margin="0,0,0,8" Style="{DynamicResource Text.Meta}" Text="Automatic makes the colors suitable for ordinary screens. Keep original color is for recordings already in standard color." TextWrapping="Wrap" />
                 </StackPanel>
             </Expander>
             <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
-        </Expander>
+
     </Border>
 </UserControl>

@@ -6,7 +6,18 @@ namespace ReplayFoundry.Desktop.Features.Studio.Browser
 {
     public partial class StudioBrowserView : UserControl
     {
-        public StudioBrowserView() => InitializeComponent();
+        public StudioBrowserView()
+        {
+            InitializeComponent();
+            IsVisibleChanged += (_, _) => { if (IsVisible) BringSelectedClipIntoView(); };
+        }
+
+        private void BringSelectedClipIntoView() => Dispatcher.InvokeAsync(() =>
+        {
+            if (IsVisible && BrowserItems.SelectedItem is { } item &&
+                BrowserItems.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem selected)
+                selected.BringIntoView();
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
 
         private void BrowserItems_SelectionChanged(
             object sender,
@@ -28,6 +39,7 @@ namespace ReplayFoundry.Desktop.Features.Studio.Browser
             // the one-way projection so the visual selection stays truthful.
             listBox.GetBindingExpression(Selector.SelectedValueProperty)?
                 .UpdateTarget();
+            BringSelectedClipIntoView();
         }
     }
 }

@@ -3,6 +3,7 @@
     x:Name="Root"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:flair="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:data="clr-namespace:System.Windows.Data;assembly=PresentationFramework"
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Library.Sections">
@@ -84,7 +85,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,16,0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="{Binding SelectedCategoryLabel}" />
+                    <flair:FoundryHeading Style="{DynamicResource Text.SectionTitle}" Text="{Binding SelectedCategoryLabel}" />
                     <TextBlock Margin="10,2,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding ResultSummary}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" Orientation="Horizontal">

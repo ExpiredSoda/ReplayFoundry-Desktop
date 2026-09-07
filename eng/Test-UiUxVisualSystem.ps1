@@ -280,8 +280,9 @@ if ($activeDockTrigger -match 'BorderBrush|BorderThickness') {
 if ($selection -match 'x:Name="SelectionWash"') {
     Add-Failure "Checkboxes and radio buttons must not paint an oversized selection wash behind their labels."
 }
-if ($range -match 'LaserGuide|ThumbGlow') {
-    Add-Failure "Slider thumbs must not paint stray guide lines or detached glow shapes."
+if ($range -match 'LaserGuide' -or
+    $range -notmatch 'x:Name="ThumbGlow" Width="28" Height="28"[^>]*[\s\S]{0,160}HorizontalAlignment="Center" VerticalAlignment="Center"[^>]*IsHitTestVisible="False"') {
+    Add-Failure "Slider playhead glow must remain centered inside its pointer target without intercepting input or drawing detached guides."
 }
 if ($scroll -match 'ThumbGlow' -or
     $scroll -match 'IsKeyboardFocusWithin[\s\S]{0,220}Property="BorderBrush"') {
@@ -322,7 +323,8 @@ if ($scroll -notmatch 'x:Name="PART_ScrollContentPresenter"[\s\S]*?x:Name="Scrol
     Add-Failure "Scroll viewers must theme both the content presenter and scrollbar corner instead of exposing the white default square."
 }
 Require-Pattern "src/ReplayFoundry.Desktop/Features/Generate/GenerationSetup/Steps/Audio/AudioStepView.xaml" 'controls:AudioSignalWaveform[\s\S]*Peaks="\{Binding WaveformPeaks\}"[\s\S]*Progress="\{Binding AuditionProgress\}"' "Audio setup must render its inspected peak envelope against real playback progress."
-Require-Pattern "src/ReplayFoundry.Desktop/Presentation/Controls/AudioSignalWaveform.cs" 'OnRender[\s\S]*peaks\[index\][\s\S]*progressX[\s\S]*DrawLine' "The waveform must paint actual inspected peaks and a playback-bound playhead."
+Require-Pattern "src/ReplayFoundry.Desktop/Presentation/Controls/AudioSignalWaveform.cs" 'OnRender[\s\S]*Progress \* ActualWidth[\s\S]*peaks\[sample\][\s\S]*DrawLine' "The waveform must aggregate actual inspected peaks and paint a playback-bound playhead."
+Require-Pattern "src/ReplayFoundry.Desktop/Presentation/Controls/AudioSignalWaveform.cs" 'OnMouseLeftButtonDown[\s\S]*CaptureMouse[\s\S]*OnKeyDown[\s\S]*IRangeValueProvider' "Waveform seeking must support pointer capture, keyboard input, and accessible range values."
 Require-Pattern "src/ReplayFoundry.Desktop/Platform/Media/WpfAudioStreamAuditionService.cs" 'DispatcherTimer[\s\S]*_player\.Position[\s\S]*PlaybackChanged' "Audio waveform progress must follow MediaPlayer position rather than decorative timing."
 if ($progressBehavior -notmatch 'Motion\.Ambient' -or
     $progressBehavior -notmatch 'SystemParameters\.ClientAreaAnimation' -or

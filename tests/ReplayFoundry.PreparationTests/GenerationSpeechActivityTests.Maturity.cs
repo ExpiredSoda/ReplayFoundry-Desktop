@@ -48,6 +48,7 @@ internal static partial class GenerationSpeechActivityTests
         yield return new("Default source transcription never runs semantic inference and retains detected language", SemanticSourceAnalysisIsInactiveByDefault);
         yield return new("Generation never fills counts with a mid-speech beginning", SpeechBeginningRejectsCountFill);
         yield return new("Grounded semantic rejection excludes even saturated high scores", GroundedRejectionExcludesCountFill);
+        yield return new("Final AI rejection cannot be undone by count fill or neural preferences", FinalRejectionBlocksSelection);
         yield return new("Visual rejection cannot override an unreviewed spoken story", VisualRejectionRespectsSpeechAndPartialReview);
         yield return new("Semantic exploration finds unproposed source windows without inventing evidence", ExplorationFindsUnproposedWindows);
         yield return new("Semantic exploration requires a grounded Keep before selection", ExplorationRequiresGroundedKeep);

@@ -22,9 +22,9 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
-            <TextBlock
+            <controls:FoundryHeading
                 Foreground="{DynamicResource Brush.TextPrimary}"
-                FontSize="23"
+                FontFamily="{DynamicResource Font.Display}" FontSize="23"
                 FontWeight="SemiBold"
                 Text="Game details" />
             <TextBlock

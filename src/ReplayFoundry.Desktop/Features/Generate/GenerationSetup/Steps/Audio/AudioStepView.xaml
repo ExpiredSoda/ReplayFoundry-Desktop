@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:captionPreviews="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Inspector"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     d:DesignHeight="420"
@@ -20,40 +21,21 @@
 
         <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
 
-            <TextBlock
+            <controls:FoundryHeading
                 Foreground="{DynamicResource Brush.TextPrimary}"
-                FontSize="23"
+                FontFamily="{DynamicResource Font.Display}" FontSize="23"
                 FontWeight="SemiBold"
                 Text="Audio" />
 
             <TextBlock
-                Margin="0,7,0,20"
+                Margin="0,7,0,12"
                 Foreground="{DynamicResource Brush.TextSecondary}"
                 FontSize="14"
-                Text="Choose how the original audio and captions should work in your clips."
+                Text="Keep the original sound. Add captions from the voices you choose."
                 TextWrapping="Wrap" />
 
             <Border
-                Padding="12"
-                Background="{DynamicResource Brush.InteractiveSelected}"
-                BorderBrush="{DynamicResource Brush.StatusInfo}"
-                BorderThickness="1"
-                CornerRadius="9">
-                <StackPanel>
-                    <TextBlock
-                        Foreground="{DynamicResource Brush.TextPrimary}"
-                        FontWeight="SemiBold"
-                        Text="All original audio stays audible" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        Text="{Binding SourceAudioPolicyText}"
-                        TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
-
-            <Border
-                Margin="0,22,0,0"
+                Margin="0,0,0,0"
                 Padding="14"
                 Background="{DynamicResource Brush.SurfaceInset}"
                 BorderBrush="{DynamicResource Brush.BorderSubtle}"
@@ -84,22 +66,7 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock
-                            Foreground="{DynamicResource Brush.TextSecondary}"
-                            FontSize="11"
-                            FontWeight="SemiBold"
-                            Text="CAPTION STYLE" />
-                        <ComboBox
-                            Margin="0,5,0,0"
-                            AutomationProperties.Name="Caption effect"
-                            IsEnabled="{Binding IsCaptionStyleSelectable}"
-                            DisplayMemberPath="Name"
-                            ItemsSource="{Binding CaptionStyles}"
-                            SelectedItem="{Binding SelectedCaptionStyle, Mode=TwoWay}" />
-                        <TextBlock Margin="0,12,0,4" Style="{DynamicResource Text.Meta}" Text="Saved caption look" />
-                        <ComboBox AutomationProperties.Name="Generate saved caption look" DisplayMemberPath="Name"
-                                  ItemsSource="{Binding CaptionLooks}" SelectedItem="{Binding SelectedCaptionLook, Mode=TwoWay}" />
-                        <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Text="{Binding CaptionLookHint}" />
+
 
                         <ItemsControl
                             Margin="0,12,0,0"
@@ -127,11 +94,22 @@
                                                 Margin="0,0,0,5"
                                                 Style="{DynamicResource Text.Meta}"
                                                 Text="WORDS SHOWN FROM" />
+                                            <Grid>
                                             <ComboBox
                                                 AutomationProperties.Name="Recording track whose words should be captioned"
                                                 DisplayMemberPath="DisplayName"
                                                 ItemsSource="{Binding Streams}"
                                                 SelectedItem="{Binding SelectedStream, Mode=TwoWay}" />
+                                            <TextBlock Text="Choose a track to listen to…" IsHitTestVisible="False"
+                                                Margin="13,0,35,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextSecondary}">
+                                                <TextBlock.Style><Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers><DataTrigger Binding="{Binding SelectedStream}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger></Style.Triggers>
+                                                </Style></TextBlock.Style>
+                                            </TextBlock>
+                                            </Grid>
                                             <TextBlock
                                                 Margin="0,4,0,8"
                                                 Style="{DynamicResource Text.Meta}"
@@ -148,12 +126,17 @@
                                                 <Grid>
                                                     <controls:AudioSignalWaveform
                                                         AutomationProperties.Name="Audio sample waveform"
+                                                        AutomationProperties.HelpText="Click or drag anywhere on the waveform to seek. Arrow keys move through the sample."
                                                         ActiveBrush="{DynamicResource Brush.BrandCyan}"
                                                         InactiveBrush="{DynamicResource Brush.ScrollThumb}"
                                                         IsPlaying="{Binding IsAuditionPlaying}"
+                                                        SeekCommand="{Binding SeekAuditionCommand}"
                                                         Peaks="{Binding WaveformPeaks}"
                                                         PlayheadBrush="{DynamicResource Brush.BrandPaper}"
                                                         Progress="{Binding AuditionProgress}" />
+                                                    <TextBlock Text="Choose a track to see its waveform" Style="{DynamicResource Text.Meta}"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                                                        Visibility="{Binding HasWaveform, Converter={StaticResource InverseBoolToVisibility}}" />
                                                     <ProgressBar
                                                         AutomationProperties.Name="Preparing audio sample"
                                                         IsIndeterminate="True"
@@ -165,9 +148,12 @@
                                                         VerticalAlignment="Bottom"
                                                         Foreground="{DynamicResource Brush.TextMuted}"
                                                         FontSize="10"
+                                                        IsHitTestVisible="False"
                                                         Text="{Binding AuditionProgressText}" />
                                                 </Grid>
                                             </Border>
+                                            <TextBlock Margin="0,2,0,8" Style="{DynamicResource Text.Meta}"
+                                                Text="Click the waveform to seek · drag to explore · press Play to listen" TextWrapping="Wrap" />
                                             <Grid Margin="0,0,0,8">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
@@ -201,11 +187,16 @@
                                                 Style="{DynamicResource Text.Meta}"
                                                 Text="{Binding AuditionStatus}"
                                                 TextWrapping="Wrap" />
-                                            <ComboBox
+                                            <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Whose words are on this track?" />
+                                            <ListBox
                                                 AutomationProperties.Name="Type of speech on this track"
-                                                DisplayMemberPath="Name"
+                                                Style="{DynamicResource GenerationSetup.OptionList}"
+                                                ItemContainerStyle="{DynamicResource GenerationSetup.ChoiceItem}"
                                                 ItemsSource="{Binding Roles}"
-                                                SelectedItem="{Binding SelectedRole, Mode=TwoWay}" />
+                                                SelectedItem="{Binding SelectedRole, Mode=TwoWay}">
+                                                <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                                                <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextWrapping="Wrap" /></DataTemplate></ListBox.ItemTemplate>
+                                            </ListBox>
                                             <TextBlock
                                                 Margin="0,5,0,8"
                                                 Style="{DynamicResource Text.Meta}"
@@ -217,6 +208,7 @@
                                                 Text="SPOKEN LANGUAGE" />
                                             <ComboBox
                                                 AutomationProperties.Name="Spoken language to transcribe"
+                                                ToolTip="{Binding LanguageCapabilitySummary}"
                                                 DisplayMemberPath="Name"
                                                 ItemsSource="{Binding Languages}"
                                                 SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}" />
@@ -224,11 +216,6 @@
                                                 Margin="0,4,0,0"
                                                 Style="{DynamicResource Text.Meta}"
                                                 Text="{Binding SelectedLanguage.Description}"
-                                                TextWrapping="Wrap" />
-                                            <TextBlock
-                                                Margin="0,4,0,0"
-                                                Style="{DynamicResource Text.Meta}"
-                                                Text="{Binding LanguageCapabilitySummary}"
                                                 TextWrapping="Wrap" />
                                         </StackPanel>
                                     </Border>
@@ -245,44 +232,53 @@
 
             <StackPanel>
 
-                <TextBlock
-                    Foreground="{DynamicResource Brush.TextPrimary}"
-                    FontSize="18"
-                    FontWeight="SemiBold"
-                    Text="Audio summary" />
-
-                <TextBlock
-                    Margin="0,20,0,5"
-                    Foreground="{DynamicResource Brush.TextSecondary}"
-                    FontSize="11"
-                    FontWeight="SemiBold"
-                    Text="STARTING VIDEO" />
-
-                <TextBlock
-                    Foreground="{DynamicResource Brush.TextPrimary}"
-                    FontSize="15"
-                    Text="{Binding ReferenceSourceName}"
-                    TextTrimming="CharacterEllipsis" />
-
-                <TextBlock
-                    Margin="0,18,0,5"
-                    Foreground="{DynamicResource Brush.TextSecondary}"
-                    FontSize="11"
-                    FontWeight="SemiBold"
-                    Text="FINISHED CLIP" />
-
-                <TextBlock
-                    Foreground="{DynamicResource Brush.TextPrimary}"
-                    FontSize="15"
-                    Text="All original audio" />
-
-                <TextBlock
-                    Margin="0,12,0,0"
-                    Foreground="{DynamicResource Brush.TextSecondary}"
-                    FontSize="12"
-                    Text="{Binding SourceAudioPolicyText}"
-                    TextWrapping="Wrap" />
-
+                <controls:FoundryHeading Text="Caption look" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Margin="0,8,0,14" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                    Text="Your clips keep all original audio. Captions add the words you choose on top."
+                    Visibility="{Binding IsCaptioningEnabled, Converter={StaticResource InverseBoolToVisibility}}" />
+                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                    Text="Turn on spoken captions to choose a style."
+                    Visibility="{Binding IsCaptioningEnabled, Converter={StaticResource InverseBoolToVisibility}}" />
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsCaptioningEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock
+                            Foreground="{DynamicResource Brush.TextSecondary}"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Text="Choose a look · hover to preview" />
+                        <ListBox
+                            Margin="0,5,0,0"
+                            AutomationProperties.Name="Caption look"
+                            IsEnabled="{Binding IsCaptioningEnabled}"
+                            Style="{DynamicResource GenerationSetup.OptionList}"
+                            ItemContainerStyle="{DynamicResource GenerationSetup.ChoiceItem}"
+                            ItemsSource="{Binding CaptionLooks}"
+                            SelectedItem="{Binding SelectedCaptionLook, Mode=TwoWay}">
+                            <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel MinWidth="66" ToolTip="{Binding Description}">
+                                        <captionPreviews:StudioCaptionEffectPreview Height="46" Preset="{Binding Style}" Typography="{Binding Typography}">
+                                            <captionPreviews:StudioCaptionEffectPreview.Style>
+                                                <Style TargetType="captionPreviews:StudioCaptionEffectPreview">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                            <Setter Property="IsPreviewActive" Value="True" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                            <Setter Property="IsPreviewActive" Value="True" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </captionPreviews:StudioCaptionEffectPreview.Style>
+                                        </captionPreviews:StudioCaptionEffectPreview>
+                                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" />
+                                        <TextBlock Text="Saved" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.BrandCyan}" Visibility="{Binding IsSaved, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Text="{Binding CaptionLookHint}" />
+                </StackPanel>
                 <Border
                     Margin="0,24,0,0"
                     Padding="12"

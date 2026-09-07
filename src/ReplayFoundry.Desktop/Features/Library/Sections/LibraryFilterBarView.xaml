@@ -11,19 +11,15 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid>
-                <StackPanel>
-                    <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="Find in library" />
-                    <TextBlock
-                        Margin="0,3,48,0"
-                        Style="{DynamicResource Text.Meta}"
-                        Text="Find a finished clip by title, game or filename."
-                        TextWrapping="Wrap" />
-                </StackPanel>
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Margin="8,0,0,0"
+                    AutomationProperties.Name="Refresh known Library entries"
+                    Command="{Binding RefreshLibraryCommand}" Content="Refresh"
+                    Style="{DynamicResource Control.GhostButton}" />
                 <Button
+                    DockPanel.Dock="Right" Margin="8,0,0,0"
                     Width="40"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
@@ -35,20 +31,20 @@
                     Style="{DynamicResource Control.IconButton}"
                     ToolTip="Clear filters"
                     Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVisibility}}" />
-            </Grid>
-
-            <Grid Grid.Row="1" Margin="0,12,0,0">
+            <Grid>
                 <TextBox
                     AutomationProperties.Name="Search library"
-                    AutomationProperties.HelpText="Search remains in memory and does not index files."
+                    AutomationProperties.HelpText="Find a saved clip by its title, game, format, or filename."
                     Style="{DynamicResource Control.InlineSearchTextBox}"
+                    Background="{DynamicResource Brush.SurfaceInset}"
+                    BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1"
                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                     ToolTip="Search Library" />
                 <TextBlock
                     Margin="14,0"
                     VerticalAlignment="Center"
                     IsHitTestVisible="False"
-                    Text="Search by title, game, format, or file name">
+                    Text="Search your library" TextTrimming="CharacterEllipsis">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Meta}">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -61,18 +57,11 @@
                     </TextBlock.Style>
                 </TextBlock>
             </Grid>
+            </DockPanel>
 
-            <Expander Grid.Row="2" Margin="0,8,0,0" Header="Filters &amp; organization" IsExpanded="False"
+            <Expander Grid.Row="1" Margin="0,8,0,0" Header="Filter and sort" IsExpanded="False"
                       AutomationProperties.Name="Library filters and organization" Style="{DynamicResource Control.QuietExpander}">
             <WrapPanel Margin="0,4,0,0">
-                <StackPanel Width="128" Margin="0,0,10,10">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Type" />
-                    <ComboBox
-                        AutomationProperties.Name="Library mode filter"
-                        ItemsSource="{Binding Modes}"
-                        SelectedItem="{Binding ModeFilter, Mode=TwoWay}"
-                        Style="{DynamicResource Control.InlineSelectorComboBox}" />
-                </StackPanel>
                 <StackPanel Width="118" Margin="0,0,10,10">
                     <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Status" />
                     <ComboBox
@@ -89,10 +78,10 @@
                         SelectedItem="{Binding DateFilter, Mode=TwoWay}"
                         Style="{DynamicResource Control.InlineSelectorComboBox}" />
                 </StackPanel>
-                <StackPanel Width="152" Margin="0,0,10,10">
+                <StackPanel Width="176" Margin="0,0,10,10">
                     <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Sort" />
                     <ComboBox
-                        Width="152"
+                        Width="176"
                         AutomationProperties.Name="Library sort order"
                         ItemsSource="{Binding SortOptions}"
                         SelectedItem="{Binding SortBy, Mode=TwoWay}"
@@ -116,15 +105,8 @@
             </WrapPanel>
 
             </Expander>
-            <Border Grid.Row="3" Padding="0,6,0,0" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="0,1,0,0">
+            <Border Grid.Row="2" Padding="0,6,0,0" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="0,1,0,0">
                 <DockPanel LastChildFill="True">
-                    <Button
-                        DockPanel.Dock="Right"
-                        Margin="8,0,0,0"
-                        AutomationProperties.Name="Refresh known Library entries"
-                        Command="{Binding RefreshLibraryCommand}"
-                        Content="Refresh"
-                        Style="{DynamicResource Control.GhostButton}" />
                     <WrapPanel VerticalAlignment="Center">
                         <controls:IconPath
                             Width="13"

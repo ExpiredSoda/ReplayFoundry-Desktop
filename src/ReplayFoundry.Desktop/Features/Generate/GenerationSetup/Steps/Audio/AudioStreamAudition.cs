@@ -103,5 +103,9 @@ public interface IAudioStreamAuditionService
 
     void Stop();
 
+    bool CanSeek => false;
+
+    bool Seek(PreparedGenerationSource source, int absoluteAudioStreamIndex, double progress) => false;
+
     void Release(PreparedGenerationSource source);
 }

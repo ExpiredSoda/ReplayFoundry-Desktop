@@ -83,6 +83,8 @@
             </DataTemplate>
 
             <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+            <converters:StudioOptionLabelConverter x:Key="StudioOptionLabel" />
+            <DataTemplate x:Key="StudioOptionTemplate"><TextBlock Text="{Binding Converter={StaticResource StudioOptionLabel}}" TextWrapping="Wrap" /></DataTemplate>
 
             <converters:BooleanToVisibilityConverter x:Key="InverseBoolToVisibility" Invert="True" />
 

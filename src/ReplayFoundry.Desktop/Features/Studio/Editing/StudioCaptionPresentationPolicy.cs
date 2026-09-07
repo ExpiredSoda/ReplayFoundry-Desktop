@@ -40,7 +40,8 @@ public static class StudioCaptionPresentationPolicy
     private const long TicksPerAssCentisecond =
         TimeSpan.TicksPerMillisecond * 10;
     private static readonly TimeSpan MaximumVisibleInterWordSilence =
-        TimeSpan.FromMilliseconds(500);
+        TimeSpan.FromMilliseconds(220);
+    private static readonly TimeSpan MaximumPhraseDuration = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan MinimumLocalizedFallbackDuration =
         TimeSpan.FromMilliseconds(10);
 
@@ -118,8 +119,8 @@ public static class StudioCaptionPresentationPolicy
         var coverage = GetTimingCoverage(track, effectiveWordLimit);
         if (coverage.PhrasePages == 0) return null;
         return coverage.TimedPages > 0
-            ? $"{coverage.TimedPages} caption pages follow measured words; {coverage.PhrasePages} use the whole phrase where individual word timing could not be aligned reliably."
-            : $"{coverage.PhrasePages} caption pages use the whole phrase because individual word timing could not be aligned reliably.";
+            ? "Some words appear together because their timing is unclear. The rest follow the speech. In Captions, use Match words to speech to improve them."
+            : "Word timing is missing. In Captions, use Match words to speech to break these captions into shorter phrases.";
     }
 
     public static bool HasCompleteTimedWordCoverage(
@@ -186,13 +187,15 @@ public static class StudioCaptionPresentationPolicy
         ArgumentNullException.ThrowIfNull(segment);
         int? maximumWords = GetMaximumVisibleWords(preset);
         IReadOnlyList<AudioTranscriptionWord> words = segment.Words;
-        if (words.Count == 0 ||
-            !TryCreateWordSpans(
-                segment.Text,
-                words,
-                out IReadOnlyList<StudioCaptionWordSpan> sourceSpans))
+        if (!TryCreateWordSpans(segment.Text, words, out var sourceSpans))
         {
-            return WholeSegmentPhrase(segment);
+            // Older transcripts can retain correct word clocks but omit a few
+            // words at the edge of a speech segment. Keep those useful clocks.
+            // Zero-duration anchors only localize the phrase fallback; they are
+            // never persisted or presented as measured word timing.
+            words = StudioCaptionPartialWordMapping.RestoreAnchors(segment);
+            if (!TryCreateWordSpans(segment.Text, words, out sourceSpans))
+                return WholeSegmentPhrase(segment);
         }
 
         CaptionSpeechRun[] runs = CreateSpeechRuns(words);
@@ -210,7 +213,7 @@ public static class StudioCaptionPresentationPolicy
         foreach (CaptionSpeechRun run in runs)
         {
             foreach (CaptionPresentationFragment fragment in
-                     CreatePresentationFragments(run, words))
+                     CreatePresentationFragments(run, words, maximumWords ?? 5))
             {
                 AudioTranscriptionWord[] fragmentWords = words
                     .Skip(fragment.StartIndex)
@@ -357,21 +360,18 @@ public static class StudioCaptionPresentationPolicy
             int remaining = words.Count - startIndex;
             int groups = 1 + (remaining - 1) / maximumWords;
             int count = (int)Math.Ceiling(remaining / (double)groups);
-            if (remaining > count)
+            for (int offset = 1; offset < count; offset++)
             {
-                // Prefer a nearby sentence/clause boundary without dropping words,
-                // changing measured timing, or making a tiny one-word page.
-                for (int boundary = startIndex + count; boundary >= startIndex + Math.Max(2, count / 2); boundary--)
-                {
-                    int proposedCount = boundary - startIndex;
-                    int laterPages = (int)Math.Ceiling((remaining - proposedCount) / (double)maximumWords);
-                    if (1 + laterPages > groups) continue;
-                    var span = sourceSpans[boundary - 1];
-                    string between = text[(span.StartIndex + span.Length)..sourceSpans[boundary].StartIndex];
-                    if (between.IndexOfAny(['.', '!', '?', ';', ':', '\n']) < 0) continue;
-                    count = boundary - startIndex;
-                    break;
-                }
+                int boundary = startIndex + offset;
+                var span = sourceSpans[boundary - 1];
+                string between = text[(span.StartIndex + span.Length)..sourceSpans[boundary].StartIndex];
+                bool sentenceEnd = between.IndexOfAny(['.', '!', '?', ';', '\n']) >= 0;
+                bool clauseEnd = offset >= 2 && between.IndexOfAny([',', ':']) >= 0;
+                bool longPhrase = offset >= 2 &&
+                    words[boundary].RelativeEnd - words[startIndex].RelativeStart > MaximumPhraseDuration;
+                if (!sentenceEnd && !clauseEnd && !longPhrase) continue;
+                count = offset;
+                break;
             }
             int nextIndex = startIndex + count;
             AudioTranscriptionWord[] cueWords = words
@@ -445,7 +445,8 @@ public static class StudioCaptionPresentationPolicy
     private static CaptionPresentationFragment[]
         CreatePresentationFragments(
             CaptionSpeechRun run,
-            IReadOnlyList<AudioTranscriptionWord> words)
+            IReadOnlyList<AudioTranscriptionWord> words,
+            int maximumWords)
     {
         int runEnd = run.StartIndex + run.WordCount;
         if (words
@@ -509,6 +510,17 @@ public static class StudioCaptionPresentationPolicy
                 // at a run's leading edge (the real Whisper failure pattern)
                 // from downgrading every later word in the run.
                 fallbackEnd++;
+                // A missing opening word should not flash with its first
+                // 20 ms neighbor. Include a small readable phrase, retaining
+                // real boundaries and leaving later words fully animated.
+                // Uncertain words may need one short phrase (up to eight words)
+                // rather than an unreadable flash at the selected page limit.
+                // Only the fallback envelope grows; provider clocks stay intact.
+                int readableFallbackLimit = Math.Max(maximumWords, 8);
+                while (fallbackEnd < runEnd && fallbackEnd - fallbackStart < readableFallbackLimit &&
+                       HasRenderableProviderTiming(words[fallbackEnd]) &&
+                       words[fallbackEnd - 1].RelativeEnd - words[fallbackStart].RelativeStart < TimeSpan.FromMilliseconds(450))
+                    fallbackEnd++;
                 index = fallbackEnd;
             }
             else if (fragments.Count > 0 &&

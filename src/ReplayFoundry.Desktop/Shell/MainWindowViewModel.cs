@@ -116,6 +116,11 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
             new NavigateCommand(
                 Navigate,
                 CanNavigate);
+        OpenWritingDefaultsCommand = new DelegateCommand(() =>
+        {
+            settingsViewModel.SelectedSection = SettingsSection.CreatorVoice;
+            Navigate(ShellDestination.Settings);
+        });
 
         _closeOverlayCommand = new DelegateCommand(CloseOverlay);
         _openGuideCommand = new DelegateCommand(OpenGuide);
@@ -185,6 +190,7 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 
     public ICommand NavigateCommand =>
         _navigateCommand;
+    public ICommand OpenWritingDefaultsCommand { get; }
 
     public string CurrentWorkspaceLabel => CurrentWorkspaceChrome.WorkspaceTitle;
 
@@ -334,6 +340,8 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         CurrentDestination = destination;
+        if (workspace is StudioViewModel studio)
+            studio.Inspector.Editorial.LoadProfile(preserveUnsaved: true);
         CurrentWorkspace = workspace;
     }
 

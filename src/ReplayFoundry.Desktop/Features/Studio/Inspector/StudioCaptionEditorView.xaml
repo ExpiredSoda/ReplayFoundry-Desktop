@@ -2,6 +2,8 @@
     x:Class="ReplayFoundry.Desktop.Features.Studio.Inspector.StudioCaptionEditorView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:flair="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Inspector"
     xmlns:editing="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Editing">
     <UserControl.Resources>
         <Style
@@ -29,114 +31,65 @@
                     Text="This clip has no captions yet. Add phrases, import subtitles, or regenerate from its voice track below."
                     TextWrapping="Wrap"
                     Visibility="{Binding IsCaptionTrackMissing, Converter={StaticResource BoolToVisibility}}" />
-                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Caption effect" />
-                <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="Choose how captions look. The spoken words and their audio source stay the same." TextWrapping="Wrap" />
-                <ComboBox
-                    AutomationProperties.Name="Studio caption effect"
-                    DisplayMemberPath="Name"
-                    IsEnabled="{Binding IsProjectDraft}"
-                    ItemsSource="{Binding Clip.CaptionStyleOptions}"
-                    SelectedItem="{Binding Clip.SelectedCaptionStyle, Mode=TwoWay}" />
-                <Expander Margin="0,10,0,0" Header="Fonts, colors &amp; saved looks" IsEnabled="{Binding IsProjectDraft}" Style="{DynamicResource Control.DisclosureExpander}">
-                    <StackPanel Margin="0,8,0,0">
-                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Saved look" />
-                        <ComboBox ItemsSource="{Binding Clip.NamedCaptionLooks}" DisplayMemberPath="Name" SelectedItem="{Binding Clip.SelectedNamedCaptionLook}" AutomationProperties.Name="Saved caption look" />
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Font family" />
-                        <ComboBox ItemsSource="{Binding Clip.CaptionFontFamilies}" SelectedItem="{Binding Clip.CaptionFontFamily}" AutomationProperties.Name="Caption font family" />
-                        <TextBlock Margin="0,4,0,0"
-                            Style="{DynamicResource Text.Meta}"
-                            Text="{Binding Clip.CaptionFontWarning}"
-                            TextWrapping="Wrap"
-                            Visibility="{Binding Clip.HasCaptionFontWarning, Converter={StaticResource BoolToVisibility}}" />
-                        <UniformGrid Columns="3" Margin="0,8,0,0">
-                            <StackPanel Margin="0,0,4,0">
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Text" />
-<TextBox Text="{Binding Clip.CaptionTextColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption text color" />
-</StackPanel>
-                            <StackPanel Margin="0,0,4,0">
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Accent" />
-<TextBox Text="{Binding Clip.CaptionAccentColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption accent color" />
-</StackPanel>
-                            <StackPanel>
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Outline" />
-<TextBox Text="{Binding Clip.CaptionOutlineColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption outline color" />
-</StackPanel>
-                        </UniformGrid>
-                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Colors use #RRGGBB." />
-                        <WrapPanel Margin="0,8,0,0"><CheckBox Margin="0,0,12,0" IsChecked="{Binding Clip.CaptionBold}" Content="Bold" /><CheckBox IsChecked="{Binding Clip.CaptionRightToLeft}" Content="Right to left" /></WrapPanel>
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Outline thickness" />
-                        <Slider Minimum="0" Maximum="12" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionOutlineWidth}" AutomationProperties.Name="Caption outline thickness" />
-                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Shadow depth" />
-                        <Slider Minimum="0" Maximum="12" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionShadowDepth}" AutomationProperties.Name="Caption shadow depth" />
-                        <TextBox Margin="0,8,0,0" Text="{Binding Clip.CaptionLookName}" AutomationProperties.Name="Caption look name" />
-                        <Button Margin="0,6,0,0" Content="Save named look" Command="{Binding Clip.SaveNamedCaptionLookCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" />
-                    </StackPanel>
-                </Expander>
-                <Expander Margin="0,10,0,0" Header="Background, motion &amp; spacing" IsEnabled="{Binding IsProjectDraft}" Style="{DynamicResource Control.DisclosureExpander}">
-                    <StackPanel Margin="0,8,0,0">
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Background" />
-                        <ComboBox ItemsSource="{Binding Clip.CaptionBackgrounds}" DisplayMemberPath="Name" SelectedValuePath="Value" SelectedValue="{Binding Clip.CaptionBackground}" AutomationProperties.Name="Caption background" />
-                        <TextBox Margin="0,4,0,0" Text="{Binding Clip.CaptionBackgroundColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption background color" />
-                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Background opacity (%)" />
-                        <Slider Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionBackgroundOpacityPercent}" AutomationProperties.Name="Caption background opacity" />
-                        <UniformGrid Columns="2" Margin="0,8,0,0">
-                            <StackPanel Margin="0,0,6,0">
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Alignment" />
-<ComboBox ItemsSource="{Binding Clip.CaptionAlignments}" SelectedItem="{Binding Clip.CaptionAlignment}" AutomationProperties.Name="Caption alignment" />
-</StackPanel>
-                            <StackPanel>
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Casing" />
-<ComboBox ItemsSource="{Binding Clip.CaptionCasings}" SelectedItem="{Binding Clip.CaptionCasing}" AutomationProperties.Name="Caption casing" />
-</StackPanel>
-                        </UniformGrid>
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Animation motion (%)" />
-                        <Slider Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionAnimationIntensityPercent}" AutomationProperties.Name="Caption animation intensity" />
-                        <TextBlock Style="{DynamicResource Text.Meta}" Text="At zero, word colors still follow speech; zoom motion is removed." TextWrapping="Wrap" />
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Line spacing (%)" />
-                        <Slider Minimum="80" Maximum="200" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionLineSpacingPercent}" AutomationProperties.Name="Caption line spacing" />
-                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Moves wrapped lines apart while keeping the same letter size." TextWrapping="Wrap" />
-                    </StackPanel>
-                </Expander>
-                <Expander Margin="0,10,0,0" Header="Platform safe areas" IsEnabled="{Binding IsProjectDraft}" Style="{DynamicResource Control.DisclosureExpander}">
-                    <StackPanel Margin="0,8,0,0">
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Platform safe area" />
-                        <ComboBox ItemsSource="{Binding Clip.CaptionSafeAreas}" SelectedItem="{Binding Clip.CaptionSafeArea}" AutomationProperties.Name="Caption platform safe area" />
-                        <TextBlock Style="{DynamicResource Text.Meta}"
-                            Text="Shows approximate platform controls and review margins. Check the current platform UI and game HUD; large captions can extend beyond their center position."
-                            TextWrapping="Wrap" />
-                        <CheckBox Margin="0,6,0,0" Content="Adjust safe-area margins" IsChecked="{Binding Clip.UseCustomCaptionSafeArea}" />
-                        <UniformGrid Columns="2" Margin="0,4,0,0" IsEnabled="{Binding Clip.UseCustomCaptionSafeArea}">
-                            <StackPanel Margin="0,0,6,4">
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Left (%)" />
-<TextBox Text="{Binding Clip.CaptionSafeLeftPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area left margin" />
-</StackPanel>
-                            <StackPanel Margin="0,0,0,4">
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Right (%)" />
-<TextBox Text="{Binding Clip.CaptionSafeRightPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area right margin" />
-</StackPanel>
-                            <StackPanel Margin="0,0,6,0">
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Top (%)" />
-<TextBox Text="{Binding Clip.CaptionSafeTopPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area top margin" />
-</StackPanel>
-                            <StackPanel>
-<TextBlock Style="{DynamicResource Text.Meta}" Text="Bottom (%)" />
-<TextBox Text="{Binding Clip.CaptionSafeBottomPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area bottom margin" />
-</StackPanel>
-                        </UniformGrid>
-                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Margins accept 0–45%. Custom margins stay with this named look; turn adjustment off to use platform defaults." TextWrapping="Wrap" />
-                    </StackPanel>
-                </Expander>
-                <Expander Header="Size &amp; placement" Margin="0,10,0,0" Style="{DynamicResource Control.DisclosureExpander}">
-                    <StackPanel Margin="0,8,0,0">
-                <TextBlock Margin="0,10,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Caption phrase size" />
-                <ComboBox
+                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Caption look" />
+                <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="Hover over a look to see it move. Click to use it." TextWrapping="Wrap" />
+                <ListBox AutomationProperties.Name="Studio caption look" Background="Transparent" BorderThickness="0"
+                    ItemsSource="{Binding Clip.CaptionLooks.Choices}" SelectedItem="{Binding Clip.CaptionLooks.SelectedChoice, Mode=TwoWay}"
+                    IsEnabled="{Binding IsProjectDraft}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                    ItemContainerStyle="{DynamicResource Control.ChoiceTile}">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate><DataTemplate>
+                        <StackPanel ToolTip="{Binding Description}">
+                            <local:StudioCaptionEffectPreview Height="40" Margin="0,0,0,5" Preset="{Binding Style}">
+                                <local:StudioCaptionEffectPreview.Style>
+                                    <Style TargetType="{x:Type local:StudioCaptionEffectPreview}">
+                                        <Setter Property="IsPreviewActive" Value="False" />
+                                        <Setter Property="Typography" Value="{Binding DataContext.Clip.CaptionTypography, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSaved}" Value="True"><Setter Property="Typography" Value="{Binding Typography}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                <Setter Property="IsPreviewActive" Value="True" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                <Setter Property="IsPreviewActive" Value="True" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </local:StudioCaptionEffectPreview.Style>
+                            </local:StudioCaptionEffectPreview>
+                            <TextBlock Text="{Binding Name}" Style="{DynamicResource Text.Meta}" />
+                            <TextBlock Text="Saved" FontSize="10" Foreground="{DynamicResource Brush.BrandCyan}" Visibility="{Binding IsSaved, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Margin="0,8,0,6" Text="Highlight color" Style="{DynamicResource Text.Meta}" />
+                <ListBox ItemsSource="{Binding Clip.CaptionAccentChoices}" SelectedItem="{Binding Clip.SelectedCaptionAccentChoice}"
+                    IsEnabled="{Binding IsProjectDraft}" Background="Transparent" BorderThickness="0" ItemContainerStyle="{DynamicResource Control.ChoiceTile}"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Caption highlight color">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="5" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate><DataTemplate><StackPanel>
+                        <Ellipse Fill="{Binding Value}" Width="16" Height="16" Margin="0,0,0,5" />
+                        <TextBlock Text="{Binding Name}" FontSize="11" TextAlignment="Center" />
+                    </StackPanel></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Margin="0,4,0,12">
+                <TextBlock Margin="0,10,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Phrase length" />
+                <ListBox
                     Margin="0,5,0,0"
                     AutomationProperties.Name="Caption phrase size"
-                    DisplayMemberPath="Name"
+                    DisplayMemberPath="Name" ItemContainerStyle="{DynamicResource Control.ChoiceTile}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                     IsEnabled="{Binding Clip.IsCaptionPhraseSizeEditorEnabled}"
                     ItemsSource="{Binding Clip.CaptionWordLimitOptions}"
                     SelectedItem="{Binding Clip.SelectedCaptionWordLimit, Mode=TwoWay}"
-                    Visibility="{Binding Clip.IsCaptionPhraseSizeSelectorVisible, Converter={StaticResource BoolToVisibility}}" />
+
+                        Visibility="{Binding Clip.IsCaptionPhraseSizeSelectorVisible, Converter={StaticResource BoolToVisibility}}" >
+                        <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                        <UniformGrid
+                        Columns="2" />
+                        </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        </ListBox>
                 <Border
                     Margin="0,5,0,0"
                     Padding="12,9"
@@ -196,7 +149,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Vertical position" />
+                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextSecondary}" Text="Move up or down" />
                     <TextBlock Grid.Column="1" FontFamily="Consolas" Foreground="{DynamicResource Brush.StatusInfo}" Text="{Binding Clip.CaptionVerticalPositionText}" />
                 </Grid>
                 <Slider
@@ -216,6 +169,95 @@
                     Style="{DynamicResource Text.Meta}"
                     Text="The preview matches the captions that will appear in the finished video."
                     TextWrapping="Wrap" />
+                                    </StackPanel>
+                <Expander Header="Customize this look" Style="{DynamicResource Control.DisclosureExpander}" IsEnabled="{Binding IsProjectDraft}">
+                    <StackPanel Margin="0,8,0,0">
+<flair:FoundryHeading Margin="0,16,0,8" Style="{DynamicResource Text.SectionTitle}" Text="Font and colors" />
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Font family" />
+                        <ComboBox ItemsSource="{Binding Clip.CaptionFontFamilies}" SelectedItem="{Binding Clip.CaptionFontFamily}" AutomationProperties.Name="Caption font family" />
+                        <TextBlock Margin="0,4,0,0"
+                            Style="{DynamicResource Text.Meta}"
+                            Text="{Binding Clip.CaptionFontWarning}"
+                            TextWrapping="Wrap"
+                            Visibility="{Binding Clip.HasCaptionFontWarning, Converter={StaticResource BoolToVisibility}}" />
+                        <UniformGrid Columns="3" Margin="0,8,0,0">
+                            <StackPanel Margin="0,0,4,0">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Text" />
+<TextBox Text="{Binding Clip.CaptionTextColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption text color" />
+</StackPanel>
+                            <StackPanel Margin="0,0,4,0">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Accent" />
+<TextBox Text="{Binding Clip.CaptionAccentColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption accent color" />
+</StackPanel>
+                            <StackPanel>
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Outline" />
+<TextBox Text="{Binding Clip.CaptionOutlineColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption outline color" />
+</StackPanel>
+                        </UniformGrid>
+                        <TextBlock Style="{DynamicResource Text.Meta}" Text="For a custom color, paste its six-character color code." />
+                        <WrapPanel Margin="0,8,0,0"><CheckBox Margin="0,0,12,0" IsChecked="{Binding Clip.CaptionBold}" Content="Bold" /><CheckBox IsChecked="{Binding Clip.CaptionRightToLeft}" Content="Right to left" /></WrapPanel>
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Outline thickness" />
+                        <Slider Minimum="0" Maximum="12" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionOutlineWidth}" AutomationProperties.Name="Caption outline thickness" />
+                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Shadow depth" />
+                        <Slider Minimum="0" Maximum="12" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionShadowDepth}" AutomationProperties.Name="Caption shadow depth" />
+                        <TextBox Margin="0,8,0,0" Text="{Binding Clip.CaptionLookName}" AutomationProperties.Name="Caption look name" />
+                        <Button Margin="0,6,0,0" Content="Save this look" Command="{Binding Clip.SaveNamedCaptionLookCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" />
+                    <flair:FoundryHeading Margin="0,16,0,8" Style="{DynamicResource Text.SectionTitle}" Text="Background and motion" />
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Background" />
+                        <ComboBox ItemsSource="{Binding Clip.CaptionBackgrounds}" DisplayMemberPath="Name" SelectedValuePath="Value" SelectedValue="{Binding Clip.CaptionBackground}" AutomationProperties.Name="Caption background" />
+                        <TextBox Margin="0,4,0,0" Text="{Binding Clip.CaptionBackgroundColor, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption background color" />
+                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Background opacity (%)" />
+                        <Slider Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionBackgroundOpacityPercent}" AutomationProperties.Name="Caption background opacity" />
+                        <UniformGrid Columns="2" Margin="0,8,0,0">
+                            <StackPanel Margin="0,0,6,0">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Alignment" />
+<ComboBox ItemTemplate="{DynamicResource StudioOptionTemplate}" ItemsSource="{Binding Clip.CaptionAlignments}" SelectedItem="{Binding Clip.CaptionAlignment}" AutomationProperties.Name="Caption alignment" />
+</StackPanel>
+                            <StackPanel>
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Capital letters" />
+<ComboBox ItemTemplate="{DynamicResource StudioOptionTemplate}" ItemsSource="{Binding Clip.CaptionCasings}" SelectedItem="{Binding Clip.CaptionCasing}" AutomationProperties.Name="Caption casing" />
+</StackPanel>
+                        </UniformGrid>
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Animation motion (%)" />
+                        <Slider Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionAnimationIntensityPercent}" AutomationProperties.Name="Caption animation intensity" />
+                        <TextBlock Style="{DynamicResource Text.Meta}" Text="At zero, word colors still follow speech; zoom motion is removed." TextWrapping="Wrap" />
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Line spacing (%)" />
+                        <Slider Minimum="80" Maximum="200" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding Clip.CaptionLineSpacingPercent}" AutomationProperties.Name="Caption line spacing" />
+                        <TextBlock Style="{DynamicResource Text.Meta}" Text="Moves wrapped lines apart while keeping the same letter size." TextWrapping="Wrap" />
+                    <flair:FoundryHeading Margin="0,16,0,8" Style="{DynamicResource Text.SectionTitle}" Text="Keep text clear of app buttons" />
+                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="Platform safe area" />
+                        <ComboBox
+                            ItemTemplate="{DynamicResource StudioOptionTemplate}"
+                            ItemsSource="{Binding Clip.CaptionSafeAreas}"
+                            SelectedItem="{Binding Clip.CaptionSafeArea}"
+                            AutomationProperties.Name="Keep captions clear of app buttons" />
+                        <TextBlock Style="{DynamicResource Text.Meta}"
+                            Text="Choose where you will post. The preview marks space to leave clear for buttons and descriptions. Check that captions also avoid your game controls."
+                            TextWrapping="Wrap" />
+                        <CheckBox Margin="0,6,0,0" Content="Adjust safe-area margins" IsChecked="{Binding Clip.UseCustomCaptionSafeArea}" />
+                        <UniformGrid Columns="2" Margin="0,4,0,0" IsEnabled="{Binding Clip.UseCustomCaptionSafeArea}">
+                            <StackPanel Margin="0,0,6,4">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Left (%)" />
+<TextBox Text="{Binding Clip.CaptionSafeLeftPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area left margin" />
+</StackPanel>
+                            <StackPanel Margin="0,0,0,4">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Right (%)" />
+<TextBox Text="{Binding Clip.CaptionSafeRightPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area right margin" />
+</StackPanel>
+                            <StackPanel Margin="0,0,6,0">
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Top (%)" />
+<TextBox Text="{Binding Clip.CaptionSafeTopPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area top margin" />
+</StackPanel>
+                            <StackPanel>
+<TextBlock Style="{DynamicResource Text.Meta}" Text="Bottom (%)" />
+<TextBox Text="{Binding Clip.CaptionSafeBottomPercent, ValidatesOnExceptions=True}" AutomationProperties.Name="Caption safe area bottom margin" />
+</StackPanel>
+                        </UniformGrid>
+                        <TextBlock
+                            Style="{DynamicResource Text.Meta}"
+                            Text="Margins accept 0ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ45%. Custom margins stay with this named look; turn adjustment off to use platform defaults."
+                            TextWrapping="Wrap" />
+
                     </StackPanel>
                 </Expander>
                 <Border
@@ -255,17 +297,24 @@
                             Foreground="{DynamicResource Brush.BrandCyan}"
                             FontSize="11"
                             FontWeight="SemiBold"
-                            Text="Phrase text and measured timing" />
+                            Text="Follow the words as you listen" />
                         <TextBlock
                             Margin="0,8,0,10"
                             Style="{DynamicResource Text.Meta}"
-                            Text="Edit the text and its timing from the start of this clip. Word effects use measured timing when available."
+                            Text="Fix a word here, or choose Match words to speech to time the corrected phrase to your audio."
                             TextWrapping="Wrap" />
+                                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="Spoken language" />
+                                <ComboBox ItemsSource="{Binding Caption.LanguageOptions}"
+                                    DisplayMemberPath="Name"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding Caption.SelectedLanguage}"
+                                    AutomationProperties.Name="Caption regeneration language" />
+                        <TextBlock Margin="0,5,0,10" Text="{Binding Caption.AlignmentAvailability}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
                         <WrapPanel Margin="0,0,0,8">
                             <Button Content="Add phrase" Command="{Binding Caption.AddCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
                             <Button Content="Undo" Command="{Binding Caption.UndoCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
                             <Button Content="Redo" Command="{Binding Caption.RedoCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
-                            <Button Content="Import SRT/VTT" Command="{Binding Caption.ImportCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
+                            <Button Content="Import subtitles" Command="{Binding Caption.ImportCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
                             <Button Content="Export subtitles" Command="{Binding Caption.ExportCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
                         </WrapPanel>
                         <ScrollViewer
@@ -334,13 +383,13 @@
                                                 <TextBlock Margin="0,5,0,0" Text="{Binding ReadabilitySummary}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
                                                 <TextBlock Margin="0,3,0,0" Text="{Binding ReadabilityWarning}" Foreground="{DynamicResource Brush.StatusWarning}" TextWrapping="Wrap" />
                                                 <TextBlock Margin="0,5,0,0" Text="{Binding AlignmentSummary}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
-                                                <Expander Header="Alignment source and model"
+                                                <Expander Header="How this timing was made"
                                                     Margin="0,3,0,0"
                                                     Visibility="{Binding HasAlignmentProvenance, Converter={StaticResource BoolToVisibility}}"
                                                     Style="{DynamicResource Control.DisclosureExpander}">
                                                     <TextBlock Text="{Binding AlignmentDetails}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
                                                 </Expander>
-                                                <Expander Header="Correct individual words and timing" Margin="0,6,0,0" Style="{DynamicResource Control.DisclosureExpander}">
+                                                <Expander Header="Fine-tune each word" Margin="0,6,0,0" Style="{DynamicResource Control.DisclosureExpander}">
                                                     <ItemsControl ItemsSource="{Binding Words}" IsEnabled="{Binding DataContext.IsProjectDraft, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
@@ -360,12 +409,12 @@
                                                     </ItemsControl>
                                                 </Expander>
                                                 <WrapPanel Margin="0,6,0,0">
-                                                    <Button Content="Realign corrected English text"
+                                                    <Button Content="Match words to speech"
                                                         Command="{Binding DataContext.Caption.AlignCorrectedTextCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         Style="{DynamicResource Control.StudioSecondaryButton}"
                                                         Margin="0,0,4,4" />
-                                                    <Button Content="Rebuild word list"
+                                                    <Button Content="Edit as separate words"
                                                         Command="{Binding DataContext.Caption.RebuildWordRowsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         Style="{DynamicResource Control.StudioSecondaryButton}"
@@ -398,7 +447,6 @@
                             Style="{DynamicResource Text.Meta}"
                             Text="{Binding Caption.Status}"
                             TextWrapping="Wrap" />
-                        <TextBlock Margin="0,6,0,0" Text="{Binding Caption.AlignmentAvailability}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
                         <Button Margin="0,6,0,0"
                             Content="Cancel alignment"
                             Command="{Binding Caption.CancelAlignmentCommand}"
@@ -411,9 +459,9 @@
                             Command="{Binding Caption.SaveCommand}"
                             Content="Save words and timing"
                             Style="{DynamicResource Control.StudioPrimaryButton}" />
-                        <Expander Header="Voice, language and regeneration" Margin="0,12,0,0" IsEnabled="{Binding IsProjectDraft}" Style="{DynamicResource Control.DisclosureExpander}">
+                        <Expander Header="Create captions again" Margin="0,12,0,0" IsEnabled="{Binding IsProjectDraft}" Style="{DynamicResource Control.DisclosureExpander}">
                             <StackPanel Margin="0,8,0,0">
-                                <TextBlock Style="{DynamicResource Text.Meta}" Text="Voice audio stream" />
+                                <TextBlock Style="{DynamicResource Text.Meta}" Text="Audio track with your voice" />
                                 <ComboBox ItemsSource="{Binding Caption.AudioStreams}"
                                     DisplayMemberPath="Label"
                                     SelectedValuePath="Index"
@@ -424,12 +472,6 @@
                                     <Button Margin="6,0,0,0" Content="Stop" Command="{Binding Caption.AudioAudition.StopCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" />
                                 </WrapPanel>
                                 <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Caption.AudioAudition.Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-                                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="Spoken language" />
-                                <ComboBox ItemsSource="{Binding Caption.LanguageOptions}"
-                                    DisplayMemberPath="Name"
-                                    SelectedValuePath="Value"
-                                    SelectedValue="{Binding Caption.SelectedLanguage}"
-                                    AutomationProperties.Name="Caption regeneration language" />
                                 <TextBlock Text="{Binding Caption.LanguageModelDescription}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
                                 <TextBlock Text="{Binding Caption.LanguageUnavailableReason}" Foreground="{DynamicResource Brush.StatusWarning}" TextWrapping="Wrap" />
                                 <TextBlock Margin="0,6,0,0"
@@ -441,12 +483,15 @@
                                 <TextBlock Text="{Binding Caption.TranslationUnavailableReason}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Expander>
-                        <Expander Header="Game names and spelling hints" Margin="0,10,0,0" Style="{DynamicResource Control.DisclosureExpander}">
+                        <Expander Header="Help captions spell names correctly" Margin="0,10,0,0" Style="{DynamicResource Control.DisclosureExpander}">
                             <StackPanel Margin="0,6,0,0">
-                                <TextBlock Style="{DynamicResource Text.Meta}" Text="Enter names and game terms, one per line. These hints apply to future transcription on this computer." TextWrapping="Wrap" />
+                                <TextBlock Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                                    Text="Add unusual names or game terms the captions get wrong, one per line. For example: REANIMAL or a character's name. These spellings help the next time you create captions on this PC." />
+                                <TextBlock Margin="0,6,0,8" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                                    Text="Hints do not change existing captions or write titles. To fix captions already on screen, edit the words above or create the captions again." />
                                 <TextBox MinHeight="80" AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding Caption.VocabularyText}" AutomationProperties.Name="Caption transcription vocabulary" />
-                                <CheckBox Margin="0,6,0,0" IsChecked="{Binding Caption.RememberCorrections}" Content="Remember words I correct" />
-                                <Button Margin="0,6,0,0" Content="Save vocabulary" Command="{Binding Caption.SaveVocabularyCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" />
+                                <CheckBox Margin="0,6,0,0" IsChecked="{Binding Caption.RememberCorrections}" Content="Also remember spellings I correct" />
+                                <Button Margin="0,6,0,0" Content="Save spelling hints" Command="{Binding Caption.SaveVocabularyCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" />
                             </StackPanel>
                         </Expander>
                     </StackPanel>

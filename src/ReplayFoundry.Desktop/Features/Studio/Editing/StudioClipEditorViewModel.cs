@@ -8,18 +8,6 @@ using ReplayFoundry.Desktop.Presentation.Commands;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editing;
 
-internal sealed record StudioClipEditorDraftSnapshot(
-    double StartAdjustmentSeconds,
-    double EndAdjustmentSeconds,
-    GenerationCaptionStylePreset CaptionStyle,
-    StudioCaptionWordLimitPreset CaptionWordLimit,
-    double CaptionVerticalPositionPercent,
-    double CaptionMaximumWidthPercent,
-    double CaptionFontScalePercent,
-    StudioVideoEffectPreset VideoEffect,
-    double VideoEffectIntensityPercent,
-    StudioCaptionTypography? CaptionTypography = null);
-
 public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
 {
     private StudioCaptionTypography _captionTypography = StudioCaptionTypography.Default;
@@ -27,6 +15,8 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
     private readonly DelegateCommand _saveNamedLookCommand;
     private StudioNamedCaptionLook? _selectedNamedLook;
     public ObservableCollection<StudioNamedCaptionLook> NamedCaptionLooks { get; } = [];
+    public CaptionLookChooserViewModel CaptionLooks { get; }
+    public StudioVideoEffectEditorViewModel Effects { get; }
     public string CaptionLookName { get; set; } = "My captions";
     public IReadOnlyList<string> CaptionFontFamilies => StudioCaptionFontResolver.Resolve(CaptionFontFamily).IsFallback
         ? new[] { CaptionFontFamily }.Concat(StudioCaptionFontResolver.InstalledFamilies).ToArray() : StudioCaptionFontResolver.InstalledFamilies;
@@ -46,6 +36,17 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
     public string CaptionFontFamily { get => CaptionTypography.FontFamily; set => ChangeTypography(font: value); }
     public string CaptionTextColor { get => CaptionTypography.TextColor; set => ChangeTypography(text: value); }
     public string CaptionAccentColor { get => CaptionTypography.AccentColor; set => ChangeTypography(accent: value); }
+    public IReadOnlyList<StudioCaptionAccentChoice> CaptionAccentChoices { get; } =
+    [
+        new("#FFC75E", "Gold", "Warm gold"), new("#50D5FA", "Ice", "Bright blue"),
+        new("#6EE7B7", "Mint", "Mint green"), new("#FDA4AF", "Rose", "Soft pink"),
+        new("#FFFFFF", "White", "Plain white"),
+    ];
+    public StudioCaptionAccentChoice? SelectedCaptionAccentChoice
+    {
+        get => CaptionAccentChoices.FirstOrDefault(choice => choice.Value.Equals(CaptionAccentColor, StringComparison.OrdinalIgnoreCase));
+        set { if (value is not null) CaptionAccentColor = value.Value; }
+    }
     public string CaptionOutlineColor { get => CaptionTypography.OutlineColor; set => ChangeTypography(outline: value); }
     public bool CaptionBold { get => CaptionTypography.Bold; set => ChangeTypography(bold: value); }
     public bool CaptionRightToLeft { get => CaptionTypography.RightToLeft; set => ChangeTypography(rtl: value); }
@@ -112,6 +113,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
     }
     private void NotifyTypography()
     {
+        OnPropertyChanged(nameof(SelectedCaptionAccentChoice));
         foreach (string property in new[] { nameof(CaptionTypography), nameof(CaptionFontFamily), nameof(CaptionTextColor), nameof(CaptionAccentColor),
             nameof(CaptionOutlineColor), nameof(CaptionBold), nameof(CaptionRightToLeft), nameof(CaptionOutlineWidth), nameof(CaptionShadowDepth), nameof(CaptionSafeArea),
             nameof(CaptionBackground), nameof(CaptionBackgroundColor), nameof(CaptionBackgroundOpacityPercent), nameof(CaptionAlignment), nameof(CaptionCasing),
@@ -167,6 +169,10 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
 
     public StudioClipEditorViewModel(IGenerationOutputEditor? outputEditor)
     {
+        Effects = new(this);
+        CaptionLooks = new(NamedCaptionLooks, () => StudioCaptionLook.FromAppearance(DraftAppearance),
+            () => _selectedNamedLook?.Name, saved => SelectedNamedCaptionLook = saved,
+            style => { _selectedNamedLook = null; SelectedCaptionStyle = _captionStyleOptions.Single(option => option.Value == style); });
         _saveNamedLookCommand = new DelegateCommand(SaveNamedLook, () => _asset is not null && !_isHostBusy);
         try { foreach (var look in _captionLookStore.Load()) NamedCaptionLooks.Add(look); }
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
@@ -388,7 +394,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
             _asset, SelectedCaptionStyle.Value, SelectedCaptionWordLimit);
     public bool IsCaptionPhraseSizeEditorEnabled =>
         _project is { IsFinalized: false } &&
-        _asset?.HasCaptions == true &&
+        _asset is not null &&
         SelectedCaptionStyle.Value != GenerationCaptionStylePreset.Pop;
     public bool IsCaptionPhraseSizeSelectorVisible =>
         SelectedCaptionStyle.Value != GenerationCaptionStylePreset.Pop;
@@ -580,9 +586,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
     public string VideoEffectIntensityText =>
         $"{VideoEffectIntensityPercent:0}%";
     public StudioClipAppearance DraftAppearance => new(
-        _asset?.Captions is null
-            ? GenerationCaptionStylePreset.Clean
-            : SelectedCaptionStyle.Value,
+        SelectedCaptionStyle.Value,
         CaptionVerticalPositionPercent,
         SelectedVideoEffect.Value,
         VideoEffectIntensityPercent,
@@ -604,6 +608,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         _project = project;
         _asset = asset;
         LoadDraftFromAsset();
+        Effects.Bind(project, asset);
         NotifyDraftProperties();
         OnPropertyChanged(nameof(CaptionedClipCount));
         OnPropertyChanged(nameof(ApplyCaptionLookToAllText));
@@ -687,9 +692,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         }
 
         var appearance = new StudioClipAppearance(
-            _asset.Captions is null
-                ? GenerationCaptionStylePreset.Clean
-                : SelectedCaptionStyle.Value,
+            SelectedCaptionStyle.Value,
             CaptionVerticalPositionPercent,
             SelectedVideoEffect.Value,
             VideoEffectIntensityPercent,
@@ -942,6 +945,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
             OnPropertyChanged(propertyName);
         }
 
+        CaptionLooks.Refresh();
         NotifyCommandState();
         DraftRangeChanged?.Invoke(this, EventArgs.Empty);
     }

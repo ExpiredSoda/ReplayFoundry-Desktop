@@ -70,7 +70,7 @@
         </Setter>
     </Style>
     <Style x:Key="Text.WorkspaceEyebrow" TargetType="{x:Type TextBlock}">
-        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.BrandCyan}" />
         <Setter Property="FontSize" Value="11" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="TextWrapping" Value="Wrap" />

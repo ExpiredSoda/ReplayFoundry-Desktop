@@ -57,6 +57,7 @@ internal sealed class StudioEditorialMetadataService
     public int MaximumDescriptionLength =>
         ClipEditorialMetadataDraft.MaximumDescriptionLength;
 
+    public bool CanGenerate => _generator is not null;
     public bool IsAiAvailable => _generator?.IsAiAvailable == true;
 
     public string? AiUnavailableReason => _generator?.AiUnavailableReason;
@@ -81,6 +82,8 @@ internal sealed class StudioEditorialMetadataService
             asset?.IsEditorialMetadataCurrentForCut == false;
         string status = metadata is null
             ? "This clip does not have a title and description yet."
+            : StudioEditorialDraftPresentation.IsUnwritten(asset)
+                ? "Write a title and description below, or use the writer to create a first draft for this clip."
             : metadata.QualityIssues.Count > 0
                 ? string.Join(Environment.NewLine, metadata.QualityIssues
                     .Select(ClipEditorialMetadataReview.Describe)

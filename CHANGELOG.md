@@ -2,7 +2,18 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 4](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.4).
+downloadable version is [1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5).
+
+## 1.0.0 Beta 5 — 2026-09-07
+
+- Refreshed Generate, Studio, Library, Publish, and Settings with consistent branding, clearer wording, and fewer overlapping controls. Video intake now makes drag and drop clear, and audio waveforms support direct seeking.
+- Added a dedicated full-recording workspace with thumbnail timelines, suggested regions, gameplay/commentary/funny filters, draggable clip ranges, undo/redo, and familiar editing shortcuts.
+- Improved caption phrase breaks, unified caption look choices, and added animated effect previews. Custom clips receive the same title and description workflow as generated clips.
+- Added a proprietary personal neural model to official builds. It learns locally from explicit ratings, accepted moments, custom clips, renders, and successful publishing actions. Training and activation require sufficient feedback and independent quality checks; new profiles start without trained preferences. Public source retains the interface without the private learning implementation.
+- Prevented fully reviewed, AI-rejected moments from returning through automatic count filling or personal ranking. Creators can still select their own ranges.
+- Strengthened support-report redaction, matched server receipts to the submitted report, and connected handled generation failures to local report drafts. Sending remains an explicit choice.
+- Updated the Advanced AI runtime to CPython 3.13.15, PyTorch 2.13.0 with CUDA 13.0, Transformers 5.16.1, and patched supporting libraries. Release packaging blocks known dependency advisories and incompatible runtime sets.
+- Added recovery after temporary learning failures and more detailed generation timing diagnostics. Generation speed depends on the recording and analysis settings; no universal speed claim is made.
 
 ## 1.0.0 Beta 4 — 2026-09-06
 

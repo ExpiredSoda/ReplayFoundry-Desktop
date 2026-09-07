@@ -1,5 +1,6 @@
 <UserControl
     x:Class="ReplayFoundry.Desktop.Features.Generate.SourceSelection.SourceSelectionView"
+    x:Name="SourceRoot"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,25 +24,50 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <StackPanel Margin="0,0,0,16">
+                <TextBlock Margin="0,0,0,7" Text="FROM RECORDING TO REPLAY" Style="{DynamicResource Text.WorkspaceEyebrow}" />
                 <TextBlock Style="{StaticResource Generate.ResponsiveHeaderTitle}" Text="Start with a recording" />
                 <TextBlock Style="{StaticResource Generate.ResponsiveHeaderSubtitle}"
                            Text="Add recordings, choose your preferences, then review the results in Studio." />
             </StackPanel>
-            <mode:GenerationModeSelector Grid.Row="1" Margin="0,0,0,16"
-                IsCompact="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type generate:GenerateView}}}" />
-            <Border Grid.Row="2" AllowDrop="True" Drop="DropZone_Drop" PreviewDragOver="DropZone_PreviewDragOver"
+            <StackPanel Grid.Row="2" Margin="0,18,0,0">
+                <TextBlock Margin="0,0,0,10" Style="{DynamicResource Text.Meta}" Text="What would you like to make?" />
+                <mode:GenerationModeSelector
+                    IsCompact="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type generate:GenerateView}}}" />
+            </StackPanel>
+            <Border Grid.Row="1" AllowDrop="True" Drop="DropZone_Drop" PreviewDragOver="DropZone_PreviewDragOver"
+                    PreviewDragEnter="DropZone_PreviewDragOver" DragLeave="DropZone_DragLeave"
+                    AutomationProperties.Name="Video drop zone"
+                    AutomationProperties.HelpText="Drag one or more video files from File Explorer into this area, or choose Browse videos."
                     Style="{StaticResource Generate.ResponsiveSourcePanel}">
+                <Grid>
+                    <Rectangle RadiusX="12" RadiusY="12" StrokeThickness="1.5" StrokeDashArray="6,5" IsHitTestVisible="False">
+                        <Rectangle.Style><Style TargetType="Rectangle">
+                            <Setter Property="Stroke" Value="{DynamicResource Brush.BorderStrong}" />
+                            <Setter Property="Fill" Value="Transparent" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFileDragOver, ElementName=SourceRoot}" Value="True">
+                                    <Setter Property="Stroke" Value="{DynamicResource Brush.BrandCyan}" />
+                                    <Setter Property="StrokeThickness" Value="3" />
+                                    <Setter Property="Fill" Value="{DynamicResource Brush.InteractiveSelected}" />
+                                    <Setter Property="StrokeDashArray" Value="1,0" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style></Rectangle.Style>
+                    </Rectangle>
                 <StackPanel>
-                    <DockPanel LastChildFill="True" Margin="0,0,0,16">
-                        <Button DockPanel.Dock="Right" Margin="12,0,0,0"
-                                Command="{Binding ImportFolderCommand}" Content="Import folder"
-                                AutomationProperties.Name="Import recording folder"
-                                Style="{DynamicResource Control.GhostButton}" />
-                        <TextBlock VerticalAlignment="Center" FontSize="16" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource Brush.TextPrimary}" Text="Recordings" />
-                    </DockPanel>
-                    <TextBlock Margin="0,0,0,8" Text="{Binding FolderImportStatus}" Style="{DynamicResource Text.Meta}"
-                               TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                    <StackPanel.Style><Style TargetType="StackPanel">
+                        <Setter Property="Margin" Value="24" />
+                        <Style.Triggers><DataTrigger Binding="{Binding IsShortLayout, ElementName=SourceRoot}" Value="True"><Setter Property="Margin" Value="12" /></DataTrigger></Style.Triggers>
+                    </Style></StackPanel.Style>
+                    <TextBlock Margin="0,0,0,8" Text="{Binding FolderImportStatus}"
+                               TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
+                        <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Text.Meta}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding FolderImportStatus}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                <DataTrigger Binding="{Binding FolderImportStatus}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                            </Style.Triggers>
+                        </Style></TextBlock.Style>
+                    </TextBlock>
                     <Border Style="{StaticResource Generate.ResponsiveDropZone}">
                         <Grid>
                             <StackPanel VerticalAlignment="Center">
@@ -54,16 +80,56 @@
                                         </Style.Triggers>
                                     </Style>
                                 </StackPanel.Style>
-                                <TextBlock Style="{StaticResource Generate.ResponsiveDropInstruction}" Text="Drop recordings here" />
-                                <TextBlock Style="{StaticResource Generate.ResponsiveFormatsText}" Text="MP4, MKV, MOV or AVI · original files stay on your computer" />
-                                <WrapPanel Margin="0,20,0,0">
-                                    <Button Command="{Binding SelectSingleFileCommand}" Content="Choose a video"
-                                            AutomationProperties.Name="Choose one video"
+                                <Viewbox Margin="0,2,0,8" HorizontalAlignment="Center" IsHitTestVisible="False">
+                                    <Viewbox.Style><Style TargetType="Viewbox">
+                                        <Setter Property="Width" Value="230" /><Setter Property="Height" Value="100" />
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsShortLayout, ElementName=SourceRoot}" Value="True">
+                                            <Setter Property="Width" Value="138" /><Setter Property="Height" Value="60" />
+                                        </DataTrigger></Style.Triggers>
+                                    </Style></Viewbox.Style>
+                                    <Canvas Width="230" Height="100">
+                                        <Border
+                                            Canvas.Left="18"
+                                            Canvas.Top="18"
+                                            Width="92"
+                                            Height="58"
+                                            CornerRadius="5"
+                                            BorderThickness="1.5"
+                                            BorderBrush="{DynamicResource Brush.BrandCyan}"
+                                            Background="{DynamicResource Brush.SurfaceInset}" />
+                                        <Path Fill="{DynamicResource Brush.BrandCyan}" Data="M 54,34 L 76,47 L 54,60 Z" />
+                                        <Path Stroke="{DynamicResource Brush.BrandCyan}" StrokeThickness="1.5" Data="M 18,77 L 9,84 L 119,84 L 110,77 M 53,83 L 75,83" />
+                                        <Path Stroke="{DynamicResource Brush.BrandYellow}" StrokeThickness="2" Data="M 120,37 C 150,35 135,67 167,65 M 159,58 L 168,65 L 159,73" />
+                                        <Path
+                                            Fill="{DynamicResource Brush.InteractiveSelected}"
+                                            Stroke="{DynamicResource Brush.BrandCyan}"
+                                            StrokeThickness="1.5"
+                                            Data="M 178,15 L 202,15 L 214,27 L 214,68 L 178,68 Z M 201,15 L 201,28 L 214,28" />
+                                        <Path Fill="{DynamicResource Brush.BrandCyan}" Data="M 189,35 L 204,44 L 189,53 Z" />
+                                        <Path Stroke="{DynamicResource Brush.BrandYellow}" StrokeThickness="2" Data="M 172,78 L 172,90 L 222,90 L 222,78" />
+                                    </Canvas>
+                                </Viewbox>
+                                <TextBlock TextAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
+                                    <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Generate.ResponsiveDropInstruction}">
+                                        <Setter Property="FontSize" Value="24" />
+                                        <Setter Property="Text" Value="Drag videos here from your PC" />
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsFileDragOver, ElementName=SourceRoot}" Value="True">
+                                            <Setter Property="Text" Value="Release to add your videos" />
+                                        </DataTrigger></Style.Triggers>
+                                    </Style></TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Body}" TextAlignment="Center" TextWrapping="Wrap"
+                                           Text="Open a folder on your PC, select your videos, then drag and drop them into this box." />
+                                <WrapPanel Margin="0,12,0,0" HorizontalAlignment="Center">
+                                    <Button Command="{Binding SelectMultipleFilesCommand}" Content="Browse videos"
+                                            AutomationProperties.Name="Browse for one or more videos"
                                             Style="{StaticResource Generate.PrimaryButton}" />
-                                    <Button Command="{Binding SelectMultipleFilesCommand}" Content="Choose multiple"
-                                            AutomationProperties.Name="Choose one or more videos"
+                                    <Button Command="{Binding ImportFolderCommand}" Content="Choose a folder"
+                                            AutomationProperties.Name="Import recording folder"
                                             Style="{StaticResource Generate.SecondaryButton}" />
                                 </WrapPanel>
+                                <TextBlock Margin="0,8,0,6" Style="{DynamicResource Text.Meta}" TextAlignment="Center" TextWrapping="Wrap"
+                                           Text="MP4 · MKV · MOV · AVI     |     One video or several. Your originals stay on your PC." />
                             </StackPanel>
                             <StackPanel>
                                 <StackPanel.Style>
@@ -116,7 +182,7 @@
                                 </ScrollViewer>
                                 <StackPanel Style="{StaticResource Generate.ResponsiveSelectedFooter}">
                                     <TextBlock FontSize="12" Foreground="{DynamicResource Brush.TextSecondary}"
-                                               Text="Drop more recordings here to add them." TextWrapping="Wrap" />
+                                               Text="Drag more videos from your PC into this box to add them." TextWrapping="Wrap" />
                                     <Border Style="{StaticResource Generate.SetupSummary}">
                                         <StackPanel>
                                             <TextBlock Foreground="{DynamicResource Brush.TextPrimary}" FontSize="13"
@@ -130,6 +196,8 @@
                                                 Style="{StaticResource Generate.PrimaryButton}" />
                                         <Button Command="{Binding ClearSelectionCommand}" Content="Clear selection"
                                                 Style="{StaticResource Generate.SecondaryButton}" />
+                                        <Button Command="{Binding SelectMultipleFilesCommand}" Content="Add more videos"
+                                                Style="{StaticResource Generate.SecondaryButton}" />
                                     </WrapPanel>
                                 </StackPanel>
                             </StackPanel>
@@ -140,6 +208,7 @@
                                    Text="{Binding ValidationMessage}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
                     </Border>
                 </StackPanel>
+                </Grid>
             </Border>
         </Grid>
     </ScrollViewer>

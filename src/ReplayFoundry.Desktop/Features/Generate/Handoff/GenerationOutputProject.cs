@@ -467,7 +467,10 @@ public sealed partial class GenerationOutputProject
             audioMastering: template.AudioMastering, burnCaptions: template.BurnCaptions, resolution: template.Resolution);
         const string explanation = "The creator chose this source interval manually; no automatic event score was assigned.";
         var context = new ClipEditorialContext(id, source.FullPath, Path.GetFileNameWithoutExtension(source.FullPath),
-            start, end, source.Duration, 0, explanation);
+            start, end, source.Duration, 0, explanation,
+            gameContext: sameSource?.EditorialContext?.GameContext,
+            gameKnowledge: sameSource?.EditorialContext?.GameKnowledge,
+            gameplayRegion: sameSource?.EditorialContext?.GameplayRegion);
         var metadata = new ClipEditorialMetadataDraft($"Manual clip {_assets.Count + 1}",
             "A selected section from this recording. Add a title and description that match the clip.", [],
             ClipEditorialMetadataOrigin.Heuristic, new ClipEditorialMetadataGeneratorIdentity("studio-manual", "1.0"), 0);

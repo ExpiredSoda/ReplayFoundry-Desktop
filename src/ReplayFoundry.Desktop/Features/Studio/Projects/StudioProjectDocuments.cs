@@ -238,7 +238,8 @@ public sealed record StudioPreferenceFeatureDocument(
 
 public sealed record StudioPreferenceVectorDocument(
     IReadOnlyList<StudioPreferenceFeatureDocument> Features,
-    ClipPreferenceContext? Context = null);
+    ClipPreferenceContext? Context = null,
+    ReplayFoundry.Desktop.Media.Moments.MomentContentProfile? DetectedContent = null);
 
 public sealed record StudioMediaRationalDocument(
     long Numerator,

@@ -396,7 +396,9 @@ public sealed class GenerationResult
                             request.SetupOptions.QualityThreshold,
                             selected.SelectionReason,
                             GenerationClipPreferenceFeatureExtractor.Create(
-                                selected, request.SetupOptions));
+                                selected, request.SetupOptions,
+                                candidateIntelligence?.VisualSemantic?.Observations.FirstOrDefault(review =>
+                                    ReferenceEquals(review.Candidate, selected.Candidate))));
                     })
                 .ToArray();
 

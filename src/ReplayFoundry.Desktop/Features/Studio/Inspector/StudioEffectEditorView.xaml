@@ -9,7 +9,7 @@
         Visibility="{Binding IsVideoEffectEditorVisible, Converter={StaticResource BoolToVisibility}}">
         <StackPanel>
             <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Color treatment" />
-            <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="Choose a look for this clip. Your saved treatment appears here and in the final Library video." TextWrapping="Wrap" />
+            <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="Choose a look, adjust its strength, then compare it with the original color." TextWrapping="Wrap" />
             <ComboBox
                 AutomationProperties.Name="Studio video effect"
                 DisplayMemberPath="Name"
@@ -27,7 +27,7 @@
             </Grid>
             <Slider
                 AutomationProperties.Name="Studio video effect intensity"
-                IsEnabled="{Binding IsProjectDraft}"
+                IsEnabled="{Binding Clip.Effects.CanAdjust}"
                 IsSnapToTickEnabled="True"
                 LargeChange="10"
                 Maximum="100"
@@ -35,19 +35,14 @@
                 SmallChange="1"
                 TickFrequency="1"
                 Value="{Binding Clip.VideoEffectIntensityPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <Button
-                Margin="0,10,0,0"
-                HorizontalAlignment="Left"
-                AutomationProperties.Name="Save video effect"
-                Command="{Binding Clip.ApplyBoundaryEditCommand}"
-                Content="Save effect"
-                Style="{DynamicResource Control.StudioPrimaryButton}" />
-            <Border Margin="0,14,0,0" Padding="10" Style="{DynamicResource Control.CanvasGhostZone}">
-                <StackPanel>
-                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Transition" />
-                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="Clips join with a clean cut." TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
+            <CheckBox Margin="0,10,0,0" Content="Compare original color"
+                IsChecked="{Binding Clip.Effects.ShowOriginal, Mode=TwoWay}"
+                IsEnabled="{Binding Clip.Effects.HasEffect}" />
+            <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}"
+                Text="{Binding Clip.Effects.ComparisonStatus}" TextWrapping="Wrap" />
+            <Button Margin="0,10,0,0" HorizontalAlignment="Left"
+                Content="Reset effect" Command="{Binding Clip.Effects.ResetCommand}"
+                Style="{DynamicResource Control.StudioSecondaryButton}" />
         </StackPanel>
     </Border>
 </UserControl>

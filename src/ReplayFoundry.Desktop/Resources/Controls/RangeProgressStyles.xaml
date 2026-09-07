@@ -14,6 +14,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Thumb}">
                     <Grid Background="Transparent">
+                        <Ellipse x:Name="ThumbGlow" Width="28" Height="28" Fill="{DynamicResource Brush.KineticGlowSoft}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5" IsHitTestVisible="False" />
                         <Ellipse
                             x:Name="ThumbSurface"
                             Width="14"
@@ -26,10 +28,14 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ThumbGlow" Property="Opacity" Value="1" />
                             <Setter TargetName="ThumbSurface" Property="Width" Value="17" />
                             <Setter TargetName="ThumbSurface" Property="Height" Value="17" />
                         </Trigger>
                         <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ThumbGlow" Property="Width" Value="36" />
+                            <Setter TargetName="ThumbGlow" Property="Height" Value="36" />
+                            <Setter TargetName="ThumbGlow" Property="Opacity" Value="1" />
                             <Setter TargetName="ThumbSurface" Property="Width" Value="18" />
                             <Setter TargetName="ThumbSurface" Property="Height" Value="18" />
                         </Trigger>

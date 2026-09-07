@@ -22,6 +22,13 @@ public enum GenerationProgressState
 public sealed class GenerationProgressViewModel :
     INotifyPropertyChanged
 {
+    internal event EventHandler<Exception>? FailureOccurred;
+
+    private void ApplyFailure(GenerationProgressPresentation presentation, Exception exception)
+    {
+        ApplyPresentation(presentation);
+        FailureOccurred?.Invoke(this, exception);
+    }
     private readonly Action _cancelActiveOperation;
     private readonly Action _returnToSourceSelection;
     private readonly Action? _openStudio;
@@ -266,13 +273,13 @@ public sealed class GenerationProgressViewModel :
     internal void FailPreparation(
         string friendlyMessage,
         Exception exception) =>
-        ApplyPresentation(
+        ApplyFailure(
             GenerationProgressPresentationFactory.Failure(
                 "Source preparation stopped",
                 friendlyMessage,
                 exception,
                 CurrentRunContext,
-                ProgressPercent));
+                ProgressPercent), exception);
 
     internal void MarkPreparationCancelled() =>
         ApplyPresentation(
@@ -317,13 +324,13 @@ public sealed class GenerationProgressViewModel :
     internal void FailEvidenceAnalysis(
         string friendlyMessage,
         Exception exception) =>
-        ApplyPresentation(
+        ApplyFailure(
             GenerationProgressPresentationFactory.Failure(
                 "Video scan stopped",
                 friendlyMessage,
                 exception,
                 CurrentRunContext,
-                ProgressPercent));
+                ProgressPercent), exception);
 
     internal void MarkEvidenceAnalysisCancelled() =>
         ApplyPresentation(
@@ -387,7 +394,7 @@ public sealed class GenerationProgressViewModel :
     internal void Fail(
         string friendlyMessage,
         Exception exception) =>
-        ApplyPresentation(
+        ApplyFailure(
             GenerationProgressPresentationFactory.Failure(
                 exception is GenerationEngineUnavailableException
                     ? "Video scan finished"
@@ -395,7 +402,7 @@ public sealed class GenerationProgressViewModel :
                 friendlyMessage,
                 exception,
                 CurrentRunContext,
-                IsIndeterminate ? 0 : ProgressPercent));
+                IsIndeterminate ? 0 : ProgressPercent), exception);
 
     internal void MarkCancelled() =>
         ApplyPresentation(

@@ -248,6 +248,31 @@
         </Setter>
     </Style>
     <Style TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource Control.ThemedListBoxItem}" />
+    <Style x:Key="Control.ChoiceTile" TargetType="ListBoxItem" BasedOn="{StaticResource Control.ThemedListBoxItem}">
+        <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="Template">
+            <Setter.Value><ControlTemplate TargetType="ListBoxItem">
+                <Border x:Name="Tile" Padding="{TemplateBinding Padding}" CornerRadius="9" Background="{TemplateBinding Background}"
+                    BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1">
+                    <Grid>
+                        <Border x:Name="ChoiceSelectionRail" Width="3" Margin="-7,0,0,0" HorizontalAlignment="Left"
+                            Background="{DynamicResource Brush.BrandCyan}" CornerRadius="2" Visibility="Collapsed" />
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tile" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" /></Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter TargetName="ChoiceSelectionRail" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Tile" Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Tile" Property="Opacity" Value="0.5" /></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value>
+        </Setter>
+    </Style>
     <!-- Rail navigation uses one tonal surface plus one leading state rail.
          Keyboard focus remains the shared, keyboard-only outer adorner. -->
     <Style x:Key="Control.CanvasRailListBoxItem" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource Control.KeyboardFocus}">
@@ -304,6 +329,20 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource Control.ThemedListBoxItem}" />
         <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                        <ScrollViewer Focusable="False" CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+                            HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                            VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <Style TargetType="{x:Type ListBox}" BasedOn="{StaticResource Control.ThemedListBox}" />
     <Style TargetType="{x:Type ListView}" BasedOn="{StaticResource Control.KeyboardFocus}">

@@ -10,8 +10,8 @@ public sealed class LibraryDesignViewModel
     {
         Categories = new[]
         {
-            new LibraryCategoryItem(LibraryCategory.Projects, "Projects", "Icon.Project"),
-            new LibraryCategoryItem(LibraryCategory.GeneratedClips, "Generated Clips", "Icon.Spark"),
+            new LibraryCategoryItem(LibraryCategory.Projects, "All videos", "Icon.Media"),
+            new LibraryCategoryItem(LibraryCategory.GeneratedClips, "Clips", "Icon.Spark"),
             new LibraryCategoryItem(LibraryCategory.Montages, "Montages", "Icon.Grid")
         };
         Items = new[]
@@ -26,7 +26,6 @@ public sealed class LibraryDesignViewModel
         }
     }
     public IReadOnlyList<LibraryCategoryItem> Categories { get; }
-    public IReadOnlyList<string> Modes { get; } = new[] { "All modes", "Individual clips", "Montage" };
     public IReadOnlyList<string> Statuses { get; } = new[] { "All statuses", "Ready", "Missing locally" };
     public IReadOnlyList<string> Dates { get; } = new[] { "Any date", "Today", "This week", "This month" };
     public IReadOnlyList<string> SortOptions { get; } = new[] { "Recently modified", "Name", "Duration", "Status" };
@@ -53,7 +52,6 @@ public sealed class LibraryDesignViewModel
     public bool CanRelinkSelected => false;
     public bool HasActiveFilters => false;
     public string SearchQuery => string.Empty;
-    public string ModeFilter => "All modes";
     public string StatusFilter => "All statuses";
     public string DateFilter => "Any date";
     public string SortBy => "Recently modified";
@@ -62,7 +60,7 @@ public sealed class LibraryDesignViewModel
     public string OrganizationSummary => "Grouped by date";
     public string EmptyTitle => "No items match these filters";
     public string EmptyDescription => "Clear a filter or search term to see the full category.";
-    public string SelectedCategoryLabel => "Projects";
+    public string SelectedCategoryLabel => "All videos";
     public string StatusText => "Design preview · runtime index unavailable";
     public string ErrorSummary => "The library could not load its content.";
     public string LibraryNotice => string.Empty;

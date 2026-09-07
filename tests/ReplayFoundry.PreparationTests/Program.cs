@@ -26,6 +26,12 @@ internal static class Program
             .. GenerateUsabilityTests.GetTests(),
             .. GenerationSpeechActivityTests.GetTests(),
             .. ClipPreferenceTests.GetTests(),
+#if !REPLAYFOUNDRY_PUBLIC_SOURCE
+            .. TasteLearningTests.GetTests(),
+            .. TasteStorageTests.GetTests(),
+#endif
+            .. TasteIntegrationTests.GetTests(),
+            .. ReportConnectionTests.GetTests(),
             .. EditorialMetadataPreferenceLearningTests.GetTests(),
             .. EditorialRerollPreferenceTests.GetTests(),
             .. EditorialRerollDiversityTests.GetTests(),
@@ -41,6 +47,7 @@ internal static class Program
             .. StudioSourceCropTrackingIntegrationTests.GetTests(),
             .. CaptionForcedAlignmentTests.GetTests(),
             .. StudioCaptionLineLayoutTests.GetTests(),
+            .. StudioSpeechPhrasingTests.GetTests(),
             .. GenerationClipRenderingTests.GetTests(),
             .. StudioProjectPersistenceTests.GetTests(),
             .. GenerateWorkflowStateOwnerTests.GetTests(),

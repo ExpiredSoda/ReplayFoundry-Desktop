@@ -8,21 +8,14 @@ namespace ReplayFoundry.Desktop.Features.Studio;
 
 internal static class StudioSurfaceCatalog
 {
-    public static IReadOnlyList<StudioToolItem> ToolSections { get; } =
-        Array.AsReadOnly<StudioToolItem>(
-        [
-            new(StudioToolSection.MomentsClips, "Clips", "Icon.Spark", "Choose the generated clip to preview and edit"),
-            new(StudioToolSection.StickersGraphics, "Graphics", "Icon.Graphics", "Add and position visual overlays"),
-        ]);
-
     public static IReadOnlyList<StudioInspectorItem> InspectorSections { get; } =
         Array.AsReadOnly<StudioInspectorItem>(
         [
-            new(StudioInspectorSection.Clip, "Clip", "Icon.Media", "Keep, rate, and trim"),
+            new(StudioInspectorSection.Clip, "Clip", "Icon.Media", "Choose where the clip starts and ends"),
             new(StudioInspectorSection.Audio, "Audio", "Icon.Audio", "Choose what you hear"),
-            new(StudioInspectorSection.Captions, "Captions", "Icon.Caption", "Style and placement"),
-            new(StudioInspectorSection.Effects, "Effects", "Icon.Effects", "Color and transition"),
-            new(StudioInspectorSection.Graphics, "Graphics", "Icon.Graphics", "Position and size"),
+            new(StudioInspectorSection.Captions, "Captions", "Icon.Caption", "Choose a look and edit the words"),
+            new(StudioInspectorSection.Effects, "Effects", "Icon.Effects", "Adjust a look and compare it with the original"),
+            new(StudioInspectorSection.Graphics, "Graphics", "Icon.Graphics", "Add pictures and logos"),
             new(StudioInspectorSection.Metadata, "Title & description", "Icon.Info", "Title, description, and tags"),
         ]);
 
@@ -31,7 +24,7 @@ internal static class StudioSurfaceCatalog
         [
             new(GenerationCaptionStylePreset.Clean, "Clean", "Shows short white phrases with a crisp edge and soft shadow."),
             new(GenerationCaptionStylePreset.WordFocus, "Word focus", "Keeps phrase context visible while the spoken word lifts in gold."),
-            new(GenerationCaptionStylePreset.KaraokeSweep, "Karaoke sweep", "Sweeps gold through each spoken word while past words resolve white."),
+            new(GenerationCaptionStylePreset.KaraokeSweep, "Karaoke", "Sweeps gold through each spoken word while past words resolve white."),
             new(GenerationCaptionStylePreset.Pop, "Pop", "Shows one spoken word at a time with a quick elastic bounce."),
             new(GenerationCaptionStylePreset.HighContrast, "High contrast", "Places white phrases on an opaque dark panel for busy footage."),
         ]);
@@ -39,10 +32,10 @@ internal static class StudioSurfaceCatalog
     public static IReadOnlyList<SelectionOption<StudioCaptionWordLimitPreset>> CaptionWordLimits { get; } =
         Array.AsReadOnly<SelectionOption<StudioCaptionWordLimitPreset>>(
         [
-            new(StudioCaptionWordLimitPreset.Streamlined, "Streamlined · 5 words", "Groups timed captions into balanced phrases of up to five words."),
-            new(StudioCaptionWordLimitPreset.Balanced, "More context · 8 words", "Groups timed captions into broader phrases of up to eight words."),
-            new(StudioCaptionWordLimitPreset.Punchy, "Punchy · 3 words", "Groups timed captions into quick phrases of up to three words."),
-            new(StudioCaptionWordLimitPreset.FullSegment, "Full segment", "Keeps each complete caption segment together when timing permits."),
+            new(StudioCaptionWordLimitPreset.Punchy, "3 words", "Quick phrases, up to three words. Pauses start a new phrase."),
+            new(StudioCaptionWordLimitPreset.Streamlined, "5 words", "Short phrases, up to five words. Pauses start a new phrase."),
+            new(StudioCaptionWordLimitPreset.Balanced, "8 words", "More context, up to eight words. Pauses still break the phrase."),
+            new(StudioCaptionWordLimitPreset.FullSegment, "Full phrase", "Longer phrases, with breaks at pauses and punctuation."),
         ]);
 
     public static IReadOnlyList<SelectionOption<StudioVideoEffectPreset>> VideoEffects { get; } =
@@ -51,14 +44,9 @@ internal static class StudioSurfaceCatalog
             new(StudioVideoEffectPreset.None, "None", "Keep the source color unchanged."),
             new(StudioVideoEffectPreset.Noir, "Noir", "Reduce color and deepen contrast."),
             new(StudioVideoEffectPreset.Chromatic, "Chromatic", "Offset red and blue channels for a subtle digital edge."),
-            new(StudioVideoEffectPreset.SoftBloom, "Soft bloom", "Soften highlights and gently lift the image."),
-            new(StudioVideoEffectPreset.Vivid, "Vivid", "Increase selective color and contrast."),
+            new(StudioVideoEffectPreset.SoftBloom, "Soft focus", "Soften the picture and gently lift its brightness."),
+            new(StudioVideoEffectPreset.Vivid, "Vivid", "Bring out muted colors."),
         ]);
-
-    public static StudioToolItem GetTool(StudioToolSection section) =>
-        ToolSections.SingleOrDefault(item => item.Key == section) ??
-        throw new InvalidOperationException(
-            "The selected Studio tool is not defined.");
 
     public static StudioInspectorItem GetInspector(StudioInspectorSection section) =>
         InspectorSections.SingleOrDefault(item => item.Key == section) ??
@@ -66,41 +54,10 @@ internal static class StudioSurfaceCatalog
             "The selected Studio inspector is not defined.");
 
     public static IReadOnlyList<StudioBrowserPreviewItem> BuildBrowserPreviewItems(
-        StudioToolSection section,
         GenerationOutputProject? project,
         string? selectedAssetId,
-        IReadOnlySet<string>? queuedAssetIds = null) => section switch
-        {
-            StudioToolSection.MomentsClips => BuildMomentItems(
-                project,
-                selectedAssetId,
-                queuedAssetIds),
-            _ => BuildGraphicItems(project, selectedAssetId),
-        };
-
-    private static IReadOnlyList<StudioBrowserPreviewItem> BuildGraphicItems(
-        GenerationOutputProject? project,
-        string? selectedAssetId)
-    {
-        GenerationOutputAsset? asset = project?.Assets.FirstOrDefault(item =>
-            selectedAssetId is not null && item.Id.Equals(selectedAssetId, StringComparison.Ordinal));
-        if (asset?.Appearance.GraphicOverlays.Count is not > 0)
-        {
-            return Items(new StudioBrowserPreviewItem(
-                "No graphics added",
-                "Drag a PNG, JPG, or WebP from Windows onto the preview.",
-                "DROP ON PREVIEW",
-                "Icon.Graphics"));
-        }
-
-        return Array.AsReadOnly(asset.Appearance.GraphicOverlays
-            .Select(overlay => new StudioBrowserPreviewItem(
-                overlay.DisplayName,
-                $"Center {overlay.CenterXPercent:0.#}% × {overlay.CenterYPercent:0.#}% · width {overlay.WidthPercent:0.#}%",
-                "ON SELECTED CLIP",
-                "Icon.Graphics"))
-            .ToArray());
-    }
+        IReadOnlySet<string>? queuedAssetIds = null) =>
+        BuildMomentItems(project, selectedAssetId, queuedAssetIds);
 
     private static IReadOnlyList<StudioBrowserPreviewItem> BuildMomentItems(
         GenerationOutputProject? project,

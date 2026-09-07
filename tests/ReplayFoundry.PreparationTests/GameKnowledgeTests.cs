@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ReplayFoundry.Desktop.Features.Generate.Editorial;
 using ReplayFoundry.Desktop.Features.Generate.Editorial.GameKnowledge;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
@@ -1086,7 +1087,7 @@ internal static class GameKnowledgeTests
             Qwen3VlGenerationWatchdogPolicy.Sha256,
             watchdogPolicySha256,
             "Generation watchdog policy text hash.");
-        string memoryPolicyText = File.ReadAllText(RepositoryLayout.VisualSemanticHostPath("replayfoundry-grounded-editorial-cuda-memory-policy-1.5.txt"))
+        string memoryPolicyText = File.ReadAllText(RepositoryLayout.VisualSemanticHostPath("replayfoundry-grounded-editorial-cuda-memory-policy-1.6.txt"))
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace("\r", "\n", StringComparison.Ordinal)
             .Trim();
@@ -1177,13 +1178,43 @@ internal static class GameKnowledgeTests
             memoryAudit.SdpaBackend == "CudnnAttention" &&
             memoryAudit.SdpaBackendForced,
             "Completed memory provenance must satisfy every frozen bound.");
-        string previousMemoryPolicyJson = memoryPolicyJson
+        JsonObject conservativeMemory = JsonNode.Parse(memoryPolicyJson)!.AsObject();
+        conservativeMemory["policyVersion"] = Qwen3VlGroundedMemoryPolicy.ConservativeVersion;
+        conservativeMemory["policySha256"] = Qwen3VlGroundedMemoryPolicy.ConservativeSha256;
+        conservativeMemory["reservedAllocatorHeadroomBytes"] = 3 * gibibyte;
+        conservativeMemory["requiredStartupFreeMemoryBytes"] =
+            3 * gibibyte + Qwen3VlGroundedMemoryPolicy.MinimumViableAllocatorLimitBytes;
+        conservativeMemory["allocatorLimitBytes"] = startupFreeMemoryBytes - 3 * gibibyte;
+        conservativeMemory["allocatorFraction"] = (double)(startupFreeMemoryBytes - 3 * gibibyte) / totalDeviceMemoryBytes;
+        conservativeMemory["observedAllocatorFraction"] = (double)(startupFreeMemoryBytes - 3 * gibibyte) / totalDeviceMemoryBytes;
+        using JsonDocument conservativeMemoryDocument = JsonDocument.Parse(conservativeMemory.ToJsonString());
+        Qwen3VlGroundedMemoryPolicy.Parse(conservativeMemoryDocument.RootElement, requireCompleted: true,
+            expectedPeakAllocatedBytes: Qwen3VlGroundedMemoryPolicy.QualificationReferencePeakAllocatedBytes);
+        TestAssert.Throws<Qwen3VlOutputParseException>(() => Qwen3VlGroundedMemoryPolicy.Parse(
+                conservativeMemoryDocument.RootElement, requireCompleted: true,
+                expectedPeakAllocatedBytes: Qwen3VlGroundedMemoryPolicy.QualificationReferencePeakAllocatedBytes, requireCurrentPolicy: true),
+            "Historical 1.5 results retain their 3 GiB reserve and cannot claim the current policy.");
+        var compatibleAudit = Qwen3VlGroundedMemoryPolicy.Parse(conservativeMemoryDocument.RootElement,
+            requireCompleted: true, expectedPeakAllocatedBytes: Qwen3VlGroundedMemoryPolicy.QualificationReferencePeakAllocatedBytes,
+            requireCurrentPolicy: true, allowConservativeInferencePolicy: true);
+        TestAssert.True(compatibleAudit.SdpaBackendForced && compatibleAudit.AllocatorLimitBytes == startupFreeMemoryBytes - 3 * gibibyte,
+            "A separately installed 1.5 runtime remains usable with its exact larger reserve and attention checks.");
+        conservativeMemory["reservedAllocatorHeadroomBytes"] = 2 * gibibyte;
+        using JsonDocument mislabeledMemoryDocument = JsonDocument.Parse(conservativeMemory.ToJsonString());
+        TestAssert.Throws<Qwen3VlOutputParseException>(() => Qwen3VlGroundedMemoryPolicy.Parse(
+                mislabeledMemoryDocument.RootElement, requireCompleted: true,
+                expectedPeakAllocatedBytes: Qwen3VlGroundedMemoryPolicy.QualificationReferencePeakAllocatedBytes),
+            "A historical result cannot be relabeled with the new reserve.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(() => Qwen3VlGroundedMemoryPolicy.Parse(
+            mislabeledMemoryDocument.RootElement, requireCompleted: true, requireCurrentPolicy: true, allowConservativeInferencePolicy: true),
+            "Compatibility must not allow a mismatched allocator reserve.");
+        string previousMemoryPolicyJson = conservativeMemoryDocument.RootElement.GetRawText()
             .Replace(
-                Qwen3VlGroundedMemoryPolicy.Version,
+                Qwen3VlGroundedMemoryPolicy.ConservativeVersion,
                 Qwen3VlGroundedMemoryPolicy.PreviousVersion,
                 StringComparison.Ordinal)
             .Replace(
-                Qwen3VlGroundedMemoryPolicy.Sha256,
+                Qwen3VlGroundedMemoryPolicy.ConservativeSha256,
                 Qwen3VlGroundedMemoryPolicy.PreviousSha256,
                 StringComparison.Ordinal);
         using JsonDocument previousMemoryPolicyDocument =
@@ -1203,6 +1234,9 @@ internal static class GameKnowledgeTests
                         .QualificationReferencePeakAllocatedBytes,
                 requireCurrentPolicy: true),
             "Current output must reject the prior root-preload policy.");
+        TestAssert.Throws<Qwen3VlOutputParseException>(() => Qwen3VlGroundedMemoryPolicy.Parse(
+            previousMemoryPolicyDocument.RootElement, requireCompleted: true, requireCurrentPolicy: true, allowConservativeInferencePolicy: true),
+            "Compatibility is limited to the known 1.5 policy, not older preload behavior.");
         string priorMemoryPolicyJson = previousMemoryPolicyJson
             .Replace(
                 Qwen3VlGroundedMemoryPolicy.PreviousVersion,

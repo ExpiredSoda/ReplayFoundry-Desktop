@@ -56,6 +56,12 @@ $violations = [Collections.Generic.List[string]]::new()
 foreach ($relative in $inventory.Paths) {
     $portable = ConvertTo-RepositoryPath $relative
     $full = Join-Path $root $portable
+    if (($portable.StartsWith('src/ReplayFoundry.Desktop/Media/Intelligence/Learning/', [StringComparison]::OrdinalIgnoreCase) -and
+         $portable -ne 'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteContracts.cs') -or
+        $portable -eq 'src/ReplayFoundry.Desktop/Platform/Storage/JsonTasteLearningStore.cs') {
+        $violations.Add("$portable (proprietary learning implementation)")
+        continue
+    }
     if ($portable -match $forbiddenDirectoryPattern) {
         $violations.Add("$portable (generated or packaged directory)")
         continue

@@ -9,7 +9,8 @@ internal static class GenerationGroundedVisualRejectionPolicy
 {
     // Joint corroboration for unavailable gameplay, not independent image
     // quality thresholds. Dark action, static readable scenes, and a missing
-    // visible payoff remain eligible when either corroborating signal is absent.
+    // visible payoff remain provisionally eligible when either signal is absent.
+    // The final completed editorial verdict is applied by GenerationReviewedSelectionPolicy.
     internal const double PredominantlyBlackRatio = 0.5;
     internal const double NearStaticRatio = 0.8;
 
@@ -54,7 +55,7 @@ internal static class GenerationGroundedVisualRejectionPolicy
         // A picture-only observation cannot disqualify a creator's spoken
         // story. Likewise, absence of a visible payoff is not proof that an
         // event is worthless. Only affirmative, grounded rejection facts gate
-        // automatic output; uncertain observations remain ranking signals.
+        // this refinement stage; uncertain observations remain ranking signals.
         bool hasSpeech = refinement.Components.Any(static component =>
             component.Code == GenerationCandidateRefinementComponentCode.SpeechCoverage &&
             component.RawValue > 0);

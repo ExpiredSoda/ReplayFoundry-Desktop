@@ -333,6 +333,11 @@ public sealed class SettingsViewModel :
     public CreatorVoiceSettingsViewModel CreatorVoice { get; }
     public BugReportSettingsViewModel BugReports { get; }
     public LocalDataSettingsViewModel LocalData { get; }
+    public Personalization.TasteLearningSettingsViewModel Learning { get; private set; } = new(null);
+    internal void AttachTasteLearning(Media.Intelligence.Learning.ITasteLearningService? learning)
+    {
+        Learning.Dispose(); Learning = new(learning); OnPropertyChanged(nameof(Learning));
+    }
     public WorkspaceSurfaceState SurfaceState => _surfaceState;
     public bool IsEmpty => SurfaceState == WorkspaceSurfaceState.Empty;
     public bool IsContentReady => SurfaceState == WorkspaceSurfaceState.ContentReady;
@@ -622,6 +627,7 @@ public sealed class SettingsViewModel :
             EditorialMetadataPreferenceLearningConsent_Changed;
         LocalData.ResetScheduled -= LocalData_ResetScheduled;
         BugReports.Dispose();
+        Learning.Dispose();
     }
 
     private void YouTubePermission_Changed(object? sender, EventArgs args)

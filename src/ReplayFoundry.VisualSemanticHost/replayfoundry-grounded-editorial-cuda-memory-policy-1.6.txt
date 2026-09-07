@@ -1,0 +1,71 @@
+ReplayFoundry Grounded Editorial CUDA Memory Policy 1.6
+
+Purpose
+
+Allow local AI title and description generation alongside desktop and capture
+apps on a 16 GiB graphics card. This revision explicitly reduces the fixed
+allocator headroom from 3 GiB to 2 GiB. It preserves the measured minimum
+model allowance, bounded allocator, per-generation admission checks, model
+precision, placement, attention backend, prompts, and output validation.
+
+Fixed configuration
+
+- Scope: grounded editorial metadata only; CUDA device 0.
+- Allocator: PyTorch native CUDA caching allocator.
+- Reserved allocator headroom: 2,147,483,648 bytes (2 GiB).
+- Allocator limit: reported free device memory at startup minus the fixed
+  headroom, expressed as a fraction of total device memory.
+- Startup gate: the allocator limit must exceed 11,705,485,312 bytes, the
+  retained qualification peak. Required startup free memory is therefore
+  13,852,968,961 bytes (approximately 12.90 GiB).
+- Pre-generation gate: after releasing only unoccupied PyTorch cache blocks,
+  current free device memory must be at least the fixed 2 GiB headroom.
+- Model attention: PyTorch scaled dot product attention, with cuDNN attention
+  explicitly forced through torch.nn.attention.sdpa_kernel for every call.
+- Attention fallback: prohibited; unsupported cuDNN attention fails closed.
+- KV cache: Transformers offloaded DynamicCache.
+- Model precision: every floating-point model parameter remains BF16.
+- Language model and lm_head: CUDA device 0.
+- Vision backing store: CPU. Accelerate root-preload offload materializes all
+  Qwen3VLVisionModel parameters together on CUDA 0 before visual execution
+  and returns them to their CPU backing store after the visual forward.
+- Exact initial load map, CPU BF16 vision backing values, one CUDA-0 root
+  offload hook with recursive placement, and CUDA-0 language parameters and
+  buffers are verified before inference. Descendant vision hooks, other CPU
+  model offload, disk offload, and quantization remain prohibited.
+- Automatic cap relaxation and automatic fallback: prohibited.
+
+Headroom rationale
+
+The previous 3 GiB reserve rejected the user's 16 GiB GPU with about 13.8 GiB
+free, despite retained successful generation using substantially less memory.
+The cuDNN attention reproduction recorded 8,544,662,016 peak allocated bytes
+and 8,849,981,440 peak reserved bytes. The higher, older qualification peak
+is still the minimum model allowance. Reducing the reserve adds exactly
+1 GiB to the bounded allocator at the same startup free-memory reading.
+This is a versioned configuration change, not an unbounded retry after OOM.
+
+Qualification reference
+
+The retained real-qwen-metadata-v1.6.json artifact uses schema
+replayfoundry-editorial-metadata-real-quality-1.0 and has SHA-256
+0EC7F4BE4DD3664091D6808176B2FEA36B7FE016B277422DACA00C4C9D28EC70.
+Its measured 11,705,485,312 peak allocated bytes under the older all-CUDA
+placement remain the minimum allocator admission reference.
+
+Limitations and audit
+
+The allocator cap covers PyTorch-managed CUDA allocations. Driver, library,
+Windows WDDM, and other-process allocations are outside that cap. Neither
+the startup nor the per-generation check reserves global free memory from
+other processes. If contention violates a gate or inference runs out of
+memory, the host reports the failure and does not expand its cap or switch
+models, precision, attention, or language-model placement automatically.
+
+Each execution records the policy version and hash, model/cache/attention
+settings, total/startup-free/externally occupied device bytes, required free
+bytes, fixed headroom, computed allocator limit and fraction, observed
+fraction, qualification reference identity, pre-generation admission count
+and free-memory observations, peak/end allocated and reserved bytes, end
+free bytes, runtime outcome, failure reason, and explicit policy flags.
+Historical 1.0-1.5 telemetry retains its original 3 GiB reserve and identity.

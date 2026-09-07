@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+    <DefineConstants>$(DefineConstants);REPLAYFOUNDRY_PUBLIC_SOURCE</DefineConstants>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest-minimum</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>

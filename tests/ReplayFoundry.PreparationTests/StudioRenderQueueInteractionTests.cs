@@ -824,7 +824,6 @@ internal static partial class UiUxApplicationSurfaceTests
                     "Deterministic candidate score used prominence, luma, baseline, quality target, and diversity.");
             StudioBrowserPreviewItem item =
                 StudioSurfaceCatalog.BuildBrowserPreviewItems(
-                    StudioToolSection.MomentsClips,
                     project,
                     project.PrimaryAsset.Id)[0];
 
@@ -1590,7 +1589,7 @@ internal static partial class UiUxApplicationSurfaceTests
         GenerationOutputProject project =
             CreateStudioQueueProjectWithHiddenMoment(
                 count: 1,
-                hiddenMomentCount: 3);
+                hiddenMomentCount: 5);
         var session = new GenerationOutputSession();
         session.Publish(project);
         using var mediaService = new ImmediateStudioPreviewMediaService();
@@ -1601,29 +1600,18 @@ internal static partial class UiUxApplicationSurfaceTests
 
         hiddenMoments.Bind(project);
         hiddenMoments.WarmFirstAlternatePreview();
-        await WaitForPreviewRequestCountAsync(mediaService, 1);
-        hiddenMoments.OpenCommand.Execute(null);
-
-        TestAssert.Equal(
-            2,
-            mediaService.MaterializeCount,
-            "Opening review should request the current alternate but not warm the remaining deck yet.");
-        TestAssert.True(
-            mediaService.Requests.Take(2).All(request =>
-                request.Asset.Id == project.HiddenMoments[0].Id),
-            "Foreground review should reuse the same first-alternate cache identity.");
-
-        Synchronize(hiddenMoments.Preview);
         await WaitForPreviewRequestCountAsync(mediaService, 3);
-
-        TestAssert.Equal(
-            project.HiddenMoments[1].Id,
-            mediaService.Requests[2].Asset.Id,
-            "Once the current review settles, only its immediate successor should warm.");
-        TestAssert.False(
-            mediaService.Requests.Any(request =>
-                request.Asset.Id == project.HiddenMoments[2].Id),
-            "Bounded warm-ahead must not encode the rest of a large alternate deck.");
+        TestAssert.True(project.HiddenMoments.Take(3).All(moment => mediaService.Requests.Any(request => request.Asset.Id == moment.Id)),
+            "The first alternate and two successors should prepare before review opens.");
+        TestAssert.False(mediaService.Requests.Any(request => project.HiddenMoments.Skip(3).Any(moment => moment.Id == request.Asset.Id)),
+            "Opening a project must not encode the entire alternate deck.");
+        hiddenMoments.OpenCommand.Execute(null);
+        await WaitForPreviewRequestCountAsync(mediaService, 4);
+        TestAssert.Equal(project.HiddenMoments[0].Id, mediaService.Requests[3].Asset.Id,
+            "Foreground playback must reuse the first alternate's cache identity.");
+        Synchronize(hiddenMoments.Preview);
+        TestAssert.True(mediaService.Requests.All(request => request.RangeMode == StudioPreviewRangeMode.ExactSelection),
+            "Look-ahead must stay bounded to the actual cuts.");
     }
 
     private static async Task StudioAlternateWarmupCancelsOnProjectChange()

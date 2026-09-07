@@ -11,17 +11,19 @@ public static class GenerationClipPreferenceFeatureExtractor
 
     public static ClipPreferenceFeatureVector Create(
         GenerationMomentCandidate candidate,
-        GenerationSetupOptions? setup = null)
+        GenerationSetupOptions? setup = null,
+        GenerationVisualSemanticCandidateObservation? review = null)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         return Create(candidate.Candidate, candidate.Refinement,
-            setup is null ? null : CreateContext(setup, candidate.AnalyzedSource.PreparedSource.Media.FullPath));
+            setup is null ? null : CreateContext(setup, candidate.AnalyzedSource.PreparedSource.Media.FullPath), review);
     }
 
     public static ClipPreferenceFeatureVector Create(
         MomentCandidate moment,
         GenerationCandidateRefinement? refinement,
-        ClipPreferenceContext? context = null)
+        ClipPreferenceContext? context = null,
+        GenerationVisualSemanticCandidateObservation? review = null)
     {
         ArgumentNullException.ThrowIfNull(moment);
         var features = new List<ClipPreferenceFeature>
@@ -79,7 +81,7 @@ public static class GenerationClipPreferenceFeatureExtractor
             refinement,
             GenerationCandidateRefinementComponentCode.VisualSemanticEditorialPenalty,
             ClipPreferenceFeatureCode.VisualSemanticRejection);
-        return new ClipPreferenceFeatureVector(features, context);
+        return new ClipPreferenceFeatureVector(features, context, GenerationMomentContentClassifier.Classify(moment, features, review));
     }
 
     public static ClipPreferenceContext CreateContext(GenerationSetupOptions setup, string sourcePath)

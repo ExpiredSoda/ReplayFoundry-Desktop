@@ -19,6 +19,10 @@ public sealed class WpfAudioStreamAuditionService :
         _prepared = new(StringComparer.OrdinalIgnoreCase);
     private string? _playingKey;
     private bool _isDisposed;
+    private bool _mediaOpened;
+    private bool _playWhenOpened;
+    private TimeSpan _pendingPosition;
+    public bool CanSeek => !_isDisposed;
 
     public WpfAudioStreamAuditionService(IAudioSegmentExtractor extractor)
     {
@@ -31,6 +35,15 @@ public sealed class WpfAudioStreamAuditionService :
         _progressTimer.Stop();
         _player.MediaEnded += (_, _) => CompletePlayback();
         _player.MediaFailed += (_, _) => Stop();
+        _player.MediaOpened += (_, _) =>
+        {
+            if (TryGetPlaying() is null) return;
+            _mediaOpened = true;
+            _player.Position = _pendingPosition;
+            if (_playWhenOpened) { _player.Play(); _progressTimer.Start(); }
+            else _player.Pause();
+            PublishProgress();
+        };
     }
 
     public event EventHandler<AudioStreamAuditionPlaybackChangedEventArgs>?
@@ -76,12 +89,12 @@ public sealed class WpfAudioStreamAuditionService :
                 end,
                 TimeSpan.FromMinutes(1)),
             cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             double[] peaks = WaveFileValidator.ReadPeakEnvelope(
                 extracted.Path,
-                72);
+                360);
             var preview = new AudioStreamAuditionPreview(
                 source.Media.FullPath,
                 absoluteAudioStreamIndex,
@@ -110,20 +123,40 @@ public sealed class WpfAudioStreamAuditionService :
         CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
-        AudioStreamAuditionPreview preview = await PrepareAsync(
+        await PrepareAsync(
             source,
             absoluteAudioStreamIndex,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         string key = CreateKey(source, absoluteAudioStreamIndex);
         PreparedAudition prepared = _prepared[key];
+        if (!string.Equals(key, _playingKey, StringComparison.OrdinalIgnoreCase)) OpenPrepared(key, prepared, TimeSpan.Zero);
+        _playWhenOpened = true;
+        if (_mediaOpened) { _player.Play(); _progressTimer.Start(); }
+        PublishProgress();
+    }
+
+    public bool Seek(PreparedGenerationSource source, int absoluteAudioStreamIndex, double progress)
+    {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        if (!double.IsFinite(progress)) return false;
+        string key = CreateKey(source, absoluteAudioStreamIndex);
+        if (!_prepared.TryGetValue(key, out PreparedAudition? prepared)) return false;
+        TimeSpan position = TimeSpan.FromSeconds(Math.Clamp(progress, 0, 1) * prepared.Preview.Duration.TotalSeconds);
+        if (!string.Equals(key, _playingKey, StringComparison.OrdinalIgnoreCase)) OpenPrepared(key, prepared, position);
+        _pendingPosition = position;
+        if (_mediaOpened) _player.Position = position;
+        PublishPlayback(prepared.Preview, position, _playWhenOpened);
+        return true;
+    }
+
+    private void OpenPrepared(string key, PreparedAudition prepared, TimeSpan position)
+    {
         Stop();
         _playingKey = key;
+        _pendingPosition = position;
         _player.Open(new Uri(prepared.Segment.Path, UriKind.Absolute));
         _player.Volume = 1;
-        _player.Play();
-        _progressTimer.Start();
-        PublishProgress();
     }
 
     public void Stop()
@@ -133,6 +166,9 @@ public sealed class WpfAudioStreamAuditionService :
         _player.Stop();
         _player.Close();
         _playingKey = null;
+        _mediaOpened = false;
+        _playWhenOpened = false;
+        _pendingPosition = TimeSpan.Zero;
         if (playing is not null)
         {
             PublishPlayback(playing.Preview, TimeSpan.Zero, isPlaying: false);
@@ -215,12 +251,12 @@ public sealed class WpfAudioStreamAuditionService :
             return;
         }
 
-        TimeSpan position = _player.Position;
+        TimeSpan position = _mediaOpened ? _player.Position : _pendingPosition;
         if (position > playing.Preview.Duration)
         {
             position = playing.Preview.Duration;
         }
-        PublishPlayback(playing.Preview, position, isPlaying: true);
+        PublishPlayback(playing.Preview, position, isPlaying: _playWhenOpened);
     }
 
     private void CompletePlayback()
@@ -230,6 +266,9 @@ public sealed class WpfAudioStreamAuditionService :
         _player.Stop();
         _player.Close();
         _playingKey = null;
+        _mediaOpened = false;
+        _playWhenOpened = false;
+        _pendingPosition = TimeSpan.Zero;
         if (playing is not null)
         {
             PublishPlayback(

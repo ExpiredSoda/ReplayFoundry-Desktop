@@ -10,7 +10,7 @@ using ReplayFoundry.Desktop.Presentation.Commands;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editing;
 
-public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
+public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IStudioClipPreferenceService? _service;
     private readonly IGenerationOutputEditor? _outputEditor;
@@ -31,6 +31,7 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
         IResearchFeedbackRecorder? researchFeedback = null)
     {
         _service = service;
+        if (service is not null) service.Changed += LearningChanged;
         _outputEditor = outputEditor;
         _decisionStore = decisionStore;
         _researchFeedback = researchFeedback;
@@ -40,11 +41,13 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    private void LearningChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(PreferenceLearningStatus));
+    public void Dispose() { if (_service is not null) _service.Changed -= LearningChanged; }
 
     public StudioClipPreferenceRating? SelectedPreference =>
         _asset is not null &&
         _sessionRatings.TryGetValue(
-            _asset.Id,
+            RatingKey(_asset),
             out StudioClipPreferenceRating rating)
                 ? rating
                 : null;
@@ -66,7 +69,7 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
         StudioClipPreferenceRating.Like =>
             "Saved — you want more moments with patterns like this.",
         StudioClipPreferenceRating.Neutral =>
-            "Saved — this moment will not push future choices up or down.",
+            "Saved — this teaches the difference between a favorite, an okay moment, and one you dislike.",
         StudioClipPreferenceRating.Dislike =>
             "Saved — you want fewer moments with patterns like this.",
         _ => "Choose a preference to help future moment suggestions.",
@@ -84,6 +87,7 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
                 return "Personalized suggestions are unavailable. You can still edit and create finished files.";
             }
 
+            if (_service.LearningStatus is { } learnedStatus) return learnedStatus;
             StudioClipPreferenceStatus status = _service.Current;
             return status.IsReady
                 ? $"Personalized suggestions are active after {status.RatedCount} clip ratings. " +
@@ -125,10 +129,10 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
     {
         _project = project;
         _asset = asset;
-        if (asset is not null &&
-            _decisionStore?.Find(asset.Id)?.Rating is { } saved)
+        if (asset is not null && _decisionStore?.Find(asset.Id) is { Rating: { } saved } decision &&
+            decision.SourceStart == asset.SourceStart && decision.SourceEnd == asset.SourceEnd)
         {
-            _sessionRatings[asset.Id] = saved;
+            _sessionRatings[RatingKey(asset)] = saved;
         }
         NotifyProperties();
     }
@@ -218,7 +222,7 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
         try
         {
             _service.Update(asset, previous, rating);
-            _sessionRatings[asset.Id] = rating;
+            _sessionRatings[RatingKey(asset)] = rating;
             SaveDecision(_project, asset);
             RecordResearch(
                 asset,
@@ -287,16 +291,19 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged
             asset.SourceStart,
             asset.SourceEnd,
             asset.Disposition,
-            ResolveRating(asset.Id),
+            ResolveRating(asset),
             DateTimeOffset.UtcNow));
     }
 
-    private StudioClipPreferenceRating? ResolveRating(string assetId) =>
+    private StudioClipPreferenceRating? ResolveRating(GenerationOutputAsset asset) =>
         _sessionRatings.TryGetValue(
-            assetId,
+            RatingKey(asset),
             out StudioClipPreferenceRating rating)
                 ? rating
-                : _decisionStore?.Find(assetId)?.Rating;
+                : _decisionStore?.Find(asset.Id) is { } decision && decision.SourceStart == asset.SourceStart && decision.SourceEnd == asset.SourceEnd
+                    ? decision.Rating : null;
+
+    private static string RatingKey(GenerationOutputAsset asset) => $"{asset.Id}|{asset.SourceStart.Ticks}|{asset.SourceEnd.Ticks}";
 
     private void RecordResearch(
         GenerationOutputAsset asset,

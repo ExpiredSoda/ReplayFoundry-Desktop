@@ -68,7 +68,8 @@ internal static class PrimaryFeatureComposition
             dependencies.VisualReview.Analysis,
             dependencies.Speech.TranscriptAnalysis,
             new ReplayFoundry.Desktop.Features.Generate.Intelligence.GenerationCaptureContextScreeningService(
-                dependencies.Experience.VisualText));
+                dependencies.Experience.VisualText),
+            dependencies.Feedback.TasteLearning is { } learning ? new Features.Generate.Intelligence.GenerationTasteRanking(learning) : null);
 
     private static StudioViewModel CreateStudioViewModel(
         PrimaryFeatureDependencies dependencies,
@@ -80,10 +81,9 @@ internal static class PrimaryFeatureComposition
             dependencies.Editorial.MetadataGenerator,
             dependencies.Editorial.ProfileSession,
             previewMedia,
-            dependencies.Feedback.ClipPreferences is null
+            dependencies.Feedback.TasteLearning is null
                 ? null
-                : new StudioClipPreferenceService(
-                    dependencies.Feedback.ClipPreferences),
+                : new Features.Personalization.NeuralStudioClipPreferenceService(dependencies.Feedback.TasteLearning),
             dependencies.Feedback.CandidateDecisions,
             dependencies.Feedback.HiddenMomentDecisions,
             dependencies.Feedback.ResearchRecorder,
@@ -96,7 +96,8 @@ internal static class PrimaryFeatureComposition
             dependencies.Preferences.MetadataCorrectionRecorder,
             dependencies.Experience.GameKnowledge,
             new OnnxCorrectedCaptionAlignmentService(AudioSegmentExtractionFactory.CreateDefault()),
-            new StudioCaptionLanguageModel(dependencies.Speech.CaptionLanguageCapabilities));
+            new StudioCaptionLanguageModel(dependencies.Speech.CaptionLanguageCapabilities),
+            new StudioTimelineFilmstrip(dependencies.Experience.PreviewFrames));
 
     private static GenerateViewModel CreateGenerateViewModel(
         PrimaryFeatureDependencies dependencies,

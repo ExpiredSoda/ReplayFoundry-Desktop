@@ -129,9 +129,9 @@ internal static partial class UiUxApplicationSurfaceTests
     private static Task StudioSelectionProjectsEmptyState()
     {
         var studio = new StudioViewModel();
-        studio.SelectedTool = StudioToolSection.StickersGraphics;
-        TestAssert.True(studio.SelectedToolTitle.Contains("Graphics", StringComparison.Ordinal), "Tool title should reflect the selected tool.");
-        TestAssert.True(studio.SelectedToolDescription.Contains("overlay", StringComparison.OrdinalIgnoreCase), "Tool description should reflect the selected tool.");
+        studio.Inspector.SelectedInspector = StudioInspectorSection.Graphics;
+        TestAssert.Equal("Graphics", studio.Inspector.SelectedInspectorTitle, "Graphics should have one home in the inspector.");
+        TestAssert.Equal("No generated clips yet", studio.BrowserPreviewItems[0].Title, "Graphics must not replace the project clip browser.");
         return Task.CompletedTask;
     }
 
@@ -286,10 +286,8 @@ internal static partial class UiUxApplicationSurfaceTests
             TestAssert.True(studio.ReviewRenderRequirementsCommand.CanExecute(null),
                 "The requirement should be actionable rather than hidden in a tooltip.");
             studio.ReviewRenderRequirementsCommand.Execute(null);
-            TestAssert.Equal(
-                StudioToolSection.MomentsClips,
-                studio.SelectedTool,
-                "The action should open the Browser area where the selected clip can be kept.");
+            TestAssert.Equal(StudioInspectorSection.Clip, studio.Inspector.SelectedInspector,
+                "The action should focus the selected clip while keeping the clip browser available.");
             return Task.CompletedTask;
         }
         finally
@@ -301,9 +299,9 @@ internal static partial class UiUxApplicationSurfaceTests
     private static Task StudioVisualEditingMapsUpdate()
     {
         var studio = new StudioViewModel();
-        studio.SelectedTool = StudioToolSection.StickersGraphics;
-        TestAssert.Equal(1, studio.BrowserPreviewItems.Count, "The graphics browser should project one honest empty state.");
-        TestAssert.True(studio.BrowserPreviewItems[0].Detail.Contains("Drag", StringComparison.Ordinal), "The empty graphics browser should explain how overlays are added.");
+        studio.Inspector.SelectedInspector = StudioInspectorSection.Graphics;
+        TestAssert.Equal(1, studio.BrowserPreviewItems.Count, "The clip browser should retain its honest empty state.");
+        TestAssert.Equal("No generated clips yet", studio.BrowserPreviewItems[0].Title, "Graphics uses the inspector while project clips remain available.");
         studio.Inspector.SelectedInspector = StudioInspectorSection.Audio;
         TestAssert.Equal(0, studio.Inspector.AudioStreams.Count, "Audio details require a selected real clip.");
         TestAssert.True(studio.Inspector.AudioMixSummary.Contains("Select", StringComparison.Ordinal), "The empty audio inspector should be explicit.");
@@ -367,20 +365,10 @@ internal static partial class UiUxApplicationSurfaceTests
             "Studio is ready",
             studio.SaveStateText,
             "Studio should state its empty ready state plainly.");
-        TestAssert.False(
-            studio.SelectedToolTitle.EndsWith(
-                "workspace",
-                StringComparison.OrdinalIgnoreCase),
-            "The Browser should not repeat a workspace label beneath its selected navigation item.");
         TestAssert.Equal(
             "Clip",
             studio.Inspector.SelectedInspectorTitle,
             "The Inspector should use the concise selected-section label.");
-        TestAssert.True(
-            studio.ToolSections.All(
-                static item =>
-                    !string.IsNullOrWhiteSpace(item.Description)),
-            "Every Browser navigation item should keep its supporting text inside the selection surface.");
         TestAssert.True(
             studio.Inspector.InspectorSections.All(
                 static item =>

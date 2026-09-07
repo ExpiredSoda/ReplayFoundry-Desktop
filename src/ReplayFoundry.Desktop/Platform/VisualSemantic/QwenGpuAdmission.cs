@@ -23,7 +23,7 @@ internal static class QwenGpuAdmission
         if (!TryReadSingleDevice(out ulong free) || free >= (ulong)required) return null;
         return $"Local AI title writing needs at least {required / (1024d * 1024 * 1024):F1} GiB of free GPU memory; " +
             $"this GPU currently has {free / (1024d * 1024 * 1024):F1} GiB free. " +
-            "Free GPU memory and retry, or choose heuristic title writing. Your source and edits remain available.";
+            "Close other apps using your graphics card and try again, or choose Simple titles in clip setup. Your videos and edits are still available.";
     }
 
     private static bool TryReadSingleDevice(out ulong free)

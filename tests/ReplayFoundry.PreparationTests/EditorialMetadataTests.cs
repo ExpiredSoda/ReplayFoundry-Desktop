@@ -3336,7 +3336,7 @@ internal static partial class EditorialMetadataTests
     {
         const long gibibyte = 1024L * 1024 * 1024;
         long total = 16 * gibibyte;
-        long startupFree = 13 * gibibyte;
+        long startupFree = 12 * gibibyte;
         long reserve =
             Qwen3VlGroundedMemoryPolicy.ReservedAllocatorHeadroomBytes;
         long allocatorLimit = startupFree - reserve;

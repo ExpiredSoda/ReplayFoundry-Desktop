@@ -16,6 +16,7 @@ $forbiddenFileNames = @(
     'RecentGenerationProjects.json', 'GenerationAudioRoles.json',
     'studio-project.json', 'studio-project.json.bak', 'library-catalog.json',
     'game-context-memory.json', 'clip-preferences.json',
+    'taste-state.json', 'taste-training-report.json', 'taste-evaluation-report.json',
     'editorial-metadata-preference-consent.json',
     'editorial-metadata-preferences.json', 'editorial-reroll-preference.json',
     'bug-report-consent.json', 'generation-output-location.json',
@@ -81,6 +82,7 @@ function Test-PayloadFile([string]$FullPath, [string]$Container, [string]$Relati
     $name = [IO.Path]::GetFileName($portable)
     $extension = [IO.Path]::GetExtension($name).ToLowerInvariant()
     if ($name -in $forbiddenFileNames -or
+        $name -match '(?i)\.taste-(example|model)\.json$' -or
         $portable -match '(?i)(^|/)(Cache/(GameKnowledge|StudioPreview)|Diagnostics/(Outbox|VisualSemanticFailures))(/|$)' -or
         $extension -in $forbiddenMediaExtensions) {
         $violations.Add("$Container::$portable (mutable or captured user payload)")
@@ -89,6 +91,10 @@ function Test-PayloadFile([string]$FullPath, [string]$Container, [string]$Relati
     if ($extension -notin $textExtensions -or
         (Get-Item -LiteralPath $FullPath).Length -gt 16MB) { return }
     $text = [IO.File]::ReadAllText($FullPath)
+    if ($extension -eq '.json' -and $text -match 'foundry-taste-(local-state|example|checkpoint|training)-1') {
+        $violations.Add("$Container::$portable (personal learning data)")
+        return
+    }
     $userRoots = @(
         [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile),
         $env:USERPROFILE

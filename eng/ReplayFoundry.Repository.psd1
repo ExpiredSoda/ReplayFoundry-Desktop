@@ -87,6 +87,7 @@
             'eng/ReplayFoundry.Repository.psd1'
             'eng/Resolve-ReplayFoundryArtifactSigningClient.ps1'
             'eng/Test-CreativeCommerceArchitecture.ps1'
+            'eng/Test-AiRuntimeDependencies.ps1'
             'eng/Test-GenerateWorkflowArchitecture.ps1'
             'eng/Test-InstallerBranding.ps1'
             'eng/Test-MomentFinderArchitecture.ps1'

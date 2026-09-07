@@ -10,6 +10,16 @@ namespace ReplayFoundry.Desktop.Features.Studio.Preview;
 
 public partial class StudioPreviewView : UserControl
 {
+    public static readonly DependencyProperty ShowHeaderProperty = DependencyProperty.Register(
+        nameof(ShowHeader), typeof(bool), typeof(StudioPreviewView), new PropertyMetadata(true));
+    public static readonly DependencyProperty ShowPositionSliderProperty = DependencyProperty.Register(
+        nameof(ShowPositionSlider), typeof(bool), typeof(StudioPreviewView), new PropertyMetadata(true));
+    public static readonly DependencyProperty ShowDetailsProperty = DependencyProperty.Register(
+        nameof(ShowDetails), typeof(bool), typeof(StudioPreviewView), new PropertyMetadata(true));
+    public bool ShowHeader { get => (bool)GetValue(ShowHeaderProperty); set => SetValue(ShowHeaderProperty, value); }
+    public bool ShowPositionSlider { get => (bool)GetValue(ShowPositionSliderProperty); set => SetValue(ShowPositionSliderProperty, value); }
+    public bool ShowDetails { get => (bool)GetValue(ShowDetailsProperty); set => SetValue(ShowDetailsProperty, value); }
+
     private const int MaximumMediaOpenRetries = 1;
     private static readonly TimeSpan SeekPrimeStartupDelay =
         TimeSpan.FromMilliseconds(75);

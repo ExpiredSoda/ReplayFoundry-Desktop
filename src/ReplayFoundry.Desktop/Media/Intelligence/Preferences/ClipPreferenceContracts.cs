@@ -73,7 +73,8 @@ public sealed class ClipPreferenceFeatureVector
 
     public ClipPreferenceFeatureVector(
         IEnumerable<ClipPreferenceFeature> features,
-        ClipPreferenceContext? context = null)
+        ClipPreferenceContext? context = null,
+        ReplayFoundry.Desktop.Media.Moments.MomentContentProfile? detectedContent = null)
     {
         ArgumentNullException.ThrowIfNull(features);
         ClipPreferenceFeature[] snapshot = features
@@ -91,10 +92,13 @@ public sealed class ClipPreferenceFeatureVector
 
         _features = Array.AsReadOnly(snapshot);
         Context = context;
+        DetectedContent = detectedContent;
     }
 
     public IReadOnlyList<ClipPreferenceFeature> Features => _features;
     public ClipPreferenceContext? Context { get; }
+    // Descriptive metadata retained with the measurements; never used as a preference weight.
+    public ReplayFoundry.Desktop.Media.Moments.MomentContentProfile? DetectedContent { get; }
 
     public double? Find(ClipPreferenceFeatureCode code) =>
         _features.FirstOrDefault(feature => feature.Code == code)

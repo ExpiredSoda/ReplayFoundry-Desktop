@@ -11,16 +11,16 @@ from typing import Any
 from .errors import InitializationError
 
 
-POLICY_VERSION = "grounded-editorial-cuda-memory-1.5"
+POLICY_VERSION = "grounded-editorial-cuda-memory-1.6"
 POLICY_FILE_NAME = (
-    "replayfoundry-grounded-editorial-cuda-memory-policy-1.5.txt"
+    "replayfoundry-grounded-editorial-cuda-memory-policy-1.6.txt"
 )
 # SHA-256 of the normalized policy text beside the host entry point.
 POLICY_SHA256 = (
-    "732b33e80cb0e8a50c44f75b1f84e16aefe8044ae3cd88189b18a19e01e4220b"
+    "975eef96cdd6c526a133a2cb0d2f510c001acfd20561dc54e707bd8a5ef49b67"
 )
 CUDA_DEVICE_INDEX = 0
-RESERVED_ALLOCATOR_HEADROOM_BYTES = 3 * 1024 * 1024 * 1024
+RESERVED_ALLOCATOR_HEADROOM_BYTES = 2 * 1024 * 1024 * 1024
 QUALIFICATION_REFERENCE_ARTIFACT_NAME = "real-qwen-metadata-v1.6.json"
 QUALIFICATION_REFERENCE_ARTIFACT_SCHEMA = (
     "replayfoundry-editorial-metadata-real-quality-1.0"
@@ -562,8 +562,9 @@ def configure_grounded_cuda_memory(
         _publish(application)
         raise InitializationError(
             "Grounded metadata did not start because current free GPU "
-            f"memory ({startup_free} bytes) cannot preserve the fixed 3 "
-            "GiB reserve while retaining its minimum viable allocator "
+            f"memory ({startup_free} bytes) cannot preserve the fixed "
+            f"{RESERVED_ALLOCATOR_HEADROOM_BYTES / (1024 ** 3):g} GiB "
+            "reserve while retaining its minimum viable allocator "
             f"limit ({MINIMUM_VIABLE_ALLOCATOR_LIMIT_BYTES} bytes). Close "
             "another GPU workload and retry; the policy will not relax "
             "automatically."
@@ -688,7 +689,8 @@ def admit_grounded_generation(torch: Any) -> None:
         _publish(application)
         raise InitializationError(
             "Grounded model generation was rejected because current free "
-            f"GPU memory ({free} bytes) is below the fixed 3 GiB admission "
+            f"GPU memory ({free} bytes) is below the fixed "
+            f"{RESERVED_ALLOCATOR_HEADROOM_BYTES / (1024 ** 3):g} GiB admission "
             "floor. Close another GPU workload and retry; the policy will "
             "not relax automatically."
         )

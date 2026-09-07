@@ -81,6 +81,22 @@ public sealed class UserReportCoordinator
         }
     }
 
+    public bool TryCaptureGenerationFailure(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        if (exception is OperationCanceledException) return false;
+        try
+        {
+            var draft = CreateDraft(UserReportKind.ManualFeedback,
+                "Generation stopped before finishing",
+                "A local diagnostic report is ready to review in Settings, under Bug reports. Nothing has been sent.",
+                [_diagnostics.Collect(exception)]);
+            _outbox.Upsert(new StoredUserReport(draft, UserReportDisposition.AwaitingReview, DateTimeOffset.UtcNow));
+            return true;
+        }
+        catch (Exception) { return false; }
+    }
+
     public async Task<UserReportSubmissionResult> SendAsync(
         string reportId,
         CancellationToken cancellationToken = default)

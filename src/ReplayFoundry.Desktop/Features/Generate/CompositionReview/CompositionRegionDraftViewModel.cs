@@ -344,13 +344,13 @@ public sealed class CompositionRegionDraftViewModel :
             CompositionRegionRole.Gameplay =>
                 "Gameplay",
             CompositionRegionRole.Presenter =>
-                "Presenter",
+                "Your camera",
             CompositionRegionRole.ChatOrText =>
-                "Chat/Text",
+                "Chat or text",
             CompositionRegionRole.Overlay =>
-                "Overlay",
+                "Logo or overlay",
             CompositionRegionRole.Unknown =>
-                "Unknown",
+                "Other area",
             _ =>
                 throw new ArgumentOutOfRangeException(
                     nameof(role)),

@@ -252,9 +252,7 @@ public sealed class StudioEditorialMetadataViewModel :
     public bool HasCopyReview =>
         _asset?.EditorialMetadata?.QualityIssues.Count > 0;
 
-    public string DraftState => HasUnsavedChanges
-        ? "Unsaved"
-        : _draftState;
+    public string DraftState => StudioEditorialDraftPresentation.State(IsGenerating, HasUnsavedChanges, _asset, _draftState);
 
     public string MetadataOriginText =>
         StudioGameContextPresentation.BuildMetadataOrigin(_asset);
@@ -262,7 +260,7 @@ public sealed class StudioEditorialMetadataViewModel :
     public string WhyThisTitleText =>
         StudioGameContextPresentation.BuildWhyThisTitle(_asset);
 
-    public bool NeedsCurrentCutRefresh => _needsCurrentCutRefresh;
+    public bool NeedsCurrentCutRefresh => _needsCurrentCutRefresh && !IsGenerating && !StudioEditorialDraftPresentation.IsUnwritten(_asset);
 
     public string CurrentCutStatus => _currentCutStatus;
 
@@ -340,16 +338,18 @@ public sealed class StudioEditorialMetadataViewModel :
 
     public string SaveButtonText => "Save changes";
 
-    public string SaveGuidance => StudioGameContextPresentation.SaveGuidance(
+    public string SaveGuidance => StudioEditorialDraftPresentation.IsUnwritten(_asset)
+        ? "Add a title and description before sharing this clip." : StudioGameContextPresentation.SaveGuidance(
         HasUnsavedChanges, _asset?.HasApprovedEditorialMetadata == true, HasCopyReview);
 
     public bool IsGenerating => _isGenerating || _isGameContextUpdating;
 
     public bool IsAiAvailable => _service.IsAiAvailable;
-
+    public bool CanGenerate => _service.CanGenerate;
     public bool UsesLocalAiForRerolls => _rerollPreference.UseLocalAi;
 
-    public string RerollButtonText => UsesLocalAiForRerolls
+    public string RerollButtonText => StudioEditorialDraftPresentation.IsUnwritten(_asset)
+        ? "Write title & description" : UsesLocalAiForRerolls
         ? "Rewrite with local AI"
         : "Try another angle";
 
@@ -361,7 +361,7 @@ public sealed class StudioEditorialMetadataViewModel :
         ? "Save your changes before trying another angle so they are not replaced."
         : UsesLocalAiForRerolls
             ? IsAiAvailable
-                ? "Local AI will write a different version. Your current draft stays in place if it cannot finish."
+                ? "Local AI will write a title and description for this clip. Your current draft stays in place if it cannot finish."
                 : _service.AiUnavailableReason ??
                     "Local AI is not ready. Check Advanced AI in Settings before trying again."
             : "Replay Foundry will create a quick local rewrite.";
@@ -651,8 +651,8 @@ public sealed class StudioEditorialMetadataViewModel :
         _isGenerating = true;
         bool requireAi = _rerollPreference.UseLocalAi;
         _status = requireAi
-                ? "Asking local AI for another angle."
-                : "Writing another local version.";
+                ? "Writing a title and description with local AI."
+                : "Writing a title and description.";
         NotifyState();
         try
         {
@@ -860,6 +860,7 @@ public sealed class StudioEditorialMetadataViewModel :
         !_draftState.Equals("Reviewed", StringComparison.Ordinal);
 
     private bool CanReroll() =>
+        CanGenerate &&
         !_isStopping &&
         _service.CanEdit(_project, _asset) &&
         !_isHostBusy &&
@@ -907,8 +908,9 @@ public sealed class StudioEditorialMetadataViewModel :
         NotifyState();
     }
 
-    private void LoadProfile()
+    internal void LoadProfile(bool preserveUnsaved = false)
     {
+        if (preserveUnsaved && HasUnsavedProfileChanges) return;
         StudioEditorialProfileSnapshot snapshot =
             _service.LoadProfile();
         _audienceAddress = snapshot.AudienceAddress;

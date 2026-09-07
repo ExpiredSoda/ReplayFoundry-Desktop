@@ -18,6 +18,7 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
     private readonly IStudioPreviewMediaService? _mediaService;
     private readonly TimeProvider _timeProvider;
     private readonly bool _showCaptionControls;
+    private readonly bool _useSourceTimecodes;
     private readonly StudioPreviewRangeMode _rangeMode;
     private readonly DelegateCommand _playCommand;
     private readonly DelegateCommand _previousCommand;
@@ -68,7 +69,8 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         bool showCaptionControls = true,
         TimeProvider? timeProvider = null,
         StudioPreviewRangeMode rangeMode =
-            StudioPreviewRangeMode.EditableEnvelope)
+            StudioPreviewRangeMode.EditableEnvelope,
+        bool useSourceTimecodes = false)
     {
         if (!Enum.IsDefined(rangeMode))
         {
@@ -76,6 +78,7 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         }
         _mediaService = mediaService;
         _showCaptionControls = showCaptionControls;
+        _useSourceTimecodes = useSourceTimecodes;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _rangeMode = rangeMode;
         _playCommand = new DelegateCommand(TogglePlayback, CanUsePreview);
@@ -100,10 +103,10 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
     }
 
 
-    public string ModeBadge => "STUDIO / EDIT";
+    public string ModeBadge => "WATCH & EDIT";
     public event EventHandler<StudioGraphicFileDroppedEventArgs>? GraphicFileDropped;
     public string SequenceSummary => _project is null
-        ? "Sequence 01 · vertical social cut"
+        ? "Choose a moment from your recording"
         : $"{_project.SelectedCount} generated " +
           (_project.SelectedCount == 1 ? "moment" : "moments");
     public string ProjectPromptTitle => IsPreviewLoading
@@ -112,7 +115,7 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
             ? "Preview ready"
             : _hasProject
                 ? "Preview unavailable"
-                : "Bring a generated clip into Studio";
+                : "Choose a clip to start watching";
     public string? PreviewMediaPath => _lease?.MediaPath;
     public double PreviewSourceOffsetSeconds =>
         _lease?.SourceOffset.TotalSeconds ?? 0;
@@ -150,7 +153,8 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         _rangeMode == StudioPreviewRangeMode.ExactSelection;
     internal bool RequiresPlaybackPositionSampling =>
         IsPreviewPlaying || _pendingPlaybackSyncSeconds.HasValue;
-    public string PreviewStatus => _status;
+    public string PreviewStatus => _useSourceTimecodes && IsPreviewSynchronized && !IsPreviewLoading && !HasPreviewError
+        ? "Click the timeline to explore. Space plays or pauses." : _status;
     public string? PreviewError => _error;
     public bool HasPreviewError => !string.IsNullOrWhiteSpace(PreviewError);
     public string PreviewPlayPauseText => IsPreviewPlaying ? "Pause" : "Play";
@@ -173,10 +177,10 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         ? "0:00"
         : StudioTimeFormatter.FormatDuration(
             TimeSpan.FromSeconds(
-                Math.Max(0, PreviewPositionSeconds - _rangeStart.TotalSeconds)));
+                Math.Max(0, PreviewPositionSeconds - (_useSourceTimecodes ? 0 : _rangeStart.TotalSeconds))));
     public string PreviewDurationText => _asset is null
         ? "0:00"
-        : StudioTimeFormatter.FormatDuration(_rangeEnd - _rangeStart);
+        : StudioTimeFormatter.FormatDuration(_useSourceTimecodes ? _asset.SourceDuration : _rangeEnd - _rangeStart);
     public bool IsCaptionContentVisible => _isCaptionContentVisible;
     public bool CanShowCaptionControls =>
         _showCaptionControls && _asset?.Captions is not null && _asset.RenderSettings.BurnCaptions;
@@ -379,8 +383,6 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         _draftAppearance = appearance ??
             throw new ArgumentNullException(nameof(appearance));
         NotifyLiveCaptionProperties();
-        _status = "Studio changes are shown immediately where possible and the rendered preview refreshes after the draft is saved.";
-        OnPropertyChanged(nameof(PreviewStatus));
     }
 
     public bool TryAddGraphicFile(string imageFullPath)

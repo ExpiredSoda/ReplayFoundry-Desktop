@@ -246,10 +246,10 @@ def _load_runtime(ffmpeg_directory: Path) -> tuple[Any, Any, Any, Any]:
             InitializationError,
             "The frozen research host requires 64-bit Windows.",
         )
-    if sys.version_info[:3] != (3, 11, 9):
+    if sys.version_info[:3] != (3, 13, 15):
         _fail(
             InitializationError,
-            "The frozen research host requires CPython 3.11.9.",
+            "The qualified host requires CPython 3.13.15.",
         )
     try:
         import torch
@@ -453,6 +453,7 @@ def _load_model_and_processor(
             str(model_path),
             local_files_only=True,
             trust_remote_code=False,
+            use_safetensors=True,
             dtype=torch.bfloat16,
             device_map={"": DEVICE} if device_map is None else device_map,
             low_cpu_mem_usage=True,

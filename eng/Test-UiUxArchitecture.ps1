@@ -175,7 +175,7 @@ foreach ($name in @('Common', 'Shared', 'Helpers', 'Utils', 'Managers', 'Everyth
     if (Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'src/ReplayFoundry.Desktop') -Directory -Recurse | Where-Object Name -eq $name) { Add-Failure "Generic dumping-ground folder is present: $name" }
 }
 
-Assert-Contains "src/ReplayFoundry.Desktop/Features/Studio/Browser/StudioBrowserView.xaml" 'ToolSections' "Studio browser binding is missing."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Studio/Browser/StudioBrowserView.xaml" 'BrowserPreviewItems' "Studio must keep the project clip browser available beside the inspector."
 Assert-Contains "src/ReplayFoundry.Desktop/Features/Library/LibraryView.xaml" 'LibraryContentView' "Library content decomposition is missing."
 Assert-Contains "src/ReplayFoundry.Desktop/Features/Publish/PublishView.xaml" 'PublishLibraryBrowserView' "Publish Library browser decomposition is missing."
 Assert-Contains "src/ReplayFoundry.Desktop/Features/Publish/PublishPreparationWindow.xaml" 'PublishMetadataView' "Publish preparation metadata decomposition is missing."

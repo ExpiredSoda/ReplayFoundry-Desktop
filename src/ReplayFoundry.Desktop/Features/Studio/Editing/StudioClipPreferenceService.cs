@@ -20,6 +20,8 @@ public sealed record StudioClipPreferenceStatus(
 public interface IStudioClipPreferenceService
 {
     StudioClipPreferenceStatus Current { get; }
+    string? LearningStatus => null;
+    event EventHandler? Changed { add { } remove { } }
 
     bool CanRate(GenerationOutputAsset asset);
 

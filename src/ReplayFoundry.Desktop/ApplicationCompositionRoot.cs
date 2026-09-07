@@ -21,6 +21,9 @@ internal sealed class ApplicationComposition : IDisposable
     private readonly IDisposable? _evidenceAnalysisCoordinator;
     private readonly IDisposable? _youtubePublishing;
     private readonly IDisposable? _speechActivity;
+    private readonly IDisposable? _tasteLearning;
+    private readonly IDisposable? _tasteInteractions;
+    private readonly IDisposable? _generationFailureReporting;
     private readonly object _lifecycleSync = new();
     private Task? _stopTask;
     private bool _disposeRequested;
@@ -37,7 +40,10 @@ internal sealed class ApplicationComposition : IDisposable
         IDisposable? ownedEditorialMetadataProvider = null,
         IDisposable? evidenceAnalysisCoordinator = null,
         IDisposable? youtubePublishing = null,
-        IDisposable? speechActivity = null)
+        IDisposable? speechActivity = null,
+        IDisposable? tasteLearning = null,
+        IDisposable? tasteInteractions = null,
+        IDisposable? generationFailureReporting = null)
     {
         MainWindowViewModel = mainWindowViewModel ??
             throw new ArgumentNullException(nameof(mainWindowViewModel));
@@ -53,6 +59,8 @@ internal sealed class ApplicationComposition : IDisposable
         _evidenceAnalysisCoordinator = evidenceAnalysisCoordinator;
         _youtubePublishing = youtubePublishing;
         _speechActivity = speechActivity;
+        _tasteLearning = tasteLearning; _tasteInteractions = tasteInteractions;
+        _generationFailureReporting = generationFailureReporting;
     }
 
     public MainWindowViewModel MainWindowViewModel { get; }
@@ -117,6 +125,9 @@ internal sealed class ApplicationComposition : IDisposable
             _resourcesDisposed = true;
         }
 
+        _generationFailureReporting?.Dispose();
+        _tasteInteractions?.Dispose();
+        _tasteLearning?.Dispose();
         MainWindowViewModel.Dispose();
         _studioProjectPersistence?.Dispose();
         _audioAuditionService?.Dispose();
@@ -174,12 +185,17 @@ internal static class ApplicationCompositionRoot
                     workspace,
                     editorial,
                     folderLauncher));
+        var tasteInteractions = feedback.TasteLearning is { } learning
+            ? new Features.Personalization.TasteInteractionRecorder(learning, workspace.OutputSession, workspace.LibraryCatalog,
+                primaryFeatures.Studio, feedback.CandidateDecisions) : null;
         PublishFeatureServices publish = PublishFeatureComposition.Create(
             new PublishFeatureDependencies(
                 preferences,
                 workspace,
                 editorial,
-                experience));
+                experience,
+                tasteInteractions));
+        if (publish.Publishing is { } publishing) tasteInteractions?.ImportPublishHistory(publishing.History);
         DiagnosticReportingServices diagnostics =
             DiagnosticReportingComposition.Create();
         var settings = SettingsFeatureComposition.Create(
@@ -233,6 +249,9 @@ internal static class ApplicationCompositionRoot
             editorial.OwnedAiProvider,
             sourceAnalysis.EvidenceCoordinator,
             publish.Publishing as IDisposable,
-            speech.SpeechActivity as IDisposable);
+            speech.SpeechActivity as IDisposable,
+            feedback.TasteLearning,
+            tasteInteractions,
+            new GenerationFailureReporting(primaryFeatures.Generate.GenerationProgress, diagnostics.Coordinator));
     }
 }

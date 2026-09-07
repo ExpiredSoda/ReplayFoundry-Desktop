@@ -121,6 +121,28 @@ internal static class QwenRuntimeResolver
                 python!,
                 verifiedActivePack.PythonExecutablePath);
 
+        // Qualification can use a new, isolated wheel set before installation.
+        // Keep the production process environment restrictions in that test.
+        string? explicitSitePackages = readDevelopmentCandidate(
+            "REPLAYFOUNDRY_QWEN_SITE_PACKAGES");
+        IReadOnlyDictionary<string, string>? environment = usesVerifiedPython
+            ? verifiedActivePack?.EnvironmentVariables
+            : null;
+        if (explicitSitePackages is not null)
+        {
+            if (!Path.IsPathFullyQualified(explicitSitePackages) ||
+                !Directory.Exists(explicitSitePackages))
+            {
+                throw new ArgumentException(
+                    "Development Qwen packages must be an explicit existing directory.");
+            }
+            environment = ReplayFoundryRuntimeEnvironment.BuildQwenEnvironment(
+                Path.GetDirectoryName(python!)!,
+                Path.GetFullPath(explicitSitePackages),
+                Path.GetDirectoryName(hostScript!)!,
+                ffmpegDirectory!);
+        }
+
         return new QwenRuntimeSelection(
             python!,
             hostScript!,
@@ -131,9 +153,7 @@ internal static class QwenRuntimeResolver
             usePackagedModel
                 ? verifiedActivePack!.ModelDirectoryPath
                 : null,
-            usesVerifiedPython
-                ? verifiedActivePack?.EnvironmentVariables
-                : null);
+            environment);
     }
 
     private static bool PathsReferToSameFile(

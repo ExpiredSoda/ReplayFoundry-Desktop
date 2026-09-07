@@ -314,7 +314,6 @@ if ($null -eq $recentFooter -or
 $expectedBindingSurface = @(
     "SelectedSources",
     "GenerationProgress",
-    "SelectSingleFileCommand",
     "SelectMultipleFilesCommand",
     "ClearSelectionCommand",
     "ContinueToGenerationSetupCommand",

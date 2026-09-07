@@ -4,9 +4,9 @@
     <Border Margin="0,4,0,8" Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
         Visibility="{Binding IsClipBoundaryEditorVisible, Converter={StaticResource BoolToVisibility}}">
         <StackPanel DataContext="{Binding FrameEdits}" IsEnabled="{Binding CanEdit}">
-            <Expander Header="Zoom &amp; pan waypoints" Style="{DynamicResource Control.DisclosureExpander}">
+            <Expander Header="Move and zoom the picture" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,8,0,0">
-                    <TextBlock Style="{DynamicResource Text.Meta}" Text="Add two or more waypoints for a smooth move across the completed frame. One waypoint sets a fixed zoom." TextWrapping="Wrap" />
+                    <TextBlock Style="{DynamicResource Text.Meta}" Text="Choose a time and save a picture position. Add another position later in the clip to make a smooth camera move." TextWrapping="Wrap" />
                     <ListBox Margin="0,8,0,8" MaxHeight="120" ItemsSource="{Binding Frames}" SelectedItem="{Binding SelectedFrame}" DisplayMemberPath="DisplayText" AutomationProperties.Name="Saved framing waypoints" />
                     <UniformGrid Columns="2">
                         <StackPanel Margin="0,0,4,6">
@@ -23,10 +23,10 @@
 <TextBox Text="{Binding PanYPercent, StringFormat=F1}" AutomationProperties.Name="Waypoint vertical pan" />
 </StackPanel>
                     </UniformGrid>
-                    <WrapPanel><Button Margin="0,0,8,0" Content="Save waypoint" Command="{Binding SaveFrameCommand}" /><Button Content="Remove selected" Command="{Binding RemoveFrameCommand}" /></WrapPanel>
+                    <WrapPanel><Button Margin="0,0,8,0" Content="Save position" Command="{Binding SaveFrameCommand}" /><Button Content="Remove selected" Command="{Binding RemoveFrameCommand}" /></WrapPanel>
                 </StackPanel>
             </Expander>
-            <Expander Margin="0,14,0,8" Header="Timed text / intro / outro" Style="{DynamicResource Control.DisclosureExpander}">
+            <Expander Margin="0,14,0,8" Header="Add a message on screen" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,8,0,0">
                     <TextBlock Style="{DynamicResource Text.Meta}" Text="Place a title, context, or closing message over part of the clip. Text is included in the video preview." TextWrapping="Wrap" />
                     <ListBox Margin="0,8,0,8" MaxHeight="120" ItemsSource="{Binding Texts}" SelectedItem="{Binding SelectedText}" DisplayMemberPath="DisplayText" AutomationProperties.Name="Saved text overlays" />

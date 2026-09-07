@@ -262,7 +262,7 @@ internal static partial class YouTubePublishingTests
                 "ItemsSource=\"{Binding History.RecentItems}\"",
                 StringComparison.Ordinal) &&
             dashboard.Contains(
-                "Content=\"View all history\"",
+                "Content=\"Search all history\"",
                 StringComparison.Ordinal) &&
             !dashboard.Contains(
                 "ItemsSource=\"{Binding HistoryItems}\"",

@@ -196,8 +196,6 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         CalendarModes = PublishOptionCatalog.CreateCalendarModes();
         CalendarPlatformFilters =
             PublishOptionCatalog.CreateCalendarPlatformFilters();
-        VisibilityOptions = PublishOptionCatalog.CreateVisibilityOptions();
-        TimingOptions = PublishOptionCatalog.CreateTimingOptions();
         AudienceOptions = PublishOptionCatalog.CreateAudienceOptions();
         PreferredDays = Enum.GetValues<DayOfWeek>();
         LibraryDateFilters = PublishLibraryProjector.CreateDateFilters();
@@ -309,15 +307,18 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     { get; }
     public IReadOnlyList<string> CalendarWeekdayHeaders { get; } =
         ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-    public IReadOnlyList<PublishChoiceItem<YouTubeVideoVisibility>>
-        VisibilityOptions
-    { get; }
-    public IReadOnlyList<PublishChoiceItem<YouTubePublishTiming>>
-        TimingOptions
-    { get; }
-    public IReadOnlyList<PublishChoiceItem<YouTubeAudience>>
-        AudienceOptions
-    { get; }
+    public IReadOnlyList<PublishReleaseOption> ReleaseOptions => PublishReleaseOption.All;
+    public PublishReleaseOption SelectedReleaseOption
+    {
+        get => ReleaseOptions.First(option => option.Timing == Timing &&
+            (IsScheduled || option.Visibility == Visibility));
+        set
+        {
+            if (value is not null && ReleaseOptions.Contains(value))
+                (Timing, Visibility) = (value.Timing, value.Visibility);
+        }
+    }
+    public IReadOnlyList<PublishChoiceItem<YouTubeAudience>> AudienceOptions { get; }
     public IReadOnlyList<DayOfWeek> PreferredDays { get; }
     public IReadOnlyList<string> LibraryDateFilters { get; }
 
@@ -601,9 +602,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
                 throw new ArgumentOutOfRangeException(nameof(value));
             if (_visibility == value) return;
             _visibility = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(Checklist));
-            RaiseCommandStates();
+            NotifyReleaseChanged();
         }
     }
 
@@ -619,15 +618,17 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             if (value == YouTubePublishTiming.Schedule)
             {
                 _visibility = YouTubeVideoVisibility.Public;
-                OnPropertyChanged(nameof(Visibility));
             }
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsScheduled));
-            OnPropertyChanged(nameof(ScheduleSummary));
-            OnPropertyChanged(nameof(PublishCommandText));
-            OnPropertyChanged(nameof(Checklist));
-            RaiseCommandStates();
+            NotifyReleaseChanged();
         }
+    }
+
+    private void NotifyReleaseChanged()
+    {
+        foreach (string name in new[] { nameof(Timing), nameof(Visibility), nameof(IsScheduled),
+            nameof(SelectedReleaseOption), nameof(ScheduleSummary), nameof(PublishCommandText), nameof(Checklist) })
+            OnPropertyChanged(name);
+        RaiseCommandStates();
     }
 
     public YouTubeAudience Audience
@@ -926,12 +927,12 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             ? "Connect your YouTube channel"
             : "YouTube app configuration required");
     public string ConnectionDetail => Connection is not null
-        ? $"Channel ID {Connection.ChannelId} · token protected by Windows Credential Manager"
+        ? "Your channel is connected. Choose a finished video below to prepare an upload."
         : !IsOnlineConnectionEnabled
-            ? "Enable YouTube connections under Settings → Privacy & connections. Enabling permission alone does not contact Google."
+            ? "Allow YouTube in Settings → Privacy & connections, then connect your channel here."
         : IsYouTubeConfigured
             ? "A browser window will ask you to choose a Google account and approve YouTube access."
-            : "Set the Replay Foundry Google Desktop OAuth client ID and its paired desktop client secret for development, or include both in the release build.";
+            : "This copy of Replay Foundry isn't set up for YouTube yet. You can still plan your uploads here.";
     public string SelectedDestinationLabel => "YouTube";
     public string SelectedDestinationStatus => ConnectionStatus;
     public string SelectedDestinationDescription =>
@@ -983,11 +984,11 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
                 };
             }
             return TryGetScheduledUtc(out DateTimeOffset scheduled, out string error)
-                ? $"YouTube will publish at {TimeZoneInfo.ConvertTime(scheduled, _timeZone):f} ({_timeZone.DisplayName})."
+                ? $"YouTube will publish at {TimeZoneInfo.ConvertTime(scheduled, _timeZone):f} (UTC{TimeZoneInfo.ConvertTime(scheduled, _timeZone):zzz})."
                 : error;
         }
     }
-    public string TimeZoneLabel => _timeZone.DisplayName;
+    public string TimeZoneLabel => "Times use this computer's time zone, including daylight saving.";
     public string PublishCommandText => IsScheduled
         ? "Upload and schedule"
         : Visibility == YouTubeVideoVisibility.Public

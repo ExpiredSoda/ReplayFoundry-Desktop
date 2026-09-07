@@ -10,7 +10,7 @@
         'replayfoundry-editorial-metadata-prompt-1.46.txt'
         'replayfoundry-editorial-visual-draft-prompt-1.4.txt'
         'replayfoundry-generation-watchdog-policy-1.0.txt'
-        'replayfoundry-grounded-editorial-cuda-memory-policy-1.5.txt'
+        'replayfoundry-grounded-editorial-cuda-memory-policy-1.6.txt'
         'replayfoundry-grounded-editorial-json-whitespace-policy-1.0.txt'
         'replayfoundry-grounded-editorial-rephrase-policy-2.9.txt'
         'replayfoundry-grounded-editorial-sampled-synthesis-policy-1.0.txt'

@@ -269,6 +269,7 @@ public sealed class ReplayFoundryLocalDataMaintenanceService :
     private IEnumerable<string> PreferenceAndHistoryTargets() =>
         PreferenceAndHistoryFiles
             .Select(Child)
+            .Append(Child("Personalization"))
             .Append(Path.Combine(
                 Child("Diagnostics"),
                 "GameContextMemory"));

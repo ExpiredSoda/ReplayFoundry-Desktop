@@ -23,6 +23,8 @@ public sealed class ClipGoalsStepViewModel : INotifyPropertyChanged
     private double _qualityThreshold;
     private double _maximumClipDurationSeconds;
     private bool _isAutomaticResultCount;
+    private string _discoverySearchText;
+    private string? _discoverySearchError;
 
     private SelectionOption<ContentEmphasis>
         _selectedEmphasisOption;
@@ -36,6 +38,7 @@ public sealed class ClipGoalsStepViewModel : INotifyPropertyChanged
         ArgumentNullException.ThrowIfNull(draft);
 
         _draft = draft;
+        _discoverySearchText = DiscoverySearchText.Format(draft.DiscoveryIntent.NaturalLanguageQuery, draft.DiscoveryIntent.SpokenTerms);
 
         _emphasisOptions =
         [
@@ -125,6 +128,7 @@ public sealed class ClipGoalsStepViewModel : INotifyPropertyChanged
         set
         {
             _draft.UpdateDiscoveryIntent(new(SelectedIntentOption.Value, value, NaturalLanguageQuery));
+            RefreshSearchText();
             OnPropertyChanged();
         }
     }
@@ -135,8 +139,34 @@ public sealed class ClipGoalsStepViewModel : INotifyPropertyChanged
         set
         {
             _draft.UpdateDiscoveryIntent(new(SelectedIntentOption.Value, SpokenSearchTerms, value));
+            RefreshSearchText();
             OnPropertyChanged();
         }
+    }
+
+    public string SearchText
+    {
+        get => _discoverySearchText;
+        set
+        {
+            _discoverySearchText = value ?? string.Empty;
+            if (DiscoverySearchText.TryParse(_discoverySearchText, out string meaning, out string words, out _discoverySearchError))
+                _draft.UpdateDiscoveryIntent(new(SelectedIntentOption.Value, words, meaning));
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SpokenSearchTerms));
+            OnPropertyChanged(nameof(NaturalLanguageQuery));
+            OnPropertyChanged(nameof(IsValid));
+            OnPropertyChanged(nameof(ValidationMessage));
+        }
+    }
+
+    private void RefreshSearchText()
+    {
+        _discoverySearchText = DiscoverySearchText.Format(NaturalLanguageQuery, SpokenSearchTerms);
+        _discoverySearchError = null;
+        OnPropertyChanged(nameof(SearchText));
+        OnPropertyChanged(nameof(IsValid));
+        OnPropertyChanged(nameof(ValidationMessage));
     }
 
     public IReadOnlyList<SelectionOption<ContentEmphasis>>
@@ -435,13 +465,14 @@ public sealed class ClipGoalsStepViewModel : INotifyPropertyChanged
         SelectedEmphasisOption.Description;
 
     public bool IsValid =>
+        _discoverySearchError is null &&
         DesiredResultCount is >= 1 and <= 30 &&
         QualityThreshold is >= 0 and <= 100;
 
     public string? ValidationMessage =>
         IsValid
             ? null
-            : "Choose 1 to 30 clips and a quality level from 0 to 100.";
+            : _discoverySearchError ?? "Choose 1 to 30 clips and a quality level from 0 to 100.";
 
     private void UpdateDraft()
     {

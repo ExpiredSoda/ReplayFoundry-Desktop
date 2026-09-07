@@ -58,6 +58,9 @@ internal static class QwenRuntimeResolutionTests
         new(
             "Debug Qwen uses the checked-out host with the verified active pack",
             DebugUsesCheckedOutHost),
+        new(
+            "Debug qualification retains isolated packages and a restricted environment",
+            DebugQualificationUsesRestrictedEnvironment),
 #endif
     ];
 
@@ -275,7 +278,7 @@ internal static class QwenRuntimeResolutionTests
         await fixture.InstallValidStaleRuntimeAsync();
         AssertIncompatiblePackSetFailsClosed(
             fixture,
-            "Installed version 0.8.21; required version 0.8.22 or newer.");
+            "Installed version 0.8.21; required version 0.8.25 or newer.");
     }
 
     private static async Task ValidStaleModelFailsClosed()
@@ -284,7 +287,7 @@ internal static class QwenRuntimeResolutionTests
         await fixture.InstallValidStaleModelAsync();
         AssertIncompatiblePackSetFailsClosed(
             fixture,
-            "Installed version 4.0.17; required version 4.0.18 or newer.");
+            "Installed version 4.0.17; required version 4.0.21 or newer.");
     }
 
     private static async Task ModelRuntimeManifestMismatchFailsClosed()
@@ -361,6 +364,37 @@ internal static class QwenRuntimeResolutionTests
     }
 
 #if DEBUG
+    private static async Task DebugQualificationUsesRestrictedEnvironment()
+    {
+        using var fixture = new Fixture();
+        QwenRuntimePaths verified = await fixture.InstallAndResolveVerifiedAsync();
+        string packages = Path.Combine(fixture.Root, "qualified-packages");
+        Directory.CreateDirectory(packages);
+        var values = new Dictionary<string, string>
+        {
+            ["REPLAYFOUNDRY_QWEN_PYTHON"] = verified.PythonExecutablePath,
+            ["REPLAYFOUNDRY_QWEN_SITE_PACKAGES"] = packages,
+        };
+        var selection = QwenRuntimeResolver.ResolveDevelopmentCandidates(
+            verified, name => values.GetValueOrDefault(name));
+        var environment = selection?.EnvironmentVariables;
+        Assert(environment is not null &&
+            environment["PYTHONPATH"].Split(Path.PathSeparator).Contains(packages) &&
+            environment["HF_HUB_OFFLINE"] == "1" &&
+            environment["FORCE_QWENVL_VIDEO_READER"] == "torchcodec" &&
+            !environment.Keys.Any(name => name.Contains("SECRET", StringComparison.OrdinalIgnoreCase)),
+            "Qualification did not preserve the explicit packages and offline process boundary.");
+        values["REPLAYFOUNDRY_QWEN_SITE_PACKAGES"] = "relative-packages";
+        bool rejected = false;
+        try
+        {
+            QwenRuntimeResolver.ResolveDevelopmentCandidates(
+                verified, name => values.GetValueOrDefault(name));
+        }
+        catch (ArgumentException) { rejected = true; }
+        Assert(rejected, "Qualification accepted a relative package directory.");
+    }
+
     private static async Task DebugRequiresDevelopmentOptIn()
     {
         using var fixture = new Fixture();
@@ -765,7 +799,7 @@ internal static class QwenRuntimeResolutionTests
                     store,
                     media.Manifest,
                     sourceName: "visual-runtime-first",
-                    version: "0.8.22");
+                    version: "0.8.25");
             _ = await InstallVisualModelAsync(
                 store,
                 firstRuntime.Manifest);
@@ -773,7 +807,7 @@ internal static class QwenRuntimeResolutionTests
                 store,
                 media.Manifest,
                 sourceName: "visual-runtime-second",
-                version: "0.8.22");
+                version: "0.8.25");
         }
 
         public async Task InstallRuntimeMediaMismatchAsync()
@@ -911,7 +945,7 @@ internal static class QwenRuntimeResolutionTests
                 ReplayFoundryRuntimePackStore store,
                 ReplayFoundryRuntimePackManifest media,
                 string sourceName = "visual-runtime",
-                string version = "0.8.22")
+                string version = "0.8.25")
         {
             string source =
                 Source(
@@ -960,8 +994,8 @@ internal static class QwenRuntimeResolutionTests
             InstallVisualModelAsync(
                 ReplayFoundryRuntimePackStore store,
                 ReplayFoundryRuntimePackManifest runtime,
-                string version = "4.0.18",
-                string runtimeMinimumVersion = "0.8.22")
+                string version = "4.0.21",
+                string runtimeMinimumVersion = "0.8.25")
         {
             string source =
                 Source(

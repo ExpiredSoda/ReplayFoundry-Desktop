@@ -1,0 +1,124 @@
+<UserControl x:Class="ReplayFoundry.Desktop.Features.Studio.Editing.StudioManualClipView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Editing"
+    xmlns:preview="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Preview"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:moments="clr-namespace:ReplayFoundry.Desktop.Features.Studio.HiddenMoments"
+    PreviewKeyDown="OnEditorKeyDown" IsVisibleChanged="OnEditorVisibilityChanged"
+    AutomationProperties.Name="Create your own clip workspace">
+    <UserControl.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource Control.ThemedButton}">
+            <Setter Property="MinWidth" Value="32" /><Setter Property="MinHeight" Value="32" />
+        </Style>
+    </UserControl.Resources>
+    <Grid Margin="8" MaxWidth="1800">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Button Content="←  Back to Studio" Command="{Binding ToggleCommand}" Margin="0,0,20,0" VerticalAlignment="Center"
+                Style="{DynamicResource Control.GhostButton}" />
+            <StackPanel Grid.Column="1">
+                <controls:FoundryHeading Text="Create your own clip" Style="{DynamicResource Text.SectionTitle}" />
+                <TextBlock Text="Your recording. Just the part you want." Style="{DynamicResource Text.Meta}" Margin="0,4,0,0" />
+            </StackPanel>
+            <Button Grid.Column="2" Content="Add clip to Studio  →" Command="{Binding AddCommand}"
+                VerticalAlignment="Center" Style="{DynamicResource Control.StudioPrimaryButton}" />
+        </Grid>
+        <Grid Grid.Row="1" MinHeight="160">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <DockPanel Margin="4,0,4,6">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding RecordingLength}" Style="{DynamicResource Text.Meta}" Margin="12,0,0,0" />
+                <TextBlock Text="{Binding SelectedSource.Name}" Foreground="{DynamicResource Brush.TextPrimary}"
+                    FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+            <preview:StudioPreviewView Grid.Row="1" DataContext="{Binding Preview}" ShowHeader="False" ShowPositionSlider="False" ShowDetails="False" />
+            <Border Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="12" Padding="12,8"
+                Background="{DynamicResource Brush.SurfacePanel}" CornerRadius="6"
+                Visibility="{Binding Preview.HasPreviewError, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="This moment couldn't load." VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <Button Content="Try again" Command="{Binding Preview.ReloadPreviewCommand}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Border Grid.Row="2" Margin="0,10,0,0" Padding="16,12" Style="{DynamicResource Control.CanvasPane}">
+            <StackPanel>
+                <moments:StudioMomentFilterView DataContext="{Binding Suggestions.Filters}" Margin="0,0,0,4" />
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Content="−" Command="{Binding ZoomOutCommand}" AutomationProperties.Name="Zoom out timeline" ToolTip="Zoom out" Padding="10,3" />
+                        <Button Content="+" Command="{Binding ZoomInCommand}" AutomationProperties.Name="Zoom in timeline" ToolTip="Zoom in" Padding="10,3" Margin="4,0,10,0" />
+                        <Button Content="Zoom to cut" Command="{Binding ShowSelectionCommand}" Padding="10,3" ToolTip="Zoom to your cut (F)" />
+                        <Button Content="Fit recording" Command="{Binding ShowAllCommand}" Padding="10,3" Margin="6,0,0,0" ToolTip="Fit the entire recording (Shift+Z)" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="‹" Command="{Binding PreviousFrameCommand}" Padding="10,4" Margin="0,0,4,0"
+                            AutomationProperties.Name="Previous frame" ToolTip="Previous frame (Left arrow). Shift moves ten frames." />
+                        <Button Command="{Binding Preview.PlayCommand}" Padding="10,4" AutomationProperties.Name="Play or pause recording" ToolTip="Play or pause (Space)">
+                            <controls:IconPath Width="14" Height="14" IconKey="{Binding Preview.PreviewPlayPauseIconKey}" Stroke="{DynamicResource Brush.BrandCyan}" StrokeThickness="1.4" />
+                        </Button>
+                        <Button Content="›" Command="{Binding NextFrameCommand}" Padding="10,4" Margin="4,0,0,0"
+                            AutomationProperties.Name="Next frame" ToolTip="Next frame (Right arrow). Shift moves ten frames." />
+                        <TextBlock Text="{Binding PlayheadText}" FontFamily="Consolas" Margin="12,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Filmstrip.Status}" Style="{DynamicResource Text.Meta}" Margin="12,0,12,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </DockPanel>
+                <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" DisplayMemberPath="Name"
+                    Margin="0,8,0,0" AutomationProperties.Name="Recording to clip"
+                    Visibility="{Binding HasMultipleSources, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding Suggestions.Summary}" Style="{DynamicResource Text.Meta}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                <local:StudioMomentSuggestionLane Items="{Binding Suggestions.Items}" Selected="{Binding Suggestions.Selected}"
+                    SelectCommand="{Binding Suggestions.SelectCommand}" ViewportStart="{Binding ViewportStartSeconds}"
+                    ViewportDuration="{Binding ViewportDurationSeconds}" AutomationProperties.Name="Suggested moments on the recording"
+                    AutomationProperties.HelpText="{Binding Suggestions.Explanation}" />
+                <local:StudioManualTimeline x:Name="Timeline" Height="126" Margin="0,0,0,4"
+                    MoveRangeCommand="{Binding MoveRangeCommand}"
+                    Thumbnails="{Binding Filmstrip.Frames, Mode=OneWay}"
+                    SourceDuration="{Binding SourceMaximumSeconds, Mode=OneWay}" Position="{Binding SourcePositionSeconds, Mode=TwoWay}"
+                    SelectionStart="{Binding SelectionStartSeconds, Mode=TwoWay}" SelectionEnd="{Binding SelectionEndSeconds, Mode=TwoWay}"
+                    ViewportStart="{Binding ViewportStartSeconds, Mode=TwoWay}" ViewportDuration="{Binding ViewportDurationSeconds, Mode=TwoWay}"
+                    AutomationProperties.Name="Recording timeline"
+                    AutomationProperties.HelpText="Click the ruler to seek. Drag the clip body to move its range, or the yellow edges to trim. I marks In, O marks Out. Escape cancels a drag. Ctrl+Z undoes a trim or move." />
+                <DockPanel Margin="0,0,0,8">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Content="← Previous" Command="{Binding Suggestions.PreviousCommand}" Padding="9,4" />
+                        <Button Content="Next →" Command="{Binding Suggestions.NextCommand}" Padding="9,4" Margin="4,0,8,0" />
+                        <Button Content="Use as my cut" Command="{Binding Suggestions.UseCommand}" Padding="12,4"
+                            Foreground="{DynamicResource Brush.BrandCyan}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Suggestions.SelectionText}" ToolTip="{Binding Suggestions.Explanation}"
+                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"
+                        AutomationProperties.HelpText="{Binding Suggestions.Explanation}" AutomationProperties.LiveSetting="Polite" />
+                </DockPanel>
+                <DockPanel Margin="0,4,0,0">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding RangeSummary}" Foreground="{DynamicResource Brush.BrandCyan}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0" />
+                        <Button Content="Play my cut" Command="{Binding PreviewSelectionCommand}" Padding="12,6" ToolTip="Preview the selected range (X)" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Start" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox Width="112" FontFamily="Consolas" FontSize="11" MinHeight="32" Padding="8,4"
+                            Text="{Binding StartText, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Clip start time" />
+                        <Button Content="Mark In · I" Command="{Binding MarkStartCommand}" Margin="4,0,16,0" Padding="8,4" ToolTip="Start at the playhead (I)" />
+                        <TextBlock Text="End" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox Width="112" FontFamily="Consolas" FontSize="11" MinHeight="32" Padding="8,4"
+                            Text="{Binding EndText, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Clip end time" />
+                        <Button Content="Mark Out · O" Command="{Binding MarkEndCommand}" Margin="4,0,0,0" Padding="8,4" ToolTip="End at the playhead (O)" />
+                    </StackPanel>
+                </DockPanel>
+                <DockPanel Margin="0,8,0,0">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                        <Button Content="Undo" Command="{Binding UndoRangeCommand}" ToolTip="Undo range edit (Ctrl+Z)" Padding="8,3" />
+                        <Button Content="Redo" Command="{Binding RedoRangeCommand}" ToolTip="Redo range edit (Ctrl+Shift+Z)" Padding="8,3" Margin="4,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Status}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                </DockPanel>
+                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                    Text="Space: play / pause   ·   ← / →: frame   ·   Shift: 10 frames   ·   Alt + ← / →: move range   ·   ↑ / ↓: In / Out   ·   + / −: zoom" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

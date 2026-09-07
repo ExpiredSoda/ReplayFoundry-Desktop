@@ -109,7 +109,8 @@ internal static class Qwen3VlGroundedMetadataResultParser
                 requireCompleted: true,
                 expectedPeakAllocatedBytes: peak,
                 requireCurrentPolicy: Qwen3VlGroundedMetadataSchemaCapabilities
-                    .SupportsLiteralActionPrompt(outputSchema));
+                    .SupportsLiteralActionPrompt(outputSchema),
+                allowConservativeInferencePolicy: true);
         }
         var provenance = new ClipEditorialAiProvenance(
             identity.Name,

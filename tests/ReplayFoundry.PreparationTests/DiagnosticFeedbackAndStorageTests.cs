@@ -408,7 +408,11 @@ internal static partial class UiUxApplicationSurfaceTests
                 : await request.Content.ReadAsStringAsync(cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.Accepted)
             {
-                Content = new StringContent(string.Empty, Encoding.UTF8),
+                Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    accepted = true,
+                    reportId = System.Text.Json.JsonDocument.Parse(RequestBody!).RootElement.GetProperty("reportId").GetString(),
+                }), Encoding.UTF8, "application/json"),
             };
         }
     }

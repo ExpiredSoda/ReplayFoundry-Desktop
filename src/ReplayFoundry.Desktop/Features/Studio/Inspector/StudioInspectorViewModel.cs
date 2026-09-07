@@ -93,6 +93,7 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
             }
 
             _selectedSection = value;
+            if (value != StudioInspectorSection.Effects) Clip.Effects.ShowOriginal = false;
             OnPropertyChanged();
             NotifySectionProperties();
         }
@@ -260,6 +261,7 @@ public sealed class StudioInspectorViewModel : INotifyPropertyChanged, IDisposab
         }
 
         _isDisposed = true;
+        Preference.Dispose();
         Caption.Dispose();
         Output.Dispose();
         Editorial.Dispose();

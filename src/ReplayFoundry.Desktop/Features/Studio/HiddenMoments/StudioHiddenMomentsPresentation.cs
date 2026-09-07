@@ -108,15 +108,29 @@ internal static class StudioHiddenMomentsPresentation
         bool hasQueueItems) => current is null
             ? hasQueueItems
                 ? "You can close this review while queued moments keep preparing in the background."
-                : "Accepted moments are now in Studio. Skipped moments remain separate from Like, Neutral, and Dislike feedback."
+                : "The moments you added are now in your clips. Skipping a moment does not change your preferences."
             : $"{MediaTimeFormatter.Format(current.SourceStart)}–" +
               $"{MediaTimeFormatter.Format(current.SourceEnd)} · " +
-              $"{MediaTimeFormatter.Format(current.Duration)} · " +
-              current.ReviewReason;
+              $"{MediaTimeFormatter.Format(current.Duration)} long";
 
     internal static string EvidenceText(
         GenerationHiddenMoment? current,
-        bool hasQueueItems) => current?.Explanation ??
+        bool hasQueueItems) => current is not null ? current.Reason switch
+        {
+            GenerationHiddenMomentReason.BelowQualityTarget =>
+                "This moment ranked a little below your chosen quality level. Watch it to decide whether it belongs in your clips.",
+            GenerationHiddenMomentReason.RequestedCountReached =>
+                "This moment passed the checks, but your requested number of clips was already filled. You can add it as an extra.",
+            GenerationHiddenMomentReason.OverlapSuppressed or GenerationHiddenMomentReason.SameEventSuppressed =>
+                "Another clip already covers this part of the recording. This version may give you a start or ending you prefer.",
+            GenerationHiddenMomentReason.CooldownSuppressed or GenerationHiddenMomentReason.PortfolioNotSelected =>
+                "Other moments were chosen first to give your clips more variety. You can still include this one.",
+            GenerationHiddenMomentReason.IncompleteSpeechBoundary =>
+                "This cut may interrupt a sentence. Adjust the start or end after adding it so the speaker can finish their thought.",
+            GenerationHiddenMomentReason.CaptureContextReview =>
+                "This part may include menus, loading screens, or another app. Check the opening and trim anything you do not want.",
+            _ => "This moment needs a closer look before it is ready to share. Watch it, then decide whether to add it."
+        } :
             (hasQueueItems
                 ? "Queued moments appear in the Studio browser only after their captions, title, and description are ready."
                 : "Nothing else is waiting in this review session.");

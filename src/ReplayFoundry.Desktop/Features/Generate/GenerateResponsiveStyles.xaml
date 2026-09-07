@@ -56,9 +56,9 @@
     <!--  Outer source-selection panel.  -->
     <Style x:Key="Generate.ResponsiveSourcePanel" TargetType="{x:Type Border}">
 
-        <Setter Property="Padding" Value="20" />
+        <Setter Property="Padding" Value="10" />
 
-        <Setter Property="Background" Value="{DynamicResource Brush.SurfacePanel}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.KineticCanvasPane}" />
 
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
 
@@ -70,7 +70,7 @@
 
             <DataTrigger Binding="{Binding IsCompactLayout, RelativeSource={RelativeSource AncestorType={x:Type local:GenerateView}}}" Value="True">
 
-                <Setter Property="Padding" Value="18" />
+                <Setter Property="Padding" Value="8" />
 
                 <Setter Property="CornerRadius" Value="8" />
 

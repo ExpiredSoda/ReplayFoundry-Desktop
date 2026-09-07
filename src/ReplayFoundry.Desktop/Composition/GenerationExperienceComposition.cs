@@ -58,7 +58,8 @@ internal static class GenerationExperienceComposition
                 (request, initialResult) => new CompositionReviewViewModel(
                     request,
                     previewFrames,
-                    initialResult));
+                    initialResult,
+                    new WindowsCompositionLayoutSuggestionService()));
         return new(
             gameContextMemory,
             (IGameKnowledgePermissionStatus)gameContextMemory,

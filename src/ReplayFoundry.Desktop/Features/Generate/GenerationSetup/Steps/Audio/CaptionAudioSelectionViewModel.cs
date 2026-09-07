@@ -18,7 +18,6 @@ public sealed record CaptionAudioStreamOption(
     public override string ToString() => DisplayName;
 }
 
-public sealed record AudioWaveformBar(double Height);
 
 public sealed class CaptionAudioSelectionViewModel :
     INotifyPropertyChanged,
@@ -27,6 +26,7 @@ public sealed class CaptionAudioSelectionViewModel :
     private readonly IAudioStreamAuditionService? _auditionService;
     private readonly AsyncDelegateCommand _auditionCommand;
     private readonly DelegateCommand _stopAuditionCommand;
+    private readonly DelegateCommand<double> _seekAuditionCommand;
     private CancellationTokenSource? _auditionCancellation;
     private CancellationTokenSource? _preparationCancellation;
     private readonly Dictionary<int, AudioStreamAuditionPreview>
@@ -125,6 +125,8 @@ public sealed class CaptionAudioSelectionViewModel :
         _stopAuditionCommand = new DelegateCommand(
             StopAudition,
             () => IsAuditionPlaying);
+        _seekAuditionCommand = new DelegateCommand<double>(SeekAudition,
+            _ => _auditionService?.CanSeek == true && SelectedStream is not null && HasWaveform && !IsPreparingAudition);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -141,16 +143,6 @@ public sealed class CaptionAudioSelectionViewModel :
     public string? LanguageValidationMessage => SelectedLanguage.UnavailableReason;
     public bool HasAudio => _streams.Length > 0;
     public bool IsRememberedSelection { get; }
-    public IReadOnlyList<AudioWaveformBar> WaveformBars =>
-        SelectedStream is not null &&
-        _preparedAuditions.TryGetValue(
-            SelectedStream.Stream.Index,
-            out AudioStreamAuditionPreview? preview)
-            ? preview.WaveformPeaks
-                .Select(static peak =>
-                    new AudioWaveformBar(Math.Max(3, peak * 44)))
-                .ToArray()
-            : [];
     public IReadOnlyList<double> WaveformPeaks =>
         SelectedStream is not null &&
         _preparedAuditions.TryGetValue(
@@ -158,7 +150,7 @@ public sealed class CaptionAudioSelectionViewModel :
             out AudioStreamAuditionPreview? preview)
             ? preview.WaveformPeaks
             : [];
-    public bool HasWaveform => WaveformBars.Count > 0;
+    public bool HasWaveform => WaveformPeaks.Count > 0;
     public double AuditionProgress => _auditionProgress;
     public bool IsAuditionPlaying => _isAuditionPlaying;
     public string AuditionProgressText => _auditionDuration <= TimeSpan.Zero
@@ -178,6 +170,17 @@ public sealed class CaptionAudioSelectionViewModel :
         "Choose the recording track whose words should appear, then listen before confirming its role.";
     public System.Windows.Input.ICommand AuditionCommand => _auditionCommand;
     public System.Windows.Input.ICommand StopAuditionCommand => _stopAuditionCommand;
+    public System.Windows.Input.ICommand SeekAuditionCommand => _seekAuditionCommand;
+
+    private void SeekAudition(double progress)
+    {
+        if (!double.IsFinite(progress) || SelectedStream is null) return;
+        if (_auditionService?.Seek(Source, SelectedStream.Stream.Index, Math.Clamp(progress, 0, 1)) == true)
+        {
+            AuditionStatus = IsAuditionPlaying ? "Playing from this point." : "Ready here. Press Play to listen.";
+            OnPropertyChanged(nameof(AuditionStatus));
+        }
+    }
     public string AvailabilityText => HasAudio
         ? $"{_streams.Length} audio " +
           (_streams.Length == 1 ? "track" : "tracks")
@@ -197,8 +200,10 @@ public sealed class CaptionAudioSelectionViewModel :
             if (ReferenceEquals(_selectedStream, value)) return;
             StopAudition();
             _selectedStream = value;
+            AuditionStatus = value is null ? "Choose a track to listen to." : "Press Play to listen, or click the waveform to choose a starting point.";
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsValid));
+            OnPropertyChanged(nameof(ConfirmationStatus));
             NotifyAuditionProperties();
             _auditionCommand.RaiseCanExecuteChanged();
             Changed?.Invoke(this, EventArgs.Empty);
@@ -219,6 +224,8 @@ public sealed class CaptionAudioSelectionViewModel :
             if (ReferenceEquals(_selectedRole, value)) return;
             _selectedRole = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsValid));
+            OnPropertyChanged(nameof(ConfirmationStatus));
             Changed?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -334,16 +341,20 @@ public sealed class CaptionAudioSelectionViewModel :
         {
             return;
         }
-        StopAudition();
-        if (!_preparedAuditions.ContainsKey(SelectedStream.Stream.Index))
+        _auditionCancellation?.Cancel();
+        _auditionCancellation?.Dispose();
+        _auditionCancellation = new CancellationTokenSource();
+        CancellationToken auditionToken = _auditionCancellation.Token;
+        CaptionAudioStreamOption selected = SelectedStream;
+        if (!_preparedAuditions.ContainsKey(selected.Stream.Index))
         {
             await PrepareAuditionsAsync();
         }
-        if (!_preparedAuditions.ContainsKey(SelectedStream.Stream.Index))
+        if (auditionToken.IsCancellationRequested || !ReferenceEquals(selected, SelectedStream) ||
+            !_preparedAuditions.ContainsKey(selected.Stream.Index))
         {
             return;
         }
-        _auditionCancellation = new CancellationTokenSource();
         AuditionStatus = $"Starting {SelectedStream.DisplayName}…";
         OnPropertyChanged(nameof(AuditionStatus));
         _stopAuditionCommand.RaiseCanExecuteChanged();
@@ -351,8 +362,8 @@ public sealed class CaptionAudioSelectionViewModel :
         {
             await _auditionService.PlayAsync(
                 Source,
-                SelectedStream.Stream.Index,
-                _auditionCancellation.Token);
+                selected.Stream.Index,
+                auditionToken);
             if (IsAuditionPlaying)
             {
                 AuditionStatus =
@@ -408,7 +419,7 @@ public sealed class CaptionAudioSelectionViewModel :
         {
             AuditionStatus = eventArgs.Progress >= 0.999
                 ? $"Finished {SelectedStream.DisplayName}."
-                : "Audio sample stopped.";
+                : eventArgs.Position > TimeSpan.Zero ? "Ready here. Press Play to listen." : "Sample stopped. Press Play to listen again.";
             OnPropertyChanged(nameof(AuditionStatus));
         }
     }
@@ -442,7 +453,7 @@ public sealed class CaptionAudioSelectionViewModel :
 
     private void NotifyAuditionProperties()
     {
-        OnPropertyChanged(nameof(WaveformBars));
+        _seekAuditionCommand.RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(WaveformPeaks));
         OnPropertyChanged(nameof(HasWaveform));
         OnPropertyChanged(nameof(IsPreparingAudition));

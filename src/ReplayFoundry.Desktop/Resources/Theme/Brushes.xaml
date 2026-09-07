@@ -1,6 +1,15 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--  Live preview and caption treatments  -->
+    <DrawingBrush x:Key="Brush.FoundryHeading" Viewbox="0,0,24,24" ViewboxUnits="Absolute"
+        Viewport="0,0,24,24" ViewportUnits="Absolute" TileMode="None" Stretch="None">
+        <DrawingBrush.Drawing><DrawingGroup>
+            <GeometryDrawing Geometry="M 1,4 L 15,4 L 15,18 L 1,18 Z M 5,15 L 11,15">
+                <GeometryDrawing.Pen><Pen Brush="{DynamicResource Brush.BrandCyan}" Thickness="1.3" /></GeometryDrawing.Pen>
+            </GeometryDrawing>
+            <GeometryDrawing Brush="{DynamicResource Brush.BrandYellow}" Geometry="M 5,8 L 19,8 L 19,11 L 5,11 Z" />
+        </DrawingGroup></DrawingBrush.Drawing>
+    </DrawingBrush>
     <SolidColorBrush x:Key="Brush.PreviewCanvasDark" Color="{DynamicResource Color.PreviewCanvasDark}" />
 
     <!--  Solid brand brushes  -->
@@ -63,7 +72,11 @@
 
     <SolidColorBrush x:Key="Brush.KineticGlowSoft" Color="{DynamicResource Color.KineticGlowSoft}" />
 
-    <SolidColorBrush x:Key="Brush.KineticCanvasPane" Color="{DynamicResource Color.KineticCanvasPane}" />
+    <LinearGradientBrush x:Key="Brush.KineticCanvasPane" StartPoint="0,0" EndPoint="0.8,1">
+        <GradientStop Color="{DynamicResource Color.SurfaceElevated}" Offset="0" />
+        <GradientStop Color="{DynamicResource Color.KineticCanvasPane}" Offset="0.4" />
+        <GradientStop Color="{DynamicResource Color.SurfacePanel}" Offset="1" />
+    </LinearGradientBrush>
 
     <SolidColorBrush x:Key="Brush.StatusSuccess" Color="{DynamicResource Color.StatusSuccess}" />
 

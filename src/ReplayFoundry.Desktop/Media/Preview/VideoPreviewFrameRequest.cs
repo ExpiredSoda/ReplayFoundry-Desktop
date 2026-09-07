@@ -3,6 +3,8 @@ using ReplayFoundry.Desktop.Media.Composition;
 
 namespace ReplayFoundry.Desktop.Media.Preview;
 
+public enum VideoPreviewWorkIntent { Interactive, BackgroundFilmstrip }
+
 public sealed class VideoPreviewFrameRequest
 {
     public const int DefaultMaximumWidth = 1280;
@@ -15,9 +17,12 @@ public sealed class VideoPreviewFrameRequest
         TimeSpan timestamp,
         int maximumWidth = DefaultMaximumWidth,
         int maximumHeight = DefaultMaximumHeight,
-        NormalizedRectangle? contentRegion = null)
+        NormalizedRectangle? contentRegion = null,
+        VideoPreviewWorkIntent workIntent = VideoPreviewWorkIntent.Interactive)
     {
         ArgumentNullException.ThrowIfNull(media);
+        if (!Enum.IsDefined(workIntent)) throw new ArgumentOutOfRangeException(nameof(workIntent));
+        WorkIntent = workIntent;
 
         if (timestamp < TimeSpan.Zero ||
             timestamp >= media.Duration)
@@ -44,6 +49,7 @@ public sealed class VideoPreviewFrameRequest
     }
 
     public MediaProbeResult Media { get; }
+    public VideoPreviewWorkIntent WorkIntent { get; }
 
     public TimeSpan Timestamp { get; }
 

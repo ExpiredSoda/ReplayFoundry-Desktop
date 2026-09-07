@@ -1,7 +1,7 @@
 <UserControl x:Class="ReplayFoundry.Desktop.Features.Studio.Inspector.StudioSourceTrackingView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Expander Header="Track a source region (review before applying)" Margin="0,8,0,8" DataContext="{Binding Tracking}" Style="{DynamicResource Control.DisclosureExpander}">
+    <Expander Header="Follow something as it moves" Margin="0,8,0,8" DataContext="{Binding Tracking}" Style="{DynamicResource Control.DisclosureExpander}">
         <StackPanel Margin="0,8,0,0">
             <TextBlock Style="{DynamicResource Text.Meta}"
                 Text="Tracks a textured seed at up to 8 fps; stops on cuts, loss or ambiguity. Gameplay moves a viewport within its saved region. HUD moves its source region only. This follows motion, without recognizing people or objects."
@@ -46,7 +46,7 @@
                 </Canvas>
             </Viewbox>
             <TextBlock Style="{DynamicResource Text.Meta}"
-                Text="Yellow dashed: input seed · blue: accepted feature · green: proposed crop. Failed frames have no proposed motion. Scores are similarities, not confidence probabilities."
+                Text="Yellow marks the starting area, blue shows the detail being followed, and green is the suggested frame. Review the movement before applying it."
                 TextWrapping="Wrap" />
             <TextBlock Margin="0,6,0,6" Style="{DynamicResource Text.Meta}" Text="{Binding FrameStatus}" TextWrapping="Wrap" />
             <TextBlock Style="{DynamicResource Text.Meta}" Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />

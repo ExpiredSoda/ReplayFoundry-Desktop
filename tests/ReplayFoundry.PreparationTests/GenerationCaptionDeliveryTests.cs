@@ -31,8 +31,8 @@ internal static partial class GenerationClipRenderingTests
         GenerationSetupOptions captured = draft.CreateOptions();
         TestAssert.Equal("Tournament", captured.CaptionSettings.SavedLookName!, "Generate must retain the selected look's reviewable name.");
         TestAssert.Equal(look, captured.CaptionSettings.SavedLook!, "Generate must capture the full immutable typography, not a mutable store lookup.");
-        TestAssert.Equal(look.CaptionStyle, audio.SelectedCaptionStyle.Value, "A saved look also owns its caption effect.");
-        TestAssert.False(audio.IsCaptionStyleSelectable, "The effect selector cannot conflict with a complete named look.");
+        TestAssert.Equal(look.CaptionStyle, audio.SelectedCaptionLook.Style, "A saved look also owns its caption effect.");
+        TestAssert.Equal(6, audio.CaptionLooks.Count, "One gallery must contain all five built-ins and the saved look.");
         TestAssert.True(captured.Summary.Contains("Tournament captions", StringComparison.Ordinal), "The setup summary must identify the chosen look.");
 
         // The catalog may later change or disappear; reopening this draft must keep its captured settings.
@@ -42,7 +42,7 @@ internal static partial class GenerationClipRenderingTests
             captionLooks: [new StudioNamedCaptionLook("Practice", look), new StudioNamedCaptionLook("Tournament", look)]);
         TestAssert.Equal("Tournament", sameStyles.SelectedCaptionLook.Name, "Two identically styled presets must retain the deliberately selected name.");
         audio.SelectedCaptionLook = audio.CaptionLooks[0];
-        TestAssert.True(audio.IsCaptionStyleSelectable && draft.CaptionSettings.SavedLook is null,
+        TestAssert.True(audio.SelectedCaptionLook.Look is null && draft.CaptionSettings.SavedLook is null,
             "Choosing effect defaults must explicitly release the named look while leaving the captured run unchanged.");
         TestAssert.Equal(look, captured.CaptionSettings.SavedLook!, "Later setup choices cannot mutate a captured run.");
 

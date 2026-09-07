@@ -2,8 +2,10 @@
     x:Class="ReplayFoundry.Desktop.Features.Studio.HiddenMoments.StudioHiddenMomentsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:flair="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:preview="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Preview"
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:moments="clr-namespace:ReplayFoundry.Desktop.Features.Studio.HiddenMoments"
     Focusable="True"
     KeyboardNavigation.ControlTabNavigation="Cycle"
     KeyboardNavigation.DirectionalNavigation="Cycle"
@@ -25,8 +27,8 @@
             MaxHeight="800"
             Margin="16"
             Padding="18"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
             Background="{DynamicResource Brush.SurfacePanel}"
             BorderBrush="{DynamicResource Brush.StatusInfo}"
             BorderThickness="1"
@@ -44,7 +46,7 @@
                     <StackPanel Margin="0,0,18,0">
                         <TextBlock
                             Style="{DynamicResource Text.WorkspaceEyebrow}"
-                            Text="HIDDEN MOMENTS / SECOND LOOK" />
+                            Text="MORE FROM YOUR RECORDING" />
                         <TextBlock
                             Margin="0,4,0,0"
                             FontSize="20"
@@ -54,8 +56,10 @@
                         <TextBlock
                             Margin="0,4,0,0"
                             Style="{DynamicResource Text.Meta}"
-                            Text="Add a promising alternate to Studio, or skip it for this project. These choices do not change your Like, Neutral, or Dislike preference."
+                            Text="Watch a moment, then add it to your clips or move on. We prepare the next previews as you browse."
                             TextWrapping="Wrap" />
+                        <moments:StudioMomentFilterView DataContext="{Binding Filters}" Margin="0,12,0,0" />
+                        <TextBlock Text="{Binding FilterSummary}" Style="{DynamicResource Text.Meta}" AutomationProperties.LiveSetting="Polite" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" HorizontalAlignment="Right">
                         <TextBlock
@@ -117,9 +121,15 @@
                                 HorizontalScrollBarVisibility="Disabled"
                                 VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
-                                    <TextBlock
+                                    <flair:FoundryHeading
                                         Style="{DynamicResource Text.SectionTitle}"
                                         Text="{Binding MomentTitle}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,6,0,0"
+                                        Foreground="{DynamicResource Brush.StatusInfo}"
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding ContentLabel}"
                                         TextWrapping="Wrap" />
                                     <TextBlock
                                         Margin="0,8,0,0"
@@ -136,7 +146,7 @@
                                                 FontSize="10"
                                                 FontWeight="SemiBold"
                                                 Foreground="{DynamicResource Brush.StatusInfo}"
-                                                Text="WHY YOU MIGHT WANT IT" />
+                                                Text="ABOUT THIS MOMENT" />
                                             <TextBlock
                                                 Margin="0,6,0,0"
                                                 Style="{DynamicResource Text.Meta}"
@@ -451,7 +461,7 @@
                         </Style>
                     </Border.Style>
                     <StackPanel>
-                        <TextBlock
+                        <flair:FoundryHeading
                             HorizontalAlignment="Center"
                             Style="{DynamicResource Text.SectionTitle}"
                             Text="{Binding MomentTitle}"

@@ -3,6 +3,7 @@ using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
 using ReplayFoundry.Desktop.Features.Generate.Moments;
 using ReplayFoundry.Desktop.Features.Studio.Preview;
+using ReplayFoundry.Desktop.Features.Studio.HiddenMoments;
 using ReplayFoundry.Desktop.Media.Inspection;
 using ReplayFoundry.Desktop.Platform.Media;
 using ReplayFoundry.Desktop.Platform.Processes;
@@ -19,6 +20,7 @@ internal static class StudioCpuPreviewTests
         new("Foreground preview cancels executing same-key prewarming and retains cache identity", ForegroundPromotesExecutingPrewarm),
         new("Cancelling an active CPU preview removes staging and releases its lane", ActivePreviewCancellationCleansUp),
         new("Long or background previews retain ordinary media admission", IneligibleRequestsKeepMainAdmission),
+        new("Alternate navigation reuses an in-progress warm preview without restarting its encode", NavigationReusesActiveWarmup),
     ];
 
     private static async Task CpuLaneDoesNotChangeMainCapacity()
@@ -121,6 +123,28 @@ internal static class StudioCpuPreviewTests
         await TestAssert.ThrowsAsync<OperationCanceledException>(async () => await pending, "Ineligible queued preview cancellation must still work.");
     }
 
+    private static async Task NavigationReusesActiveWarmup()
+    {
+        using var fixture = new PreviewFixture();
+        var runner = new ControlledPreviewRunner(blockFirst: true);
+        var service = fixture.Service(runner);
+        using var warmup = new StudioHiddenMomentPreviewWarmup(service);
+        warmup.Restart(fixture.Asset);
+        await runner.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Task<StudioPreviewMediaLease> navigation = service.MaterializeAsync(
+            new(fixture.Asset, StudioPreviewRangeMode.ExactSelection), CancellationToken.None);
+        var next = fixture.Asset.WithStudioEdits(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3), fixture.Asset.Appearance);
+        warmup.Restart(next);
+        TestAssert.False(runner.FirstCancelled, "Selecting a warming moment cannot discard the active encode.");
+        runner.ReleaseFirst.TrySetResult(true);
+        using var selected = await navigation.WaitAsync(TimeSpan.FromSeconds(3));
+        using var successor = await service.MaterializeAsync(new(next, StudioPreviewRangeMode.ExactSelection), CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(3));
+        await warmup.StopAsync(CancellationToken.None);
+        TestAssert.Equal(2, runner.Requests.Count, "Two different cuts must require two encodes, with no restart of the selected one.");
+        TestAssert.False(runner.FirstCancelled, "Finishing navigation cannot retroactively cancel a shared preview.");
+    }
+
     private static void AssertCpuCommand(ProcessRunRequest request)
     {
         static bool Pair(IReadOnlyList<string> args, string flag, string value) => args.Zip(args.Skip(1)).Any(pair => pair.First == flag && pair.Second == value);
@@ -161,6 +185,7 @@ internal static class StudioCpuPreviewTests
     {
         internal List<ProcessRunRequest> Requests { get; } = [];
         internal TaskCompletionSource<bool> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource<bool> ReleaseFirst { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal bool FirstCancelled { get; private set; }
         public async Task<ProcessRunResult> RunAsync(ProcessRunRequest request, CancellationToken cancellationToken)
         {
@@ -169,7 +194,7 @@ internal static class StudioCpuPreviewTests
             if (blockFirst && count == 1)
             {
                 Started.TrySetResult(true);
-                try { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken); }
+                try { await ReleaseFirst.Task.WaitAsync(cancellationToken); }
                 catch (OperationCanceledException) { FirstCancelled = true; throw; }
             }
             cancellationToken.ThrowIfCancellationRequested();

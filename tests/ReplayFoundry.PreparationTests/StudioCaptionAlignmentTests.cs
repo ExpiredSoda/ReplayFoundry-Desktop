@@ -328,8 +328,8 @@ internal static partial class GenerationClipRenderingTests
             var extended = asset.WithStudioEdits(start, start + TimeSpan.FromSeconds(4.5), asset.Appearance);
             preview.Bind(true, project.ReplaceAsset(extended), extended);
             string warning = preview.LiveCaptionPresentationWarning ?? "";
-            TestAssert.True(warning.Contains("caption pages follow measured words", StringComparison.Ordinal) &&
-                warning.Contains("use the whole phrase", StringComparison.Ordinal),
+            TestAssert.True(warning.Contains("The rest follow the speech", StringComparison.Ordinal) &&
+                warning.Contains("Some words appear together", StringComparison.Ordinal),
                 "When both timing types become visible, guidance must describe mixed coverage without claiming all captions fall back.");
             var empty = asset.WithStudioEdits(start, start + TimeSpan.FromSeconds(.5), asset.Appearance);
             preview.Bind(true, project.ReplaceAsset(empty), empty);

@@ -30,6 +30,7 @@ internal static partial class GenerationSpeechActivityTests
 {
     public static IEnumerable<TestCase> GetTests()
     {
+        yield return new("Moment content tags require grounded full-window evidence", ContentTagsRequireGroundedReview);
         foreach (TestCase test in GenerationMaturityTests())
         {
             yield return test;

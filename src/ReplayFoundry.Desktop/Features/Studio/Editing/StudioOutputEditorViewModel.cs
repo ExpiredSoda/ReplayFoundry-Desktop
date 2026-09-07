@@ -45,7 +45,19 @@ public sealed class StudioOutputEditorViewModel : INotifyPropertyChanged, IDispo
     private StudioRenderSettings _settings = new();
     public StudioOutputEditorViewModel(IGenerationOutputEditor? editor) { _editor = editor; Tracking = new(editor); InitializePresets(); }
     public event PropertyChangedEventHandler? PropertyChanged;
-    public IReadOnlyList<StudioOutputCanvas> Canvases { get; } = Enum.GetValues<StudioOutputCanvas>();
+    public IReadOnlyList<StudioOutputFormatChoice> Formats => StudioOutputFormatChoice.All;
+    public StudioOutputFormatChoice SelectedFormat
+    {
+        get => Formats.First(choice => choice.Canvas == Canvas &&
+            choice.Platform == (Canvas == StudioOutputCanvas.Portrait ? PlatformPreset : StudioPlatformExportPreset.Custom));
+        set
+        {
+            if (!CanEdit || value is null || !Formats.Contains(value)) return;
+            if (value == SelectedFormat) return;
+            PlatformPreset = value.Platform;
+            if (value.Platform == StudioPlatformExportPreset.Custom) Canvas = value.Canvas;
+        }
+    }
     public IReadOnlyList<StudioCompositionLayout> Layouts { get; } = Enum.GetValues<StudioCompositionLayout>();
     public IReadOnlyList<StudioExportQuality> Qualities { get; } = Enum.GetValues<StudioExportQuality>();
     public IReadOnlyList<StudioResolutionChoice> Resolutions { get; } =
@@ -56,8 +68,6 @@ public sealed class StudioOutputEditorViewModel : INotifyPropertyChanged, IDispo
         new(StudioOutputResolution.Uhd2160, "2160p · 4K UHD"),
     ];
     public IReadOnlyList<StudioColorOutput> ColorOutputs { get; } = Enum.GetValues<StudioColorOutput>();
-    public IReadOnlyList<StudioPlatformPresetChoice> PlatformPresets { get; } = Enum.GetValues<StudioPlatformExportPreset>()
-        .Select(static preset => new StudioPlatformPresetChoice(preset, StudioPlatformExportPresets.DisplayName(preset))).ToArray();
     public IReadOnlyList<StudioAudioTrackEditor> AudioTracks { get; private set; } = [];
     public StudioMixAudioAuditionViewModel MixAudition { get; } = new();
     public StudioSourceTrackingViewModel Tracking { get; }
@@ -275,11 +285,6 @@ public sealed class StudioOutputEditorViewModel : INotifyPropertyChanged, IDispo
         { Status = "Layout was not saved: " + exception.Message; }
         Notify();
     }
-}
-
-public sealed record StudioPlatformPresetChoice(StudioPlatformExportPreset Value, string Label)
-{
-    public override string ToString() => Label;
 }
 
 public sealed record StudioResolutionChoice(StudioOutputResolution Value, string Label)

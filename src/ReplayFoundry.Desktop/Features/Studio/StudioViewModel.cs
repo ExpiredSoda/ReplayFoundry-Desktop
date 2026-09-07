@@ -26,7 +26,6 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     IStudioProjectSwitchService, IStudioProjectSwitchContext,
     IApplicationStopParticipant, IDisposable
 {
-    private StudioToolSection _selectedTool = StudioToolSection.MomentsClips;
     private readonly IGenerationOutputSession? _outputSession;
     private readonly IGenerationOutputSink? _outputSink;
     private readonly StudioPreviewPrewarmCoordinator _previewPrewarming;
@@ -141,7 +140,8 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
             null,
         IGenerationGameKnowledgeService? gameKnowledge = null,
         ICorrectedCaptionAlignmentService? captionAlignment = null,
-        StudioCaptionLanguageModel? captionLanguageCapabilities = null)
+        StudioCaptionLanguageModel? captionLanguageCapabilities = null,
+        StudioTimelineFilmstrip? timelineFilmstrip = null)
         : this(
             outputSession ??
                 throw new ArgumentNullException(nameof(outputSession)),
@@ -168,7 +168,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
                 : WorkspaceSurfaceState.ContentReady,
             editorialRerollPreference,
             editorialPreferenceRecorder,
-            gameKnowledge, captionAlignment, captionLanguageCapabilities)
+            gameKnowledge, captionAlignment, captionLanguageCapabilities, timelineFilmstrip)
     {
     }
 
@@ -196,7 +196,8 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
             null,
         IGenerationGameKnowledgeService? gameKnowledge = null,
         ICorrectedCaptionAlignmentService? captionAlignment = null,
-        StudioCaptionLanguageModel? captionLanguageCapabilities = null)
+        StudioCaptionLanguageModel? captionLanguageCapabilities = null,
+        StudioTimelineFilmstrip? timelineFilmstrip = null)
     {
         _outputSession = outputSession;
         _outputSink = outputSession as IGenerationOutputSink;
@@ -241,6 +242,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         Inspector.SelectedAssetChanged += Inspector_SelectedAssetChanged;
         Inspector.Clip.DraftRangeChanged += Clip_DraftRangeChanged;
         Inspector.Clip.DraftAppearanceChanged += Clip_DraftAppearanceChanged;
+        Inspector.Clip.Effects.ComparisonChanged += Clip_ComparisonChanged;
         FinalRender = new StudioFinalRenderViewModel(
             outputEditor,
             projectRenderingService,
@@ -260,7 +262,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         ManualClips = new StudioManualClipViewModel(outputEditor as IGenerationManualClipEditor,
             previewMediaService, () => !FinalRender.IsRendering && !Inspector.Editorial.IsGenerating &&
                 !Inspector.Editorial.HasUnsavedChanges && !Inspector.Clip.HasPendingEdit &&
-                !HiddenMoments.HasUnfinishedQueueItems);
+                !HiddenMoments.HasUnfinishedQueueItems, timelineFilmstrip);
         ManualClips.ClipAdded += ManualClips_ClipAdded;
         _projectSwitcher = new StudioProjectSwitchCoordinator(this);
         Inspector.Editorial.PropertyChanged += Editorial_PropertyChanged;
@@ -268,8 +270,6 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         FinalRender.PropertyChanged += FinalRender_PropertyChanged;
         Preview.PropertyChanged += Preview_PropertyChanged;
 
-        ToolSections = StudioSurfaceCatalog.ToolSections;
-        SelectToolCommand = new DelegateCommand<StudioToolSection>(value => SelectedTool = value);
         _selectBrowserAssetCommand = new DelegateCommand<string>(
             SelectBrowserAsset,
             CanSelectBrowserAsset);
@@ -293,7 +293,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         }
         Inspector.Bind(HasProject, CurrentProject, preferredAssetId: null);
         _boundProjectId = CurrentProject?.Id;
-        Preview.Bind(HasProject, CurrentProject, Inspector.SelectedAsset);
+        Preview.Bind(HasProject, CurrentProject, Inspector.Clip.Effects.ForPreview(Inspector.SelectedAsset));
         FinalRender.Bind(CurrentProject);
         HiddenMoments.Bind(CurrentProject);
         ManualClips.Bind(CurrentProject);
@@ -307,7 +307,6 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     }
 
 
-    public IReadOnlyList<StudioToolItem> ToolSections { get; }
     public StudioInspectorViewModel Inspector { get; }
     public StudioPreviewViewModel Preview { get; }
     public StudioFinalRenderViewModel FinalRender { get; }
@@ -320,7 +319,6 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         _projectSwitcher.TrySwitchAsync(project, cancellationToken);
     public IReadOnlyList<StudioBrowserPreviewItem> BrowserPreviewItems =>
         StudioSurfaceCatalog.BuildBrowserPreviewItems(
-            SelectedTool,
             CurrentProject,
             Inspector.SelectedAsset?.Id,
             FinalRender.QueueItems
@@ -363,29 +361,10 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     public string SurfaceSuggestion => IsEmpty
         ? "Start in Generate, then return here when a project is ready to shape."
         : "Studio cannot open this project yet. Return to Generate and finish preparing the source video.";
-    public string SelectedToolTitle =>
-        StudioSurfaceCatalog.GetTool(SelectedTool).Label;
-    public string SelectedToolDescription =>
-        StudioSurfaceCatalog.GetTool(SelectedTool).Description + ".";
     public string SelectedClipDurationText => SelectedAsset is null
         ? "No clip selected"
         : StudioTimeFormatter.FormatDuration(SelectedAsset.Duration);
 
-    public StudioToolSection SelectedTool
-    {
-        get => _selectedTool;
-        set
-        {
-            if (_selectedTool == value) return;
-            _selectedTool = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(SelectedToolTitle));
-            OnPropertyChanged(nameof(SelectedToolDescription));
-            OnPropertyChanged(nameof(BrowserPreviewItems));
-        }
-    }
-
-    public ICommand SelectToolCommand { get; }
     public ICommand SelectBrowserAssetCommand => _selectBrowserAssetCommand;
     public ICommand QueueBrowserAssetCommand => _queueBrowserAssetCommand;
     public ICommand RemoveBrowserAssetCommand => _removeBrowserAssetCommand;
@@ -408,6 +387,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         Inspector.SelectedAssetChanged -= Inspector_SelectedAssetChanged;
         Inspector.Clip.DraftRangeChanged -= Clip_DraftRangeChanged;
         Inspector.Clip.DraftAppearanceChanged -= Clip_DraftAppearanceChanged;
+        Inspector.Clip.Effects.ComparisonChanged -= Clip_ComparisonChanged;
         Inspector.Editorial.PropertyChanged -= Editorial_PropertyChanged;
         HiddenMoments.PropertyChanged -= HiddenMoments_PropertyChanged;
         FinalRender.PropertyChanged -= FinalRender_PropertyChanged;
@@ -606,7 +586,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
             Inspector.RestorePendingDrafts(pendingDrafts);
         }
         _boundProjectId = e.Current?.Id;
-        Preview.Bind(HasProject, CurrentProject, Inspector.SelectedAsset);
+        Preview.Bind(HasProject, CurrentProject, Inspector.Clip.Effects.ForPreview(Inspector.SelectedAsset));
         if (pendingDrafts?.Clip is not null)
         {
             TimeSpan draftStart = Inspector.Clip.DraftSourceStart;
@@ -614,7 +594,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
                 ? Inspector.Clip.DraftSourceEnd
                 : draftStart;
             Preview.UpdateRange(draftStart, draftEnd);
-            Preview.UpdateAppearanceDraft(Inspector.Clip.DraftAppearance);
+            Preview.UpdateAppearanceDraft(Inspector.Clip.Effects.PreviewAppearance);
         }
         FinalRender.Bind(CurrentProject);
         HiddenMoments.Bind(CurrentProject);
@@ -667,7 +647,6 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     {
         if (FinalRender.NeedsIncludedCandidate)
         {
-            SelectedTool = StudioToolSection.MomentsClips;
             Inspector.SelectedInspector = StudioInspectorSection.Clip;
             return;
         }
@@ -690,7 +669,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         Preview.Bind(
             HasProject,
             CurrentProject,
-            Inspector.SelectedAsset);
+            Inspector.Clip.Effects.ForPreview(Inspector.SelectedAsset));
         OnPropertyChanged(nameof(SelectedAsset));
         OnPropertyChanged(nameof(BrowserPreviewItems));
         OnPropertyChanged(nameof(SelectedClipDurationText));
@@ -863,11 +842,18 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         RefreshClipDraftCommandState();
     }
 
+    private void Clip_ComparisonChanged(object? sender, EventArgs e)
+    {
+        Preview.Bind(HasProject, CurrentProject, Inspector.Clip.Effects.ForPreview(Inspector.SelectedAsset));
+        Preview.UpdateAppearanceDraft(Inspector.Clip.Effects.PreviewAppearance);
+        Clip_DraftRangeChanged(sender, e);
+    }
+
     private void Clip_DraftAppearanceChanged(
         object? sender,
         EventArgs e)
     {
-        Preview.UpdateAppearanceDraft(Inspector.Clip.DraftAppearance);
+        Preview.UpdateAppearanceDraft(Inspector.Clip.Effects.PreviewAppearance);
         RefreshClipDraftCommandState();
         _draftSaveCancellation?.Cancel();
         _draftSaveCancellation?.Dispose();
@@ -903,7 +889,6 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         }
         if (Inspector.Graphics.TryAddFile(e.ImageFullPath))
         {
-            SelectedTool = StudioToolSection.StickersGraphics;
             Inspector.SelectedInspector = StudioInspectorSection.Graphics;
         }
     }
@@ -929,7 +914,9 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     private void ManualClips_ClipAdded(object? sender, EventArgs e)
     {
         Inspector.SelectedAsset = CurrentProject?.Assets.LastOrDefault();
-        SelectedTool = StudioToolSection.MomentsClips;
+        Inspector.SelectedInspector = StudioInspectorSection.Metadata;
+        if (Inspector.Editorial.RerollCommand.CanExecute(null))
+            Inspector.Editorial.RerollCommand.Execute(null);
     }
 
     private bool CanCommitPendingClipEdit() =>

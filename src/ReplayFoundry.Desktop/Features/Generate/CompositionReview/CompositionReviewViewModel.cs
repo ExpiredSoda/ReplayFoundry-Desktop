@@ -40,6 +40,7 @@ public sealed class CompositionReviewViewModel :
         _continueCommand;
     private readonly AsyncDelegateCommand
         _refreshPreviewCommand;
+    private readonly DebouncedUiAction _previewSeek;
 
 #pragma warning disable CA2213 // Alias to an item owned and disposed through Sources.
     private CompositionReviewSourceViewModel
@@ -51,7 +52,8 @@ public sealed class CompositionReviewViewModel :
     public CompositionReviewViewModel(
         GenerationCompositionReviewRequest request,
         IVideoPreviewFrameProvider previewFrameProvider,
-        GenerationCompositionReviewResult? initialResult = null)
+        GenerationCompositionReviewResult? initialResult = null,
+        ICompositionLayoutSuggestionService? layoutSuggestions = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(previewFrameProvider);
@@ -87,7 +89,8 @@ public sealed class CompositionReviewViewModel :
                             request.Sources[index],
                             request.ReferenceSource),
                     previewFrameProvider,
-                    initialPlan);
+                    initialPlan,
+                    layoutSuggestions);
 
             sources[index].PropertyChanged +=
                 Source_PropertyChanged;
@@ -176,6 +179,7 @@ public sealed class CompositionReviewViewModel :
                 LoadSelectedPreviewAsync,
                 () =>
                     !SelectedSource.IsLoadingPreview);
+        _previewSeek = new(TimeSpan.FromMilliseconds(250), () => _ = ObservePreviewLoadAsync(SelectedSource));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -223,6 +227,7 @@ public sealed class CompositionReviewViewModel :
                 return;
             }
 
+            _previewSeek.Cancel();
             _selectedSource = value;
 
             OnPropertyChanged();
@@ -331,6 +336,7 @@ public sealed class CompositionReviewViewModel :
     public Task LoadSelectedPreviewAsync()
     {
         ThrowIfDisposed();
+        _previewSeek.Cancel();
 
         return SelectedSource
             .LoadPreviewAsync();
@@ -361,6 +367,7 @@ public sealed class CompositionReviewViewModel :
         }
 
         _isDisposed = true;
+        _previewSeek.Dispose();
 
         foreach (CompositionReviewSourceViewModel source in
                  Sources)
@@ -452,6 +459,9 @@ public sealed class CompositionReviewViewModel :
         object? sender,
         PropertyChangedEventArgs e)
     {
+        if (_isInitialized && ReferenceEquals(sender, SelectedSource) &&
+            e.PropertyName == nameof(CompositionReviewSourceViewModel.RequestedTimestampSeconds))
+            _previewSeek.Restart();
         if (ReferenceEquals(
                 sender,
                 SelectedSource) &&

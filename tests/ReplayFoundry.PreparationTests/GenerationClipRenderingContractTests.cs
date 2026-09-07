@@ -156,9 +156,9 @@ internal static partial class GenerationClipRenderingTests
             new StudioPreviewMediaRequest(effect));
 
         TestAssert.Equal(
-            "1.3",
+            "1.4",
             StudioPreviewCacheKey.PolicyVersion,
-            "Current frame-clock handling must invalidate previews rendered by the prior cache policy.");
+            "Updated color treatments must invalidate previews rendered by the prior cache policy.");
         TestAssert.Equal(
             baseline.Hash,
             captionKey.Hash,
@@ -780,20 +780,14 @@ internal static partial class GenerationClipRenderingTests
                     candidate.AnalyzedSource.PreparedSource.Media.FullPath)!,
             GenerationCaptionStylePreset.KaraokeSweep,
             punctuatedTranscription);
-        StudioCaptionCue punctuatedCue =
-            StudioCaptionPresentationPolicy.ProjectCues(
-                punctuatedSegment,
-                StudioCaptionWordLimitPreset.FullSegment).Single();
-        TestAssert.Equal(
-            punctuatedText,
-            punctuatedCue.Text,
-            "Timed caption projection must retain original punctuation and spacing.");
-        TestAssert.Equal(
-            "what",
-            punctuatedCue.Text.Substring(
-                punctuatedCue.WordSpans[1].StartIndex,
-                punctuatedCue.WordSpans[1].Length),
-            "Repeated styling must use the shared character span instead of reconstructing text.");
+        var punctuatedCues = StudioCaptionPresentationPolicy.ProjectCues(
+            punctuatedSegment, StudioCaptionWordLimitPreset.FullSegment);
+        StudioCaptionCue punctuatedCue = punctuatedCues[0];
+        TestAssert.Equal(punctuatedText, string.Join(" ", punctuatedCues.Select(cue => cue.Text)),
+            "Phrase breaks must retain every punctuation mark and word.");
+        StudioCaptionCue whatCue = punctuatedCues.Single(cue => cue.Text.Contains("what", StringComparison.Ordinal));
+        TestAssert.Equal("what", whatCue.Text.Substring(whatCue.WordSpans[0].StartIndex, whatCue.WordSpans[0].Length),
+            "Styling must use the exact mapped character span within its phrase.");
 
         AssSubtitleDocument karaokeDocument =
             AssSubtitleDocumentBuilder.Build(
@@ -812,9 +806,7 @@ internal static partial class GenerationClipRenderingTests
                 @"\{[^}]*\}",
                 string.Empty);
         TestAssert.True(
-            normalizedKaraokeScript.Contains(
-                "Wait... what?! Don't stop.",
-                StringComparison.Ordinal) &&
+            punctuatedCues.All(cue => normalizedKaraokeScript.Contains(cue.Text, StringComparison.Ordinal)) &&
             karaokeDocument.Script.Contains(
                 "{\\1c&H005EC7FF&\\2c&H00A59E98&\\kf",
                 StringComparison.Ordinal) &&
@@ -869,7 +861,7 @@ internal static partial class GenerationClipRenderingTests
         preview.PreviewPositionSeconds =
             absoluteOffset.TotalSeconds + 1.35;
         TestAssert.Equal(
-            punctuatedText,
+            punctuatedCue.Text,
             preview.LiveCaptionText!,
             "Studio must preview the exact punctuated text written to ASS.");
         TestAssert.Equal(
@@ -885,14 +877,8 @@ internal static partial class GenerationClipRenderingTests
             "Studio must expose continuous Karaoke progress across the active word.");
         preview.PreviewPositionSeconds =
             absoluteOffset.TotalSeconds + 1.65;
-        TestAssert.Equal(
-            punctuatedCue.WordSpans[1].StartIndex,
-            preview.LiveCaptionAccentStartIndex,
-            "A retained inter-word pause must hold the next word in the future color instead of advancing early.");
-        TestAssert.Equal(
-            0d,
-            preview.LiveCaptionAccentProgress,
-            "Karaoke progress must remain stopped during the retained inter-word pause.");
+        TestAssert.Null(preview.LiveCaptionText,
+            "The 300 ms pause must clear the phrase instead of previewing the next word early.");
 
         var popTrack = new GenerationCandidateCaptionTrack(
             candidate,
@@ -2051,17 +2037,17 @@ internal static partial class GenerationClipRenderingTests
                 StudioCaptionWordLimitPreset.Punchy);
 
         TestAssert.Equal(
-            6,
+            7,
             cues.Count,
-            "The real Review Moment pattern must retain four earlier timed Punchy pages, one localized fallback, and the timed remainder.");
+            "Natural sentence breaks produce five timed pages, one readable local fallback, and the timed remainder.");
         TestAssert.True(
-            cues.Take(4).All(static cue => cue.Words.Count > 0),
+            cues.Take(5).All(static cue => cue.Words.Count > 0),
             "Every fully timed speech run before the bad provider word must keep exact word animation.");
         StudioCaptionCue fallback = cues[^2];
         TestAssert.Equal(
-            "The gun",
+            "The gun sword?",
             fallback.Text,
-            "The zero-duration word must absorb only its nearest measured neighbor.");
+            "The zero-duration word needs a short readable phrase using measured neighbor boundaries.");
         TestAssert.Equal(
             0,
             fallback.Words.Count,
@@ -2071,16 +2057,16 @@ internal static partial class GenerationClipRenderingTests
             fallback.RelativeStart,
             "The fallback phrase must begin at its observed local boundary.");
         TestAssert.Equal(
-            TimeSpan.FromSeconds(32.44),
+            TimeSpan.FromSeconds(32.97),
             fallback.RelativeEnd,
-            "The fallback phrase must stop at its measured neighbor instead of consuming the timed remainder.");
+            "The fallback must stop before the next sentence and keep the measured phrase end.");
         StudioCaptionCue timedRemainder = cues[^1];
         TestAssert.Equal(
-            "sword? What",
+            "What",
             timedRemainder.Text,
             "Valid words after the local failure must remain a separate Punchy cue.");
         TestAssert.Equal(
-            2,
+            1,
             timedRemainder.Words.Count,
             "Valid remainder words must retain their exact karaoke timing.");
         TestAssert.True(
@@ -2149,16 +2135,13 @@ internal static partial class GenerationClipRenderingTests
             "Final ASS must never restore the obsolete whole-provider-segment fallback interval.");
         TestAssert.True(
             document.Script.Contains(
-                "0:00:32.05,0:00:32.44",
+                "0:00:32.05,0:00:32.97",
                 StringComparison.Ordinal) &&
             document.Script.Contains(
                 "The gun",
                 StringComparison.Ordinal),
             "Final ASS must burn only the localized phrase interval for the affected words.");
         TestAssert.True(
-            document.Script.Contains(
-                "0:00:32.45,0:00:32.97",
-                StringComparison.Ordinal) &&
             document.Script.Contains(
                 "0:00:32.97,0:00:33.11",
                 StringComparison.Ordinal) &&
@@ -2168,7 +2151,7 @@ internal static partial class GenerationClipRenderingTests
             document.Script.Contains(
                 "What",
                 StringComparison.Ordinal),
-            "Final ASS must preserve both exact word intervals in the timed remainder after the localized fallback.");
+            "Final ASS must preserve the timed remainder and every word in the localized fallback.");
         return Task.CompletedTask;
     }
 
@@ -2924,7 +2907,7 @@ internal static partial class GenerationClipRenderingTests
             fixture.Moments.SelectedCandidates[0];
         var expectedFilters = new Dictionary<StudioVideoEffectPreset, string>
         {
-            [StudioVideoEffectPreset.Noir] = "curves=preset=increase_contrast",
+            [StudioVideoEffectPreset.Noir] = "curves=master='0/0 0.25/0.22 0.75/0.78 1/1'",
             [StudioVideoEffectPreset.Chromatic] = "rgbashift=",
             [StudioVideoEffectPreset.SoftBloom] = "gblur=sigma=",
             [StudioVideoEffectPreset.Vivid] = "vibrance=intensity=",

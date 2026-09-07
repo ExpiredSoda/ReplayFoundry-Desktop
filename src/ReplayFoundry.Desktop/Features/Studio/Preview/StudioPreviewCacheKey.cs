@@ -10,7 +10,7 @@ internal sealed record StudioPreviewCacheKey(
     string Hash,
     string CanonicalInput)
 {
-    public const string PolicyVersion = "1.3";
+    public const string PolicyVersion = "1.4";
 
     public static string CreateMediaIdentity(
         StudioPreviewMediaRequest request)

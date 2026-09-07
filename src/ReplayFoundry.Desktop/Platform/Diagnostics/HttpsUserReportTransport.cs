@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.IO;
+using System.Text.Json;
 using ReplayFoundry.Desktop.Features.Diagnostics;
 
 namespace ReplayFoundry.Desktop.Platform.Diagnostics;
@@ -62,9 +64,11 @@ public sealed class HttpsUserReportTransport :
         ArgumentNullException.ThrowIfNull(report);
         UserReportDraft outbound =
             UserReportSanitizer.SanitizeOutboundDraft(report);
-        using HttpResponseMessage response = await _client.PostAsJsonAsync(
-            _endpoint,
-            new
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(30));
+        using var request = new HttpRequestMessage(HttpMethod.Post, _endpoint)
+        {
+            Content = JsonContent.Create(new
             {
                 schemaVersion = UserReportDraft.SchemaVersion,
                 reportId = outbound.ReportId,
@@ -81,8 +85,10 @@ public sealed class HttpsUserReportTransport :
                     attachment.Sha256,
                     attachment.Content,
                 }),
-            },
-            cancellationToken);
+            }),
+        };
+        using HttpResponseMessage response = await _client.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
         if ((int)response.StatusCode is >= 300 and < 400)
         {
             throw new HttpRequestException(
@@ -90,14 +96,40 @@ public sealed class HttpsUserReportTransport :
                 inner: null,
                 response.StatusCode);
         }
-        if (response.StatusCode is not HttpStatusCode.OK and
-            not HttpStatusCode.Accepted and
-            not HttpStatusCode.NoContent)
+        if (response.StatusCode is not HttpStatusCode.OK and not HttpStatusCode.Accepted)
         {
             throw new HttpRequestException(
                 "The configured bug-report endpoint rejected the report.",
                 inner: null,
                 response.StatusCode);
+        }
+        // A proxy error page or an unrelated successful request is not a receipt for this report.
+        if (!string.Equals(response.Content.Headers.ContentType?.MediaType, "application/json", StringComparison.OrdinalIgnoreCase) ||
+            response.Content.Headers.ContentLength is > 4096)
+            throw new HttpRequestException("Support did not confirm receipt of this report.");
+        using Stream body = await response.Content.ReadAsStreamAsync(deadline.Token);
+        using var receipt = new MemoryStream();
+        var buffer = new byte[512];
+        int count;
+        while ((count = await body.ReadAsync(buffer, deadline.Token)) > 0)
+        {
+            if (receipt.Length + count > 4096)
+                throw new HttpRequestException("The support receipt exceeded its supported size.");
+            receipt.Write(buffer, 0, count);
+        }
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(receipt.ToArray());
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("accepted", out JsonElement accepted) || accepted.ValueKind != JsonValueKind.True ||
+                !root.TryGetProperty("reportId", out JsonElement id) || id.ValueKind != JsonValueKind.String ||
+                !string.Equals(id.GetString(), outbound.ReportId, StringComparison.OrdinalIgnoreCase))
+                throw new HttpRequestException("Support did not confirm receipt of this report.");
+        }
+        catch (JsonException exception)
+        {
+            throw new HttpRequestException("Support returned an unreadable receipt. The report remains on this PC.", exception);
         }
     }
 

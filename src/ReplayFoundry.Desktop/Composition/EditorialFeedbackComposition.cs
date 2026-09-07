@@ -4,28 +4,26 @@ using ReplayFoundry.Desktop.Features.Research;
 using ReplayFoundry.Desktop.Features.Studio;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
 using ReplayFoundry.Desktop.Features.Studio.HiddenMoments;
-using ReplayFoundry.Desktop.Media.Intelligence.Preferences;
 using ReplayFoundry.Desktop.Platform.Diagnostics;
 using ReplayFoundry.Desktop.Platform.Storage;
+using ReplayFoundry.Desktop.Platform.Intelligence;
 
 namespace ReplayFoundry.Desktop.Composition;
 
 internal sealed record EditorialFeedbackServices(
-    IClipPreferenceFeedbackStore? ClipPreferences,
     IStudioCandidateDecisionStore? CandidateDecisions,
     IStudioHiddenMomentDecisionStore? HiddenMomentDecisions,
     ResearchParticipationState ResearchParticipation,
     IResearchFeedbackStore ResearchStore,
     ResearchFeedbackRecorder ResearchRecorder,
-    IGenerationCandidateRefinementService? CandidateRefinement);
+    IGenerationCandidateRefinementService? CandidateRefinement,
+    TasteLearningService? TasteLearning);
 
 internal static class EditorialFeedbackComposition
 {
     public static EditorialFeedbackServices Create(
         IGenerationSpeechActivityService? speechActivity)
     {
-        IClipPreferenceFeedbackStore? clipPreferences =
-            CreateClipPreferenceStore();
         IStudioCandidateDecisionStore? candidateDecisions =
             CreateCandidateDecisionStore();
         IStudioHiddenMomentDecisionStore? hiddenMomentDecisions =
@@ -36,19 +34,22 @@ internal static class EditorialFeedbackComposition
         var researchRecorder = new ResearchFeedbackRecorder(
             researchParticipation,
             researchStore);
+        TasteLearningService? tasteLearning = null;
+        try { tasteLearning = new TasteLearningService(); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or TimeoutException or System.Text.Json.JsonException)
+        { SafeDiagnosticTrace.Write("Local neural learning is unavailable", exception); }
         IGenerationCandidateRefinementService? candidateRefinement =
             speechActivity is null
                 ? null
-                : new GenerationCandidateRefinementService(
-                    preferenceProfiles: clipPreferences);
+                : new GenerationCandidateRefinementService();
         return new(
-            clipPreferences,
             candidateDecisions,
             hiddenMomentDecisions,
             researchParticipation,
             researchStore,
             researchRecorder,
-            candidateRefinement);
+            candidateRefinement,
+            tasteLearning);
     }
 
     private static ResearchParticipationState CreateResearchParticipation()
@@ -80,24 +81,6 @@ internal static class EditorialFeedbackComposition
             InvalidDataException)
         {
             return new InMemoryResearchFeedbackStore();
-        }
-    }
-
-    private static IClipPreferenceFeedbackStore? CreateClipPreferenceStore()
-    {
-        try
-        {
-            return JsonClipPreferenceFeedbackStore.CreateDefault();
-        }
-        catch (Exception exception) when (
-            exception is IOException or
-            UnauthorizedAccessException or
-            InvalidDataException)
-        {
-            SafeDiagnosticTrace.Write(
-                "Clip preference storage is unavailable",
-                exception);
-            return null;
         }
     }
 

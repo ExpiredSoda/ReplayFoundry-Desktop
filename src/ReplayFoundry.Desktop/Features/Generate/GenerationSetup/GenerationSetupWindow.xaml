@@ -108,7 +108,8 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel>
+            <controls:FoundryFrameMark Width="66" Height="57" IconKey="Icon.Spark" HorizontalAlignment="Left" />
+            <StackPanel Margin="82,0,0,0">
 
                 <TextBlock
                     Foreground="{DynamicResource Brush.TextPrimary}"

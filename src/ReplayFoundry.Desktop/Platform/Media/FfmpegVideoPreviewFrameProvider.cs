@@ -101,7 +101,8 @@ internal sealed class FfmpegVideoPreviewFrameProvider :
                 result =
                     await MediaWorkBudget.RunAsync(_processRunner,
                         processRequest,
-                        MediaWorkPriority.Foreground, cancellationToken);
+                        request.WorkIntent == VideoPreviewWorkIntent.BackgroundFilmstrip ? MediaWorkPriority.Background : MediaWorkPriority.Foreground,
+                        cancellationToken);
             }
             catch (OperationCanceledException)
             {

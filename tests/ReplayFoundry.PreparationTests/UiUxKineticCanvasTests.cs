@@ -104,8 +104,10 @@ internal static partial class UiUxApplicationSurfaceTests
             TestAssert.True(
                 thumb.Template.FindName("ThumbSurface", thumb) is System.Windows.Shapes.Ellipse &&
                 thumb.Template.FindName("LaserGuide", thumb) is null &&
-                thumb.Template.FindName("ThumbGlow", thumb) is null,
-                "The Slider thumb should respond without painting stray guide lines or detached glow shapes.");
+                thumb.Template.FindName("ThumbGlow", thumb) is System.Windows.Shapes.Ellipse
+                    { IsHitTestVisible: false, HorizontalAlignment: HorizontalAlignment.Center, VerticalAlignment: VerticalAlignment.Center } glow &&
+                glow.Width <= thumb.Width && glow.Height <= thumb.Height,
+                "The playhead glow must stay centered within the thumb target and cannot intercept input or draw detached guide lines.");
 
             var slider = new Slider
             {
@@ -636,7 +638,7 @@ internal static partial class UiUxApplicationSurfaceTests
             "Publish Library filtering should reuse the same editorial search, selector, and ghost-action language.");
         TestAssert.True(
             studioBrowser.Contains("Control.CanvasPane", StringComparison.Ordinal) &&
-            studioBrowser.Contains("Control.CanvasRailListBoxItem", StringComparison.Ordinal) &&
+            studioBrowser.Contains("BasedOn=\"{StaticResource Control.KeyboardFocus}\"", StringComparison.Ordinal) &&
             studioBrowser.Contains("Control.StudioClipCard", StringComparison.Ordinal) &&
             studioBrowser.Contains("StudioBrowser.ClipItem", StringComparison.Ordinal) &&
             studioBrowser.Contains("SelectedValue=\"{Binding SelectedAsset.Id", StringComparison.Ordinal) &&

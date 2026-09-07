@@ -252,6 +252,11 @@ function Assert-QwenDeploymentQualification([string]$RuntimeRoot, [string]$Quali
     }
 }
 
+if ($Profile -eq 'Advanced') {
+    $sitePackages = Assert-Directory $PythonSitePackages 'PythonSitePackages'
+    & (Join-Path $PSScriptRoot 'Test-AiRuntimeDependencies.ps1') -SitePackages $sitePackages `
+        -ReportPath (Join-Path $outputRoot 'ai-runtime-dependency-audit.json')
+}
 $mediaSource = Assert-Directory $MediaToolsRoot 'MediaToolsRoot'
 Assert-RedistributableFfmpeg $mediaSource
 $mediaPack = Join-Path $packRoots 'replayfoundry-media-tools'
@@ -336,10 +341,10 @@ if ($Profile -eq 'Advanced') {
         -DestinationRoot $packagedHostRoot
     Test-QwenRuntimeHost $visualRuntimePack $mediaPack
     $visualRuntime = Seal-Pack 'replayfoundry-qwen3-vl-runtime' (Recipe-Base `
-        'replayfoundry-qwen3-vl-runtime' 'VisualRuntime' '0.8.24' 'Qwen3-VL CUDA runtime' 'Cuda' `
+        'replayfoundry-qwen3-vl-runtime' 'VisualRuntime' '0.8.25' 'Qwen3-VL CUDA runtime' 'Cuda' `
         @{PythonExecutable='python/python.exe';VisualHostScript='host/qwen3_vl_batch_host.py'} `
         @([ordered]@{componentName='CPython and pinned Qwen runtime wheels';licenseIdentifier='Multiple-see-notices';textRelativePath='notices/THIRD-PARTY-NOTICES.md';textSha256=(File-Hash (Join-Path $visualRuntimePack 'notices\THIRD-PARTY-NOTICES.md'));sourceUrl='https://www.python.org/downloads/windows/';redistributionNotes='Exact component inventory and retained license texts are included under notices/licenses.'}) `
-        @([ordered]@{officialUrl='https://www.python.org/downloads/release/python-3119/';revision='3.11.9';artifactSha256=(File-Hash (Join-Path $pythonRoot 'python.exe'))},[ordered]@{officialUrl='https://pytorch.org/get-started/locally/';revision='torch-2.12.0+cu130';artifactSha256='07F0D0520196071C336391C174B9B9AB8AECA8518749B2A570D017521960F8D6'}) `
+        @([ordered]@{officialUrl='https://www.python.org/downloads/release/python-31315/';revision='3.13.15';artifactSha256=(File-Hash (Join-Path $pythonRoot 'python.exe'))},[ordered]@{officialUrl='https://download.pytorch.org/whl/cu130/torch/';revision='torch-2.13.0+cu130';artifactSha256='CF23236E9DEED7D3510D14D9B9592D75D272EF7B35BBFEE31A02BEA339C73971'}) `
                 @([ordered]@{packageId='replayfoundry-media-tools';minimumVersion='8.1.2.32';requiredManifestHash=$media.manifest.manifestHash}))
     $results.Add($visualRuntime)
 
@@ -359,11 +364,11 @@ if ($Profile -eq 'Advanced') {
     Copy-Item $qwenLicense (Join-Path $visualModelPack 'LICENSE-Qwen.txt')
     Assert-QwenDeploymentQualification $visualRuntimePack $qualificationLock
     $visualModel = Seal-Pack 'replayfoundry-qwen3-vl-4b-instruct' (Recipe-Base `
-        'replayfoundry-qwen3-vl-4b-instruct' 'VisualModel' '4.0.20' 'Qwen3-VL 4B Instruct' 'Cuda' `
+        'replayfoundry-qwen3-vl-4b-instruct' 'VisualModel' '4.0.21' 'Qwen3-VL 4B Instruct' 'Cuda' `
         @{QwenModelManifest='config/model-manifest.json';QwenPromptManifest='config/prompt-manifest.json';QwenQualificationLock='config/qualification-lock.json'} `
         @([ordered]@{componentName='Qwen3-VL 4B Instruct';licenseIdentifier='Apache-2.0';textRelativePath='LICENSE-Qwen.txt';textSha256=(File-Hash (Join-Path $visualModelPack 'LICENSE-Qwen.txt'));sourceUrl='https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/tree/ebb281ec70b05090aa6165b016eac8ec08e71b17';redistributionNotes='Locally qualified for the bounded Replay Foundry workflow. Generated wording remains user-reviewable and no universal semantic-accuracy claim is made.'}) `
         @([ordered]@{officialUrl='https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/tree/ebb281ec70b05090aa6165b016eac8ec08e71b17';revision='ebb281ec70b05090aa6165b016eac8ec08e71b17';artifactSha256='2018FFABE5257D8045BD565A232D82DA382679C9E71C388F6880BFF01ACF17B4'}) `
-        @([ordered]@{packageId='replayfoundry-qwen3-vl-runtime';minimumVersion='0.8.24';requiredManifestHash=$visualRuntime.manifest.manifestHash}))
+        @([ordered]@{packageId='replayfoundry-qwen3-vl-runtime';minimumVersion='0.8.25';requiredManifestHash=$visualRuntime.manifest.manifestHash}))
     $results.Add($visualModel)
 }
 

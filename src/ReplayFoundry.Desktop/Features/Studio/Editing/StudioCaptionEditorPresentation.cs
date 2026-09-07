@@ -3,11 +3,15 @@ using ReplayFoundry.Desktop.Features.Generate.Handoff;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editing;
 
+public sealed record StudioCaptionAccentChoice(string Value, string Name, string Description);
+
 internal static class StudioCaptionEditorPresentation
 {
     internal static string PhraseSizeDescription(GenerationOutputAsset? asset,
         GenerationCaptionStylePreset style, SelectionOption<StudioCaptionWordLimitPreset> wordLimit)
     {
+        if (asset?.HasCaptions != true)
+            return "Choose a phrase size now. It will apply when you create captions for this clip.";
         if (StudioCaptionPresentationPolicy.RequiresTimedWords(style) &&
             asset?.Captions is { } track &&
             !StudioCaptionPresentationPolicy
@@ -17,9 +21,9 @@ internal static class StudioCaptionEditorPresentation
             var coverage = StudioCaptionPresentationPolicy.GetTimingCoverage(visible,
                 StudioCaptionPresentationPolicy.ResolveEffectiveWordLimit(style, wordLimit.Value));
             return coverage.TimedPages > 0
-                ? $"{coverage.TimedPages} caption pages follow measured words; {coverage.PhrasePages} use phrase timing where individual word timing is unreliable."
-                : coverage.PhrasePages > 0 ? $"{coverage.PhrasePages} caption pages use phrase timing because individual word timing is unavailable."
-                : "No caption pages are visible within this cut.";
+                ? "Short phrases follow the speech. A few words stay together where their timing is unclear."
+                : coverage.PhrasePages > 0 ? "Match words to speech below to improve phrase breaks."
+                : "There are no captions in this part of the recording.";
         }
 
         return style switch

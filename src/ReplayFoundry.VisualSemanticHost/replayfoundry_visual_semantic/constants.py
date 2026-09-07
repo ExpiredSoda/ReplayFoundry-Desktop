@@ -131,12 +131,12 @@ MAX_LIMITATIONS = 4
 MAX_DETAIL_TEXT = 240
 
 EXPECTED_PACKAGE_VERSIONS = {
-    "torch": "2.12.0+cu130",
-    "torchvision": "0.27.0+cu130",
-    "transformers": "4.57.6",
+    "torch": "2.13.0+cu130",
+    "torchvision": "0.28.0+cu130",
+    "transformers": "5.16.1",
     "accelerate": "1.14.0",
     "qwen-vl-utils": "0.0.14",
-    "torchcodec": "0.15.0+cpu",
+    "torchcodec": "0.16.0",
     "psutil": "7.2.2",
 }
 

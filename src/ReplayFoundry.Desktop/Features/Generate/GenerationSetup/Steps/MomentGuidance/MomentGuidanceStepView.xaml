@@ -17,7 +17,7 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
-            <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Priority moments" />
+            <controls:FoundryHeading FontFamily="{DynamicResource Font.Display}" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Priority moments" />
             <TextBlock
                 Margin="0,7,0,18"
                 FontSize="14"

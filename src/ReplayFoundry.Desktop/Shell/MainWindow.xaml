@@ -123,7 +123,7 @@
             Panel.ZIndex="0"
             Fill="{DynamicResource Brush.WindowGrid}"
             IsHitTestVisible="False"
-            Opacity="0.04" />
+            Opacity="0.14" />
 
         <Border Panel.ZIndex="1" Background="{DynamicResource Brush.WindowOverlay}" IsHitTestVisible="False" />
 

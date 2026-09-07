@@ -11,16 +11,16 @@ BACKEND_NAME = "XGrammar"
 BACKEND_VERSION = "0.2.2"
 SOURCE_TAG = "v0.2.2"
 SOURCE_COMMIT = "4d145cc13d878c751ebeed36af1c013074be76bc"
-WHEEL_FILE_NAME = "xgrammar-0.2.2-cp311-cp311-win_amd64.whl"
+WHEEL_FILE_NAME = "xgrammar-0.2.2-cp313-cp313-win_amd64.whl"
 WHEEL_SHA256 = (
-    "eefb94f9dd84b0d79885943318b0fbf3e6fd23b86ae3dfe6d0e48f090f431e6b"
+    "6de5da025cdbc8150181b19ca9ee5db9e4b4acac96484aa5e8af0cf810e9bb91"
 )
 TVM_FFI_VERSION = "0.1.9"
 TVM_FFI_WHEEL_FILE_NAME = (
-    "apache_tvm_ffi-0.1.9-cp311-cp311-win_amd64.whl"
+    "apache_tvm_ffi-0.1.9-cp312-abi3-win_amd64.whl"
 )
 TVM_FFI_WHEEL_SHA256 = (
-    "9ee710a9fba3d9ff9747870bbd7e2175eb8d5b9c791f17fd645f35f6dab3f8aa"
+    "d1dcf4c041d5ec05e3da1d545800c33cdbb95c113baa7705085ff79fa262752b"
 )
 PYDANTIC_VERSION = "2.12.5"
 PYDANTIC_WHEEL_FILE_NAME = "pydantic-2.12.5-py3-none-any.whl"
@@ -29,10 +29,10 @@ PYDANTIC_WHEEL_SHA256 = (
 )
 PYDANTIC_CORE_VERSION = "2.41.5"
 PYDANTIC_CORE_WHEEL_FILE_NAME = (
-    "pydantic_core-2.41.5-cp311-cp311-win_amd64.whl"
+    "pydantic_core-2.41.5-cp313-cp313-win_amd64.whl"
 )
 PYDANTIC_CORE_WHEEL_SHA256 = (
-    "76ee27c6e9c7f16f47db7a94157112a2f3a00e958bc626e2f4ee8bec5c328fbe"
+    "79ec52ec461e99e13791ec6508c722742ad745571f234ea6255bed38c6480f11"
 )
 ANNOTATED_TYPES_VERSION = "0.8.0"
 ANNOTATED_TYPES_WHEEL_FILE_NAME = (

@@ -43,7 +43,7 @@ public partial class SettingsView : UserControl
             viewModel.SelectedSection = selected.Key;
         }
 
-        SectionScrollViewport.ScrollToTop();
+        SectionScrollViewport?.ScrollToTop();
     }
 
     private void UpdateResponsiveState(double width)

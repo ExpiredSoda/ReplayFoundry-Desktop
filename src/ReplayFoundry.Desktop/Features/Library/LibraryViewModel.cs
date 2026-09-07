@@ -14,7 +14,6 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
     private LibraryCategory _selectedCategory = LibraryCategory.Projects;
     private LibraryViewMode _viewMode = LibraryViewMode.Grid;
     private string _searchQuery = string.Empty;
-    private string _modeFilter = "All modes";
     private string _statusFilter = "All statuses";
     private string _dateFilter = "Any date";
     private string _sortBy = "Recently modified";
@@ -168,11 +167,10 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         Playback = new LibraryPlaybackViewModel();
         Categories = new[]
         {
-            new LibraryCategoryItem(LibraryCategory.Projects, "Projects", "Icon.Project"),
-            new LibraryCategoryItem(LibraryCategory.GeneratedClips, "Generated Clips", "Icon.Spark"),
+            new LibraryCategoryItem(LibraryCategory.Projects, "All videos", "Icon.Media"),
+            new LibraryCategoryItem(LibraryCategory.GeneratedClips, "Clips", "Icon.Spark"),
             new LibraryCategoryItem(LibraryCategory.Montages, "Montages", "Icon.Grid"),
         };
-        Modes = new[] { "All modes", "Individual clips", "Montage" };
         Statuses = new[] { "All statuses", "Ready", "Missing locally" };
         Dates = new[] { "Any date", "Today", "This week", "This month" };
         SortOptions = new[] { "Recently modified", "Name", "Duration", "Status" };
@@ -239,7 +237,6 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
     }
 
     public IReadOnlyList<LibraryCategoryItem> Categories { get; }
-    public IReadOnlyList<string> Modes { get; }
     public IReadOnlyList<string> Statuses { get; }
     public IReadOnlyList<string> Dates { get; }
     public IReadOnlyList<string> SortOptions { get; }
@@ -291,7 +288,6 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         : $"{MarkedCount} videos selected";
     public bool HasActiveFilters =>
         !string.IsNullOrWhiteSpace(SearchQuery) ||
-        ModeFilter != Modes[0] ||
         StatusFilter != Statuses[0] ||
         DateFilter != Dates[0];
     public string ResultSummary => Items.Count == 0 ? "0 items" : $"{Items.Count} items";
@@ -303,7 +299,8 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         LibraryOrganizationMode.Project => "Grouped by Studio project",
         _ => "Organized Library",
     };
-    public string EmptyTitle => HasActiveFilters ? "No items match these filters" : $"No {SelectedCategoryLabel.ToLowerInvariant()} yet";
+    public string EmptyTitle => HasActiveFilters ? "No items match these filters"
+        : SelectedCategory == LibraryCategory.Projects ? "No videos yet" : $"No {SelectedCategoryLabel.ToLowerInvariant()} yet";
     public string EmptyDescription => HasActiveFilters ? "Clear a filter or search term to see the full category." : GetFutureWorkflowMessage();
     public string SelectedCategoryLabel => GetCategoryLabel(SelectedCategory);
     public string StatusText => IsUnavailable ? "Library not connected" : ResultSummary;
@@ -355,7 +352,6 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
     }
 
     public string SearchQuery { get => _searchQuery; set { if (_searchQuery == value) return; _searchQuery = value; RaiseDerivedProperties(); } }
-    public string ModeFilter { get => _modeFilter; set { if (_modeFilter == value) return; _modeFilter = value; RaiseDerivedProperties(); } }
     public string StatusFilter { get => _statusFilter; set { if (_statusFilter == value) return; _statusFilter = value; RaiseDerivedProperties(); } }
     public string DateFilter { get => _dateFilter; set { if (_dateFilter == value) return; _dateFilter = value; RaiseDerivedProperties(); } }
     public string SortBy { get => _sortBy; set { if (_sortBy == value) return; _sortBy = value; RefreshView(); OnPropertyChanged(); } }
@@ -405,17 +401,16 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
     private void ClearFilters()
     {
         SearchQuery = string.Empty;
-        ModeFilter = Modes[0];
         StatusFilter = Statuses[0];
         DateFilter = Dates[0];
     }
 
     private string GetFutureWorkflowMessage() => SelectedCategory switch
     {
-        LibraryCategory.Projects => "Finished Studio files will appear here after you create them.",
-        LibraryCategory.GeneratedClips => "Finished clips will appear here after you create them in Studio.",
-        LibraryCategory.Montages => "Finished montages will appear here after you create them in Studio.",
-        _ => "Finished Studio files will appear here after you create them.",
+        LibraryCategory.Projects => "Render a video in Studio to save it here. Use Group by project to see each project's finished videos together.",
+        LibraryCategory.GeneratedClips => "Render a clip in Studio to save it here. Your finished clips will be ready to watch or publish.",
+        LibraryCategory.Montages => "Bring your favorite moments together in Studio, then render the montage to save it here.",
+        _ => "Render a video in Studio to add it to your library.",
     };
 
     private void RaiseDerivedProperties()
@@ -423,7 +418,6 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         RefreshView();
         OnPropertyChanged(nameof(SelectedCategory));
         OnPropertyChanged(nameof(SearchQuery));
-        OnPropertyChanged(nameof(ModeFilter));
         OnPropertyChanged(nameof(StatusFilter));
         OnPropertyChanged(nameof(DateFilter));
         OnPropertyChanged(nameof(SelectedCategoryLabel));
@@ -767,16 +761,6 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
                     StringComparison.OrdinalIgnoreCase) == true ||
                 item.Detail.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                 item.Type.Contains(search, StringComparison.OrdinalIgnoreCase));
-        }
-        if (ModeFilter == "Individual clips")
-        {
-            query = query.Where(item =>
-                item.Asset?.Mode == GenerationMode.IndividualClips);
-        }
-        else if (ModeFilter == "Montage")
-        {
-            query = query.Where(item =>
-                item.Asset?.Mode == GenerationMode.Montage);
         }
         if (StatusFilter != Statuses[0])
         {

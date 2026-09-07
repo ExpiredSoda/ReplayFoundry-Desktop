@@ -116,14 +116,8 @@ internal static partial class UiUxApplicationSurfaceTests
             view.Arrange(new Rect(0, 0, 340, 720));
             view.UpdateLayout();
 
-            Expander placement = EnumerateVisualDescendants<Expander>(view)
-                .Single(expander => string.Equals(
-                    expander.Header as string,
-                    "Size & placement",
-                    StringComparison.Ordinal));
-            placement.IsExpanded = true;
-            view.UpdateLayout();
-
+            TestAssert.False(EnumerateVisualDescendants<Expander>(view).Any(expander =>
+                Equals(expander.Header, "Size & placement")), "Everyday caption controls must be visible without opening a menu.");
             TestAssert.Equal(
                 0,
                 EnumerateVisualDescendants<DataGrid>(view).Count(),
@@ -138,7 +132,7 @@ internal static partial class UiUxApplicationSurfaceTests
             TestAssert.True(
                 EnumerateVisualDescendants<TextBlock>(view).Any(text =>
                     text.Text.Equals(
-                        "Caption phrase size",
+                        "Phrase length",
                         StringComparison.Ordinal)),
                 "The Studio control must describe static caption segmentation as phrase size, not words shown during animation.");
             TestAssert.True(
@@ -586,11 +580,9 @@ internal static partial class UiUxApplicationSurfaceTests
                     throw new InvalidOperationException(
                         "The second Studio clip card was not generated.");
 
-                Point nonTitlePoint = second.TranslatePoint(
-                    new Point(
-                        Math.Max(12d, second.ActualWidth - 18d),
-                        Math.Min(92d, second.ActualHeight / 2d)),
-                    view);
+                var sourcePosition = EnumerateVisualDescendants<TextBlock>(second).Single(text =>
+                    System.Windows.Automation.AutomationProperties.GetName(text) == "Studio Browser clip source position");
+                Point nonTitlePoint = sourcePosition.TranslatePoint(new Point(4, sourcePosition.ActualHeight / 2), view);
                 DependencyObject hit = VisualTreeHelper.HitTest(
                         view,
                         nonTitlePoint)?.VisualHit ??
@@ -814,7 +806,7 @@ internal static partial class UiUxApplicationSurfaceTests
             using var viewModel = new SettingsViewModel();
             var settings = new SettingsView
             {
-                Width = 1266,
+                Width = 1666,
                 Height = 620,
                 DataContext = viewModel,
             };
@@ -824,16 +816,16 @@ internal static partial class UiUxApplicationSurfaceTests
             settings.UpdateLayout();
 
             var sectionList = EnumerateVisualDescendants<ListBox>(settings)
-                    .SingleOrDefault(list =>
+                    .SingleOrDefault(list => list.Name != "CompactSectionSelector" &&
                         System.Windows.Automation.AutomationProperties.GetName(list)
                             .Equals("Settings section selector", StringComparison.Ordinal)) ??
                 throw new InvalidOperationException(
-                    "The standard Settings navigation list is missing.");
+                    "The wide Settings navigation list is missing.");
             var sectionViewport =
                 settings.FindName("SectionScrollViewport") as
                     WorkspaceScrollViewport ??
                 throw new InvalidOperationException(
-                    "The standard Settings section viewport is missing.");
+                    "The wide Settings section viewport is missing.");
             sectionViewport.ApplyTemplate();
             ScrollViewer sectionScroller =
                 FindVisualDescendant<ScrollViewer>(sectionViewport) ??
@@ -883,6 +875,52 @@ internal static partial class UiUxApplicationSurfaceTests
             TestAssert.True(
                 Math.Abs(sectionScroller.VerticalOffset) <= 0.01d,
                 "Changing Settings sections must reset the new page to the top.");
+        });
+        return Task.CompletedTask;
+    }
+
+    private static Task CompactSettingsNavigationPreservesSelection()
+    {
+        RunOnSta(() =>
+        {
+            EnsureApplication();
+            using var model = new SettingsViewModel();
+            var view = new SettingsView { Height = 620, DataContext = model };
+            var selector = (ListBox)view.FindName("CompactSectionSelector");
+            foreach (double width in new[] { 1266d, 1000d, 850d })
+            {
+                view.Width = width;
+                view.SetResponsiveWidthForTest(width);
+                view.Measure(new Size(width, view.Height));
+                view.Arrange(new Rect(0, 0, width, view.Height));
+                view.UpdateLayout();
+                TestAssert.Equal(Visibility.Visible, selector.Visibility,
+                    "Small windows must expose their section choices without opening a menu.");
+                for (int i = 0; i < model.Sections.Count; i++)
+                {
+                    var item = (ListBoxItem)selector.ItemContainerGenerator.ContainerFromIndex(i);
+                    Rect bounds = item.TransformToAncestor(selector).TransformBounds(new Rect(item.RenderSize));
+                    TestAssert.True(bounds.Left >= 0 && bounds.Right <= selector.ActualWidth + 0.5 &&
+                        bounds.Top >= 0 && bounds.Bottom <= selector.ActualHeight + 0.5 && item.ActualHeight >= 64,
+                        "Every section must have a fully visible target without a horizontal or vertical scroll.");
+                    selector.SelectedIndex = i;
+                    view.UpdateLayout();
+                    TestAssert.Equal(model.Sections[i].Key, model.SelectedSection,
+                        "Choosing a compact section must open the matching page.");
+                }
+            }
+            model.SelectedSection = SettingsSection.AiModels;
+            view.Width = 1666;
+            view.SetResponsiveWidthForTest(view.Width);
+            view.Measure(new Size(view.Width, view.Height));
+            view.Arrange(new Rect(0, 0, view.Width, view.Height));
+            view.UpdateLayout();
+            ListBox sidebar = EnumerateVisualDescendants<ListBox>(view)
+                .Single(list => list != selector && ReferenceEquals(list.ItemsSource, model.Sections));
+            TestAssert.Equal(model.SelectedSectionItem, (SettingsSectionItem)sidebar.SelectedItem,
+                "The wide sidebar must retain the page chosen in compact navigation.");
+            TestAssert.Equal(Visibility.Collapsed, selector.Visibility,
+                "Only one set of section choices should be shown at a time.");
         });
         return Task.CompletedTask;
     }
@@ -1012,9 +1050,7 @@ internal static partial class UiUxApplicationSurfaceTests
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public IReadOnlyList<StudioToolItem> ToolSections { get; } = [];
 
-        public StudioToolSection SelectedTool { get; set; }
 
         public IReadOnlyList<StudioBrowserPreviewItem> BrowserPreviewItems
         {

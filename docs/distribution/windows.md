@@ -26,6 +26,19 @@ The compact runtime path is intentional because deeply nested Windows paths can 
 
 ## Build runtime packs
 
+Beta 5 requires visual runtime `0.8.25` and model pack `4.0.21` as a matching
+set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
+structured-decoding qualification lock for CPython `3.13.15`, PyTorch
+`2.13.0+cu130`, TorchVision `0.28.0+cu130`, TorchCodec `0.16.0`, and Transformers
+`5.16.1`. The release also updates Pillow, pip, and setuptools. Exact installed
+distribution versions, retained licenses, and dependency-audit results belong
+in the external release evidence. Do not reuse the Beta 4 qualification lock.
+
+For a pre-installation Debug qualification, the existing explicit Qwen override
+opt-in also accepts `REPLAYFOUNDRY_QWEN_SITE_PACKAGES` as an absolute existing
+directory. It uses the same restricted child-process environment as packaged
+execution. This override is absent from Release builds.
+
 All payload roots and outputs must remain outside the repository. Generate exact Python and wheel notices first; a missing license text is a hard failure unless a reviewed, hash-pinned official override is supplied.
 
 ```powershell
@@ -113,6 +126,8 @@ Before packaging, verify deterministic branding and compile a minimal setup:
 
 Production uses Microsoft Artifact Signing Public Trust for `Expired Soda Studios LLC`. No certificate, private key, OAuth token, or Azure credential belongs in source control or script arguments.
 
+The personal learning engine is proprietary. Official installers are built from the private repository and include its neural training, evaluation, and local storage implementation. Public source exports retain the integration contracts and an explicitly unavailable adapter; they do not include personal learning. The exporter excludes the learning implementation directory by default, allowing only the reviewed contract file. Never publish the private Git history, personal training examples, or learned checkpoints with a source release.
+
 Install Microsoft's official workstation tools:
 
 ```powershell
@@ -184,6 +199,10 @@ Each successful build writes external release records for the application payloa
    Artifact Signing role.
 7. Review the exact generated notices and every item in the
    [third-party compliance record](third-party-compliance.md).
+   Advanced runtime packaging also checks the exact installed Python package inventory against OSV.
+   An unavailable advisory service or a known advisory stops packaging. Upgrade affected dependencies,
+   rerun the frozen model and structured-decoding qualification, and regenerate signed manifests;
+   never patch files inside an already sealed or installed runtime pack.
 8. Upload runtime archives and corresponding source to their final HTTPS
    locations, then regenerate and verify the catalog against those URLs.
 9. Build, sign, timestamp, and verify the application, runtime-maintenance

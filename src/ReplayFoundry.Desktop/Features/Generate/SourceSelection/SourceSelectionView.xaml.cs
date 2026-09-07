@@ -6,9 +6,27 @@ namespace ReplayFoundry.Desktop.Features.Generate.SourceSelection;
 
 public partial class SourceSelectionView : UserControl
 {
+    public static readonly DependencyProperty IsFileDragOverProperty = DependencyProperty.Register(
+        nameof(IsFileDragOver), typeof(bool), typeof(SourceSelectionView), new PropertyMetadata(false));
+    public static readonly DependencyProperty IsShortLayoutProperty = DependencyProperty.Register(
+        nameof(IsShortLayout), typeof(bool), typeof(SourceSelectionView), new PropertyMetadata(false));
+
+    public bool IsShortLayout
+    {
+        get => (bool)GetValue(IsShortLayoutProperty);
+        private set => SetValue(IsShortLayoutProperty, value);
+    }
+
+    public bool IsFileDragOver
+    {
+        get => (bool)GetValue(IsFileDragOverProperty);
+        private set => SetValue(IsFileDragOverProperty, value);
+    }
+
     public SourceSelectionView()
     {
         InitializeComponent();
+        SizeChanged += (_, e) => IsShortLayout = e.NewSize.Height is > 0 and < 660;
     }
 
     private void DropZone_PreviewDragOver(
@@ -21,6 +39,15 @@ public partial class SourceSelectionView : UserControl
                 : DragDropEffects.None;
 
         e.Handled = true;
+        IsFileDragOver = e.Effects == DragDropEffects.Copy;
+    }
+
+    private void DropZone_DragLeave(object sender, DragEventArgs e)
+    {
+        if (sender is FrameworkElement target &&
+            new Rect(new Point(), target.RenderSize).Contains(e.GetPosition(target)))
+            return;
+        IsFileDragOver = false;
     }
 
     private async void DropZone_Drop(
@@ -28,6 +55,7 @@ public partial class SourceSelectionView : UserControl
         DragEventArgs e)
     {
         e.Handled = true;
+        IsFileDragOver = false;
 
         if (DataContext is not GenerateViewModel viewModel)
         {

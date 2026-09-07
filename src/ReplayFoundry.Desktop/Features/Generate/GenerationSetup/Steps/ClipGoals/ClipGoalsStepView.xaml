@@ -2,6 +2,7 @@
     x:Class="ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.ClipGoals.ClipGoalsStepView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     d:DesignHeight="420"
@@ -19,9 +20,9 @@
 
         <StackPanel Grid.Column="0" Style="{DynamicResource GenerationSetup.MainContent}">
 
-            <TextBlock
+            <controls:FoundryHeading
                 Foreground="{DynamicResource Brush.TextPrimary}"
-                FontSize="23"
+                FontFamily="{DynamicResource Font.Display}" FontSize="23"
                 FontWeight="SemiBold"
                 Text="Clip goals" />
 
@@ -117,7 +118,7 @@
                 </StackPanel>
             </Border>
 
-            <Expander Header="Selection and quality" Margin="0,0,0,20" Style="{DynamicResource Control.DisclosureExpander}">
+            <Expander Header="Fine-tune selection" Margin="0,0,0,20" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,16,0,0">
             <Border
                 Style="{DynamicResource GenerationSetup.SectionCard}">
@@ -209,6 +210,22 @@
 
             </Border>
 
+                                    <TextBlock
+                        Style="{DynamicResource GenerationSetup.FieldLabel}"
+                        Text="Balance of gameplay and voice" />
+
+                    <ListBox ItemsSource="{Binding EmphasisOptions}" SelectedItem="{Binding SelectedEmphasisOption, Mode=TwoWay}"
+                        DisplayMemberPath="Name" Style="{DynamicResource GenerationSetup.OptionList}"
+                        ItemContainerStyle="{DynamicResource GenerationSetup.ChoiceItem}" AutomationProperties.Name="Focus of your clips">
+                        <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    </ListBox>
+
+                    <TextBlock
+                        Margin="0,9,0,0"
+                        Foreground="{DynamicResource Brush.TextSecondary}"
+                        FontSize="12"
+                        Text="{Binding SelectedEmphasisDescription}"
+                        TextWrapping="Wrap" />
                 </StackPanel>
             </Expander>
 
@@ -217,64 +234,26 @@
 
                 <StackPanel>
 
-                    <TextBlock
-                        Style="{DynamicResource GenerationSetup.FieldLabel}"
-                        Text="Content emphasis" />
 
-                    <ComboBox
-                        ItemsSource="{Binding EmphasisOptions}"
-                        SelectedItem="{Binding SelectedEmphasisOption, Mode=TwoWay}"
-                        DisplayMemberPath="Name"
-                        Style="{DynamicResource GenerationSetup.ComboBox}" />
 
-                    <TextBlock
-                        Margin="0,9,0,0"
-                        Foreground="{DynamicResource Brush.TextSecondary}"
-                        FontSize="12"
-                        Text="{Binding SelectedEmphasisDescription}"
-                        TextWrapping="Wrap" />
-
-                    <TextBlock Margin="0,18,0,8" Text="Find moments about"
+                    <TextBlock Margin="0,18,0,8" Text="What should stand out?"
                         Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" />
                     <ComboBox ItemsSource="{Binding IntentOptions}"
                         SelectedItem="{Binding SelectedIntentOption, Mode=TwoWay}"
                         DisplayMemberPath="Name" Style="{DynamicResource GenerationSetup.ComboBox}" />
-                    <Expander Header="Search the transcript (optional)" Margin="0,16,0,0">
-                        <Expander.Style>
-                            <Style TargetType="Expander" BasedOn="{StaticResource Control.DisclosureExpander}">
-                                <Setter Property="IsExpanded" Value="True" />
-                                <Style.Triggers>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding NaturalLanguageQuery}" Value="" />
-                                            <Condition Binding="{Binding SpokenSearchTerms}" Value="" />
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="IsExpanded" Value="False" />
-                                    </MultiDataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Expander.Style>
-                        <StackPanel>
-                    <TextBlock Margin="0,12,0,6" Text="Exact spoken phrases (optional)"
-                        Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" />
-                    <TextBox Text="{Binding SpokenSearchTerms, UpdateSourceTrigger=PropertyChanged}"
-                        MaxLength="240" Padding="8" MinHeight="34" />
-                    <TextBlock Margin="0,8,0,0" FontSize="12"
-                        Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap"
-                        Text="Separate exact phrases with commas. Spoken matches guide review; they do not confirm a game event." />
-                    <TextBlock Margin="0,12,0,5" Text="Describe what to find (optional, English)"
-                        Foreground="{DynamicResource Brush.TextSecondary}" />
-                    <TextBox Text="{Binding NaturalLanguageQuery, UpdateSourceTrigger=PropertyChanged}" MaxLength="240"
-                        TextWrapping="Wrap" MinHeight="48" />
-                        </StackPanel>
-                    </Expander>
+                    <TextBlock Margin="0,14,0,6" Text="Describe a moment or search for words (optional)"
+                        Style="{DynamicResource Text.FormLabel}" TextWrapping="Wrap" />
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" MaxLength="1024"
+                        AutomationProperties.Name="Find moments by meaning or exact words"
+                        MinHeight="64" TextWrapping="Wrap" AcceptsReturn="True" />
+                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                        Text="Describe what you want. Put exact spoken phrases in quotes, for example: a funny reaction &quot;no way&quot;. You can use both together." />
                     <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="12"
                         Foreground="{DynamicResource Brush.TextSecondary}"
                         Text="Semantic search, comebacks, tutorials and reactions use a Thorough scan and a one-time 22 MiB download. English text is processed on your computer." />
-                    <Expander Header="Search limitations" Margin="0,8,0,0" Style="{DynamicResource Control.DisclosureExpander}">
-                        <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap"
-                                   Text="Similarity suggests passages for visual review, not proof. Negation, hypothetical speech and sarcasm can produce false matches. Other languages and unspoken events may be missed." />
-                    </Expander>
+                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                        Text="Search helps find promising passages. Replay Foundry still checks each moment against the recording."
+                        ToolTip="Quoted words match the transcript. Descriptions search by meaning in English. Sarcasm, hypothetical speech, negation and unspoken events can be missed or misunderstood." />
 
                 </StackPanel>
 

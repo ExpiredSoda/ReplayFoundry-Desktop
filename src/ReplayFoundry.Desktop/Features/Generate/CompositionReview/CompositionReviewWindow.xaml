@@ -153,7 +153,7 @@
                     Margin="0,7,0,0"
                     Foreground="{DynamicResource Brush.TextSecondary}"
                     FontSize="13"
-                    Text="Show Replay Foundry where the gameplay, presenter camera, chat, and overlays appear. Review each video and confirm its areas."
+                    Text="Show where your game and camera appear. Try a suggested layout, or draw the areas yourself."
                     TextWrapping="Wrap" />
 
             </StackPanel>
@@ -433,7 +433,7 @@
                             Margin="12,0,0,0"
                             AutomationProperties.Name="Load preview image"
                             Command="{Binding RefreshPreviewCommand}"
-                            Content="Load preview"
+                            Content="Refresh image"
                             Style="{StaticResource GenerationSetup.SecondaryButton}" />
 
                     </Grid>
@@ -460,6 +460,7 @@
                             AutomationProperties.Name="Representative preview timestamp"
                             Maximum="{Binding SelectedSource.MaximumPreviewTimestampSeconds}"
                             Minimum="0"
+                            IsMoveToPointEnabled="True"
                             SmallChange="1"
                             Value="{Binding SelectedSource.RequestedTimestampSeconds, Mode=TwoWay}" />
 
@@ -537,11 +538,19 @@
 
                     <StackPanel>
 
-                        <Grid>
-
-                            <Grid.Style>
-
-                                <Style TargetType="{x:Type Grid}">
+                        <Border Padding="14" Margin="0,0,0,16" Background="{DynamicResource Brush.KineticCanvasPane}" CornerRadius="8">
+                            <StackPanel DataContext="{Binding SelectedSource.LayoutAssist}">
+                                <controls:FoundryHeading Text="A head start on your layout" FontSize="15" />
+                                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,8,0,12"
+                                    Style="{DynamicResource Text.Meta}" AutomationProperties.LiveSetting="Polite" />
+                                <Button Content="Suggest a layout" Command="{Binding SuggestCommand}" AutomationProperties.Name="Suggest a camera layout"
+                                    Style="{DynamicResource GenerationSetup.SecondaryButton}" />
+                                <Button Content="Add suggested boxes" Command="{Binding ApplyCommand}" Margin="0,6,0,0"
+                                    Visibility="{Binding HasSuggestion, Converter={StaticResource BoolToVisibility}}"
+                                    Style="{DynamicResource GenerationSetup.PrimaryButton}" />
+                            </StackPanel>
+                        </Border>
+                        <Grid><Grid.Style><Style TargetType="{x:Type Grid}">
 
                                     <Setter
                                         Property="IsEnabled"
@@ -583,7 +592,7 @@
                                 <ComboBox
                                     Margin="0,9,0,10"
                                     AutomationProperties.Name="Selected area type"
-                                    ItemsSource="{Binding AvailableRoles}"
+                                    ItemsSource="{Binding AvailableRoles}" ItemTemplate="{StaticResource StudioOptionTemplate}"
                                     SelectedItem="{Binding SelectedSource.SelectedRegion.Role, Mode=TwoWay}" />
 
                                 <TextBlock
@@ -621,25 +630,25 @@
                         <Button
                             AutomationProperties.Name="Add Gameplay Area"
                             Command="{Binding AddGameplayCommand}"
-                            Content="Add Gameplay Area"
+                            Content="+ Gameplay"
                             Style="{StaticResource CompositionReview.SmallButton}" />
 
                         <Button
                             AutomationProperties.Name="Add Presenter Area"
                             Command="{Binding AddPresenterCommand}"
-                            Content="Add Presenter Area"
+                            Content="+ Your camera"
                             Style="{StaticResource CompositionReview.SmallButton}" />
 
                         <Button
                             AutomationProperties.Name="Add Chat or Text Area"
                             Command="{Binding AddChatOrTextCommand}"
-                            Content="Add Chat/Text Area"
+                            Content="+ Chat or text"
                             Style="{StaticResource CompositionReview.SmallButton}" />
 
                         <Button
                             AutomationProperties.Name="Add Overlay Area"
                             Command="{Binding AddOverlayCommand}"
-                            Content="Add Overlay Area"
+                            Content="+ Logo or overlay"
                             Style="{StaticResource CompositionReview.SmallButton}" />
 
                         <Button

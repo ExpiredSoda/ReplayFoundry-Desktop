@@ -200,12 +200,18 @@ internal static class GenerateUsabilityTests
             "Codec internals should not dominate the source selector.");
         TestAssert.True(viewModel.HasWaveform,
             "The selected prepared sample should project an immutable waveform.");
-        TestAssert.Equal(4, viewModel.WaveformBars.Count,
+        TestAssert.Equal(4, viewModel.WaveformPeaks.Count,
             "The waveform projection should preserve every prepared peak.");
         TestAssert.True(viewModel.IsAuditionPlaying,
             "The selected waveform should react while its exact sample is playing.");
         TestAssert.Equal(0.25d, viewModel.AuditionProgress,
             "Waveform progress should follow the player's bounded media position.");
+        viewModel.SeekAuditionCommand.Execute(.8);
+        TestAssert.Equal(.8, viewModel.AuditionProgress, "Clicking the waveform seeks the selected prepared sample.");
+        TestAssert.Equal(viewModel.Streams[1].Stream.Index, audition.StreamIndex, "Seeking preserves the absolute stream identity.");
+        viewModel.SelectedStream = viewModel.Streams[0];
+        viewModel.SeekAuditionCommand.Execute(.4);
+        TestAssert.Equal(viewModel.Streams[0].Stream.Index, audition.StreamIndex, "A changed track receives its own seek command.");
     }
 
     private static async Task AudioAuditionsPrepareOnEntry()
@@ -653,6 +659,14 @@ internal static class GenerateUsabilityTests
             PlaybackChanged;
 
         public int StreamIndex { get; private set; } = -1;
+        public bool CanSeek => true;
+        public bool Seek(PreparedGenerationSource source, int absoluteAudioStreamIndex, double progress)
+        {
+            StreamIndex = absoluteAudioStreamIndex;
+            PlaybackChanged?.Invoke(this, new AudioStreamAuditionPlaybackChangedEventArgs(source.Media.FullPath,
+                absoluteAudioStreamIndex, TimeSpan.FromSeconds(progress * 30), TimeSpan.FromSeconds(30), isPlaying: false));
+            return true;
+        }
         public List<int> PreparedStreamIndices { get; } = [];
 
         public Task<AudioStreamAuditionPreview> PrepareAsync(

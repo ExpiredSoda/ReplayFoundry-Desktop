@@ -7,7 +7,41 @@
         <StackPanel>
             <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="Local tools &amp; AI" />
             <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Body}" Text="Replay Foundry keeps its video tools and optional AI on this PC." TextWrapping="Wrap" />
-            <controls:UnavailableBanner Margin="0,12,0,0" Title="{Binding RuntimeProfileStatus}" Description="{Binding AiStatus}" />
+            <Border Margin="0,16,0,0" Style="{DynamicResource Control.CanvasInsetCard}" DataContext="{Binding Learning}">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding State}" Foreground="{DynamicResource Brush.BrandCyan}" FontWeight="SemiBold" />
+                        <controls:FoundryHeading Text="Foundry Taste" Style="{DynamicResource Text.SectionTitle}" />
+                    </DockPanel>
+                    <TextBlock Margin="0,6,0,0" Text="Learns which moments feel right for you." Style="{DynamicResource Text.Body}" TextWrapping="Wrap" />
+                    <CheckBox Margin="0,10,0,0" Content="Learn from my clip choices" IsEnabled="{Binding IsAvailable}"
+                        IsChecked="{Binding Enabled, Mode=TwoWay}" Style="{DynamicResource Control.FormCheckBox}" />
+                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                        Text="Your ratings, finished renders, successful publishes, moments you bring into Studio, and cuts you create help train your personal model. Neutral is a real rating; an untouched clip is not a dislike." />
+                    <TextBlock Margin="0,10,0,0" Text="{Binding Summary}" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" />
+                    <TextBlock Margin="0,6,0,0" Text="{Binding Status}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                    <WrapPanel Margin="0,12,0,0">
+                        <Button Content="Update my model" Command="{Binding TrainCommand}" Style="{DynamicResource Control.PrimaryButton}" Margin="0,0,8,8"
+                            ToolTip="Training starts after eight different clips have ratings, with more than one rating choice." ToolTipService.ShowOnDisabled="True" />
+                        <Button Content="Forget learned preferences" Command="{Binding ResetCommand}" Style="{DynamicResource Control.GhostButton}" Margin="0,0,0,8"
+                            ToolTip="Clears this personal model and its learning history. Your clips and projects stay." />
+                    </WrapPanel>
+                    <TextBlock Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                        Text="Updates run automatically. Your model must pass a check on separate recordings before it changes suggestions. Learning stays on this PC and uses the CPU, leaving GPU memory for video work." />
+                </StackPanel>
+            </Border>
+            <Border Margin="0,16,0,0" Padding="16" CornerRadius="8"
+                Background="{DynamicResource Brush.SurfaceInset}" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <controls:FoundryFrameMark Width="70" Height="60" Margin="0,0,18,0" IconKey="Icon.Spark" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="{Binding RuntimeProfileStatus}" />
+                        <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Body}" Text="{Binding AiStatus}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding ToolchainStatus}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+            </Border>
             <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
                 <StackPanel>
                     <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Title rewriting" />
@@ -37,37 +71,39 @@
                         Visibility="{Binding HasEditorialRerollPreferenceNotice, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </Border>
-            <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
-                <StackPanel>
-                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="Video tools" />
-                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding ToolchainStatus}" TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
-            <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding AiCapabilities}">
+            <controls:FoundryHeading Margin="0,24,0,4" Style="{DynamicResource Text.SectionTitle}" Text="What these tools do" />
+            <ItemsControl Margin="0,8,-16,0" ItemsSource="{Binding AiCapabilities}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="0,0,0,8" Style="{DynamicResource Control.CanvasInsetCard}">
+                        <Border Margin="0,0,16,16" Style="{DynamicResource Control.CanvasInsetCard}">
                             <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Capability}" />
-                                    <TextBlock Margin="0,4,18,0" Style="{DynamicResource Text.Meta}" Text="{Binding Detail}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <controls:StatusBadge Grid.Column="1" Text="{Binding Status}" />
+                                <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontWeight="SemiBold"
+                                    Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Capability}" TextWrapping="Wrap" />
+                                <controls:StatusBadge Grid.Column="1" VerticalAlignment="Top" Text="{Binding Status}" />
+                                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0"
+                                    Style="{DynamicResource Text.Meta}" Text="{Binding Detail}" TextWrapping="Wrap" />
                             </Grid>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <WrapPanel Margin="0,8,0,0">
+            <controls:FoundryHeading Margin="0,8,0,0" Style="{DynamicResource Text.SectionTitle}" Text="Manage your tools" />
+            <TextBlock Margin="0,6,0,12" Style="{DynamicResource Text.Meta}"
+                Text="Update for the latest tools, or repair an installation that isn't working." TextWrapping="Wrap" />
+            <WrapPanel>
                 <Button
                     AutomationProperties.Name="Install or update Advanced AI"
                     Command="{Binding AddAdvancedAiCommand}"
                     Content="{Binding AdvancedAiActionLabel}"
-                    Style="{DynamicResource Control.PrimaryButton}" />
-                <Button Margin="8,0,0,0" AutomationProperties.Name="Repair local tools" Command="{Binding RepairRuntimePacksCommand}" Content="Repair installed tools" Style="{DynamicResource Control.GhostButton}" />
-                <Button Margin="8,0,0,0" AutomationProperties.Name="Remove Advanced AI" Command="{Binding RemoveAdvancedAiCommand}" Content="Remove Advanced AI" Style="{DynamicResource Control.DestructiveButton}" />
-                <Button Margin="8,0,0,0" AutomationProperties.Name="Open local tools folder" Command="{Binding OpenRuntimePackFolderCommand}" Content="Open tools folder" Style="{DynamicResource Control.GhostButton}" />
+                    Margin="0,0,8,8" Style="{DynamicResource Control.PrimaryButton}" />
+                <Button Margin="0,0,8,8" AutomationProperties.Name="Repair local tools" Command="{Binding RepairRuntimePacksCommand}" Content="Repair installed tools" Style="{DynamicResource Control.GhostButton}" />
+                <Button Margin="0,0,8,8" AutomationProperties.Name="Open local tools folder" Command="{Binding OpenRuntimePackFolderCommand}" Content="Open tools folder" Style="{DynamicResource Control.GhostButton}" />
+                <Button Margin="0,0,0,8" AutomationProperties.Name="Remove Advanced AI" Command="{Binding RemoveAdvancedAiCommand}" Content="Remove Advanced AI" Style="{DynamicResource Control.DestructiveButton}" />
             </WrapPanel>
             <TextBlock Margin="0,12,0,0" Style="{DynamicResource Text.Meta}" Text="Core clip discovery stays available after Advanced AI is removed. Projects and rendered videos are never removed by these buttons." TextWrapping="Wrap" />
             <Border

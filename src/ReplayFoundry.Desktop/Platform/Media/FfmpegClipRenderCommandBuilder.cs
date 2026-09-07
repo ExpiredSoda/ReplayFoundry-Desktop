@@ -435,9 +435,8 @@ internal static class FfmpegClipRenderCommandBuilder
             StudioVideoEffectPreset.Noir =>
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"hue=s={1 - amount:0.###}:" +
-                    $"b={-0.025 * amount:0.###}," +
-                    $"curves=preset=increase_contrast,"),
+                    $"hue=s={1 - amount:0.###}:b={-0.025 * amount:0.###}," +
+                    $"curves=master='0/0 0.25/{0.25 - 0.06 * amount:0.###} 0.75/{0.75 + 0.06 * amount:0.###} 1/1',"),
             StudioVideoEffectPreset.Chromatic =>
                 string.Create(
                     CultureInfo.InvariantCulture,
@@ -447,7 +446,7 @@ internal static class FfmpegClipRenderCommandBuilder
             StudioVideoEffectPreset.SoftBloom =>
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"gblur=sigma={0.25 + 0.9 * amount:0.###}:steps=1," +
+                    $"gblur=sigma={1.15 * amount:0.###}:steps=1," +
                     $"hue=b={0.035 * amount:0.###}:" +
                     $"s={1 + 0.10 * amount:0.###},"),
             StudioVideoEffectPreset.Vivid =>

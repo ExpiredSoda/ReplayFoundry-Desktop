@@ -16,10 +16,12 @@
     mc:Ignorable="d">
     <Grid Margin="8">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-
-            <Grid Grid.Row="0">
+        <controls:FoundryPageHeader MaxWidth="1600" Title="Your library" IconKey="Icon.Folder"
+            Description="Finished clips, ready to revisit or share." />
+            <Grid Grid.Row="1">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="MinHeight" Value="0" />
@@ -125,28 +127,12 @@
                     BorderThickness="0"
                     CornerRadius="7"
                     Visibility="{Binding ShouldShowPlaceholder, Converter={StaticResource BoolToVisibility}}">
-                    <controls:IssuePanel
-                        MaxWidth="720"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        AutomationProperties.Name="Library content status"
-                        IconKey="Icon.Project"
-                        Reference="RF-LIB-001"
-                        StageOne="Generate a source"
-                        StageTwo="Create a clip"
-                        StageThree="Organize and find"
-                        Summary="Your finished clips live here"
-                        Suggestion="Add a recording in Generate, edit a clip in Studio, then export it to your Library."
-                        Details="Library is working. Only finished Studio files appear here; clips you leave out stay available in Studio." />
+                    <StackPanel MaxWidth="540" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <controls:EmptyState AutomationProperties.Name="Library content status" IconKey="Icon.Folder"
+                            Title="Your library couldn't load"
+                            Description="Close and reopen Replay Foundry to try again. Your video files are still on this PC." />
+                    </StackPanel>
                 </Border>
-
-                <controls:UnavailableBanner
-                    Margin="12"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Title="Library content is unavailable"
-                    Description="Replay Foundry could not read your saved Library information. Existing video files were not changed."
-                    Visibility="{Binding IsUnavailable, Converter={StaticResource BoolToVisibility}}" />
             </Grid>
     </Grid>
 </UserControl>

@@ -8,7 +8,6 @@ public sealed class StudioDesignViewModel
 {
     public StudioDesignViewModel()
     {
-        ToolSections = StudioSurfaceCatalog.ToolSections;
         InspectorSections = StudioSurfaceCatalog.InspectorSections;
         BrowserPreviewItems = new[]
         {
@@ -17,7 +16,6 @@ public sealed class StudioDesignViewModel
         };
     }
 
-    public IReadOnlyList<StudioToolItem> ToolSections { get; }
     public IReadOnlyList<StudioInspectorItem> InspectorSections { get; }
     public IReadOnlyList<StudioBrowserPreviewItem> BrowserPreviewItems { get; }
     public StudioDesignViewModel Preview => this;
@@ -25,7 +23,6 @@ public sealed class StudioDesignViewModel
     public StudioDesignViewModel Clip => this;
     public StudioDesignViewModel Preference => this;
     public StudioDesignViewModel FinalRender => this;
-    public StudioToolSection SelectedTool => StudioToolSection.MomentsClips;
     public StudioInspectorSection SelectedInspector => StudioInspectorSection.Clip;
     public bool IsEmpty => false;
     public WorkspaceSurfaceState SurfaceState => WorkspaceSurfaceState.ContentReady;
@@ -56,8 +53,6 @@ public sealed class StudioDesignViewModel
     public string ModeBadge => "STUDIO / EDIT";
     public string StatusText => "Design preview · no project loaded at runtime";
     public string ErrorSummary => "Studio could not load a project.";
-    public string SelectedToolTitle => "Clips";
-    public string SelectedToolDescription => "Choose the generated clip to preview and edit.";
     public string SelectedInspectorTitle => "Clip controls";
     public string SelectedInspectorDescription => "Changes stay nondestructive until render.";
     public string PreviewTimecode => "0:12";
@@ -67,7 +62,6 @@ public sealed class StudioDesignViewModel
     public string SequenceSummary => "Selected clip layers";
     public string SelectedClipDurationText => "0:45";
     public string CaptionVisibilityText => "Hide captions";
-    public ICommand? SelectToolCommand => null;
     public ICommand? SelectBrowserAssetCommand => null;
     public ICommand? SelectInspectorCommand => null;
     public ICommand? PlayCommand => null;

@@ -14,7 +14,8 @@ internal sealed record PublishFeatureDependencies(
     ApplicationPreferenceServices Preferences,
     GenerationWorkspaceServices Workspace,
     EditorialServices Editorial,
-    GenerationExperienceServices Experience);
+    GenerationExperienceServices Experience,
+    Features.Personalization.TasteInteractionRecorder? TasteInteractions = null);
 
 internal sealed record PublishFeatureServices(
     YouTubeConnectionPermissionState ConnectionPermission,
@@ -30,6 +31,8 @@ internal static class PublishFeatureComposition
             CreateConnectionPermission();
         IYouTubePublishingService? publishing =
             YouTubePublishingFactory.CreateDefault(connectionPermission);
+        if (publishing is not null && dependencies.TasteInteractions is { } recorder)
+            publishing = new Features.Personalization.TastePublishingService(publishing, recorder);
         var viewModel = new PublishViewModel(
             dependencies.Workspace.LibraryCatalog,
             publishing,

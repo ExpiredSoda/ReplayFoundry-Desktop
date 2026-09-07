@@ -156,11 +156,11 @@
                     <TextBlock
                         FontWeight="SemiBold"
                         Foreground="{DynamicResource Brush.TextPrimary}"
-                        Text="Try another angle" />
+                        Text="Writing style" />
                     <TextBlock
                         Margin="0,3,0,8"
                         Style="{DynamicResource Text.Meta}"
-                        Text="Keep the facts, but change what the title leads with."
+                        Text="Choose what your title should lead with."
                         TextWrapping="Wrap" />
                     <ComboBox
                         AutomationProperties.Name="Title and description angle"
@@ -284,54 +284,12 @@
                 </StackPanel>
             </Expander>
 
-            <Expander
-                Margin="0,12,0,0"
-                Header="Writing preferences"
-                IsExpanded="False"
-                Style="{DynamicResource Control.QuietExpander}">
-                <Border Margin="0,8,0,0" Padding="10" Style="{DynamicResource Control.CanvasGhostZone}">
-                    <StackPanel>
-                        <TextBlock
-                            Style="{DynamicResource Text.Meta}"
-                            Text="These preferences guide future suggestions. This clip's tags and wording stay with this clip."
-                            TextWrapping="Wrap" />
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Audience name (for example, Chat)" />
-                        <TextBox
-                            Margin="0,4,0,0"
-                            AutomationProperties.Name="Editorial audience name"
-                            IsEnabled="{Binding IsProjectDraft}"
-                            MaxLength="40"
-                            Style="{DynamicResource Control.FormTextBox}"
-                            Text="{Binding Editorial.AudienceAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Preferred title wording" />
-                        <TextBox
-                            Margin="0,4,0,0"
-                            AutomationProperties.Name="Editorial naming guidance"
-                            IsEnabled="{Binding IsProjectDraft}"
-                            MaxLength="300"
-                            Style="{DynamicResource Control.FormTextBox}"
-                            Text="{Binding Editorial.NamingGuidance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Reusable description ending" />
-                        <TextBox
-                            MinHeight="64"
-                            Margin="0,4,0,0"
-                            AcceptsReturn="True"
-                            AutomationProperties.Name="Reusable description signature"
-                            IsEnabled="{Binding IsProjectDraft}"
-                            MaxLength="1500"
-                            Style="{DynamicResource Control.FormTextBox}"
-                            Text="{Binding Editorial.DescriptionSignature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            TextWrapping="Wrap" />
-                        <Button
-                            Margin="0,8,0,0"
-                            HorizontalAlignment="Left"
-                            AutomationProperties.Name="Save writing preferences"
-                            Command="{Binding Editorial.SaveProfileCommand}"
-                            Content="Save preferences"
-                            Style="{DynamicResource Control.StudioSecondaryButton}" />
-                    </StackPanel>
-                </Border>
-            </Expander>
+            <Button Margin="0,12,0,0" HorizontalAlignment="Left"
+                AutomationProperties.Name="Open writing defaults"
+                Command="{Binding DataContext.OpenWritingDefaultsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                Content="Writing defaults in Settings  →"
+                ToolTip="Set your audience name, preferred wording, default tags and description ending in one place."
+                Style="{DynamicResource Control.StudioQuietButton}" />
         </StackPanel>
     </Border>
 </UserControl>

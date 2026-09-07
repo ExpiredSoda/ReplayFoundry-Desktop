@@ -571,7 +571,8 @@ public static class GenerationHiddenMomentPlanner
                     entry.Candidate,
                     entry.Refinement,
                     GenerationClipPreferenceFeatureExtractor.CreateContext(moments.Request.Setup,
-                        entry.Source.PreparedSource.Media.FullPath)),
+                        entry.Source.PreparedSource.Media.FullPath),
+                    intelligence?.VisualSemantic?.Observations.FirstOrDefault(review => ReferenceEquals(review.Candidate, entry.Candidate))),
                 editorialPreference:
                     moments.Request.Setup.MetadataAuthoringMode ==
                     GenerationMetadataAuthoringMode.AiRequired

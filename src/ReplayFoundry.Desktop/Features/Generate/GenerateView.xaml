@@ -44,8 +44,7 @@
         <Border Grid.Row="1" MaxWidth="1120" Margin="24,0,24,12" Padding="0,10,0,0"
                 BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="0,1,0,0">
             <Expander Header="Recent projects" Style="{DynamicResource Control.DisclosureExpander}">
-                <ScrollViewer MaxHeight="190" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel>
+                <StackPanel Margin="0,10,0,0">
                         <DockPanel LastChildFill="True" Margin="0,0,0,10">
                             <Button DockPanel.Dock="Right" Margin="16,0,0,0" MinWidth="90"
                                     AutomationProperties.Name="Clear all recent Generate projects"
@@ -67,6 +66,8 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
+                        <ScrollViewer x:Name="RecentProjectsScrollViewer" MaxHeight="186" CanContentScroll="False"
+                            PanningMode="VerticalOnly" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl ItemsSource="{Binding RecentProjects}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><WrapPanel ItemWidth="240" /></ItemsPanelTemplate>
@@ -86,10 +87,19 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding RecentProjectStatus}"
-                                   TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-                    </StackPanel>
-                </ScrollViewer>
+                        </ScrollViewer>
+                        <TextBlock Margin="0,4,0,0" Text="{Binding RecentProjectStatus}"
+                                   TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Meta}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RecentProjectStatus}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                        <DataTrigger Binding="{Binding RecentProjectStatus}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                </StackPanel>
             </Expander>
         </Border>
     </Grid>

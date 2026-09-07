@@ -25,6 +25,8 @@ public sealed partial class UserReportSanitizer : IUserReportTextSanitizer
     {
         if (string.IsNullOrWhiteSpace(value)) return "(not available)";
         string sanitized = value.Replace('\0', ' ');
+        sanitized = PrivateKey().Replace(sanitized, "[redacted-private-key]");
+        sanitized = CredentialUrl().Replace(sanitized, "$1[redacted-credentials]@");
         string profile = Environment.GetFolderPath(
             Environment.SpecialFolder.UserProfile);
         if (!string.IsNullOrWhiteSpace(profile))
@@ -40,6 +42,7 @@ public sealed partial class UserReportSanitizer : IUserReportTextSanitizer
             match => match.Groups[1].Value + "=[redacted]");
         sanitized = BearerToken().Replace(sanitized, "Bearer [redacted]");
         sanitized = JsonWebToken().Replace(sanitized, "[redacted-token]");
+        sanitized = ProviderToken().Replace(sanitized, "[redacted-token]");
         sanitized = EmailAddress().Replace(sanitized, "[redacted-email]");
         sanitized = UrlParameters().Replace(
             sanitized,
@@ -110,11 +113,11 @@ public sealed partial class UserReportSanitizer : IUserReportTextSanitizer
     }
 
     [GeneratedRegex(
-        "(?i)(?<![A-Za-z0-9])(?:[A-Z]:\\\\|\\\\\\\\)[^\\r\\n\\t<>|\"']+")]
+        "(?i)(?<![A-Za-z0-9])(?:[A-Z]:[\\\\/]|\\\\\\\\)[^\\r\\n\\t<>|\"']+")]
     private static partial Regex WindowsPath();
 
     [GeneratedRegex(
-        "(?i)\\b(access[_-]?token|refresh[_-]?token|client[_-]?secret|password|authorization|api[_-]?key|cookie|session[_-]?id)\\b[\\s\"']*[:=][\\s\"']*[^\\s,;\"']+")]
+        "(?i)\\b(access[_-]?token|refresh[_-]?token|client[_-]?secret|token|secret|password|authorization|api[_-]?key|cookie|session[_-]?id)\\b[\\s\"']*[:=][\\s\"']*[^\\s,;\"']+")]
     private static partial Regex SecretAssignment();
 
     [GeneratedRegex(@"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+")]
@@ -122,6 +125,15 @@ public sealed partial class UserReportSanitizer : IUserReportTextSanitizer
 
     [GeneratedRegex(@"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b")]
     private static partial Regex JsonWebToken();
+
+    [GeneratedRegex(@"\b(?:github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|cf(?:at|ut)_[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|ya29\.[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{30,})\b")]
+    private static partial Regex ProviderToken();
+
+    [GeneratedRegex(@"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----[\s\S]*?(?:-----END (?:[A-Z0-9 ]+ )?PRIVATE KEY-----|$)")]
+    private static partial Regex PrivateKey();
+
+    [GeneratedRegex(@"(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@]+@")]
+    private static partial Regex CredentialUrl();
 
     [GeneratedRegex(@"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")]
     private static partial Regex EmailAddress();

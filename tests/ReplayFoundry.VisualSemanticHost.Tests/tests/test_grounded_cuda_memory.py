@@ -94,7 +94,7 @@ class GroundedCudaMemoryTests(unittest.TestCase):
 
     def test_policy_source_hash_and_fixed_constraints_are_exact(self) -> None:
         self.assertEqual(policy.POLICY_SHA256, policy._normalized_policy_sha256())
-        self.assertEqual(3 * 1024 * 1024 * 1024, policy.RESERVED_ALLOCATOR_HEADROOM_BYTES)
+        self.assertEqual(2 * 1024 * 1024 * 1024, policy.RESERVED_ALLOCATOR_HEADROOM_BYTES)
         self.assertEqual(11_705_485_312, policy.QUALIFICATION_REFERENCE_PEAK_ALLOCATED_BYTES)
         self.assertEqual(
             "real-qwen-metadata-v1.6.json",
@@ -148,7 +148,7 @@ class GroundedCudaMemoryTests(unittest.TestCase):
             SimpleNamespace(cuda=cuda)
         )
         startup_free = self.TOTAL - 512 * 1024 * 1024
-        expected_limit = startup_free - 3 * 1024 * 1024 * 1024
+        expected_limit = startup_free - 2 * 1024 * 1024 * 1024
         expected_fraction = expected_limit / self.TOTAL
         self.assertEqual([(expected_fraction, 0)], cuda.memory.calls)
         self.assertEqual([0], cuda.reset_peak_calls)
@@ -242,6 +242,19 @@ class GroundedCudaMemoryTests(unittest.TestCase):
             policy.configure_grounded_cuda_memory(SimpleNamespace(cuda=cuda))
         self.assertEqual([], cuda.memory.calls)
 
+    def test_desktop_and_capture_app_headroom_admits_the_16_gib_card(self) -> None:
+        # The observed 13.75 GiB free failed the previous 3 GiB reserve.
+        free = int(13.75 * 1024 ** 3)
+        self.assertLess(free - 3 * 1024 ** 3, policy.MINIMUM_VIABLE_ALLOCATOR_LIMIT_BYTES)
+        cuda = _FakeCuda(self.TOTAL, free)
+        applied = policy.configure_grounded_cuda_memory(SimpleNamespace(cuda=cuda))
+        self.assertEqual(free - 2 * 1024 ** 3, applied.allocator_limit_bytes)
+        self.assertGreater(applied.allocator_limit_bytes, policy.MINIMUM_VIABLE_ALLOCATOR_LIMIT_BYTES)
+        self.assertLess(applied.allocator_fraction, free / self.TOTAL)
+        cuda.free = 2 * 1024 ** 3
+        policy.admit_grounded_generation(SimpleNamespace(cuda=cuda))
+        self.assertEqual(1, applied.pre_generation_admission_count)
+
     def test_device_too_small_for_reference_peak_fails_closed(self) -> None:
         total = policy.RESERVED_ALLOCATOR_HEADROOM_BYTES
         cuda = _FakeCuda(total, total)
@@ -296,7 +309,7 @@ class GroundedCudaMemoryTests(unittest.TestCase):
         cuda.free = policy.RESERVED_ALLOCATOR_HEADROOM_BYTES - 1
         with self.assertRaisesRegex(
             InitializationError,
-            "fixed 3 GiB admission floor",
+            "fixed 2 GiB admission floor",
         ):
             policy.admit_grounded_generation(torch)
         payload = applied.payload()
