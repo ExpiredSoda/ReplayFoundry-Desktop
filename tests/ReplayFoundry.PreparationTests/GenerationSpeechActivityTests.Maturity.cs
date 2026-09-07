@@ -18,6 +18,7 @@ internal static partial class GenerationSpeechActivityTests
     private static IEnumerable<TestCase> GenerationMaturityTests()
     {
         yield return new("Generation includes the beginning and ending of creator speech", SpeechRepairsBothBoundaries);
+        yield return new("Capture screening preserves learned selection preferences", CaptureScreeningPreservesPersonalRanking);
         yield return new("Transcript beginning repair includes sentence context across a VAD pause", TranscriptBeginningBridgesSentencePause);
         yield return new("Transcript beginning repair uses measured sentence word boundaries", TranscriptBeginningUsesMeasuredWords);
         yield return new("Transcript beginning repair crosses continuously transcribed source chunks", TranscriptBeginningCrossesContinuousChunks);
@@ -167,6 +168,15 @@ internal static partial class GenerationSpeechActivityTests
         IReadOnlyList<string> hud = new[] { "Health 100", "Ammo 30", "Inventory", "Achievement unlocked", "Loading bay" };
         TestAssert.True(GenerationCaptureContextPolicy.Assess([hud, hud, hud]) is null,
             "Readable HUD and world-location text must not be mistaken for loading screens or software chrome.");
+        TestAssert.Equal(GenerationCaptureContextKind.GameMenu,
+            GenerationCaptureContextPolicy.Assess([
+                new[] { "Select a save file to play.", "New Game", "BACK" },
+                new[] { "SELECT DIFFICULTY", "REGULAR", "VETERAN", "BACK" }])!.Kind,
+            "Save selection and difficulty screens must be recognized even when menu pages change.");
+        TestAssert.True(GenerationCaptureContextPolicy.Assess([
+            new[] { "Veteran soldier", "Weapon unlocked", "Operators ready" },
+            new[] { "Veteran soldier", "Weapon unlocked", "Operators ready" }]) is null,
+            "Gameplay HUD labels alone do not identify a menu.");
         TestAssert.Equal(GenerationCaptureContextKind.Loading,
             GenerationCaptureContextPolicy.Assess([new[] { "Loading..." }, new[] { "LOADING 50%" }])!.Kind,
             "Repeated exact loading-state labels are bounded evidence of a waiting screen.");
@@ -234,6 +244,9 @@ internal static partial class GenerationSpeechActivityTests
             first.Candidate.Window.Start + TimeSpan.FromSeconds(1), first.Candidate.Window.End - TimeSpan.FromSeconds(1));
         TestAssert.False(GenerationCaptureContextPolicy.ShouldExcludeAutomatically(launcher, spoken.Sources.Single(), first.Candidate, request.SetupOptions),
             "Even speech with an unknown stream role preserves a potentially meaningful spoken story.");
+        TestAssert.True(GenerationCaptureContextPolicy.ShouldExcludeAutomatically(launcher with { DominatesSampledWindow = true },
+            spoken.Sources.Single(), first.Candidate, request.SetupOptions),
+            "Speech over a visually established application screen must not turn it into an automatic gameplay highlight.");
         TestAssert.False(GenerationCaptureContextPolicy.ShouldExcludeAutomatically(new(GenerationCaptureContextKind.Loading, [0, 1]),
             sourceSpeech, first.Candidate, request.SetupOptions), "Loading text alone remains a soft ranking signal.");
         foreach (var guidance in new[]
@@ -248,6 +261,8 @@ internal static partial class GenerationSpeechActivityTests
                 momentGuidance: new GenerationMomentGuidance([guidance]));
             TestAssert.False(GenerationCaptureContextPolicy.ShouldExcludeAutomatically(launcher, sourceSpeech, first.Candidate, guided.SetupOptions),
                 "An explicit matching creator marker or range must preserve the requested moment.");
+            TestAssert.False(GenerationCaptureContextPolicy.ShouldExcludeAutomatically(launcher with { DominatesSampledWindow = true },
+                sourceSpeech, first.Candidate, guided.SetupOptions), "User markers also override dominant application screening.");
         }
         var twoStreams = CreateRequest(GenerationAnalysisDepth.Thorough, [("partial-vad-launcher.mkv", 2)]);
         var partial = CreateSpeech(twoStreams, AudioContentRoleAssignment.Unknown, []);

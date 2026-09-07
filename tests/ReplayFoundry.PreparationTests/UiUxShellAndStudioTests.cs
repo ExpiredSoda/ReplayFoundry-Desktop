@@ -471,9 +471,9 @@ internal static partial class UiUxApplicationSurfaceTests
         TestAssert.True(library.IsContentReady, "Library must activate after Studio finalization.");
         TestAssert.Equal(1, library.Items.Count, "Library must list the finalized clip.");
         TestAssert.Equal(
-            "Gameplay — 0:10",
+            "Grounded test moment",
             library.Items[0].Title,
-            "Library must show its conservative navigation label instead of publish copy or an internal render filename.");
+            "Library must show the same title as Studio after the render completes.");
         TestAssert.Equal(
             "Grounded test moment",
             catalog.Assets.Single().Title,

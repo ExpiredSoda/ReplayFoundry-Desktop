@@ -265,9 +265,9 @@ internal static class OutputLocationAndLibraryTests
             folderLauncher.LastOpened,
             "Library must open the selected asset folder, not an arbitrary root.");
         TestAssert.Equal(
-            missing.LibraryLabel,
+            missing.Title,
             library.SelectedItem!.Title,
-            "Library surfaces must display the navigation label rather than the publish title.");
+            "Library must preserve the publishing title when a video is relinked.");
 
         File.Delete(moved);
         library.RefreshLibraryCommand.Execute(null);
@@ -509,9 +509,11 @@ internal static class OutputLocationAndLibraryTests
 
         using var library = new LibraryViewModel(catalog);
         TestAssert.Equal(
-            archived.LibraryLabel,
+            archived.Title,
             library.SelectedItem!.Title,
-            "Library must display the literal navigation label rather than the publish title.");
+            "Library must display the same title as Studio and publishing, including older entries with a different navigation label.");
+        TestAssert.Equal(archived.Title, archived.DisplayName,
+            "Every Library display surface must use the audience-facing title.");
         return Task.CompletedTask;
     }
 

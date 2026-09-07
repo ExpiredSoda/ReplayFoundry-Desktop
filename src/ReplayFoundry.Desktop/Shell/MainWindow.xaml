@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:dock="clr-namespace:ReplayFoundry.Desktop.Shell.Dock"
     xmlns:local="clr-namespace:ReplayFoundry.Desktop.Shell"
+    xmlns:navigation="clr-namespace:ReplayFoundry.Desktop.Shell.Navigation"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     xmlns:windowing="clr-namespace:ReplayFoundry.Desktop.Shell.Windowing"
@@ -127,9 +128,17 @@
 
         <Border Panel.ZIndex="1" Background="{DynamicResource Brush.WindowOverlay}" IsHitTestVisible="False" />
 
-        <Grid
-            Panel.ZIndex="2"
-            Margin="12,64,12,72">
+        <Grid Panel.ZIndex="2">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Margin" Value="12,64,12,72" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentDestination}" Value="{x:Static navigation:ShellDestination.Studio}">
+                            <Setter Property="Margin" Value="2,64,2,72" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <ContentControl
                 x:Name="WorkspaceContent"
                 HorizontalContentAlignment="Stretch"

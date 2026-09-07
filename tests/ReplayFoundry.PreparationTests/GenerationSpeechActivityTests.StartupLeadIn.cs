@@ -18,6 +18,28 @@ namespace ReplayFoundry.PreparationTests;
 
 internal static partial class GenerationSpeechActivityTests
 {
+    private static async Task CaptureScreeningPreservesPersonalRanking()
+    {
+        var request = CreateRequest(GenerationAnalysisDepth.Balanced, [("ranked-gameplay.mkv", 1)], desiredCount: 1);
+        var speech = CreateSpeech(request, AudioContentRoleAssignment.Unknown, []);
+        var intelligence = new GenerationCandidateRefinementService().Refine(CreateMoments(request, [81, 80]), speech);
+        var refinements = intelligence.Refinements.ToDictionary(static item => item.Candidate);
+        var preferred = intelligence.BaseMoments.Sources.Single().Moments.Proposals.Last();
+        var preferences = new Dictionary<MomentCandidate, double> { [preferred] = 4 };
+        var pool = refinements.Keys.ToHashSet();
+        var selected = new GenerationMomentPortfolioSelector().SelectEligible(intelligence.BaseMoments.Request,
+            intelligence.BaseMoments.Sources, refinements, pool, preferences, CancellationToken.None);
+        var personalized = new GenerationMomentFindingResult(intelligence.BaseMoments.Request,
+            intelligence.BaseMoments.Sources, selected, refinements, selectionPreferences: preferences);
+        intelligence = new(intelligence.BaseMoments, speech, refinements.Values, personalized);
+        var screened = await new GenerationCaptureContextScreeningService(new StartupVisualText { GameplayOnly = true })
+            .ScreenAsync(intelligence, null, CancellationToken.None);
+        TestAssert.Same(preferred, screened.RefinedMoments.SelectedCandidates.Single().Candidate,
+            "The picture check must preserve personal ranking while applying menu exclusions and selecting replacements.");
+        preferences.Clear();
+        TestAssert.Equal(1, personalized.SelectionPreferences.Count, "Retained preference values must be immutable snapshots.");
+    }
+
     private static Task StartupLeadInRequiresCompleteLeadingEvidence()
     {
         GenerationRequest request = StartupRequest();
@@ -210,6 +232,7 @@ internal static partial class GenerationSpeechActivityTests
         public bool IsAvailable => true;
         public bool LateOnly { get; init; }
         public bool AllFramesAreLauncher { get; init; }
+        public bool GameplayOnly { get; init; }
         public bool WrongFollowupTimestamp { get; init; }
         public List<GenerationVisualTextAnalysisRequest> Requests { get; } = [];
 
@@ -220,7 +243,7 @@ internal static partial class GenerationSpeechActivityTests
             var frames = request.PriorityTimestamps.Select(timestamp =>
             {
                 TimeSpan reported = WrongFollowupTimestamp && Requests.Count > 1 ? TimeSpan.FromSeconds(23.212) : timestamp;
-                bool launcher = AllFramesAreLauncher || (LateOnly ? reported.TotalSeconds > 55 : reported.TotalSeconds < 35);
+                bool launcher = !GameplayOnly && (AllFramesAreLauncher || (LateOnly ? reported.TotalSeconds > 55 : reported.TotalSeconds < 35));
                 var frame = new VideoPreviewFrame(request.Media.FullPath, request.Media.Duration, request.Media.PrimaryVideoStream.Index,
                     reported, null, 1280, 720, CompositionCoordinateSpace.EffectiveDisplayNormalizedBeforeCrop, [1],
                     new("fixture", "1", "ffmpeg", "fixture", TestMediaFactory.CreateSourcePath("ffmpeg.exe"), DateTimeOffset.UnixEpoch, TimeSpan.Zero));

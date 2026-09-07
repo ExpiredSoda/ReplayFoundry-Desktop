@@ -26,12 +26,22 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
             return intelligence;
         var refinements = new Dictionary<MomentCandidate, GenerationCandidateRefinement>(ReferenceEqualityComparer.Instance);
         foreach (var refinement in intelligence.Refinements) refinements.Add(refinement.Candidate, refinement);
-        var review = intelligence.Refinements.Where(value => GenerationAutomaticCandidateEligibility.IsEligible(value.Candidate, value))
-            .OrderByDescending(static value => value.RankingScore).Take(Math.Clamp(setup.DesiredResultCount * 2, 4, 12)).ToArray();
-        for (int index = 0; index < review.Length; index++)
+        int reviewLimit = Math.Max(setup.DesiredResultCount, Math.Clamp(setup.DesiredResultCount * 4, 8, 80));
+        var screened = new HashSet<MomentCandidate>(ReferenceEqualityComparer.Instance);
+        var selector = new GenerationMomentPortfolioSelector();
+        var pool = new HashSet<MomentCandidate>(intelligence.BaseMoments.Sources.SelectMany(source => source.Moments.Proposals), ReferenceEqualityComparer.Instance);
+        var preferences = intelligence.RefinedMoments.SelectionPreferences;
+        for (int index = 0; index < reviewLimit; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var existing = review[index];
+            // Revisit the portfolio after each rejection, so a promoted replacement
+            // receives the same check without reading every candidate in the video.
+            var next = selector.SelectEligible(intelligence.BaseMoments.Request,
+                intelligence.BaseMoments.Sources, refinements, pool, preferences, cancellationToken)
+                .FirstOrDefault(item => !screened.Contains(item.Candidate));
+            if (next is null) break;
+            screened.Add(next.Candidate);
+            if (!refinements.TryGetValue(next.Candidate, out var existing)) continue;
             MomentCandidate candidate = existing.Candidate;
             GenerationSourceMomentResult source = intelligence.BaseMoments.Sources.Single(value => value.Moments.Proposals.Any(proposal => ReferenceEquals(proposal, candidate)));
             var media = source.AnalyzedSource.PreparedSource.Media;
@@ -41,7 +51,7 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
             var layout = source.AnalyzedSource.CompositionPlan.Plan.GetLayoutAt(midpoint);
             var gameplay = CompositionRegionSelector.FindPrimary(layout, CompositionRegionRole.Gameplay);
             if (gameplay?.RoleSource != CompositionValueSource.UserConfirmed) continue;
-            progress?.Report($"Checking visible application and loading labels in moment {index + 1} of {review.Length}.");
+            progress?.Report($"Checking moment {index + 1} for menus and loading screens.");
             var context = new ClipEditorialContext(candidate.Id, media.FullPath, System.IO.Path.GetFileName(media.FullPath),
                 start, end, media.Duration, candidate.HeuristicScore, "A candidate awaiting capture-context screening.", gameplayRegion: gameplay.Geometry);
             TimeSpan inset = TimeSpan.FromTicks((end - start).Ticks / 10);
@@ -57,7 +67,7 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
                 retainedText = new(candidate.Id, media.FullPath, gameplay.Geometry, frames, [],
                     (retainedText?.Warnings ?? []).Concat(followup?.Warnings ?? []));
             }
-            GenerationCaptureContextAssessment? assessment = GenerationCaptureContextPolicy.Assess(Lines(frames));
+            GenerationCaptureContextAssessment? assessment = GenerationCaptureContextPolicy.Assess(frames);
             GenerationSourceSpeechActivity sourceSpeech = intelligence.SpeechActivity.FindSource(media.FullPath);
             GenerationApplicationStartupLeadIn? leadIn = assessment is null ? null :
                 GenerationCaptureContextPolicy.FindApplicationStartupLeadIn(assessment,
@@ -97,8 +107,7 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
                     references),
                 new(GenerationCandidateRefinementComponentCode.NonGameplayCapture, excludeAutomatically ? 1 : 0, 0,
                     excludeAutomatically
-                        ? "Repeated software-interface labels and successful speech analysis with no detected speech " +
-                            "keep this application capture out of automatic clips. It remains available for manual review."
+                        ? "Menus or startup screens dominate this moment. It stays in Find More, but automatic clips will favor the recording itself."
                         : "Capture screening preserves clips with speech, incomplete speech evidence, loading alone, or a matching user marker or range.",
                     references),
                 new(GenerationCandidateRefinementComponentCode.ApplicationStartupLeadIn, leadIn is not null ? 1 : 0, 0,
@@ -106,7 +115,7 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
                         ? "Repeated application-interface labels occur in a long silent opening before speech begins. " +
                             "Inspect and trim this opening in Studio before including the clip; it may also contain valid gameplay later."
                         : "Application startup review requires repeated labels inside a verified long silent opening, with creator intent and guidance preserved.",
-                    leadInReferences)], "1.11");
+                    leadInReferences)], "1.12");
 
             async Task<ClipVisualTextContext?> ReadOwnedAsync(IReadOnlyList<TimeSpan> timestamps)
             {
@@ -123,10 +132,11 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
                 return new(candidate.Id, media.FullPath, gameplay.Geometry, owned, [], text.Warnings);
             }
         }
-        var selected = new GenerationMomentPortfolioSelector().Select(intelligence.BaseMoments.Request,
-            intelligence.BaseMoments.Sources, refinements, cancellationToken);
+        var selected = selector.SelectEligible(intelligence.BaseMoments.Request,
+            intelligence.BaseMoments.Sources, refinements, screened, preferences, cancellationToken);
         return new(intelligence.BaseMoments, intelligence.SpeechActivity, refinements.Values,
-            new GenerationMomentFindingResult(intelligence.BaseMoments.Request, intelligence.BaseMoments.Sources, selected, refinements),
+            new GenerationMomentFindingResult(intelligence.BaseMoments.Request, intelligence.BaseMoments.Sources, selected, refinements,
+                screened, "Checked automatic picks for menus and startup screens. Other moments remain available in Find More.", preferences),
             intelligence.VisualSemantic, intelligence.Transcripts);
     }
 

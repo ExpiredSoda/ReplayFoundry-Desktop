@@ -815,7 +815,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
     private static IReadOnlyList<LibraryItem> BuildItems(
         IReadOnlyList<LibraryMediaAsset> assets) =>
         assets.Select(asset => new LibraryItem(
-                asset.LibraryLabel,
+                asset.DisplayName,
                 asset.Mode == GenerationMode.Montage
                     ? "Montage"
                     : "Generated Clip",

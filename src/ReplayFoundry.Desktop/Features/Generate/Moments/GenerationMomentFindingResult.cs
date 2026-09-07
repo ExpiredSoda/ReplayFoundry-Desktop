@@ -28,7 +28,8 @@ public sealed class GenerationMomentFindingResult
         IEnumerable<GenerationSourceMomentResult> sources,
         IEnumerable<GenerationMomentCandidate> selectedCandidates,
         IReadOnlyDictionary<MomentCandidate, GenerationCandidateRefinement>? refinements = null,
-        IReadOnlySet<MomentCandidate>? eligibleCandidates = null, string? selectionReviewNote = null)
+        IReadOnlySet<MomentCandidate>? eligibleCandidates = null, string? selectionReviewNote = null,
+        IReadOnlyDictionary<MomentCandidate, double>? selectionPreferences = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(sources);
@@ -145,6 +146,8 @@ public sealed class GenerationMomentFindingResult
         }
 
         Request = request;
+        SelectionPreferences = new ReadOnlyDictionary<MomentCandidate, double>(
+            selectionPreferences is null ? new Dictionary<MomentCandidate, double>() : new Dictionary<MomentCandidate, double>(selectionPreferences));
         SelectionReviewNote = selectionReviewNote;
         _sources = Array.AsReadOnly(sourceSnapshot);
         _selectedCandidates =
@@ -186,6 +189,7 @@ public sealed class GenerationMomentFindingResult
         SelectedCount == RequestedCount;
     public GenerationClipFulfillmentOutcome FulfillmentOutcome { get; }
     public string? SelectionReviewNote { get; }
+    internal IReadOnlyDictionary<MomentCandidate, double> SelectionPreferences { get; }
 
     public string FulfillmentMessage => FulfillmentSummary + (SelectionReviewNote is null ? "" : " " + SelectionReviewNote);
 

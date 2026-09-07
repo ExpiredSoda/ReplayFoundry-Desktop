@@ -12,7 +12,7 @@
             <Setter Property="MinWidth" Value="32" /><Setter Property="MinHeight" Value="32" />
         </Style>
     </UserControl.Resources>
-    <Grid Margin="8" MaxWidth="1800">
+    <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" />
         </Grid.RowDefinitions>

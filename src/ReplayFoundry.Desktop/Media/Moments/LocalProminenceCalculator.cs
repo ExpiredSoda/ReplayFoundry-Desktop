@@ -140,14 +140,25 @@ public static class LocalProminenceCalculator
 
         var contexts =
             new LocalSignalContext[ordered.Length];
+        TimeSpan radius = new[] { policy.LocalBaselineHalfWindow,
+            policy.LocalBaselineGuardHalfWindow, policy.OnsetLookback }.Max();
+        int firstNearby = 0, afterNearby = 0;
 
         for (int index = 0; index < ordered.Length; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             LocalSignalSample current = ordered[index];
+            while (firstNearby < ordered.Length && ordered[firstNearby].Timestamp < current.Timestamp - radius)
+                firstNearby++;
+            while (afterNearby < ordered.Length && ordered[afterNearby].Timestamp <= current.Timestamp + radius)
+                afterNearby++;
+            // Every statistic below has bounded temporal support. Enumerate that
+            // support once rather than rescanning the whole recording five times
+            // per sample. Original order and boundary comparisons are preserved.
+            var nearby = new ArraySegment<LocalSignalSample>(ordered, firstNearby, afterNearby - firstNearby);
 
             double[] baselineValues =
-                ordered
+                nearby
                     .Where(
                         sample =>
                         {
@@ -179,7 +190,7 @@ public static class LocalProminenceCalculator
                     policy.ProminenceSaturationMultiple);
 
             double[] preceding =
-                ordered
+                nearby
                     .Where(
                         sample =>
                             sample.Timestamp < current.Timestamp &&
@@ -198,7 +209,7 @@ public static class LocalProminenceCalculator
                     policy.ProminenceSaturationMultiple);
 
             LocalSignalSample[] neighborhood =
-                ordered
+                nearby
                     .Where(
                         sample =>
                             (sample.Timestamp - current.Timestamp).Duration() <=
@@ -215,7 +226,7 @@ public static class LocalProminenceCalculator
             double integrated =
                 excesses.Sum();
             double totalContextExcess =
-                ordered
+                nearby
                     .Where(
                         sample =>
                             (sample.Timestamp - current.Timestamp).Duration() <=
@@ -227,7 +238,7 @@ public static class LocalProminenceCalculator
                     : Math.Clamp(integrated / totalContextExcess, 0, 1);
 
             double[] following =
-                ordered
+                nearby
                     .Where(
                         sample =>
                             sample.Timestamp > current.Timestamp &&

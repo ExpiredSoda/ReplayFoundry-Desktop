@@ -31,6 +31,6 @@ internal sealed class GenerationTasteRanking(ITasteLearningService learning)
             }
         if (!applied) return moments;
         var selected = new GenerationMomentPortfolioSelector().SelectEligible(moments.Request, moments.Sources, refinements, eligible, preferences, cancellationToken);
-        return new(moments.Request, moments.Sources, selected, refinements, eligible, moments.SelectionReviewNote);
+        return new(moments.Request, moments.Sources, selected, refinements, eligible, moments.SelectionReviewNote, preferences);
     }
 }

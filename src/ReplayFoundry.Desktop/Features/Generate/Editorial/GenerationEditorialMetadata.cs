@@ -333,9 +333,10 @@ public sealed class GenerationEditorialMetadataService :
         }
 
         // Hidden Moments are not publishing candidates until the user accepts
-        // one. Retain their grounded context now, but in AI mode defer the
-        // audience copy so a normal five-clip run does not author dozens of
-        // unused alternates. Promotion performs the required AI generation.
+        // one. Retain their existing context now, but in AI mode defer both
+        // frame/OCR reads and audience copy. A five-clip run must not decode
+        // hundreds of frames for unused alternatives. Promotion enriches the
+        // chosen moment before performing the required AI generation.
         bool deferAiMetadata =
             hiddenMoments.SelectedMoments.Request.Setup.MetadataAuthoringMode ==
             GenerationMetadataAuthoringMode.AiRequired;
@@ -373,7 +374,7 @@ public sealed class GenerationEditorialMetadataService :
                     hidden.SourceFullPath),
                 visualResult?.Observations.SingleOrDefault(value =>
                     ReferenceEquals(value.Candidate, hidden.Candidate)));
-            if (_visualText is not null)
+            if (_visualText is not null && !deferAiMetadata)
             {
                 context = await _visualText.EnrichAsync(
                     VisualTextRequest(context, selected),
@@ -449,10 +450,12 @@ public sealed class GenerationEditorialMetadataService :
                         "A persisted Hidden Moment requires retained editorial context before its provisional metadata can be accepted.");
         if (_visualText is not null &&
             context.VisualText is null &&
-            selected is not null)
+            context.GameplayRegion is not null)
         {
             context = await _visualText.EnrichAsync(
-                VisualTextRequest(context, selected),
+                selected is not null
+                    ? VisualTextRequest(context, selected)
+                    : new GenerationVisualTextAnalysisRequest(context, hiddenMoment.SourceMedia),
                 cancellationToken);
         }
         if (_gameKnowledge is not null &&

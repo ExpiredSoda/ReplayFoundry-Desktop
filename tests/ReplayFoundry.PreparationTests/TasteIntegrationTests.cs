@@ -112,6 +112,7 @@ internal static class TasteIntegrationTests
         var learning = new Recorder { Active = true };
         var result = await new GenerationTasteRanking(learning).ApplyAsync(original, null, CancellationToken.None);
         TestAssert.Equal(1, result.SelectedCount, "Personalization must preserve the requested result count.");
+        TestAssert.True(result.SelectionPreferences.Count > 0, "Neural preferences must reach the subsequent capture-context check.");
         TestAssert.NearlyEqual(80, result.SelectedCandidates.Single().Candidate.Score.HeuristicScore, 1e-9,
             "A learned preference may choose the other qualified moment without changing its evidence score.");
         TestAssert.False(result.SelectedCandidates.Any(x => x.Candidate.Score.HeuristicScore < 70), "Personalization cannot bypass the chosen quality floor.");

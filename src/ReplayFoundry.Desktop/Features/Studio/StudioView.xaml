@@ -30,7 +30,6 @@
             <Border
                 x:Name="ProjectControls"
                 Grid.Row="0"
-                MaxWidth="1600"
                 Margin="0,0,0,12"
                 HorizontalAlignment="Stretch"
                 AutomationProperties.Name="Studio project controls"
@@ -153,7 +152,6 @@
                     </Style>
                 </Grid.Style>
                 <Border
-                    MaxWidth="1600"
                     MinHeight="350"
                     Padding="24"
                     HorizontalAlignment="Stretch"
@@ -189,7 +187,6 @@
                 <Grid
                     x:Name="FullLayout"
                     Height="{Binding PaneHeight, ElementName=Root}"
-                    MaxWidth="1600"
                     VerticalAlignment="Top"
                     HorizontalAlignment="Stretch">
                     <Grid.Style>
@@ -219,7 +216,6 @@
 
                 <TabControl
                     x:Name="CompactLayout"
-                    MaxWidth="1600"
                     HorizontalAlignment="Stretch"
                     AutomationProperties.Name="Studio compact regions"
                     Background="Transparent"
@@ -273,7 +269,6 @@
             <Border
                 x:Name="RenderQueuePanel"
                 Grid.Row="2"
-                MaxWidth="1600"
                 Margin="0,12,0,0"
                 HorizontalAlignment="Stretch"
                 AutomationProperties.Name="Studio render queue"

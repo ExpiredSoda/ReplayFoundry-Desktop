@@ -125,7 +125,7 @@ public sealed class LibraryMediaAsset
     public IReadOnlyList<string> SourceCandidateIds { get; }
     public YouTubePublishProvenance? SourceProvenance { get; }
     public bool IsAvailable => File.Exists(OutputFullPath);
-    public string DisplayName => LibraryLabel;
+    public string DisplayName => Title;
 
     public LibraryMediaAsset Relink(
         string outputFullPath,

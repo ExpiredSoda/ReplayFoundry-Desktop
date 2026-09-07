@@ -5700,11 +5700,12 @@ internal static partial class EditorialMetadataTests
         GenerationHiddenMomentDeck deck =
             GenerationHiddenMomentPlanner.Create(moments);
         var ai = new HiddenMomentRetryMetadataGenerator();
+        var deferredText = new RecordingHiddenVisualText();
         var service = new GenerationEditorialMetadataService(
             new ClipEditorialMetadataGenerationService(
                 new HeuristicClipEditorialMetadataGenerator(),
                 ai),
-            new ClipEditorialProfileSession());
+            new ClipEditorialProfileSession(), visualText: deferredText);
         GenerationHiddenMomentDeck hydrated =
             await service.GenerateHiddenAsync(
                 deck,
@@ -5712,6 +5713,7 @@ internal static partial class EditorialMetadataTests
                 CancellationToken.None);
 
         GenerationHiddenMoment provisional = hydrated.Moments[1];
+        TestAssert.Equal(0, deferredText.Calls, "Unused AI alternatives must not decode any OCR frames during generation.");
         GenerationHiddenMoment persisted = provisional.ToStudioHandoff();
         TestAssert.False(
             persisted.HasGenerationProvenance,
@@ -5802,6 +5804,7 @@ internal static partial class EditorialMetadataTests
 
         GenerationOutputAsset accepted = session.Current!.Assets.Single(asset =>
             asset.Id.Equals(persisted.Id, StringComparison.Ordinal));
+        TestAssert.Equal(1, deferredText.Calls, "Promoting one saved alternative must enrich exactly that clip before writing its title.");
 
         TestAssert.Equal(
             0,
@@ -8133,6 +8136,21 @@ internal static partial class EditorialMetadataTests
         {
             RemoveCalls++;
             _removed = true;
+        }
+    }
+
+    private sealed class RecordingHiddenVisualText : ReplayFoundry.Desktop.Features.Generate.Editorial.VisualText.IGenerationVisualTextAnalysisService
+    {
+        public bool IsAvailable => true;
+        public int Calls { get; private set; }
+        public Task<ClipEditorialContext> EnrichAsync(
+            ReplayFoundry.Desktop.Features.Generate.Editorial.VisualText.GenerationVisualTextAnalysisRequest request,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Calls++;
+            return Task.FromResult(request.Context.WithVisualText(new(request.Context.CandidateId,
+                request.Context.SourceFullPath, request.Context.GameplayRegion!, [], [])));
         }
     }
 

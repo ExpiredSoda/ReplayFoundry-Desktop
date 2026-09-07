@@ -1,4 +1,5 @@
 using ReplayFoundry.Desktop.Features.Generate.Editorial.VisualText;
+using ReplayFoundry.Desktop.Features.Generate.Intelligence;
 using ReplayFoundry.Desktop.Media.Composition;
 using ReplayFoundry.Desktop.Media.Inspection;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
@@ -12,6 +13,7 @@ internal static class VisualTextTests
     public static IReadOnlyList<TestCase> GetTests() =>
     [
         new("Visual text contracts are immutable and provenance bound", ContractsAreImmutable),
+        new("Capture screening distinguishes startup sequences from unreadable gameplay", StartupScreeningUsesPicturesAndRepeatedChrome),
         new("Visual text stability requires separate sampled frames", StabilityRequiresSeparateFrames),
         new("Visual text grounding authority matches exact wire wording", GroundingAuthorityMatchesWireWording),
         new("Visual text sampling preserves priority and bounded timeline coverage", SamplingIsBounded),
@@ -209,6 +211,39 @@ internal static class VisualTextTests
             "Deterministic evidence.",
             gameplayRegion: new NormalizedRectangle(.075, .125, .85, .425));
         return new GenerationVisualTextAnalysisRequest(context, media, priorities);
+    }
+
+    private static Task StartupScreeningUsesPicturesAndRepeatedChrome()
+    {
+        VisualTextFrameObservation steam = FrameObservation(TimeSpan.FromSeconds(2), "STORE LIBRARY COMMUNITY", "AVAILABLE CONTENT");
+        VisualTextFrameObservation second = FrameObservation(TimeSpan.FromSeconds(12), "STORE LIBRARY COMMUNITY", "LAST PLAYED");
+        VisualTextFrameObservation unreadable = FrameObservation(TimeSpan.FromSeconds(22));
+        var launcher = GenerationCaptureContextPolicy.Assess(new[] { steam, second, unreadable });
+        TestAssert.True(launcher?.Kind == GenerationCaptureContextKind.Launcher && launcher.DominatesSampledWindow,
+            "Repeated launcher navigation must survive missing or imperfect secondary OCR labels.");
+        TestAssert.True(GenerationCaptureContextPolicy.Assess(new[] { steam, unreadable, unreadable }) is null,
+            "Missing OCR and undecodable pictures cannot be called black loading frames.");
+
+        VisualTextFrameObservation Blank(TimeSpan timestamp)
+        {
+            var template = FrameObservation(timestamp).Request.Frame;
+            var pixels = new byte[32 * 32 * 4];
+            var bitmap = System.Windows.Media.Imaging.BitmapSource.Create(32, 32, 96, 96,
+                System.Windows.Media.PixelFormats.Bgr32, null, pixels, 32 * 4);
+            var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+            using var buffer = new System.IO.MemoryStream();
+            encoder.Save(buffer);
+            var frame = new VideoPreviewFrame(template.SourcePath, template.SourceDuration, template.VideoStreamIndex,
+                timestamp, null, 32, 32, template.CoordinateSpace, buffer.ToArray(), Manifest());
+            return new(new(frame), Identity(), [], TimeSpan.Zero);
+        }
+        var startup = GenerationCaptureContextPolicy.Assess(new[] { steam, Blank(TimeSpan.FromSeconds(12)), Blank(TimeSpan.FromSeconds(22)) });
+        TestAssert.True(startup?.Kind == GenerationCaptureContextKind.Startup && startup.DominatesSampledWindow,
+            "A software window followed by measured black pictures must be screened before generating copy.");
+        TestAssert.True(GenerationCaptureContextPolicy.Assess(new[] { Blank(TimeSpan.FromSeconds(2)), Blank(TimeSpan.FromSeconds(12)), Blank(TimeSpan.FromSeconds(22)) }) is null,
+            "Dark gameplay without positive application evidence must not be identified as startup.");
+        return Task.CompletedTask;
     }
 
     private static VisualTextFrameObservation FrameObservation(

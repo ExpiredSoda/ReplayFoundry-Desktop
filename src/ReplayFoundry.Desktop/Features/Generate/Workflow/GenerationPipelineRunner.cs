@@ -137,7 +137,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         transcripts,
                         cancellationToken),
                     cancellationToken);
-                if (_captureScreening is not null)
+                if (_captureScreening is not null && request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Thorough)
                 {
                     candidateIntelligence = await _captureScreening.ScreenAsync(candidateIntelligence,
                         new SynchronousProgress<string>(detail => progress.Report(new GenerationProgressUpdate(
@@ -201,6 +201,14 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                 if (candidateIntelligence is not null)
                     candidateIntelligence = new(candidateIntelligence.BaseMoments, candidateIntelligence.SpeechActivity,
                         candidateIntelligence.Refinements, moments, candidateIntelligence.VisualSemantic, candidateIntelligence.Transcripts);
+            }
+            if (_captureScreening is not null && candidateIntelligence is not null &&
+                request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Balanced)
+            {
+                candidateIntelligence = await _captureScreening.ScreenAsync(candidateIntelligence,
+                    new SynchronousProgress<string>(detail => progress.Report(new GenerationProgressUpdate(
+                        "Checking recording context", detail, isIndeterminate: true))), cancellationToken);
+                moments = candidateIntelligence.RefinedMoments;
             }
             if (moments.SelectedCandidates.Count == 0)
             {

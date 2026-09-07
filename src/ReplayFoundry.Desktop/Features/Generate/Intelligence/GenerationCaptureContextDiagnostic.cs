@@ -15,8 +15,7 @@ public sealed record GenerationCaptureContextDiagnostic(string CandidateId, doub
 {
     internal static GenerationCaptureContextDiagnostic Create(string candidateId, TimeSpan start, TimeSpan end,
         ClipVisualTextContext visualText) => new(candidateId, start.TotalSeconds, end.TotalSeconds, visualText.ContentRegion,
-        GenerationCaptureContextPolicy.Assess(visualText.Frames.Select(frame =>
-            (IReadOnlyList<string>)frame.Lines.Select(static line => line.Text).ToArray()).ToArray())?.Kind.ToString(),
+        GenerationCaptureContextPolicy.Assess(visualText.Frames)?.Kind.ToString(),
         visualText.Frames.Take(8).Select(frame => new GenerationCaptureFrameDiagnostic(frame.Request.Frame.RequestedTimestamp.TotalSeconds,
             GenerationCaptureContextPolicy.ClassifyFrame(frame.Lines.Select(static line => line.Text).ToArray())?.ToString(),
             frame.Lines.Take(128).Select(static line => line.Text.Length > 500 ? line.Text[..500] : line.Text).ToArray(),
