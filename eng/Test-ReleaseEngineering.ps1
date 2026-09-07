@@ -65,7 +65,7 @@ foreach ($required in @(
     "if CompareText(ExpandConstant('{srcexe}'), Destination) = 0 then exit;",
     "if not CopyFile(ExpandConstant('{srcexe}'), Destination, False) then",
     "RaiseException('Unable to retain the current Replay Foundry installer for repair.');",
-    'Name: "advancedai"; Description: "Add Advanced AI (about 12.7 GB download)"',
+    'Name: "advancedai"; Description: "Add Advanced AI (about {#AdvancedDownloadSizeGb} GB download)"',
     'GroupDescription: "Optional local tools (visual AI needs a compatible 16 GB NVIDIA GPU):"; Flags: unchecked',
     "WizardIsTaskSelected('advancedai')",
     'WizardForm.ProgressGauge.Style := npbstMarquee',

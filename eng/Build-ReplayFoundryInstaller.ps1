@@ -254,6 +254,11 @@ if ([string]::IsNullOrWhiteSpace($InnoCompilerPath) -or
 
 New-Item -ItemType Directory -Path $installerDirectory -Force | Out-Null
 $script = Join-Path $repoRoot 'installer\ReplayFoundry.iss'
+$advancedDownloadBytes = ($packIndex.packs |
+    Where-Object { $_.packageId -ne 'replayfoundry-media-tools' } |
+    Measure-Object -Property byteLength -Sum).Sum
+$advancedDownloadSizeGb = ([double]$advancedDownloadBytes / 1e9).ToString(
+    '0.0', [Globalization.CultureInfo]::InvariantCulture)
 $innoArguments = @(
     "/DMyAppVersion=$Version",
     "/DMyAppFileVersion=$fileVersion",
@@ -265,6 +270,7 @@ $innoArguments = @(
     "/DAdvancedPayloadMode=$AdvancedPayloadMode",
     "/DAdvancedCatalogPath=$AdvancedCatalogPath",
     "/DOfferAdvancedAi=$([int]$offerAdvancedAi)",
+    "/DAdvancedDownloadSizeGb=$advancedDownloadSizeGb",
     "/DWizardBackImagePath=$wizardBackImagePath",
     "/DWizardImagePath=$wizardImagePath",
     "/DWizardSmallImagePath=$wizardSmallImagePath",

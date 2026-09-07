@@ -37,6 +37,9 @@
 #ifndef OfferAdvancedAi
   #define OfferAdvancedAi "0"
 #endif
+#ifndef AdvancedDownloadSizeGb
+  #define AdvancedDownloadSizeGb "0.0"
+#endif
 #ifndef YouTubeCredentialTargetName
   #error YouTubeCredentialTargetName must be supplied by Build-ReplayFoundryInstaller.ps1
 #endif
@@ -126,7 +129,7 @@ FinishedLabel=Setup finished installing [name]. Select Finish to open it.
 [Tasks]
 Name: "desktopicon"; Description: "Add a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 #if OfferAdvancedAi == "1"
-Name: "advancedai"; Description: "Add Advanced AI (about 12.7 GB download)"; GroupDescription: "Optional local tools (visual AI needs a compatible 16 GB NVIDIA GPU):"; Flags: unchecked
+Name: "advancedai"; Description: "Add Advanced AI (about {#AdvancedDownloadSizeGb} GB download)"; GroupDescription: "Optional local tools (visual AI needs a compatible 16 GB NVIDIA GPU):"; Flags: unchecked
 #endif
 
 [Files]
