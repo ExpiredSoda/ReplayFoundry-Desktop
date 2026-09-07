@@ -241,11 +241,11 @@ internal sealed class SettingsActionCoordinator
 
     private void AddAdvancedAi() => RunRuntimeMaintenance(
         () => _services.RuntimeMaintenance!.AddAdvanced(),
-        "The Advanced AI installer opened. Restart Replay Foundry after it finishes.");
+        "Finish setup, then restart Replay Foundry. If the download page opens, download and run its installer with Advanced AI selected.");
 
     private void RepairRuntimePacks() => RunRuntimeMaintenance(
         () => _services.RuntimeMaintenance!.Repair(),
-        "The repair tool opened. Restart Replay Foundry after it finishes.");
+        "Finish setup, then restart Replay Foundry. If the download page opens, download and run its installer to restore your tools.");
 
     private void RemoveAdvancedAi() => RunRuntimeMaintenance(
         () => _services.RuntimeMaintenance!.RemoveAdvanced(),

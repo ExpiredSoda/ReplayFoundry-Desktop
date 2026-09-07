@@ -99,7 +99,8 @@ internal static class LocalIntelligenceComposition
                     : editorialAiUnavailableReason,
             EditorialGpuAdmissionCheck: QwenGpuAdmission.GetBlockingReason,
             EditorialGpuReadiness: QwenGpuAdmission.DescribeReadiness,
-            CaptionLanguageCapabilities: speech.CaptionLanguageCapabilities);
+            CaptionLanguageCapabilities: speech.CaptionLanguageCapabilities,
+            IsMediaAnalysisAvailable: runtime.IsBaseReady);
         return new(
             qwenRuntime,
             materializer,

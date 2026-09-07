@@ -24,7 +24,10 @@ internal static class SettingsFeatureComposition
             dependencies.Publish.ConnectionPermission,
             CreateRuntimeCapabilities(dependencies.Runtime),
             new RuntimePackMaintenanceLauncher(
-                dependencies.Runtime.PackageStoreRoot),
+                dependencies.Runtime.PackageStoreRoot,
+                dependencies.Runtime.Capabilities.Any(capability =>
+                    capability.IsAvailable &&
+                    capability.Name != "Deterministic media analysis")),
             dependencies.Feedback.ResearchParticipation,
             dependencies.Feedback.ResearchStore,
             dependencies.Preferences.OutputLocation,

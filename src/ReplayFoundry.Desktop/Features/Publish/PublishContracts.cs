@@ -40,7 +40,11 @@ public sealed record PublishCalendarDay(
     string AccessibleLabel,
     bool IsInActiveRange,
     bool IsToday,
-    IReadOnlyList<PublishCalendarSlot> Slots);
+    IReadOnlyList<PublishCalendarSlot> Slots)
+{
+    public string MonthLabel => IsInActiveRange ? string.Empty :
+        Date.ToString("MMM", System.Globalization.CultureInfo.CurrentCulture);
+}
 public sealed record PublishPlanningItem(
     string Title,
     string Detail,

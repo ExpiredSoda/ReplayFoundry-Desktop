@@ -4,6 +4,7 @@ using ReplayFoundry.Desktop.Features.Generate.Captions;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
+using ReplayFoundry.Desktop.Features.Generate.RecentProjects;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
 using ReplayFoundry.Desktop.Features.Studio.Preview;
 using ReplayFoundry.Desktop.Media.Subtitles;
@@ -13,6 +14,43 @@ namespace ReplayFoundry.PreparationTests;
 
 internal static partial class GenerationClipRenderingTests
 {
+    private static Task ClearCaptionedRecentProjectWithMissingSource()
+    {
+        using var fixture = CreateFixture(GenerationMode.IndividualClips, hasAudio: true, captionsEnabled: true,
+            sourceName: "clear-missing-" + Guid.NewGuid().ToString("N") + ".mkv");
+        var candidate = fixture.Moments.SelectedCandidates[0];
+        var track = new GenerationCandidateCaptionTrack(candidate,
+            fixture.Moments.Request.Setup.CaptionSettings.FindForSource(candidate.AnalyzedSource.PreparedSource.Media.FullPath)!,
+            GenerationCaptionStylePreset.KaraokeSweep, CreateTranscription(candidate));
+        var project = fixture.CreateDraft(new GenerationCaptionPreparationResult(fixture.Moments, [track], TimeSpan.Zero));
+        Directory.CreateDirectory(Path.GetDirectoryName(project.PrimaryAsset.SourceMedia.FullPath)!);
+        File.WriteAllText(project.PrimaryAsset.SourceMedia.FullPath, "isolated source fixture");
+        var session = new GenerationOutputSession();
+        var store = new JsonStudioProjectStore(Path.Combine(fixture.Root, "saved-projects"));
+        store.Save(project, revision: 1);
+        var recentStore = new JsonRecentGenerationProjectStore(Path.Combine(fixture.Root, "recent.json"));
+        using var catalog = new RecentGenerationProjectCatalog(session, recentStore, store);
+        session.Publish(project);
+        using var studio = new ReplayFoundry.Desktop.Features.Studio.StudioViewModel(session);
+
+        // Both transient empty ranges and a range from a different recording
+        // can arrive before the previous caption track has been unbound.
+        studio.Preview.UpdateRange(TimeSpan.Zero, TimeSpan.Zero);
+        TestAssert.Null(studio.Preview.LiveCaptionText, "An empty selection must clear the previous caption.");
+        studio.Preview.UpdateRange(TimeSpan.Zero, project.PrimaryAsset.SourceDuration + TimeSpan.FromSeconds(1));
+        TestAssert.Null(studio.Preview.LiveCaptionText, "A new source range must not be projected onto the old transcript.");
+        studio.Preview.UpdateRange(project.PrimaryAsset.SourceStart, project.PrimaryAsset.SourceEnd);
+        File.Delete(project.PrimaryAsset.SourceMedia.FullPath);
+
+        TestAssert.Equal(1, catalog.ClearAll(), "Clear all should remove the unavailable recent project.");
+        TestAssert.Null(session.Current, "The output session must release the cleared project.");
+        TestAssert.Null(studio.Preview.LiveCaptionText, "Clearing the project must clear its caption frame.");
+        TestAssert.False(studio.HasProject, "Studio must show its empty state.");
+        TestAssert.Equal(0, recentStore.Read().Count, "Cleared projects must stay cleared after restart.");
+        TestAssert.False(store.Exists(project.Id), "The saved draft must be removed even when its video is missing.");
+        return Task.CompletedTask;
+    }
+
     private static Task CaptionCutRoundTripsKeepAbsoluteWordClocks()
     {
         using var fixture = CreateFixture(GenerationMode.IndividualClips, hasAudio: true, captionsEnabled: true);

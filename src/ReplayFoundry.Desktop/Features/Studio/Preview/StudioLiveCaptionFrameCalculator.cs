@@ -32,6 +32,15 @@ internal sealed class StudioLiveCaptionFrameCalculator
         TimeSpan rangeStart,
         TimeSpan rangeEnd)
     {
+        // Selection changes briefly pair the previous transcript with an empty
+        // range (or the next recording's range). There is no caption to draw
+        // until the inspector and preview have finished rebinding.
+        if (captions is null || rangeStart < TimeSpan.Zero ||
+            rangeEnd <= rangeStart || rangeEnd > captions.SourceDuration)
+        {
+            Reset();
+            return LiveCaptionFrameState.Empty;
+        }
         if (!ReferenceEquals(_sourceTrack, captions) || _cutStart != rangeStart || _cutEnd != rangeEnd)
         {
             _sourceTrack = captions;

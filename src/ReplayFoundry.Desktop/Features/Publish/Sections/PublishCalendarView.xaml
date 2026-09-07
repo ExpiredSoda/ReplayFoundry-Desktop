@@ -132,6 +132,9 @@
                                     <Setter Property="BorderBrush" Value="Transparent" />
                                     <Setter Property="BorderThickness" Value="1" />
                                     <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsInActiveRange}" Value="False">
+                                            <Setter Property="Background" Value="{DynamicResource Brush.SurfaceCanvas}" />
+                                        </DataTrigger>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter Property="Background" Value="{DynamicResource Brush.KineticGlowSoft}" />
                                         </Trigger>
@@ -154,10 +157,27 @@
                             </Border.Style>
                             <Grid>
                                 <StackPanel>
-                                    <TextBlock
-                                        FontWeight="SemiBold"
-                                        Foreground="{DynamicResource Brush.TextSecondary}"
-                                        Text="{Binding DayNumber}" />
+                                    <DockPanel ToolTip="{Binding AccessibleLabel}">
+                                        <TextBlock DockPanel.Dock="Right"
+                                            Margin="5,0,0,0" FontSize="10" VerticalAlignment="Center"
+                                            Foreground="{DynamicResource Brush.StatusWarning}"
+                                            Text="{Binding MonthLabel}" />
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding DayNumber}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsInActiveRange}" Value="False">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.StatusWarning}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DockPanel>
                                     <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding Slots}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>

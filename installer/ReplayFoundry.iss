@@ -235,6 +235,14 @@ begin
   end;
 end;
 
+procedure RetainInstaller(const Destination: String);
+begin
+  { Repair may be launched from the retained installer itself. }
+  if CompareText(ExpandConstant('{srcexe}'), Destination) = 0 then exit;
+  if not CopyFile(ExpandConstant('{srcexe}'), Destination, False) then
+    RaiseException('Unable to retain the current Replay Foundry installer for repair.');
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   StoreRoot: String;
@@ -247,15 +255,15 @@ begin
   try
     StoreRoot := ExpandConstant('{localappdata}\ReplayFoundry\R');
     RequireRuntimeInstallerSuccess(
-      'install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-media-tools.zip') + '" --store-root "' + StoreRoot + '"',
+      'repair --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-media-tools.zip') + '" --store-root "' + StoreRoot + '"',
       'Preparing video tools');
 #if InstallerProfile == "Advanced"
   #if AdvancedPayloadMode == "Embedded"
-    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-silero-vad.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing speech timing');
-    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-cpp.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing captions');
-    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-small-multilingual.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing language support');
-    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-runtime.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing visual analysis');
-    RequireRuntimeInstallerSuccess('install --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-4b-instruct.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing local AI');
+    RequireRuntimeInstallerSuccess('repair --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-silero-vad.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing speech timing');
+    RequireRuntimeInstallerSuccess('repair --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-cpp.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing captions');
+    RequireRuntimeInstallerSuccess('repair --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-whisper-small-multilingual.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing language support');
+    RequireRuntimeInstallerSuccess('repair --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-runtime.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing visual analysis');
+    RequireRuntimeInstallerSuccess('repair --source "' + ExpandConstant('{tmp}\ReplayFoundryPacks\replayfoundry-qwen3-vl-4b-instruct.zip') + '" --store-root "' + StoreRoot + '"', 'Preparing local AI');
   #else
     RequireRuntimeInstallerSuccess(
       'install-catalog --catalog "' + ExpandConstant('{tmp}\ReplayFoundryPacks\advanced-runtime-catalog.json') + '" --store-root "' + StoreRoot + '"',
@@ -277,14 +285,8 @@ begin
     begin
       RaiseException('Unable to create the retained installer directory.');
     end;
-    if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-{#InstallerProfile}-Setup.exe'), False) then
-    begin
-      RaiseException('Unable to retain the current Replay Foundry installer for repair.');
-    end;
-    if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-Setup.exe'), False) then
-    begin
-      RaiseException('Unable to retain the current Replay Foundry installer for maintenance.');
-    end;
+    RetainInstaller(ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-{#InstallerProfile}-Setup.exe'));
+    RetainInstaller(ExpandConstant('{localappdata}\ReplayFoundry\Installers\ReplayFoundry-Setup.exe'));
   finally
     WizardForm.ProgressGauge.Style := npbstNormal;
   end;

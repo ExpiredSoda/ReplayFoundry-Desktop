@@ -15,6 +15,14 @@ internal static partial class UiUxApplicationSurfaceTests
 {
     private static Task ShellServiceIconsReportTruthfulState()
     {
+        using var missing = CreateShell(localAiCapabilities:
+            GenerationRuntimeCapabilities.DeterministicOnly with { IsMediaAnalysisAvailable = false });
+        TestAssert.Equal(ShellServiceState.Degraded, missing.LocalAiServiceState,
+            "Missing video tools must not appear as a healthy local-only install.");
+        TestAssert.Equal("Tools need repair", missing.LocalAiStatusLabel,
+            "The shell must show the same repair state as Settings.");
+        TestAssert.True(missing.LocalAiStatusDetail.Contains("Repair installed tools", StringComparison.Ordinal),
+            "The status must offer an actionable route to recovery.");
         var wikidata = new MutableGameKnowledgePermissionStatus();
         using var offline = CreateShell(
             gameKnowledgePermissionStatus: wikidata,

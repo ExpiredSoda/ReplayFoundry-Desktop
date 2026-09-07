@@ -158,10 +158,10 @@ public sealed class ReplayFoundryRuntimePackCatalogInstaller
         foreach (ReplayFoundryRuntimePackKind kind in catalog.Packs.Select(pack => pack.Kind))
         {
             try { previousActive.Add(await _store.ResolveActiveAsync(kind, cancellationToken: cancellationToken)); }
-            catch (FileNotFoundException)
+            catch (Exception exception) when (exception is FileNotFoundException or InvalidDataException)
             {
-                // This kind had no prior active pack, so rollback has no
-                // activation to restore.
+                // Missing or corrupt packs have no usable prior activation.
+                // Continue so the verified catalog can restore this kind.
             }
         }
         var completed = new List<InstalledReplayFoundryRuntimePack>();
@@ -208,7 +208,9 @@ public sealed class ReplayFoundryRuntimePackCatalogInstaller
                     string hash = await ReplayFoundryRuntimePackBuilder.ComputeSha256Async(partial, cancellationToken);
                     if (!string.Equals(hash, item.Sha256, StringComparison.Ordinal)) throw new InvalidDataException($"Downloaded {item.PackageId} failed SHA-256 verification.");
                     File.Move(partial, archive, overwrite: true);
-                    InstalledReplayFoundryRuntimePack installed = await _store.InstallAsync(archive, activate: true, cancellationToken);
+                    // Verified installed packs were reused above. A remaining
+                    // directory may be corrupt and needs verified replacement.
+                    InstalledReplayFoundryRuntimePack installed = await _store.RepairAsync(archive, cancellationToken);
                     completed.Add(installed);
                     if (installed.Manifest.Identity.Kind != item.Kind ||
                         !string.Equals(installed.Manifest.Identity.PackageId, item.PackageId, StringComparison.Ordinal) ||

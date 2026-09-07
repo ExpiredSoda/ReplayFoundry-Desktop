@@ -415,6 +415,8 @@ public sealed class SettingsViewModel :
             : "Core video tools need repair before Replay Foundry can process videos.";
     public string AiStatus => _runtimeCapabilities is null
         ? "Installed AI status is unavailable in this preview."
+        : !_runtimeCapabilities.IsBaseReady
+            ? "Choose Repair installed tools to restore video processing."
         : _runtimeCapabilities.IsThoroughReady
             ? "Advanced local analysis is installed."
             : _runtimeCapabilities.IsBalancedReady

@@ -6,6 +6,9 @@ downloadable version is [1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoun
 
 ## 1.0.0 Beta 5 — 2026-09-07
 
+- Corrected the Beta 5 installer and repair flow: missing media tools can be restored, damaged AI packages are replaced from verified downloads, and repair stays available when the cached setup is missing. Rerunning the retained installer no longer tries to overwrite itself.
+- Fixed a crash when clearing recent projects with captions, including projects whose source recordings have been deleted. Empty selections and switching recordings now clear stale caption frames safely.
+- Distinguished neighboring-month calendar dates with yellow numbers and month labels while retaining selection, keyboard navigation, and scheduling controls.
 - Refreshed Generate, Studio, Library, Publish, and Settings with consistent branding, clearer wording, and fewer overlapping controls. Video intake now makes drag and drop clear, and audio waveforms support direct seeking.
 - Added a dedicated full-recording workspace with thumbnail timelines, suggested regions, gameplay/commentary/funny filters, draggable clip ranges, undo/redo, and familiar editing shortcuts.
 - Improved caption phrase breaks, unified caption look choices, and added animated effect previews. Custom clips receive the same title and description workflow as generated clips.

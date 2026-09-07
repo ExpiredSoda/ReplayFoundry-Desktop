@@ -918,6 +918,15 @@ internal static class RuntimePackTests
             catalog,
             Path.Combine(fixture.Root, "downloads"));
         Assert(handler.RequestCount == 0, "An exact verified installed pack was downloaded again.");
+
+        InstalledReplayFoundryRuntimePack installed = await store.ResolveActiveAsync(manifest.Identity.Kind);
+        File.Delete(installed.Resolve(ReplayFoundryRuntimeFileRole.FfprobeExecutable));
+        await new ReplayFoundryRuntimePackCatalogInstaller(client, store).InstallAsync(
+            catalog, Path.Combine(fixture.Root, "downloads"));
+        Assert(handler.RequestCount == 1, "A damaged active pack must be downloaded and repaired.");
+        InstalledReplayFoundryRuntimePack repaired = await store.ResolveActiveAsync(manifest.Identity.Kind);
+        Assert(File.Exists(repaired.Resolve(ReplayFoundryRuntimeFileRole.FfprobeExecutable)),
+            "Catalog repair did not restore the deleted media tool.");
     }
 
     private static async Task CatalogRollsBackPartialProfile()

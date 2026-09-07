@@ -210,6 +210,13 @@ Each successful build writes external release records for the application payloa
 10. Run clean install, upgrade, repair, add/remove Advanced AI, uninstall,
     YouTube connect/disconnect, generation, Studio, render, Library, and Publish
     tests in clean supported Windows VMs.
+    Launch setup and the installed app from Windows Explorer or the Start menu,
+    outside a packaged development host. MSIX app-data redirection can make tools
+    appear installed to a developer-launched process while remaining unavailable
+    to a normal desktop launch. Verify the same media and AI capabilities after
+    closing the app and reopening its installed shortcut. Also exercise repair
+    with a missing cached installer and a deleted media tool in an isolated test
+    installation; never delete a user's recording for this check.
 11. Submit the signed candidate to Defender and reputation checks without
     bypassing Smart App Control or antivirus.
 12. Publish only the signed installer, its release manifest, reviewed production

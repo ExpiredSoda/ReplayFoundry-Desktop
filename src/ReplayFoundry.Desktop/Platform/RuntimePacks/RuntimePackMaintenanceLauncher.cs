@@ -10,22 +10,33 @@ public sealed class RuntimePackMaintenanceLauncher : IRuntimePackMaintenanceActi
 {
     private const string AdvancedInstallerEnvironment = "REPLAYFOUNDRY_ADVANCED_INSTALLER";
     private readonly string _storeRoot;
-    private readonly string? _advancedInstallerTarget;
+    private readonly Func<string?> _resolveInstaller;
+    private readonly Action<string, IReadOnlyList<string>> _launch;
+    private readonly bool _hasAdvancedTools;
     private readonly string? _runtimeInstaller;
 
-    public RuntimePackMaintenanceLauncher(string storeRoot)
+    public RuntimePackMaintenanceLauncher(string storeRoot, bool hasAdvancedTools = false)
+        : this(storeRoot, FindAdvancedInstallerTarget, Start, hasAdvancedTools)
+    {
+    }
+
+    internal RuntimePackMaintenanceLauncher(string storeRoot,
+        Func<string?> resolveInstaller, Action<string, IReadOnlyList<string>> launch,
+        bool hasAdvancedTools = false)
     {
         _storeRoot = Path.GetFullPath(storeRoot);
-        _advancedInstallerTarget = FindAdvancedInstallerTarget();
+        _resolveInstaller = resolveInstaller;
+        _launch = launch;
+        _hasAdvancedTools = hasAdvancedTools;
         _runtimeInstaller = FindRuntimeInstaller();
     }
 
-    public bool CanAddAdvanced => _advancedInstallerTarget is not null;
-    public bool CanRepair => _advancedInstallerTarget is not null && File.Exists(_advancedInstallerTarget);
+    public bool CanAddAdvanced => _resolveInstaller() is not null;
+    public bool CanRepair => _resolveInstaller() is not null;
     public bool CanRemoveAdvanced => _runtimeInstaller is not null;
 
-    public void AddAdvanced() => LaunchInstaller();
-    public void Repair() => LaunchInstaller();
+    public void AddAdvanced() => LaunchInstaller(addAdvanced: true);
+    public void Repair() => LaunchInstaller(addAdvanced: _hasAdvancedTools);
 
     public void RemoveAdvanced()
     {
@@ -50,15 +61,17 @@ public sealed class RuntimePackMaintenanceLauncher : IRuntimePackMaintenanceActi
         Process.Start(new ProcessStartInfo(_storeRoot) { UseShellExecute = true });
     }
 
-    private void LaunchInstaller()
+    private void LaunchInstaller(bool addAdvanced)
     {
-        if (_advancedInstallerTarget is null) throw new InvalidOperationException("The Advanced AI installer is not available on this PC.");
-        if (Uri.TryCreate(_advancedInstallerTarget, UriKind.Absolute, out Uri? uri) && uri.Scheme == Uri.UriSchemeHttps)
+        // Resolve at click time: a cached setup may have been removed since startup.
+        string? target = _resolveInstaller();
+        if (target is null) throw new InvalidOperationException("The Replay Foundry installer is not available on this PC.");
+        if (Uri.TryCreate(target, UriKind.Absolute, out Uri? uri) && uri.Scheme == Uri.UriSchemeHttps)
         {
-            Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+            _launch(uri.AbsoluteUri, []);
             return;
         }
-        Start(_advancedInstallerTarget, []);
+        _launch(target, addAdvanced ? ["/MERGETASKS=advancedai"] : []);
     }
 
     private static string? FindAdvancedInstallerTarget()

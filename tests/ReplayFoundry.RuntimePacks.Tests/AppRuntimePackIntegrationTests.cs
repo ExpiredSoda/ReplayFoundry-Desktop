@@ -17,6 +17,7 @@ internal static class AppRuntimePackIntegrationTests
         new("Desktop runtime discovery cannot deadlock a UI synchronization context", RuntimeDiscoveryDoesNotDeadlockUiContext),
         new("Advanced removal requests the cancelable main-window close path", AdvancedRemovalRequestsGracefulClose),
         new("Settings projects capability state and delegates maintenance", SettingsProjectsCapabilities),
+        new("Repair survives a missing cached setup and retains the Advanced AI choice", RepairResolvesAtClickTime),
         new("Process request snapshots runtime environment variables", ProcessEnvironmentSnapshots),
         new("Qwen deployment lock must authorize the packaged Python executable", QwenDeploymentLockMatchesPython),
         new("Qwen runtime environment is offline bounded and read only", QwenEnvironmentIsBounded),
@@ -30,6 +31,26 @@ internal static class AppRuntimePackIntegrationTests
             "An empty store exposed a runtime capability.");
         Assert(environment.Capabilities.Count == 6 && environment.Capabilities.All(item => !item.IsAvailable),
             "The fixed capability inventory was not reported as unavailable.");
+        return Task.CompletedTask;
+    }
+
+    private static Task RepairResolvesAtClickTime()
+    {
+        using var fixture = new Fixture();
+        string? target = Path.Combine(fixture.Root, "setup.exe");
+        string? launched = null;
+        IReadOnlyList<string> arguments = [];
+        var launcher = new RuntimePackMaintenanceLauncher(fixture.Root,
+            () => target, (path, args) => { launched = path; arguments = args; }, hasAdvancedTools: true);
+        Assert(launcher.CanRepair, "A retained setup must allow repair.");
+        launcher.Repair();
+        Assert(arguments.Contains("/MERGETASKS=advancedai"), "Repair must retain the installed Advanced AI choice.");
+        target = "https://replayfoundry.com/download";
+        Assert(launcher.CanRepair, "A missing cached setup must retain the official download recovery path.");
+        launcher.Repair();
+        Assert(launched == target && arguments.Count == 0, "Repair used a stale setup or passed executable switches to a URL.");
+        target = null;
+        Assert(!launcher.CanRepair && !launcher.CanAddAdvanced, "Maintenance must not claim an unavailable target.");
         return Task.CompletedTask;
     }
 

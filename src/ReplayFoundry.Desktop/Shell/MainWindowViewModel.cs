@@ -220,13 +220,14 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
     public ICommand OpenTeachingPromptCommand => _openTeachingPromptCommand;
 
     public ShellServiceState LocalAiServiceState =>
-        _localAiCapabilities is null
+        _localAiCapabilities is null || !_localAiCapabilities.IsMediaAnalysisAvailable
             ? ShellServiceState.Degraded
             : HasUsableAiTooling
                 ? ShellServiceState.Ready
                 : ShellServiceState.Offline;
 
-    public string LocalAiStatusLabel => LocalAiServiceState switch
+    public string LocalAiStatusLabel => _localAiCapabilities?.IsMediaAnalysisAvailable == false
+        ? "Tools need repair" : LocalAiServiceState switch
     {
         ShellServiceState.Ready => "AI and local tools",
         ShellServiceState.Degraded => "Tool status unavailable",
@@ -249,7 +250,8 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
     public string LocalAiAccessibleName =>
         $"Installed tools: {LocalAiStatusLabel}";
 
-    public string LocalAiAccessibleStatus => LocalAiServiceState switch
+    public string LocalAiAccessibleStatus => _localAiCapabilities?.IsMediaAnalysisAvailable == false
+        ? "Core video tools unavailable; open Settings to repair" : LocalAiServiceState switch
     {
         ShellServiceState.Ready => $"{UsableAiTier} ready",
         ShellServiceState.Degraded => "AI availability could not be checked",
@@ -391,6 +393,10 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 
     private string BuildLocalAiStatusDetail()
     {
+        if (_localAiCapabilities?.IsMediaAnalysisAvailable == false)
+        {
+            return "Core video tools need repair. Open Settings, then Local tools & AI, and choose Repair installed tools.";
+        }
         if (_localAiCapabilities is null)
         {
             return "Local tools are ready. AI availability could not be checked.";

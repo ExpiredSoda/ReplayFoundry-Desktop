@@ -10,7 +10,8 @@ public sealed record GenerationRuntimeCapabilities(
     string? EditorialAiUnavailableReason = null,
     Func<string?>? EditorialGpuAdmissionCheck = null,
     Func<string>? EditorialGpuReadiness = null,
-    AudioTranscriptionModelLanguageCapabilities? CaptionLanguageCapabilities = null)
+    AudioTranscriptionModelLanguageCapabilities? CaptionLanguageCapabilities = null,
+    bool IsMediaAnalysisAvailable = true)
 {
     public const string DefaultEditorialAiUnavailableReason =
         "Local AI title writing is not ready. Install or repair " +
