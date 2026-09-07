@@ -5,7 +5,7 @@ namespace ReplayFoundry.Desktop.Features.Settings;
 public sealed class EditorialMetadataPreferenceLearningConsentSnapshot
 {
     public const string CurrentNoticeVersion =
-        "editorial-metadata-preference-learning-notice-1.0";
+        "editorial-metadata-preference-learning-notice-2.0";
 
     public EditorialMetadataPreferenceLearningConsentSnapshot(
         bool isEnabled,
@@ -78,7 +78,10 @@ public sealed class EditorialMetadataPreferenceLearningConsentState :
     public event EventHandler? Changed;
 
     public bool IsPersistent => _store.IsPersistent;
-    public bool IsEnabled => _current.IsEnabled;
+    // The old notice promised that wording was never stored. Its approval
+    // cannot silently opt another user into retaining actual wording/facts.
+    public bool IsEnabled => _current.IsEnabled &&
+        _current.NoticeVersion == EditorialMetadataPreferenceLearningConsentSnapshot.CurrentNoticeVersion;
     public DateTimeOffset? EnabledAtUtc => _current.EnabledAtUtc;
     public string NoticeVersion => _current.NoticeVersion;
 

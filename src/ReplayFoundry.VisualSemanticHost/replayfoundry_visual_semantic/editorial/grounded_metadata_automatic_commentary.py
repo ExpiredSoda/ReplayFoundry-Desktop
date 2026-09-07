@@ -145,7 +145,15 @@ def _scoped_retry_authority(
     scoped.pop("copyProfile", None)
     scoped.pop("groundedClaims", None)
     scoped.pop("groundedClaimBindings", None)
+    if withhold_automatic:
+        scoped.pop("confirmedGameIdentity", None)
+        scoped.pop("userGameContext", None)
+        scoped.pop("selectedGameKnowledge", None)
+        scoped.pop("reviewedCreatorSpeech", None)
+        scoped.pop("stableReadableText", None)
+        scoped["identityWithheldForSafety"] = True
     if primary_only:
+        scoped["evidenceScopeSelectedPrimaryOnly"] = True
         scoped["chronologicalProgression"] = []
         for key in ("reviewedCreatorSpeech", "userGameContext", "selectedGameKnowledge", "stableReadableText"):
             scoped.pop(key, None)
@@ -209,5 +217,3 @@ def _automatic_commentary_authorizes_creator_voice(
             return False
         found = True
     return found
-
-

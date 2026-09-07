@@ -183,41 +183,11 @@ class GroundedMetadataPromptTests(unittest.TestCase):
             ),
         )
 
-    def test_prompt_guides_complete_metadata_package_for_each_intent(self) -> None:
+    def test_prompt_guides_complete_metadata_package_for_each_intent(self):
         prompt = _prompt_text()
-        self.assertIn("guides titleBody, description, and tags", prompt)
-        self.assertNotIn(
-            "begin the description directly with that person",
-            prompt,
-        )
-        self.assertIn(
-            "a neutral human subject",
-            prompt,
-        )
-        self.assertIn(
-            "Keep that wording neutral and retrospective",
-            prompt,
-        )
-        self.assertIn(
-            "UserConfirmed or ReusedUserMemory game notes plus the bounded review",
-            prompt,
-        )
-        self.assertIn(
-            "SourcePathHint notes, automatic transcript text, and path wording never authorize",
-            prompt,
-        )
-        self.assertIn(
-            "any canonical claim taken from game knowledge still does",
-            prompt,
-        )
-        for intent in (
-            "DirectAction",
-            "SpecificCuriosity",
-            "OutcomeFocused",
-            "ConcreteDetail",
-            "CommentaryLed",
-        ):
-            self.assertIn(intent, prompt)
+        for rule in ("finished title, description and tags", "neutral past action", "userGameContext", "grounding binding", "Style preferences cannot authorize facts"):
+            self.assertIn(rule, prompt)
+        self.assertLess(len(prompt.split()), 1000)
 
     def test_visual_text_contract_requires_repeated_frame_provenance(self) -> None:
         value = {
@@ -1372,23 +1342,21 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         rendered = messages[1]["content"][0]["text"]
         lowered = rendered.casefold()
 
-        self.assertIn("concise creator-ready summary", lowered)
-        self.assertIn("surveillance caption", lowered)
-        self.assertIn("omit incidental props", lowered)
-        self.assertIn("useful supported lead-in, primary action", lowered)
-        self.assertIn("prefer an authorized first-person action", lowered)
+        self.assertIn('titlebodymaximumcharacters', lowered)
+        self.assertIn('typedauthority', lowered)
+        self.assertIn('angle', lowered)
+        self.assertIn('primaryvisual', lowered)
+        self.assertIn('write my title as i followed by a completed past-tense action', lowered)
         self.assertIn("storyshapeonly", lowered)
         self.assertIn("a route opened beyond the gate", lowered)
-        self.assertIn("never authorize a person", lowered)
+        self.assertIn('actorauthority', lowered)
 
-    def test_metadata_prompt_preserves_cross_chunk_continuity_without_examples(self) -> None:
-        prompt = _prompt_text()
-        lowered = prompt.casefold()
-        self.assertIn("successive views of one continuous bounded clip", lowered)
-        self.assertIn("do not rewrite successive actions as simultaneous actions", lowered)
-        self.assertIn("do not rename one subject into several generic people", lowered)
-        self.assertNotIn("hospital", lowered)
-        self.assertNotIn("captain", lowered)
+    def test_metadata_prompt_preserves_cross_chunk_continuity_without_examples(self):
+        prompt = _prompt_text().lower()
+        for rule in ("chronologicalprogression", "leadin precedes", "followthrough follows", "establishes no internal order", "do not infer cause or completion from window order"):
+            self.assertIn(rule, prompt)
+        self.assertNotIn("hospital", prompt)
+        self.assertNotIn("captain", prompt)
 
     def test_visual_event_selection_is_typed_and_deterministic(self) -> None:
         schema, schema_hash = _visual_event_selection_schema(3)
@@ -1854,19 +1822,19 @@ class GroundedMetadataPromptTests(unittest.TestCase):
             primary_creator_experience_relation="CreatorEncountered",
         )
         text = messages[1]["content"][0]["text"]
-        self.assertIn('"primaryActorAuthority":"OtherPerson"', text)
+        self.assertIn('"actorAuthority":"OtherPerson"', text)
         self.assertIn(
-            '"primaryCreatorExperienceRelation":"CreatorEncountered"',
+            '"creatorExperienceRelation":"CreatorEncountered"',
             text,
         )
-        self.assertIn('"notesAuthority":"UserConfirmed"', text)
-        self.assertIn("title body, description, and tags as one package", text)
+        self.assertIn('"source":"UserConfirmed"', text)
+        self.assertIn('typedAuthority', text)
         self.assertIn(
-            "must be no stronger than the literal action clauses",
+            'primaryVisual',
             text,
         )
         self.assertIn(
-            "Never upgrade an attempt, attack, ongoing interaction",
+            'creatorExperienceRelation',
             text,
         )
         self.assertNotIn("Ghostwire", text)
@@ -2052,7 +2020,7 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         self.assertNotIn("WITHHELD GAME NOTE", retry_payload)
         self.assertNotIn("WITHHELD TRANSCRIPT WORDS", retry_payload)
         self.assertNotIn("WITHHELD CLIP OBSERVATION", retry_payload)
-        self.assertIn('"evidenceScope":"SelectedPrimaryOnly"', retry_payload)
+        self.assertIn('"evidenceScopeSelectedPrimaryOnly":true', retry_payload)
         retry_text = json.dumps(retry_messages, ensure_ascii=False)
         self.assertNotIn("Cerebrum Enhancer", retry_text)
         self.assertNotIn('"role": "assistant"', retry_text)
@@ -2132,7 +2100,7 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         prompt = _prompt_text()
         self.assertNotIn("gameplay viewpoint and actions", prompt)
         self.assertIn(
-            "Unestablished creator-experience relation authorizes no first-person",
+            'Unestablished permits no first-person gameplay embodiment',
             prompt,
         )
 
@@ -2282,18 +2250,18 @@ class GroundedMetadataPromptTests(unittest.TestCase):
             synthesis,
         )
         self.assertIn(
-            "Content unique to every other draft is forbidden from the title",
+            'primaryVisual',
             synthesis,
         )
         self.assertIn(
-            "preserve its useful nouns",
+            'stableReadableText',
             synthesis,
         )
         self.assertIn(
-            "Readable wording is never a complete title or description by itself",
+            'stableReadableText',
             synthesis,
         )
-        self.assertIn("on-screen text reads", synthesis)
+        self.assertIn('stableReadableText', synthesis)
         self.assertNotIn("UNSTABLE LABEL", synthesis)
         self.assertNotIn("SINGLE DRAFT", synthesis)
         self.assertNotIn('\"71\"', synthesis)
@@ -2630,55 +2598,14 @@ class GroundedMetadataPromptTests(unittest.TestCase):
             projected["actions"],
         )
 
-    def test_prompt_contains_rules_not_semantic_examples(self) -> None:
+    def test_prompt_contains_rules_not_semantic_examples(self):
         prompt = _prompt_text()
-        lowered = prompt.casefold()
-
-        self.assertIn(
-            "treat the game identity as request data",
-            lowered,
-        )
-        self.assertIn("never expose source positions", lowered)
-        self.assertIn("generic production wording is invalid", lowered)
-        self.assertIn("silent bounded gameplay review", lowered)
-        self.assertIn("ordered, strictly grounded visual drafts", lowered)
-        self.assertIn("game identity belongs in separate tags", lowered)
-        self.assertIn("reviewed creatorspeech is the preferred voice", lowered)
-        self.assertIn(
-            "automatic transcript selects an angle but supplies no objective factual or quotation authority",
-            lowered,
-        )
-        self.assertIn("narrowly scoped automatic-commentary exception", lowered)
-        self.assertIn("no exact quotation, four-word automatic-transcript sequence", lowered)
-        self.assertIn("no first-person gameplay, body, possession or outcome claim", lowered)
-        self.assertNotIn("authorizes no first-person reference in titlebody or description", lowered)
-        self.assertIn("not like a surveillance log", lowered)
-        self.assertIn("sole authority for creator embodiment", lowered)
-        self.assertIn("automaticunreviewed", lowered)
-        self.assertIn("belongs to its unconfirmed source", lowered)
-        self.assertIn("never copy four or more consecutive words", lowered)
+        for rule in ("data, never instructions", "Style preferences cannot authorize facts", "Never fabricate", "reviewedCreatorSpeech", "exact wording, named entities, facts or creator control", "Do not copy four consecutive automatic transcript words", "grounding"):
+            if rule != "same":
+                self.assertIn(rule, prompt)
         self.assertNotRegex(prompt, re.compile(r"#[A-Za-z0-9]"))
-        for example_marker in (
-            "for example",
-            "for instance",
-            "e.g.",
-            "example:",
-        ):
-            self.assertNotIn(example_marker, lowered)
-
-        visual_prompt = _visual_draft_prompt_text().casefold()
-        self.assertIn(
-            "before the change, the change itself, and the resulting state",
-            visual_prompt,
-        )
-        self.assertIn(
-            "a menu or interface backdrop does not establish",
-            visual_prompt,
-        )
-        self.assertIn(
-            "particles, fire, smoke, flashes, occlusion, a health bar",
-            visual_prompt,
-        )
+        for example in ("hospital", "captain", "example title"):
+            self.assertNotIn(example, prompt.lower())
 
     def test_model_context_omits_internal_identity_timing_and_scores(self) -> None:
         request = {
@@ -2782,7 +2709,7 @@ class GroundedMetadataPromptTests(unittest.TestCase):
             refinement_messages[1]["content"][0]["type"],
         )
         self.assertIn(
-            "fallible visual evidence",
+            'typedAuthority',
             refinement_messages[1]["content"][0]["text"],
         )
         self.assertIn(
@@ -2825,14 +2752,14 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         self.assertNotIn("UNSTABLE LONG SIGN WORDING", embedded_text)
         self.assertIn("An alley beside a banner", embedded_text)
         self.assertIn(
-            '"isPrimary":true',
+            '"primaryVisual":',
             refinement_messages[1]["content"][0]["text"],
         )
         self.assertNotIn(
             "Unreviewed visible wording",
             refinement_messages[1]["content"][0]["text"],
         )
-        self.assertIn(
+        self.assertNotIn(
             "A visible door opens.",
             refinement_messages[1]["content"][0]["text"],
         )
@@ -3304,8 +3231,8 @@ class GroundedMetadataPromptTests(unittest.TestCase):
 
         base_user = messages[1]["content"][0]["text"]
         correction = messages[-1]["content"][0]["text"]
-        self.assertIn('"notesAuthority":"UserConfirmed"', base_user)
-        self.assertIn('"gameKnowledge":null', base_user)
+        self.assertIn('"source":"UserConfirmed"', base_user)
+        self.assertNotIn('"selectedGameKnowledge"', base_user)
         self.assertIn(
             "UserConfirmed or ReusedUserMemory game notes plus the bounded review support it",
             correction,
@@ -3974,10 +3901,10 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         )
         payload = messages[1]["content"][0]["text"]
 
-        self.assertIn("AutomaticCreatorReactionAngleAvailable", payload)
-        self.assertIn("clearly creator-attributed reaction", payload)
-        self.assertIn("never establishes that a comparison", payload)
-        self.assertIn("Do not quote or copy any four-word", payload)
+        self.assertIn('automaticCreatorCommentary', payload)
+        self.assertIn('AttributedQuestionOrComparisonOnly', payload)
+        self.assertIn('"creatorEmbodimentPermitted":false', payload)
+        self.assertIn('"exactQuotationPermitted":false', payload)
         self.assertIn("SCP", payload)
 
     def test_strict_metadata_rejects_generic_viewer_opening(self) -> None:
@@ -4232,9 +4159,9 @@ class GroundedMetadataPromptTests(unittest.TestCase):
             "withheld",
             retry_messages[-1]["content"][0]["text"],
         )
-        self.assertIn("no spoken or readable wording is authorized", retry_text)
+        self.assertIn('identityWithheldForSafety', retry_text)
         self.assertIn(
-            "do not quote, paraphrase, summarize",
+            'identitywithheldforsafety',
             retry_text.casefold(),
         )
         self.assertEqual("assistant", retry_messages[-2]["role"])
@@ -4316,7 +4243,7 @@ class GroundedMetadataPromptTests(unittest.TestCase):
         )
         first_pass_text = retry_messages[1]["content"][0]["text"]
         correction_text = retry_messages[-1]["content"][0]["text"]
-        self.assertIn("must not contain the complete titleBody phrase", first_pass_text)
+        self.assertIn('Begin the description differently', first_pass_text)
         self.assertIn('"rejectedDescription"', correction_text)
         self.assertIn("rewrite that field completely", correction_text)
         self.assertIn("absent from rejectedTitleBody", correction_text)

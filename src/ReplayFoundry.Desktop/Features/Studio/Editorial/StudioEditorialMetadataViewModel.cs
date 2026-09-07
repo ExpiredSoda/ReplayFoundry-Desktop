@@ -514,7 +514,7 @@ public sealed class StudioEditorialMetadataViewModel :
             _draftState = "Saved";
             _status =
                 "Title and description saved.";
-            _preferenceRecorder?.TryRecordCorrection(
+            _preferenceRecorder?.TryRecordCorrection(_asset,
                 beforeTitle,
                 beforeDescription,
                 beforeTags,
@@ -589,7 +589,7 @@ public sealed class StudioEditorialMetadataViewModel :
             _draftState = "Saved";
             _status =
                 "Title and description saved.";
-            _preferenceRecorder?.TryRecordCorrection(
+            _preferenceRecorder?.TryRecordCorrection(_asset,
                 beforeTitle,
                 beforeDescription,
                 beforeTags,
@@ -615,6 +615,7 @@ public sealed class StudioEditorialMetadataViewModel :
         try
         {
             _service.MarkReviewed(_project, _asset);
+            _preferenceRecorder?.TryRecordApproval(_asset);
             _draftState = "Reviewed";
             _status = "Marked as reviewed.";
         }

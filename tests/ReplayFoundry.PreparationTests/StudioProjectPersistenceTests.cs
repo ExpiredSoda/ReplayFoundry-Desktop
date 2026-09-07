@@ -194,6 +194,9 @@ internal static partial class StudioProjectPersistenceTests
             "The project caption size must remain available to clips accepted after reopening.");
         TestAssert.Equal("A grounded title", asset.EditorialMetadata!.Title,
             "Editorial metadata should persist.");
+        TestAssert.Equal(new string('b', 64),
+            asset.EditorialMetadata.AiProvenance!.WritingAttempts.Single().AdapterSha256,
+            "The exact trained writer used for a draft must survive saving and reopening.");
         TestAssert.Equal(
             ClipEditorialMetadataReadiness.UserEditedDraft,
             asset.EditorialMetadata.Readiness,
@@ -1087,6 +1090,14 @@ internal static partial class StudioProjectPersistenceTests
                 ClipEditorialMetadataOrigin.UserEdited,
                 new ClipEditorialMetadataGeneratorIdentity("test", "1.0"),
                 attempt: 1,
+                aiProvenance: new ClipEditorialAiProvenance(
+                    "test", "1", "1", "test/model", "revision", new string('a', 64),
+                    "test", "1", new string('a', 64), TimeSpan.FromSeconds(1), null)
+                {
+                    WritingAttempts = [new ClipEditorialWritingAttempt(candidateId, 1,
+                        "Qwen/Qwen3-0.6B", "c1899de289a04d12100db370d81485cdf75e47ca",
+                        new string('a', 64), new string('b', 64), new string('c', 64))]
+                },
                 readiness: ClipEditorialMetadataReadiness.UserEditedDraft,
                 qualityIssues: ClipEditorialMetadataReview.BuildIssues(
                     ["UnstableReadableTextReuse"]),

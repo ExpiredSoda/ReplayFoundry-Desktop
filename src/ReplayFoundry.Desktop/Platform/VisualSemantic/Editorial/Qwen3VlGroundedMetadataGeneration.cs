@@ -2,6 +2,8 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
+using ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences;
+using ReplayFoundry.Desktop.Platform.Diagnostics;
 using ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic;
 using ReplayFoundry.Desktop.Platform.Processes;
 
@@ -21,13 +23,15 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
     private readonly Qwen3VlVerifiedModelLease _modelIntegrity;
     private readonly string _promptText;
     private readonly Func<string?>? _gpuAdmissionCheck;
+    private readonly IEditorialWriterLearningStore? _writerLearning;
 
     internal Qwen3VlGroundedMetadataExecutor(
         Qwen3VlQualifiedEditorialRuntime runtime,
         IProcessRunner processRunner,
         IQwen3VlBatchWorkspaceFactory workspaceFactory,
         IQwen3VlGroundedFailureArchive failureArchive,
-        Func<string?>? gpuAdmissionCheck = null)
+        Func<string?>? gpuAdmissionCheck = null,
+        IEditorialWriterLearningStore? writerLearning = null)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _processRunner = processRunner ??
@@ -38,6 +42,7 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
             throw new ArgumentNullException(nameof(failureArchive));
         _modelIntegrity = _runtime.ModelIntegrity;
         _gpuAdmissionCheck = gpuAdmissionCheck;
+        _writerLearning = writerLearning;
 
         _promptText = Qwen3VlGroundedMetadataPrompt.Load(
             _runtime.Host.HostScriptPath,
@@ -71,7 +76,8 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        if (_gpuAdmissionCheck?.Invoke() is string gpuReason)
+        if (_processRunner is not Qwen3VlEditorialWorker { HasResidentModel: true } &&
+            _gpuAdmissionCheck?.Invoke() is string gpuReason)
             throw new InvalidOperationException(gpuReason);
         // The model manifest can cover several gigabytes. Keep the first
         // integrity pass off the WPF dispatcher while retaining exact,
@@ -107,6 +113,12 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
                 QwenEditorialPassDiagnostics.ProcessEnvironment(_runtime.Host.EnvironmentVariables);
             if (handoff is not null)
                 environment = handoff.Prepare(workspace.DirectoryPath, environment);
+            if (_writerLearning?.IsEnabled == true)
+            {
+                environment = new Dictionary<string, string>(environment) { ["REPLAYFOUNDRY_WRITER_CAPTURE"] = "1" };
+                if (_writerLearning.LearningDirectory is { } writerRoot)
+                    environment = new Dictionary<string, string>(environment) { ["REPLAYFOUNDRY_WRITER_ROOT"] = writerRoot };
+            }
             ProcessRunResult process = await MediaWorkBudget.RunAsync(_processRunner,
                 new ProcessRunRequest(
                     _runtime.Host.PythonExecutablePath,
@@ -185,6 +197,14 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
             cancellationToken.ThrowIfCancellationRequested();
             if (handoff is not null)
                 await handoff.RetainExportAsync(workspace.DirectoryPath, cancellationToken);
+            try
+            {
+                _writerLearning?.RetainValidatedBatch(Path.Combine(workspace.DirectoryPath, "writer-contexts.json"), json, requests);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+            {
+                SafeDiagnosticTrace.Write("Local writer context could not be retained", exception);
+            }
             return result;
         }
         catch (Exception exception)
@@ -373,5 +393,8 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
     internal static string ReviewEvidenceId(
         VisualSemanticInputManifest reviewVideo) =>
         Qwen3VlGroundedMetadataPayload.ReviewEvidenceId(reviewVideo);
+
+    internal void ReleaseIdleWorker() => (_processRunner as Qwen3VlEditorialWorker)?.ReleaseIdle();
+    internal void Dispose() => (_processRunner as Qwen3VlEditorialWorker)?.Dispose();
 
 }

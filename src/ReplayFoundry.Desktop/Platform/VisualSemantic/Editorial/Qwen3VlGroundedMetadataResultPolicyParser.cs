@@ -10,6 +10,7 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
     internal static bool UsesGenerationWatchdog(string outputSchema) =>
         outputSchema is
             OutputSchema or
+            PreviousAccelerationOutputSchema or
             PreviousResponsibilitySplitOutputSchema or
             PreviousCompactIsolatedFieldAuthoringOutputSchema or
             PreviousIsolatedFieldAuthoringOutputSchema or
@@ -53,7 +54,8 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
         string outputSchema) =>
         outputSchema switch
         {
-            OutputSchema or PreviousResponsibilitySplitOutputSchema => (PromptVersion, PromptSha256),
+            OutputSchema => (PromptVersion, PromptSha256),
+            PreviousAccelerationOutputSchema or PreviousResponsibilitySplitOutputSchema => ("1.46", "61ad677ba7cb97a250df90bf77aa0fcaeb27dcd226af871b7226d89b1cf6b2d0"),
             PreviousCompactIsolatedFieldAuthoringOutputSchema =>
                 (PreviousCompactIsolatedFieldAuthoringPromptVersion,
                     PreviousCompactIsolatedFieldAuthoringPromptSha256),
@@ -331,4 +333,36 @@ internal static class Qwen3VlGroundedMetadataResultPolicyParser
                 $"Grounded Qwen metadata '{name}' changed.");
         }
     }
+    internal static IReadOnlyList<ClipEditorialWritingAttempt> ParseWritingAttempts(
+        JsonElement root, IReadOnlyList<ClipEditorialMetadataRequest> requests)
+    {
+        JsonElement[] rows = Qwen3VlEditorialJson.Array(root, "writerUsage");
+        if (rows.Length > requests.Count)
+            throw new Qwen3VlOutputParseException("Personal writer usage exceeds the requested cases.");
+        var seen = new HashSet<(string, int)>();
+        var result = new List<ClipEditorialWritingAttempt>();
+        foreach (JsonElement row in rows)
+        {
+            Qwen3VlEditorialJson.Exact(row, "candidateId", "attempt", "logicalPassOrdinal",
+                "modelRepository", "modelRevision", "baseManifestSha256", "adapterSha256", "qualificationSha256");
+            string candidate = Qwen3VlEditorialJson.Text(row, "candidateId");
+            int attempt = row.GetProperty("attempt").GetInt32();
+            if (!seen.Add((candidate, attempt)) || !requests.Any(request => request.Context.CandidateId == candidate && request.Attempt == attempt) ||
+                row.GetProperty("logicalPassOrdinal").GetInt32() != 1)
+                throw new Qwen3VlOutputParseException("Personal writer usage does not match the requested attempt.");
+            RequireText(row, "modelRepository", "Qwen/Qwen3-0.6B");
+            RequireText(row, "modelRevision", "c1899de289a04d12100db370d81485cdf75e47ca");
+            string Hash(string field)
+            {
+                string value = Qwen3VlEditorialJson.Text(row, field);
+                if (value.Length != 64 || value.Any(character => !Uri.IsHexDigit(character)))
+                    throw new Qwen3VlOutputParseException("Personal writer evidence hash is invalid.");
+                return value.ToLowerInvariant();
+            }
+            result.Add(new(candidate, attempt, "Qwen/Qwen3-0.6B", "c1899de289a04d12100db370d81485cdf75e47ca",
+                Hash("baseManifestSha256"), Hash("adapterSha256"), Hash("qualificationSha256")));
+        }
+        return result;
+    }
+
 }

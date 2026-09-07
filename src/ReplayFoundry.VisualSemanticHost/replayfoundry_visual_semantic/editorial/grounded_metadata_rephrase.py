@@ -33,9 +33,9 @@ from .grounded_metadata_rephrase_frame import (
     _require_editorial_frame_adherence,
 )
 
-POLICY_VERSION = "grounded-editorial-rephrase-2.9"
-POLICY_FILE_NAME = "replayfoundry-grounded-editorial-rephrase-policy-2.9.txt"
-POLICY_SHA256 = "f8c050c701dafcdc6b2fea4f87868caed21deb7732b1308612f409626e787f25"
+POLICY_VERSION = "grounded-editorial-rephrase-2.10"
+POLICY_FILE_NAME = "replayfoundry-grounded-editorial-rephrase-policy-2.10.txt"
+POLICY_SHA256 = "b5aa17a8d2c052dd7cfce33e24b2a855810df81ca1e434ff0c97ab43d0bb4957"
 OUTCOME_APPLIED = "Applied"
 OUTCOME_NO_CHANGE = "RetainedOriginalNoMaterialChange"
 OUTCOME_SEMANTIC_REJECTION = "RetainedOriginalSemanticRejection"
@@ -287,6 +287,13 @@ def run_editorial_rephrase(
     if not narrative_presentation_has_distinct_fact(authority):
         progress.editorial_rephrase_outcome = OUTCOME_NO_CHANGE
         progress.editorial_rephrase_rejection_code = "CaseLocalFactUnavailable"
+        progress.editorial_rephrase_output_json_sha256 = source_sha256
+        return
+    if not source_rejection_codes:
+        # Passing copy is finished; only a concrete quality issue warrants a
+        # second model call. Record that no additional generation occurred.
+        progress.editorial_rephrase_outcome = OUTCOME_NO_CHANGE
+        progress.editorial_rephrase_rejection_code = "FirstPassAccepted"
         progress.editorial_rephrase_output_json_sha256 = source_sha256
         return
     attestation_context = _attestation_context(

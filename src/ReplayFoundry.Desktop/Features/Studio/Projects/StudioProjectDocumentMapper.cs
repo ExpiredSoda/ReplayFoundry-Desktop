@@ -704,7 +704,8 @@ public static class StudioProjectDocumentMapper
                     metadata.AiProvenance.PromptVersion,
                     metadata.AiProvenance.PromptSha256,
                     metadata.AiProvenance.BatchElapsed,
-                    metadata.AiProvenance.PeakAllocatedGpuBytes),
+                    metadata.AiProvenance.PeakAllocatedGpuBytes,
+                    metadata.AiProvenance.WritingAttempts.ToArray()),
             metadata.Readiness,
             metadata.QualityIssues.Select(static value =>
                 new StudioEditorialQualityIssueDocument(
@@ -746,7 +747,10 @@ public static class StudioProjectDocumentMapper
                     metadata.AiProvenance.PromptVersion,
                     metadata.AiProvenance.PromptSha256,
                     metadata.AiProvenance.BatchElapsed,
-                    metadata.AiProvenance.PeakAllocatedGpuBytes),
+                    metadata.AiProvenance.PeakAllocatedGpuBytes)
+                {
+                    WritingAttempts = metadata.AiProvenance.WritingAttempts?.ToArray() ?? []
+                },
             metadata.Readiness,
             metadata.QualityIssues.Select(static value =>
                 new ClipEditorialMetadataQualityIssue(

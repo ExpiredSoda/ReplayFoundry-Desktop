@@ -6,6 +6,9 @@ downloadable version is [1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoun
 
 ## 1.0.0 Beta 5 — 2026-09-07
 
+- Accelerated AI titles and descriptions with compact prompts, finished first drafts, targeted corrections, reusable visual context, and a local worker that stays ready during a writing session. GPU cache placement follows available memory and retains a 2 GiB reserve; cancellation and inactivity release the worker.
+- Added opt-in local wording feedback and a trainable neural writer. Actual edits and explicit approvals retain their clip facts for supervised and preference training; clip ratings and publishing actions do not approve wording. The verified pretrained writer base ships with Advanced AI. Personal adapters need independent quality and speed checks, and synthetic test adapters never ship.
+- Updated the matching optional visual runtime/model packages to `0.8.26` and `4.0.22`. Personal writer provenance survives project save and reopen. Updates retain local learning data; a full uninstall still clears app data.
 - Corrected the Beta 5 installer and repair flow: missing media tools can be restored, damaged AI packages are replaced from verified downloads, and repair stays available when the cached setup is missing. Rerunning the retained installer no longer tries to overwrite itself.
 - Fixed a crash when clearing recent projects with captions, including projects whose source recordings have been deleted. Empty selections and switching recordings now clear stale caption frames safely.
 - Fixed caption regeneration, subtitle imports, and saved word edits after moving a clip to a different part of the recording. New speech now uses the current clip range for captions and editorial context.

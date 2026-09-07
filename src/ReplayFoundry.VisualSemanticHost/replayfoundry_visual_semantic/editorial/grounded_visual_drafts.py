@@ -55,6 +55,9 @@ def _visual_draft_messages(
                     "type": "text",
                     "text": (
                         "Describe only this chronological chunk of the bounded review. "
+                        "For weapon fire, distinguish a flash at the muzzle from a separate expanding blast in the scene. "
+                        "Sparks, smoke, recoil and targets obscured by effects do not establish an explosion or destruction. "
+                        "When that distinction is unclear, record firing or the visible effect and mark the outcome uncertain. "
                         f"Chunk {chunk_ordinal} of {chunk_count}; relative seconds "
                         f"{start:.3f} through {end:.3f}. Return only the JSON schema."
                     ),

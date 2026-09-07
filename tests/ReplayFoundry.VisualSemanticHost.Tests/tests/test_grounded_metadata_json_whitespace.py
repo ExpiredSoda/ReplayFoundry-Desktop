@@ -43,6 +43,7 @@ class GroundedMetadataJsonWhitespaceTests(unittest.TestCase):
                 return object()
 
         session = StructuredDecodingSession.__new__(StructuredDecodingSession)
+        session._schemas = {}
         session._compiler = Compiler()  # type: ignore[attr-defined]
         _, audit = session.compile_json_schema(
             '{"type":"object"}',

@@ -2,6 +2,7 @@ using System.IO;
 using ReplayFoundry.Desktop.Features.Generate.Editorial;
 using ReplayFoundry.Desktop.Platform.Diagnostics;
 using ReplayFoundry.Desktop.Platform.VisualSemantic;
+using ReplayFoundry.Desktop.Platform.Storage;
 
 namespace ReplayFoundry.Desktop.Composition;
 
@@ -62,7 +63,7 @@ internal static class EditorialComposition
         try
         {
             Qwen3VlGroundedMetadataGenerator provider =
-                new(runtime);
+                new(runtime, new JsonEditorialWriterLearningStore());
             unavailableReason = null;
             return provider;
         }

@@ -198,14 +198,13 @@ internal sealed class SettingsActionCoordinator
 
     private void EnableEditorialLearning() => SetEditorialLearning(
         () => _services.EditorialLearningConsent.Enable(DateTimeOffset.UtcNow),
-        "Local structural style learning is on. Nothing was uploaded, " +
-        "and saved wording is not retained in the profile.",
+        "Local writing learning is on. Saved corrections and their supporting clip facts stay on this PC. Nothing was uploaded.",
         "Replay Foundry could not save the local learning choice: ");
 
     private void DisableEditorialLearning() => SetEditorialLearning(
         _services.EditorialLearningConsent.Disable,
-        "Local structural style learning is off. No new correction will be " +
-        "recorded. To remove an existing numeric profile, choose Reset saved " +
+        "Local writing learning is off. No new correction will be " +
+        "recorded. To remove saved examples and models, choose Reset saved " +
         "app data in Files & storage.",
         "Replay Foundry could not turn off local learning: ");
 

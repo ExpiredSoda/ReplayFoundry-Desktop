@@ -15,6 +15,12 @@ The current public release is **[1.0.0 Beta 5](https://github.com/ExpiredSoda/Re
 
 ## Prepare and publish
 
+The refreshed Beta 5 also reduces repeated work in AI titles and descriptions.
+Optional wording learning keeps your saved edits and approvals on this PC for
+future personal-writer training. Advanced AI includes the pretrained writer
+base; personal adapters activate only after sufficient feedback and independent
+quality checks. Existing AI writing works before personalization is ready.
+
 Review the cut, captions, title, and description in Studio before exporting. Keep the generated subtitle files and publishing guide with local publishing packages. YouTube uploads and scheduled releases require an explicit publishing action.
 
 - [Website and installation status](https://replayfoundry.com/download)

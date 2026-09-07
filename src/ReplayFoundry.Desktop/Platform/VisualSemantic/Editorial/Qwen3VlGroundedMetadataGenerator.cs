@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
+using ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences;
 using ReplayFoundry.Desktop.Platform.Processes;
 
 namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
@@ -25,6 +26,8 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
     internal const string InputSchema =
         "grounded-editorial-metadata-input-batch-1.9";
     internal const string OutputSchema =
+        "grounded-editorial-metadata-output-batch-1.62";
+    internal const string PreviousAccelerationOutputSchema =
         "grounded-editorial-metadata-output-batch-1.61";
     internal const string PreviousResponsibilitySplitOutputSchema =
         "grounded-editorial-metadata-output-batch-1.60";
@@ -130,9 +133,9 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
         "grounded-editorial-metadata-output-batch-1.10";
     internal const string PromptName =
         "ReplayFoundry Grounded Editorial Metadata";
-    internal const string PromptVersion = "1.46";
+    internal const string PromptVersion = "1.47";
     internal const string PromptSha256 =
-        "61ad677ba7cb97a250df90bf77aa0fcaeb27dcd226af871b7226d89b1cf6b2d0";
+        "9696269b3370f1c1cd6ee6027c586245ef2867011e6879f54624cde1bb25451d";
     internal const string PreviousCompactIsolatedFieldAuthoringPromptVersion = "1.45";
     internal const string PreviousCompactIsolatedFieldAuthoringPromptSha256 =
         "6fa6e96a7a33d28e4c1fdd8ee4a806f57d23cb267aab04aedc3ba591f9f1249d";
@@ -227,13 +230,15 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
     private readonly Qwen3VlGroundedMetadataExecutor _executor;
 
     public Qwen3VlGroundedMetadataGenerator(
-        Qwen3VlQualifiedEditorialRuntime runtime)
+        Qwen3VlQualifiedEditorialRuntime runtime,
+        IEditorialWriterLearningStore? writerLearning = null)
         : this(
             runtime,
-            new WindowsProcessRunner(),
+            new Qwen3VlEditorialWorker(),
             new SystemQwen3VlBatchWorkspaceFactory(),
             new SystemQwen3VlGroundedFailureArchive(),
-            QwenGpuAdmission.GetBlockingReason)
+            QwenGpuAdmission.GetBlockingReason,
+            writerLearning)
     {
     }
 
@@ -242,7 +247,8 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
         IProcessRunner processRunner,
         IQwen3VlBatchWorkspaceFactory workspaceFactory,
         IQwen3VlGroundedFailureArchive? failureArchive = null,
-        Func<string?>? gpuAdmissionCheck = null)
+        Func<string?>? gpuAdmissionCheck = null,
+        IEditorialWriterLearningStore? writerLearning = null)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _executor = new Qwen3VlGroundedMetadataExecutor(
@@ -250,7 +256,8 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
             processRunner,
             workspaceFactory,
             failureArchive ?? NullQwen3VlGroundedFailureArchive.Instance,
-            gpuAdmissionCheck);
+            gpuAdmissionCheck,
+            writerLearning);
     }
 
     public ClipEditorialMetadataGeneratorIdentity Identity { get; } =
@@ -416,5 +423,9 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
             editorialRephraseEligibilitySkipped,
             rejectedLanguageRecovered);
 
-    public void Dispose() => _runtime.Dispose();
+    public void Dispose()
+    {
+        _executor.Dispose();
+        _runtime.Dispose();
+    }
 }

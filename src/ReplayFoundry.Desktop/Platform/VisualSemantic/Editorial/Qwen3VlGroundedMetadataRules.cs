@@ -26,7 +26,9 @@ internal static class Qwen3VlGroundedMetadataRules
             "displays", "gesture", "gestures", "introduce", "introduces",
             "point", "points", "present", "presents", "reveal", "reveals", "review", "reviews",
             "select", "selects", "show", "shows", "speak", "speaks",
-            "update", "updates", "walk", "walks",
+            "update", "updates", "walk", "walks", "fire", "fires", "vanish", "vanishes",
+            "clear", "clears", "reload", "reloads", "aim", "aims", "detonate", "detonates",
+            "explode", "explodes",
         ],
         StringComparer.OrdinalIgnoreCase);
     internal static readonly HashSet<string> CommonIrregularPastForms = new(

@@ -26,10 +26,12 @@ public sealed record Qwen3VlGroundedMemoryPolicyAudit(
 
 internal static class Qwen3VlGroundedMemoryPolicy
 {
-    internal const string Version = "grounded-editorial-cuda-memory-1.6";
+    internal const string Version = "grounded-editorial-cuda-memory-1.7";
     internal const string Sha256 =
-        "975eef96cdd6c526a133a2cb0d2f510c001acfd20561dc54e707bd8a5ef49b67";
+        "2eb391b64248aa7ccad66cbdb578a073b8622a70861800dfe04ae46db545c53a";
     internal const string ConservativeVersion = "grounded-editorial-cuda-memory-1.5";
+    internal const string OffloadedVersion = "grounded-editorial-cuda-memory-1.6";
+    internal const string OffloadedSha256 = "975eef96cdd6c526a133a2cb0d2f510c001acfd20561dc54e707bd8a5ef49b67";
     internal const string ConservativeSha256 =
         "732b33e80cb0e8a50c44f75b1f84e16aefe8044ae3cd88189b18a19e01e4220b";
     internal const string PreviousVersion =
@@ -111,6 +113,8 @@ internal static class Qwen3VlGroundedMemoryPolicy
         bool conservativePolicy =
             policyVersion.Equals(ConservativeVersion, StringComparison.Ordinal) &&
             policyHash.Equals(ConservativeSha256, StringComparison.OrdinalIgnoreCase);
+        bool offloadedPolicy = policyVersion == OffloadedVersion &&
+            policyHash.Equals(OffloadedSha256, StringComparison.OrdinalIgnoreCase);
         bool previousPolicy =
             policyVersion.Equals(PreviousVersion, StringComparison.Ordinal) &&
             policyHash.Equals(PreviousSha256, StringComparison.OrdinalIgnoreCase);
@@ -126,7 +130,7 @@ internal static class Qwen3VlGroundedMemoryPolicy
         bool earlierPolicy =
             policyVersion.Equals(EarlierVersion, StringComparison.Ordinal) &&
             policyHash.Equals(EarlierSha256, StringComparison.OrdinalIgnoreCase);
-        bool attentionPolicy = currentPolicy || conservativePolicy || previousPolicy;
+        bool attentionPolicy = currentPolicy || offloadedPolicy || conservativePolicy || previousPolicy;
         Exact(
             value,
             "$.groundedMemoryPolicy",
@@ -179,14 +183,14 @@ internal static class Qwen3VlGroundedMemoryPolicy
         // Runtime packs update independently of the desktop app. Policy 1.5 has
         // the same enforced attention/offload contract and a larger reserve.
         // Accept its exact telemetry without treating it as policy 1.6.
-        bool baseValid = (currentPolicy || allowConservativeInferencePolicy && conservativePolicy || !requireCurrentPolicy &&
-                (conservativePolicy || previousPolicy || priorPolicy || legacyPolicy ||
+        bool baseValid = (currentPolicy || allowConservativeInferencePolicy && (conservativePolicy || offloadedPolicy) || !requireCurrentPolicy &&
+                (offloadedPolicy || conservativePolicy || previousPolicy || priorPolicy || legacyPolicy ||
                     earlierPolicy || originalPolicy)) &&
             (!attentionPolicy ||
                 attentionImplementation == "sdpa" &&
                 sdpaBackend == "CudnnAttention" &&
                 sdpaBackendForced && !attentionFallbackPermitted) &&
-            device == 0 && cache.Equals("offloaded", StringComparison.Ordinal) &&
+            device == 0 && cache.Equals(currentPolicy ? "bounded-dynamic" : "offloaded", StringComparison.Ordinal) &&
             allocatorScope.Equals(
                 "PyTorchNativeCudaCachingAllocator", StringComparison.Ordinal) &&
             startupGate.Equals(
@@ -196,7 +200,7 @@ internal static class Qwen3VlGroundedMemoryPolicy
                 "CurrentFreeMemoryAtLeastFixedReserve", StringComparison.Ordinal) &&
             total > 0 && startupFree >= 0 && startupFree <= total &&
             external == total - startupFree &&
-            reserve == (currentPolicy ? ReservedAllocatorHeadroomBytes : HistoricalAllocatorHeadroomBytes) &&
+            reserve == (currentPolicy || offloadedPolicy ? ReservedAllocatorHeadroomBytes : HistoricalAllocatorHeadroomBytes) &&
             qualificationPeak == QualificationReferencePeakAllocatedBytes &&
             qualificationArtifactName.Equals(
                 QualificationReferenceArtifactName,
@@ -220,7 +224,7 @@ internal static class Qwen3VlGroundedMemoryPolicy
                 minimumFree <= lastFree) &&
             !Boolean(value, "globalFreeMemoryGuaranteed", "$") &&
             Boolean(value, "cpuModelOffloadPermitted", "$") ==
-                (currentPolicy || conservativePolicy || previousPolicy || priorPolicy ||
+                (currentPolicy || offloadedPolicy || conservativePolicy || previousPolicy || priorPolicy ||
                     legacyPolicy || earlierPolicy) &&
             !Boolean(value, "quantizationPermitted", "$") &&
             !Boolean(value, "automaticFallbackPermitted", "$") &&

@@ -5,9 +5,9 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
 {
-    internal const string Version = "grounded-editorial-rephrase-2.9";
+    internal const string Version = "grounded-editorial-rephrase-2.10";
     internal const string Sha256 =
-        "F8C050C701DAFCDC6B2FEA4F87868CAED21DEB7732B1308612F409626E787F25";
+        "B5AA17A8D2C052DD7CFCE33E24B2A855810DF81CA1E434FF0C97AB43D0BB4957";
     internal const string PreviousIsolatedFieldAuthoringVersion = "grounded-editorial-rephrase-2.8";
     internal const string PreviousIsolatedFieldAuthoringSha256 =
         "D62EF6A57F0EAC28213A9AFBA641FE1465D340B69713AD9A85E43430BF7AC50A";
@@ -195,7 +195,9 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
                 actualSha256.Equals(
                     PreviousStoryLedGrammaticalCenterSha256,
                     StringComparison.OrdinalIgnoreCase)));
-        if (!expectedIdentity && !compatibleHistoricalIdentity)
+        bool previousMandatoryPolish = actualVersion == "grounded-editorial-rephrase-2.9" &&
+            actualSha256.Equals("F8C050C701DAFCDC6B2FEA4F87868CAED21DEB7732B1308612F409626E787F25", StringComparison.OrdinalIgnoreCase);
+        if (!expectedIdentity && !compatibleHistoricalIdentity && !previousMandatoryPolish)
         {
             throw new Qwen3VlOutputParseException(
                 "Grounded Qwen editorial-rephrase policy identity changed.");
@@ -245,9 +247,12 @@ internal static class Qwen3VlGroundedMetadataEditorialRephrasePolicy
             !attempted &&
             !applied &&
             noChange &&
-            rejectionCode?.Equals(
-                "CaseLocalFactUnavailable",
-                StringComparison.Ordinal) == true;
+            (rejectionCode == "CaseLocalFactUnavailable" ||
+                expectedIdentity && actualVersion == Version && rejectionCode == "FirstPassAccepted" &&
+                generation.TryGetProperty("metadataReviewIssues", out JsonElement issues) &&
+                issues.ValueKind == JsonValueKind.Array && issues.GetArrayLength() == 0 &&
+                generation.TryGetProperty("metadataReviewRequired", out JsonElement review) &&
+                review.ValueKind == JsonValueKind.False);
         bool knownRejection = rejectionCode is not null &&
             (Qwen3VlGroundedMetadataSelection.IsKnownValidationRule(
                 rejectionCode) ||

@@ -53,6 +53,8 @@ internal static class Qwen3VlGroundedMetadataResultParser
             "totalElapsedSeconds",
             "canonicalHash",
         ];
+        if (outputSchema == OutputSchema)
+            rootFields = [.. rootFields, "writerUsage"];
         Qwen3VlEditorialJson.Exact(
             root,
             generationWatchdog
@@ -123,7 +125,11 @@ internal static class Qwen3VlGroundedMetadataResultParser
             promptVersion,
             promptSha256,
             elapsed,
-            peak);
+            peak)
+        {
+            WritingAttempts = outputSchema == OutputSchema ?
+                Qwen3VlGroundedMetadataResultPolicyParser.ParseWritingAttempts(root, requests) : [],
+        };
 
         JsonElement results = Qwen3VlEditorialJson.Property(root, "results");
         if (results.ValueKind != JsonValueKind.Array ||

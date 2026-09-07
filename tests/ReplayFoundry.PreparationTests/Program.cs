@@ -33,6 +33,7 @@ internal static class Program
             .. TasteIntegrationTests.GetTests(),
             .. ReportConnectionTests.GetTests(),
             .. EditorialMetadataPreferenceLearningTests.GetTests(),
+            .. EditorialWriterLearningTests.GetTests(),
             .. EditorialRerollPreferenceTests.GetTests(),
             .. EditorialRerollDiversityTests.GetTests(),
             .. StudioCreativePackTests.GetTests(),

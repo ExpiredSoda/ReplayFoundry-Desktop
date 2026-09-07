@@ -46,7 +46,8 @@ _NON_RETROSPECTIVE_ACTION_FORMS = {
     "display", "displays", "gesture", "gestures", "introduce", "introduces",
     "point", "points", "present", "presents", "reveal", "reveals", "review", "reviews", "select",
     "selects", "show", "shows", "speak", "speaks", "update", "updates",
-    "walk", "walks",
+    "walk", "walks", "fire", "fires", "vanish", "vanishes", "clear", "clears",
+    "reload", "reloads", "aim", "aims", "detonate", "detonates", "explode", "explodes",
 }
 _THIRD_PERSON_PRESENT = {
     value for value in _NON_RETROSPECTIVE_ACTION_FORMS if value.endswith("s")

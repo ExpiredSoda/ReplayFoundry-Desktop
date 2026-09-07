@@ -40,7 +40,8 @@ internal static class ApplicationPreferenceComposition
         new(
             new EditorialMetadataPreferenceRecorder(
                 consent,
-                static () => new JsonEditorialMetadataPreferenceStore()));
+                static () => new JsonEditorialMetadataPreferenceStore()),
+            new JsonEditorialWriterLearningStore(enabled: () => consent.IsEnabled));
 
     private static GenerationOutputLocationState
         CreateGenerationOutputLocation()

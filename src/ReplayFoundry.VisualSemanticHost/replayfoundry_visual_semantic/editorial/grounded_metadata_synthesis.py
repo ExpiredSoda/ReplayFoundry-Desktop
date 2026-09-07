@@ -26,8 +26,8 @@ from .grounded_metadata_lexical import (
 )
 
 PROMPT_NAME = "ReplayFoundry Grounded Editorial Metadata"
-PROMPT_VERSION = "1.46"
-PROMPT_SHA256 = "61ad677ba7cb97a250df90bf77aa0fcaeb27dcd226af871b7226d89b1cf6b2d0"
+PROMPT_VERSION = "1.47"
+PROMPT_SHA256 = "9696269b3370f1c1cd6ee6027c586245ef2867011e6879f54624cde1bb25451d"
 STABLE_READABLE_TEXT_POLICY_VERSION = "1.0"
 SYNTHESIS_EVIDENCE_POLICY_VERSION = (
     "grounded-editorial-synthesis-evidence-1.0"
@@ -129,7 +129,7 @@ def _synthesis_draft(
 
 
 def _prompt_text() -> str:
-    path = HOST_DIRECTORY / "replayfoundry-editorial-metadata-prompt-1.46.txt"
+    path = HOST_DIRECTORY / "replayfoundry-editorial-metadata-prompt-1.47.txt"
     text = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n").strip()
     if hashlib.sha256(text.encode("utf-8")).hexdigest() != PROMPT_SHA256:
         _fail(UsageOrInputError, "Grounded metadata prompt source changed.")

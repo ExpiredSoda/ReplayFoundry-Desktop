@@ -175,6 +175,7 @@ public sealed record ClipEditorialAiProvenance
     public string PromptSha256 { get; }
     public TimeSpan BatchElapsed { get; }
     public long? PeakAllocatedGpuBytes { get; }
+    public IReadOnlyList<ClipEditorialWritingAttempt> WritingAttempts { get; init; } = [];
 
     private static string Required(string value, string parameterName) =>
         string.IsNullOrWhiteSpace(value)
@@ -187,6 +188,10 @@ public sealed record ClipEditorialAiProvenance
             ? throw new ArgumentException("AI provenance hashes must be SHA-256 values.", parameterName)
             : value.ToLowerInvariant();
 }
+
+public sealed record ClipEditorialWritingAttempt(string CandidateId, int Attempt,
+    string ModelRepository, string ModelRevision, string BaseManifestSha256,
+    string AdapterSha256, string QualificationSha256);
 
 public sealed record ClipEditorialEvidenceReference
 {

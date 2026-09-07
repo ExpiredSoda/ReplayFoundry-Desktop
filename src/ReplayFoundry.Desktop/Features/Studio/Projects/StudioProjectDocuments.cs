@@ -214,7 +214,8 @@ public sealed record StudioEditorialAiProvenanceDocument(
     string PromptVersion,
     string PromptSha256,
     TimeSpan BatchElapsed,
-    long? PeakAllocatedGpuBytes);
+    long? PeakAllocatedGpuBytes,
+    IReadOnlyList<ClipEditorialWritingAttempt>? WritingAttempts = null);
 
 public sealed record StudioEditorialMetadataDocument(
     string Title,

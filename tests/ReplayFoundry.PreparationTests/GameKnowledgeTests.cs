@@ -104,7 +104,7 @@ internal static class GameKnowledgeTests
             Qwen3VlGroundedMetadataGenerator.ProviderVersion,
             "Creator-voice title separation changes provider identity.");
         TestAssert.Equal(
-            "grounded-editorial-metadata-output-batch-1.61",
+            "grounded-editorial-metadata-output-batch-1.62",
             Qwen3VlGroundedMetadataGenerator.OutputSchema,
             "Current grounded metadata output schema.");
         TestAssert.Equal(
@@ -1087,7 +1087,7 @@ internal static class GameKnowledgeTests
             Qwen3VlGenerationWatchdogPolicy.Sha256,
             watchdogPolicySha256,
             "Generation watchdog policy text hash.");
-        string memoryPolicyText = File.ReadAllText(RepositoryLayout.VisualSemanticHostPath("replayfoundry-grounded-editorial-cuda-memory-policy-1.6.txt"))
+        string memoryPolicyText = File.ReadAllText(RepositoryLayout.VisualSemanticHostPath("replayfoundry-grounded-editorial-cuda-memory-policy-1.7.txt"))
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace("\r", "\n", StringComparison.Ordinal)
             .Trim();
@@ -1111,7 +1111,7 @@ internal static class GameKnowledgeTests
             policyVersion = Qwen3VlGroundedMemoryPolicy.Version,
             policySha256 = Qwen3VlGroundedMemoryPolicy.Sha256,
             cudaDeviceIndex = 0,
-            cacheImplementation = "offloaded",
+            cacheImplementation = "bounded-dynamic",
             attentionImplementation = "sdpa",
             sdpaBackend = "CudnnAttention",
             sdpaBackendForced = true,
@@ -1181,6 +1181,7 @@ internal static class GameKnowledgeTests
         JsonObject conservativeMemory = JsonNode.Parse(memoryPolicyJson)!.AsObject();
         conservativeMemory["policyVersion"] = Qwen3VlGroundedMemoryPolicy.ConservativeVersion;
         conservativeMemory["policySha256"] = Qwen3VlGroundedMemoryPolicy.ConservativeSha256;
+        conservativeMemory["cacheImplementation"] = "offloaded";
         conservativeMemory["reservedAllocatorHeadroomBytes"] = 3 * gibibyte;
         conservativeMemory["requiredStartupFreeMemoryBytes"] =
             3 * gibibyte + Qwen3VlGroundedMemoryPolicy.MinimumViableAllocatorLimitBytes;

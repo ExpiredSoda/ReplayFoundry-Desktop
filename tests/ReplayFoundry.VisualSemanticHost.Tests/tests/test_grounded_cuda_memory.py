@@ -92,6 +92,33 @@ class _FakeCuda:
 class GroundedCudaMemoryTests(unittest.TestCase):
     TOTAL = 16_311 * 1024 * 1024
 
+    def test_cache_residency_obeys_context_and_external_memory_pressure(self):
+        gib = 1024 ** 3
+        cuda = _FakeCuda(self.TOTAL, self.TOTAL - 512 * 1024 ** 2)
+        torch = SimpleNamespace(cuda=cuda)
+        policy.configure_grounded_cuda_memory(torch)
+        cuda.allocated = cuda.reserved = 8 * gib
+        cuda.free -= cuda.allocated
+        model = SimpleNamespace(config=SimpleNamespace(text_config=SimpleNamespace(
+            num_hidden_layers=36, num_key_value_heads=8, head_dim=128)))
+        self.assertEqual("dynamic", policy.select_grounded_cache(model, torch, 1600, 768, visual=False))
+        self.assertEqual("offloaded", policy.select_grounded_cache(model, torch, 50000, 768, visual=False))
+        cuda.free = 3 * gib
+        self.assertEqual("offloaded", policy.select_grounded_cache(model, torch, 1600, 768, visual=False))
+
+    def test_resident_session_retains_original_allocator_ceiling(self):
+        cuda = _FakeCuda(self.TOTAL, self.TOTAL - 512 * 1024 ** 2)
+        torch = SimpleNamespace(cuda=cuda)
+        application = policy.configure_grounded_cuda_memory(torch)
+        original = application.allocator_limit_bytes
+        application.pre_generation_admission_count = 5
+        cuda.allocated = cuda.reserved = 8 * 1024 ** 3
+        cuda.free -= cuda.allocated
+        policy.resume_grounded_cuda_memory(torch)
+        self.assertEqual(original, application.allocator_limit_bytes)
+        self.assertEqual(1, len(cuda.memory.calls))
+        self.assertEqual(0, application.pre_generation_admission_count)
+
     def test_policy_source_hash_and_fixed_constraints_are_exact(self) -> None:
         self.assertEqual(policy.POLICY_SHA256, policy._normalized_policy_sha256())
         self.assertEqual(2 * 1024 * 1024 * 1024, policy.RESERVED_ALLOCATOR_HEADROOM_BYTES)
@@ -112,7 +139,7 @@ class GroundedCudaMemoryTests(unittest.TestCase):
             11_705_485_313,
             policy.MINIMUM_VIABLE_ALLOCATOR_LIMIT_BYTES,
         )
-        self.assertEqual("offloaded", policy.CACHE_IMPLEMENTATION)
+        self.assertEqual("bounded-dynamic", policy.CACHE_IMPLEMENTATION)
         self.assertEqual("sdpa", policy.ATTENTION_IMPLEMENTATION)
         self.assertEqual("CudnnAttention", policy.SDPA_BACKEND)
         self.assertTrue(policy.SDPA_BACKEND_FORCED)
@@ -168,7 +195,7 @@ class GroundedCudaMemoryTests(unittest.TestCase):
         )
         self.assertEqual(expected_fraction, payload["allocatorFraction"])
         self.assertEqual(expected_fraction, payload["observedAllocatorFraction"])
-        self.assertEqual("offloaded", payload["cacheImplementation"])
+        self.assertEqual("bounded-dynamic", payload["cacheImplementation"])
         self.assertEqual("sdpa", payload["attentionImplementation"])
         self.assertEqual("CudnnAttention", payload["sdpaBackend"])
         self.assertTrue(payload["sdpaBackendForced"])
@@ -291,7 +318,7 @@ class GroundedCudaMemoryTests(unittest.TestCase):
         cuda.peak_reserved = 11_500_000_000
         policy.admit_grounded_generation(torch)
         payload = policy.complete_grounded_cuda_memory(torch)
-        self.assertEqual(1, cuda.empty_cache_calls)
+        self.assertEqual(0, cuda.empty_cache_calls)
         self.assertEqual(1, payload["preGenerationAdmissionCount"])
         self.assertEqual(cuda.free, payload["minimumPreGenerationFreeDeviceMemoryBytes"])
         self.assertEqual(11_000_000_000, payload["peakAllocatedGpuBytes"])

@@ -293,7 +293,7 @@ class GroundedMetadataSynthesisDecodingTests(unittest.TestCase):
         ) as generate, patch.object(
             grounded_metadata_generation,
             "admit_grounded_generation",
-        ) as admission:
+        ) as admission, patch.object(grounded_metadata_generation, "select_grounded_cache", return_value="offloaded"):
             metadata, _, _, _, _, _, attestation = (
                 grounded_metadata_generation._generate_json_once(
                     request,
@@ -332,7 +332,7 @@ class GroundedMetadataSynthesisDecodingTests(unittest.TestCase):
         self.assertEqual([3407], torch.cpu_seeds)
         self.assertEqual([3407], torch.cuda_seeds)
         admission.assert_called_once_with(torch)
-        self.assertEqual(1, torch.empty_cache_calls)
+        self.assertEqual(0, torch.empty_cache_calls)
         self.assertEqual(
             [
                 ("enter", torch.cudnn_attention),

@@ -567,7 +567,7 @@ internal static partial class EditorialMetadataTests
             currentHash,
             "Current prompt hash.");
         TestAssert.Equal(
-            (currentVersion, currentHash),
+            ("1.46", "61ad677ba7cb97a250df90bf77aa0fcaeb27dcd226af871b7226d89b1cf6b2d0"),
             Qwen3VlGroundedMetadataResultParser.PromptIdentityFor(
                 Qwen3VlGroundedMetadataGenerator.PreviousResponsibilitySplitOutputSchema),
             "The 1.61 responsibility split must retain the exact 1.60 prompt identity.");
@@ -3370,7 +3370,7 @@ internal static partial class EditorialMetadataTests
                 policyVersion = Qwen3VlGroundedMemoryPolicy.Version,
                 policySha256 = Qwen3VlGroundedMemoryPolicy.Sha256,
                 cudaDeviceIndex = 0,
-                cacheImplementation = "offloaded",
+                cacheImplementation = "bounded-dynamic",
                 attentionImplementation = "sdpa",
                 sdpaBackend = "CudnnAttention",
                 sdpaBackendForced = true,
@@ -3502,7 +3502,7 @@ internal static partial class EditorialMetadataTests
                 policyVersion = Qwen3VlGroundedMemoryPolicy.Version,
                 policySha256 = Qwen3VlGroundedMemoryPolicy.Sha256,
                 cudaDeviceIndex = 0,
-                cacheImplementation = "offloaded",
+                cacheImplementation = "bounded-dynamic",
                 attentionImplementation = "sdpa",
                 sdpaBackend = "CudnnAttention",
                 sdpaBackendForced = true,

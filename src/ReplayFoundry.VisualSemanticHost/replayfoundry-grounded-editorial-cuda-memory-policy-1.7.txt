@@ -1,4 +1,4 @@
-ReplayFoundry Grounded Editorial CUDA Memory Policy 1.6
+ReplayFoundry Grounded Editorial CUDA Memory Policy 1.7
 
 Purpose
 
@@ -18,12 +18,12 @@ Fixed configuration
 - Startup gate: the allocator limit must exceed 11,705,485,312 bytes, the
   retained qualification peak. Required startup free memory is therefore
   13,852,968,961 bytes (approximately 12.90 GiB).
-- Pre-generation gate: after releasing only unoccupied PyTorch cache blocks,
+- Pre-generation gate: retain reusable allocator blocks unless free memory is below the reserve; then release only unoccupied blocks. After any reclamation,
   current free device memory must be at least the fixed 2 GiB headroom.
 - Model attention: PyTorch scaled dot product attention, with cuDNN attention
   explicitly forced through torch.nn.attention.sdpa_kernel for every call.
 - Attention fallback: prohibited; unsupported cuDNN attention fails closed.
-- KV cache: Transformers offloaded DynamicCache.
+- KV cache: bounded-dynamic. Use GPU DynamicCache when the full BF16 GQA cache, 25 percent cache slack, visual weights where applicable and 2 GiB inference workspace fit both the unchanged allocator limit and free-memory reserve. Otherwise use offloaded DynamicCache. Unknown model dimensions use offloading. No OOM retry, model offload change, attention fallback or cap relaxation is authorized.
 - Model precision: every floating-point model parameter remains BF16.
 - Language model and lm_head: CUDA device 0.
 - Vision backing store: CPU. Accelerate root-preload offload materializes all
@@ -69,3 +69,5 @@ fraction, qualification reference identity, pre-generation admission count
 and free-memory observations, peak/end allocated and reserved bytes, end
 free bytes, runtime outcome, failure reason, and explicit policy flags.
 Historical 1.0-1.5 telemetry retains its original 3 GiB reserve and identity.
+
+Worker reuse retains the original startup allocator ceiling. Reset request-local admission counters and GPU peaks for each new request. Idle worker shutdown releases weights and allocator blocks. A failed runtime cannot be reused.

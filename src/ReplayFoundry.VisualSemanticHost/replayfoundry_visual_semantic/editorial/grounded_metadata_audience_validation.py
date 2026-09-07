@@ -157,7 +157,7 @@ def contains_unsupported_generated_tag_claim(
 
 def _is_unexpanded_title_repetition(title: str, description: str) -> bool:
     title_tokens = title.split()
-    if len(title_tokens) < 3 or title not in description:
+    if len(title_tokens) < 3 or " " + title + " " not in " " + description + " ":
         return False
     title_vocabulary = set(title_tokens)
     added_detail = {

@@ -13,7 +13,8 @@ internal static class Qwen3VlGroundedMetadataGenerationSchemaParser
         string[] groundedJsonSchemas =
         [
             OutputSchema,
-            PreviousResponsibilitySplitOutputSchema,
+            PreviousAccelerationOutputSchema,
+        PreviousResponsibilitySplitOutputSchema,
             PreviousCompactIsolatedFieldAuthoringOutputSchema,
             PreviousIsolatedFieldAuthoringOutputSchema,
             PreviousSchemaEnforcedBalancedCopyOutputSchema,

@@ -480,15 +480,11 @@ internal static class EditorialMetadataPreferenceLearningTests
             settings.EditorialMetadataPreferenceLearningPrivacy;
         foreach (string required in new[]
                  {
-                     "general patterns",
-                     "length",
+                     "titles and descriptions",
                      "Nothing is uploaded",
-                     "words",
-                     "game or account details",
-                     "captions",
-                     "file paths",
-                     "AI output",
-                     "clip choices or generated wording",
+                     "clip facts",
+                     "separate recordings",
+                     "existing writer",
                  })
         {
             TestAssert.True(

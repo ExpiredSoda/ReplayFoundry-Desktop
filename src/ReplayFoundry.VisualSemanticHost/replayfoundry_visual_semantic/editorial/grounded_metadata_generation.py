@@ -28,7 +28,7 @@ from ..generation import (
     _token_ids_sha256,
 )
 from ..grounded_cuda_memory import (
-    CACHE_IMPLEMENTATION,
+    select_grounded_cache,
     admit_grounded_generation,
     grounded_sdpa_context,
     is_cuda_out_of_memory,
@@ -97,6 +97,13 @@ def _generate_json_once(
     from ..commands import _process_video_inputs
 
     messages = _secure_model_messages(messages)
+    from .writer.capture import observe as capture_writer_prompt
+    capture_writer_prompt(request, messages, synthesis_attestation_context)
+    from .writer.runtime import select as select_personal_writer
+    writer = select_personal_writer(request, messages, synthesis_attestation_context,
+        session, audit, maximum_new_tokens, torch)
+    if writer is not None:
+        model, processor, session, grammar, audit = writer
     rendered = processor.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
@@ -239,6 +246,10 @@ def _generate_json_once(
         )
     try:
         admit_grounded_generation(torch)
+        cache_implementation = select_grounded_cache(
+            model, torch, len(inputs.input_ids[0]), maximum_new_tokens,
+            visual=bool(video_items),
+        )
         with torch.inference_mode(), grounded_sdpa_context(torch):
             _pass_timing.generation_started()
             try:
@@ -249,7 +260,7 @@ def _generate_json_once(
                     logits_processor=[logits_processor],
                     approved_generation_arguments=
                         approved_generation_arguments,
-                    cache_implementation=CACHE_IMPLEMENTATION,
+                    cache_implementation=cache_implementation,
                 )
             finally:
                 _pass_timing.generation_finished()
@@ -264,8 +275,6 @@ def _generate_json_once(
                 "relax the limit."
             ) from error
         raise
-    finally:
-        torch.cuda.empty_cache()
     attempt_audit = audit.with_generation(
         trace.generated_token_count, trace.termination_reason
     )

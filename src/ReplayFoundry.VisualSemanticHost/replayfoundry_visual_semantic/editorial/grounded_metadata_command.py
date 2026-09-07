@@ -35,6 +35,7 @@ from ..grounded_cuda_memory import (
     is_cuda_out_of_memory,
     record_grounded_cuda_out_of_memory,
     validate_grounded_model_placement,
+    resume_grounded_cuda_memory,
 )
 from ..request_validation import (
     _require_array,
@@ -102,9 +103,57 @@ from .structured_decoding import StructuredDecodingSession, model_vocab_size
 from .structured_decoding_policy import POLICY_VERSION, require_frozen_packages
 
 INPUT_SCHEMA = "grounded-editorial-metadata-input-batch-1.9"
-OUTPUT_SCHEMA = "grounded-editorial-metadata-output-batch-1.61"
+OUTPUT_SCHEMA = "grounded-editorial-metadata-output-batch-1.62"
 MAXIMUM_CASES = 30
 NO_DISTINCT_PRIMARY_VISUAL_EVENT = "NoDistinctPrimaryVisualEvent"
+
+# Only the parent-owned stdio worker opts into residency. One-shot CLI behavior
+# and its deterministic qualification harness remain unchanged.
+_RETAIN_RUNTIME = False
+_RESIDENT_RUNTIME: tuple[Any, ...] | None = None
+_RESIDENT_IDENTITY: tuple[str, ...] | None = None
+
+
+def close_resident_runtime() -> None:
+    global _RESIDENT_RUNTIME, _RESIDENT_IDENTITY
+    from .writer.runtime import close as close_writer
+    close_writer()
+    previous = _RESIDENT_RUNTIME
+    _RESIDENT_RUNTIME = None
+    _RESIDENT_IDENTITY = None
+    if previous is not None:
+        torch = previous[2]
+        del previous
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
+def _acquire_runtime(model_path: Path, ffmpeg_directory: Path, lock_hash: str):
+    global _RESIDENT_RUNTIME, _RESIDENT_IDENTITY
+    identity = (str(model_path.resolve()), str(ffmpeg_directory.resolve()), lock_hash)
+    if _RETAIN_RUNTIME and _RESIDENT_RUNTIME is not None and identity == _RESIDENT_IDENTITY:
+        resume_grounded_cuda_memory(_RESIDENT_RUNTIME[2])
+        return _RESIDENT_RUNTIME
+    close_resident_runtime()
+    torch, torchcodec, transformers, process_vision_info = _load_runtime(ffmpeg_directory)
+    configure_grounded_cuda_memory(torch)
+    _validate_model_directory(model_path)
+    try:
+        model, processor = _load_model_and_processor(
+            model_path, torch, transformers, device_map=GROUNDED_MODEL_LOAD_DEVICE_MAP,
+            placement_finalizer=finalize_grounded_model_placement,
+            placement_validator=validate_grounded_model_placement,
+        )
+    except InitializationError as error:
+        if is_cuda_out_of_memory(error, torch):
+            record_grounded_cuda_out_of_memory(torch)
+        raise
+    session = StructuredDecodingSession(processor.tokenizer, model_vocab_size(model))
+    runtime = (model, processor, torch, torchcodec, process_vision_info, session)
+    if _RETAIN_RUNTIME:
+        _RESIDENT_RUNTIME, _RESIDENT_IDENTITY = runtime, identity
+    return runtime
 
 
 def _case_failure_result(
@@ -276,23 +325,13 @@ def run_grounded_editorial_metadata_batch(
     handoff = GroundingPacketHandoff(input_path, output_path, lock)
     require_frozen_packages()
     _set_failure_stage("RuntimeInitialization")
-    torch, torchcodec, transformers, process_vision_info = _load_runtime(ffmpeg_directory)
-    configure_grounded_cuda_memory(torch)
-    _validate_model_directory(model_path)
-    try:
-        model, processor = _load_model_and_processor(
-            model_path,
-            torch,
-            transformers,
-            device_map=GROUNDED_MODEL_LOAD_DEVICE_MAP,
-            placement_finalizer=finalize_grounded_model_placement,
-            placement_validator=validate_grounded_model_placement,
-        )
-    except InitializationError as error:
-        if is_cuda_out_of_memory(error, torch):
-            record_grounded_cuda_out_of_memory(torch)
-        raise
-    session = StructuredDecodingSession(processor.tokenizer, model_vocab_size(model))
+    model, processor, torch, torchcodec, process_vision_info, session = _acquire_runtime(
+        model_path, ffmpeg_directory, lock["canonicalHash"],
+    )
+    from .writer import capture as writer_capture
+    from .writer import runtime as writer_runtime
+    writer_runtime.begin()
+    capture_token = writer_capture.begin()
     try:
         results = _infer_grouped_requests(
             requests,
@@ -316,6 +355,7 @@ def run_grounded_editorial_metadata_batch(
             "groundedMemoryPolicy": grounded_memory_policy,
             "qualificationLockCanonicalHash": lock["canonicalHash"],
             "results": results,
+            "writerUsage": writer_runtime.usage(),
             "peakAllocatedGpuBytes":
                 grounded_memory_policy["peakAllocatedGpuBytes"],
             "totalElapsedSeconds": round(time.perf_counter() - started, 6),
@@ -325,10 +365,17 @@ def run_grounded_editorial_metadata_batch(
         _set_failure_stage("OutputWrite")
         _write_json_atomic(output_path, output)
         handoff.write()
+        writer_capture.write(output_path, results)
+    except BaseException:
+        # A failed CUDA/grammar request cannot poison the next request.
+        close_resident_runtime()
+        raise
     finally:
+        writer_capture.end(capture_token)
         del processor
         del model
-        torch.cuda.empty_cache()
+        if not _RETAIN_RUNTIME:
+            torch.cuda.empty_cache()
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

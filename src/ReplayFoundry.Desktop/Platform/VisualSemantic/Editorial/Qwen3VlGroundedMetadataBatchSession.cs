@@ -71,6 +71,7 @@ internal sealed class Qwen3VlGroundedMetadataBatchSession(
         {
             _disposed = true;
             _handoff.Dispose();
+            executor.ReleaseIdleWorker();
         }
     }
 }

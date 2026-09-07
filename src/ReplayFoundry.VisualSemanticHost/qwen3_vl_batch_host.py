@@ -19,4 +19,8 @@ from replayfoundry_visual_semantic.cli import main
 
 
 if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] == ["editorial-worker"]:
+        from replayfoundry_visual_semantic.editorial.resident_worker import main as worker_main
+        raise SystemExit(worker_main())
     raise SystemExit(main())

@@ -7,12 +7,12 @@
     Assets = @(
         'replayfoundry-editorial-event-selection-prompt-1.2.txt'
         'replayfoundry-editorial-knowledge-selection-prompt-1.4.txt'
-        'replayfoundry-editorial-metadata-prompt-1.46.txt'
+        'replayfoundry-editorial-metadata-prompt-1.47.txt'
         'replayfoundry-editorial-visual-draft-prompt-1.4.txt'
         'replayfoundry-generation-watchdog-policy-1.0.txt'
-        'replayfoundry-grounded-editorial-cuda-memory-policy-1.6.txt'
+        'replayfoundry-grounded-editorial-cuda-memory-policy-1.7.txt'
         'replayfoundry-grounded-editorial-json-whitespace-policy-1.0.txt'
-        'replayfoundry-grounded-editorial-rephrase-policy-2.9.txt'
+        'replayfoundry-grounded-editorial-rephrase-policy-2.10.txt'
         'replayfoundry-grounded-editorial-sampled-synthesis-policy-1.0.txt'
         'replayfoundry-grounded-editorial-synthesis-recovery-pool-policy-1.0.txt'
         'replayfoundry-grounded-editorial-synthesis-recovery-pool-policy-1.1.txt'
@@ -48,6 +48,11 @@
         'editorial/grounded_knowledge_selection.py'
         'editorial/grounded_metadata_audience_validation.py'
         'editorial/grounded_metadata_command.py'
+        'editorial/resident_worker.py'
+        'editorial/writer/__init__.py'
+        'editorial/writer/capture.py'
+        'editorial/writer/data.py'
+        'editorial/writer/runtime.py'
         'editorial/grounded_metadata_context_contract.py'
         'editorial/grounded_metadata_contract.py'
         'editorial/grounded_metadata_contract_values.py'
@@ -120,7 +125,12 @@
         'video_sampling.py'
     )
 
-    ForbiddenSourceFiles = @()
+    ForbiddenSourceFiles = @(
+        'replayfoundry_visual_semantic/editorial/writer/adapter.py'
+        'replayfoundry_visual_semantic/editorial/writer/evaluate.py'
+        'replayfoundry_visual_semantic/editorial/writer/train.py'
+        'replayfoundry_visual_semantic/editorial/writer/workflow.py'
+    )
 
     PublicTests = @(
         '_test_bootstrap.py'

@@ -155,6 +155,7 @@ def _progress() -> SynthesisProgress:
             "tags": ["door"],
             "grounding": [],
         },
+        metadata_review_issues=["LiteralSceneReport"],
         completed_json=source,
         diversity_result=None,
     )
@@ -230,6 +231,7 @@ class GroundedMetadataRephraseTests(unittest.TestCase):
             "I stood in an interior beside a wooden door and a passage"
         )
         progress = SynthesisProgress(
+            metadata_review_issues=["LiteralSceneReport"],
             metadata={
                 "title": source_title + " #ExampleGame",
                 "description": (

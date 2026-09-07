@@ -1,4 +1,5 @@
 using ReplayFoundry.Desktop.Features.Generate.Editorial;
+using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences;
 using ReplayFoundry.Desktop.Platform.Diagnostics;
@@ -14,6 +15,10 @@ public interface IStudioEditorialMetadataCorrectionRecorder
         string afterTitle,
         string afterDescription,
         string afterTags);
+    bool TryRecordCorrection(GenerationOutputAsset asset, string beforeTitle, string beforeDescription,
+        string beforeTags, string afterTitle, string afterDescription, string afterTags) =>
+        TryRecordCorrection(beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription, afterTags);
+    bool TryRecordApproval(GenerationOutputAsset asset) => false;
 }
 
 /// <summary>
@@ -24,12 +29,49 @@ public sealed class StudioEditorialMetadataCorrectionRecorder :
     IStudioEditorialMetadataCorrectionRecorder
 {
     private readonly EditorialMetadataPreferenceRecorder _recorder;
+    private readonly IEditorialWriterLearningStore? _writer;
 
     public StudioEditorialMetadataCorrectionRecorder(
-        EditorialMetadataPreferenceRecorder recorder)
+        EditorialMetadataPreferenceRecorder recorder,
+        IEditorialWriterLearningStore? writer = null)
     {
         _recorder = recorder ?? throw new ArgumentNullException(
             nameof(recorder));
+        _writer = writer;
+    }
+
+    public bool TryRecordCorrection(GenerationOutputAsset asset, string beforeTitle, string beforeDescription,
+        string beforeTags, string afterTitle, string afterDescription, string afterTags)
+    {
+        bool structural = TryRecordCorrection(beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription, afterTags);
+        try
+        {
+            bool wording = _writer?.Record(asset.CreateCurrentCutEditorialContext().PrepareForEditorialGeneration(),
+                beforeTitle, beforeDescription, ClipEditorialProfileTags.Parse(beforeTags),
+                afterTitle, afterDescription, ClipEditorialProfileTags.Parse(afterTags)) == true;
+            return structural || wording;
+        }
+        catch (Exception exception)
+        {
+            SafeDiagnosticTrace.Write("Local wording example could not be saved", exception);
+            return structural;
+        }
+    }
+
+    public bool TryRecordApproval(GenerationOutputAsset asset)
+    {
+        if (asset.EditorialMetadata is not { } wording) return false;
+        try
+        {
+            return _writer?.Record(asset.CreateCurrentCutEditorialContext().PrepareForEditorialGeneration(),
+                wording.Title, wording.Description, wording.Tags, wording.Title, wording.Description,
+                wording.Tags, explicitApproval: true) == true;
+        }
+        catch (Exception exception)
+        {
+            SafeDiagnosticTrace.Write("Local wording approval could not be saved", exception);
+            return false;
+        }
     }
 
     public bool TryRecordCorrection(

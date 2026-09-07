@@ -1,4 +1,4 @@
-Replay Foundry Grounded Editorial Rephrase Policy 2.9
+Replay Foundry Grounded Editorial Rephrase Policy 2.10
 
 Purpose
 
@@ -144,3 +144,6 @@ Isolated active-balanced replacement (2.9)
 When a complete scoped automatic nomination activates BalancedActionAndCommentary, the host uses the qualified isolated visual-field and commentary-field authoring calls instead of combined synthesis plus this rephrase. Each field is generated once. The thought author sees only its own nomination, safe style, exact bound and existing permitted lexical/attribution structure; no visual facts, prior copy or other authored field can enter its prompt or schema. The visual author retains only its independently authorized evidence. The host merges the two AI-authored fields mechanically and applies all unchanged combined semantic and ownership checks. Review findings remain explicit; no third polish call or handwritten fallback is introduced. The isolated component witnesses and merged hash attest this path, with rephraseAttempted false and no rephrase output witness.
 
 Ordinary requests and missing or withheld automatic nominations retain the existing bounded general synthesis/rephrase behavior described above. Sticky evidence withholding remains controlling. An earlier nomination, compact field plan or compiled grammar cannot recover unavailable authority. The historical compact and scoped-field rules above describe the retained general helper contracts; they do not authorize an additional rephrase after isolated authoring.
+
+Finished first-pass retention (2.10)
+After the unchanged semantic checks and editorial-frame drift check, an accepted object with no review issues is retained without model generation. Its outcome is RetainedOriginalNoMaterialChange, rejection/skip code FirstPassAccepted, equal source and output canonical hashes, attempted=false and no generation witness. Only a specific quality finding can trigger the existing bounded rephrase. A FirstPassAccepted receipt accompanied by review issues is invalid.

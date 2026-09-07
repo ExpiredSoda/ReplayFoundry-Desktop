@@ -381,12 +381,12 @@ class GroundedMetadataRerollIntegrationTests(unittest.TestCase):
             separators=(",", ":"),
         ).encode("utf-8")
         self.assertEqual(
-            "619ccae8d52648959c378998167db5cc1663514a7383b8cb4bdaf6d350b73b5a",
+            "e77258c6c7a484f73274e168ecdc45fd75fa95713e36d5e9e3c2d5874f713bd5",
             hashlib.sha256(canonical).hexdigest(),
         )
         self.assertEqual(["system", "user"], [item["role"] for item in messages])
-        self.assertIn("Window order establishes no cause", canonical.decode("utf-8"))
-        self.assertIn("AutomaticUnreviewed", canonical.decode("utf-8"))
+        self.assertIn("chronologicalProgression", canonical.decode("utf-8"))
+        self.assertNotIn("AutomaticUnreviewed", canonical.decode("utf-8"))
 
     def test_completed_rejected_json_is_canonical_and_strictly_bounded(self):
         retained = _bounded_completed_json('{"b":2,"a":"value"}')
@@ -794,14 +794,14 @@ class GroundedMetadataRerollIntegrationTests(unittest.TestCase):
             prior_accepted_title_bodies=("Opened the visible door",),
         )[1]["content"][0]["text"]
 
-        self.assertIn(REROLL_DIVERSITY_POLICY_VERSION, payload)
-        self.assertIn("variantIntent=ConcreteDetail", payload)
+        self.assertIn("priorTitleExclusions", payload)
+        self.assertIn("Use one grounded detail as the hook", payload)
         self.assertIn('["Opened the visible door"]', payload)
-        self.assertIn("solely as editorial exclusions", payload)
-        self.assertIn("They are not evidence", payload)
-        self.assertIn("must never be quoted or echoed", payload)
-        self.assertIn("actor-authority gate remains controlling", payload)
-        self.assertIn("Never end titleBody with one sentence-style full stop", payload)
+        self.assertIn("priorTitleExclusions", payload)
+        self.assertIn("typedAuthority", payload)
+        self.assertIn("priorTitleExclusions", payload)
+        self.assertIn("creatorExperienceRelation", payload)
+        self.assertIn("titleBodyMaximumCharacters", payload)
 
     def test_similar_title_retries_then_accepts_without_rebuilding_grounding(self):
         source = _request(0, "DirectAction")

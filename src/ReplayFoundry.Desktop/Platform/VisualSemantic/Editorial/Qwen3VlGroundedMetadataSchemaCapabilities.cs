@@ -7,6 +7,7 @@ internal static class Qwen3VlGroundedMetadataSchemaCapabilities
     private static readonly string[] NewestToOldest =
     [
         OutputSchema,
+        PreviousAccelerationOutputSchema,
         PreviousResponsibilitySplitOutputSchema,
         PreviousCompactIsolatedFieldAuthoringOutputSchema,
         PreviousIsolatedFieldAuthoringOutputSchema,
@@ -151,5 +152,5 @@ internal static class Qwen3VlGroundedMetadataSchemaCapabilities
         IsNewerThan(schema, PreviousCompactIsolatedFieldAuthoringOutputSchema);
 
     internal static bool SupportsEditorialResponsibilityModules(string schema) =>
-        schema.Equals(OutputSchema, StringComparison.Ordinal);
+        IsNewerThan(schema, PreviousResponsibilitySplitOutputSchema);
 }

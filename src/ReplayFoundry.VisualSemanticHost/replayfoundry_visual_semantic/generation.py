@@ -157,7 +157,7 @@ def _generate_with_trace(
             )
         generation_arguments.update(approved_generation_arguments)
     if cache_implementation is not None:
-        if cache_implementation != "offloaded":
+        if cache_implementation not in {"offloaded", "dynamic"}:
             _fail(
                 UsageOrInputError,
                 "Generation cache implementation is not approved.",

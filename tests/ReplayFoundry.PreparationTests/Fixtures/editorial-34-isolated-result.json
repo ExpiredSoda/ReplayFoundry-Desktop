@@ -23,8 +23,8 @@
           "UnsupportedCreatorEmbodiment",
           "BalanceNotSatisfied"
         ],
-        "editorialRephrasePolicyVersion": "grounded-editorial-rephrase-2.9",
-        "editorialRephrasePolicySha256": "f8c050c701dafcdc6b2fea4f87868caed21deb7732b1308612f409626e787f25",
+        "editorialRephrasePolicyVersion": "grounded-editorial-rephrase-2.10",
+        "editorialRephrasePolicySha256": "b5aa17a8d2c052dd7cfce33e24b2a855810df81ca1e434ff0c97ab43d0bb4957",
         "editorialRephraseAttempted": false,
         "editorialRephraseApplied": false,
         "editorialRephraseOutcome": "NotAttempted",

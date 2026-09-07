@@ -11,13 +11,13 @@ from typing import Any
 from .errors import InitializationError
 
 
-POLICY_VERSION = "grounded-editorial-cuda-memory-1.6"
+POLICY_VERSION = "grounded-editorial-cuda-memory-1.7"
 POLICY_FILE_NAME = (
-    "replayfoundry-grounded-editorial-cuda-memory-policy-1.6.txt"
+    "replayfoundry-grounded-editorial-cuda-memory-policy-1.7.txt"
 )
 # SHA-256 of the normalized policy text beside the host entry point.
 POLICY_SHA256 = (
-    "975eef96cdd6c526a133a2cb0d2f510c001acfd20561dc54e707bd8a5ef49b67"
+    "2eb391b64248aa7ccad66cbdb578a073b8622a70861800dfe04ae46db545c53a"
 )
 CUDA_DEVICE_INDEX = 0
 RESERVED_ALLOCATOR_HEADROOM_BYTES = 2 * 1024 * 1024 * 1024
@@ -32,7 +32,7 @@ QUALIFICATION_REFERENCE_PEAK_ALLOCATED_BYTES = 11_705_485_312
 MINIMUM_VIABLE_ALLOCATOR_LIMIT_BYTES = (
     QUALIFICATION_REFERENCE_PEAK_ALLOCATED_BYTES + 1
 )
-CACHE_IMPLEMENTATION = "offloaded"
+CACHE_IMPLEMENTATION = "bounded-dynamic"
 ATTENTION_IMPLEMENTATION = "sdpa"
 SDPA_BACKEND = "CudnnAttention"
 SDPA_BACKEND_FORCED = True
@@ -636,15 +636,17 @@ def configure_grounded_cuda_memory(
 
 
 def admit_grounded_generation(torch: Any) -> None:
-    """Release idle cache and fail before generation if headroom is gone."""
+    """Keep reusable allocator blocks; reclaim them only under memory pressure."""
     application = _ACTIVE_APPLICATION
     if application is None:
         raise InitializationError(
             "Grounded CUDA memory policy was not configured before generation."
         )
     try:
-        torch.cuda.empty_cache()
         free, total, allocated, reserved = _memory_snapshot(torch)
+        if free < RESERVED_ALLOCATOR_HEADROOM_BYTES:
+            torch.cuda.empty_cache()
+            free, total, allocated, reserved = _memory_snapshot(torch)
     except Exception as error:
         raise InitializationError(
             "Could not evaluate grounded CUDA pre-generation admission: "
@@ -697,6 +699,60 @@ def admit_grounded_generation(torch: Any) -> None:
     application.pre_generation_admission_count += 1
     application.runtime_outcome = RUNTIME_OUTCOME_GENERATION_ADMITTED
     application.failure_reason = None
+    _publish(application)
+
+
+def select_grounded_cache(model: Any, torch: Any, input_tokens: int,
+                          maximum_new_tokens: int, *, visual: bool) -> str:
+    """Budget the full BF16 GQA cache before choosing device residency.
+
+    K and V each hold layers * KV heads * head dimension values per token.
+    Include 25% growth/allocator slack and a separate 2 GiB inference workspace.
+    Vision weights are loaded by the existing root hook only for visual passes.
+    Unknown configurations use the already qualified offloaded cache.
+    """
+    application = _ACTIVE_APPLICATION
+    if application is None:
+        raise InitializationError("Cache selection requires CUDA admission.")
+    model_config = getattr(model, "config", None)
+    config = getattr(model_config, "text_config", model_config)
+    dimensions = [getattr(config, name, None) for name in
+                  ("num_hidden_layers", "num_key_value_heads", "head_dim")]
+    if any(type(value) is not int or value <= 0 for value in dimensions):
+        return "offloaded"
+    if type(input_tokens) is not int or input_tokens <= 0 or maximum_new_tokens <= 0:
+        raise InitializationError("Cache sizing requires positive token bounds.")
+    layers, kv_heads, head_dim = dimensions
+    cache_bytes = 2 * layers * kv_heads * head_dim * 2 * (input_tokens + maximum_new_tokens)
+    vision_bytes = 0
+    if visual:
+        module = model.get_submodule(GROUNDED_VISION_MODULE)
+        vision_bytes = sum(p.numel() * 2 for p in module.parameters())
+    free, _, allocated, reserved = _memory_snapshot(torch)
+    # Reserved, unused allocator blocks can be reused without increasing the
+    # device footprint. External allocations never become part of our budget.
+    available = min(application.allocator_limit_bytes - allocated,
+                    free + max(0, reserved - allocated) - RESERVED_ALLOCATOR_HEADROOM_BYTES)
+    required = math.ceil(cache_bytes * 1.25) + vision_bytes + 2 * 1024 ** 3
+    choice = "dynamic" if required <= available else "offloaded"
+    from .failure_state import _add_failure_diagnostic
+    _add_failure_diagnostic(
+        f"Grounded cache selection: {choice}; tokens={input_tokens}; "
+        f"cacheBytes={cache_bytes}; requiredBytes={required}; availableBytes={available}."
+    )
+    return choice
+
+
+def resume_grounded_cuda_memory(torch: Any) -> None:
+    """Reset request-local counters without charging resident weights twice."""
+    application = _ACTIVE_APPLICATION
+    if application is None or application.failure_reason is not None:
+        raise InitializationError("A failed CUDA session cannot be reused.")
+    application.pre_generation_admission_count = 0
+    application.minimum_pre_generation_free_device_memory_bytes = None
+    application.last_pre_generation_free_device_memory_bytes = None
+    application.runtime_outcome = RUNTIME_OUTCOME_CONFIGURED
+    torch.cuda.reset_peak_memory_stats(CUDA_DEVICE_INDEX)
     _publish(application)
 
 

@@ -26,7 +26,7 @@ The compact runtime path is intentional because deeply nested Windows paths can 
 
 ## Build runtime packs
 
-Beta 5 requires visual runtime `0.8.25` and model pack `4.0.21` as a matching
+This Beta 5 build requires visual runtime `0.8.26` and model pack `4.0.22` as a matching
 set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
 structured-decoding qualification lock for CPython `3.13.15`, PyTorch
 `2.13.0+cu130`, TorchVision `0.28.0+cu130`, TorchCodec `0.16.0`, and Transformers
@@ -38,6 +38,47 @@ For a pre-installation Debug qualification, the existing explicit Qwen override
 opt-in also accepts `REPLAYFOUNDRY_QWEN_SITE_PACKAGES` as an absolute existing
 directory. It uses the same restricted child-process environment as packaged
 execution. This override is absent from Release builds.
+
+The editorial acceleration source requires a freshly built visual runtime pack;
+the published `0.8.25` pack does not contain its resident worker. Qualify the
+desktop and host together before publishing these new runtime pack versions or
+updating the installer catalog. Keep the product version at Beta 5.
+
+### Personal writer qualification
+
+The private runtime includes a local writer training workflow. Advanced packaging
+requires `-WriterBaseRoot <verified-base>` and includes the pinned Qwen3-0.6B base
+under `writer-base` in the visual model pack. Its manifest must match the
+third-party compliance record. Packaging copies only its eight pinned files and
+manifest, never personal examples or adapters. Installation does not activate a
+personal writer.
+Existing qualified AI writing remains available without a personal adapter.
+
+With wording learning enabled in Settings, explicit title/description edits and
+approvals retain their verified factual context under the channel's
+`Personalization/Writer` directory. Clip ratings, renders and publishing events
+do not approve wording. At least 64 explicit examples from six recordings are
+required. Do not copy a user's examples into release artifacts or Git.
+
+Run the following module with the qualified private runtime's Python and host
+module path. Use the user's channel-specific writer directory as `<writer-root>`:
+
+```text
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow status --root <writer-root>
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow train --root <writer-root> --base <verified-base>
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow evaluate --root <writer-root> --base <verified-base> --candidate <candidate-directory>
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow promote --root <writer-root> --base <verified-base> --candidate <candidate-directory>
+```
+
+Training writes a candidate without changing the active writer. Evaluation
+reserves whole recordings and produces outputs for independent review. Fill in
+the comparison outputs/timings from the qualified production writer and the
+human review fields in `evaluation.json`; do not infer approval from training
+loss. Promotion requires every held-out comparison, supported facts, valid
+wording, at least a 60% preference score and a median latency ratio at most 0.8.
+Synthetic qualification runs always remain ineligible. Promotion writes
+`active.json` only after the gate passes; inference rechecks the evidence and
+retains the existing writer if the personal adapter is unavailable.
 
 All payload roots and outputs must remain outside the repository. Generate exact Python and wheel notices first; a missing license text is a hard failure unless a reviewed, hash-pinned official override is supplied.
 

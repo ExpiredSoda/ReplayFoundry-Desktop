@@ -112,6 +112,7 @@ class StructuredDecodingSession:
             ) from error
         self._xgr = xgr
         self._compiler = compiler
+        self._schemas = {}
 
     def compile_case(
         self,
@@ -188,6 +189,7 @@ class StructuredDecodingSession:
             )
             raise failure from error
 
+        self._schemas[schema_sha256] = (canonical_schema, schema_version, any_whitespace)
         return grammar, replace(
             audit,
             compile_elapsed_seconds=time.perf_counter() - started,

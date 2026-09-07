@@ -500,19 +500,15 @@ public sealed class SettingsViewModel :
 
     public string EditorialMetadataPreferenceLearningDetail =>
         IsEditorialMetadataPreferenceLearningEnabled
-            ? "When you save title, description, or tag changes in Studio, " +
-              "Replay Foundry remembers general writing patterns such as length, " +
-              "capitalization, punctuation, line count, and tag count."
-            : "Local learning is off. If you turn it on, Studio wording changes " +
-              "contribute only general patterns such as length, capitalization, " +
-              "punctuation, line count, and tag count. Anything already learned " +
-              "on this PC remains until you " +
-              "choose Reset saved app data in Files & storage.";
+            ? "Saved wording changes and titles you mark as reviewed help train your local writer. " +
+              "Each example stays linked to its clip facts. Clip likes and exports do not count as wording approval."
+            : "Turn this on to learn from titles and descriptions you correct or mark as reviewed. " +
+              "Saved learning stays on this PC until you reset app data in Files & storage.";
 
     public string EditorialMetadataPreferenceLearningPrivacy =>
-        "Nothing is uploaded. Replay Foundry does not save the words you enter, " +
-        "game or account details, captions, file paths, or AI output. " +
-        "This feature is not yet used to change clip choices or generated wording.";
+        "Your saved wording and its supporting clip facts stay on this PC. Nothing is uploaded. " +
+        "A trained writer must pass checks on separate recordings before it can be used. " +
+        "The existing writer stays available while yours is learning.";
 
     public string EditorialMetadataPreferenceLearningEnabledAtText =>
         _editorialMetadataPreferenceLearningConsent.EnabledAtUtc is

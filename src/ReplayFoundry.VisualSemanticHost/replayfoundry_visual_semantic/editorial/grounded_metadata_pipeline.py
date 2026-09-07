@@ -260,9 +260,8 @@ def _synthesize_case(
         progress,
         recovery_messages,
     )
-    # Model-free pipeline tests deliberately omit the qualified model and
-    # processor. Production always supplies both and therefore always executes
-    # the attested text-only editorial pass.
+    # The rephraser generates only for a specific review issue and attests
+    # retention without additional generation when the draft is finished.
     if (
         model is not None
         and processor is not None
