@@ -23,7 +23,7 @@ public sealed class GenerationVisualSemanticSettings
             !string.Equals(
                 prompt.Version,
                 VisualSemanticPromptManifest.QualifiedEditorialVersion,
-                StringComparison.Ordinal))
+                StringComparison.Ordinal) && prompt.Version != VisualSemanticPromptManifest.GroundedSceneVersion)
         {
             throw new ArgumentException(
                 "Thorough visual review requires the qualified prompt and a budget of one to thirty-two candidates in bounded batches.");
@@ -106,7 +106,8 @@ public sealed class GenerationVisualSemanticCandidateObservation
         string reviewVideoSha256,
         VisualSemanticEditorialObservation observation,
         VisualSemanticEditorialCanonicalizationAudit canonicalizationAudit,
-        TimeSpan elapsed)
+        TimeSpan elapsed,
+        double? neuralEditorialValue = null)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(source);
@@ -118,7 +119,7 @@ public sealed class GenerationVisualSemanticCandidateObservation
             reviewedSourceStart < TimeSpan.Zero ||
             reviewedSourceEnd <= reviewedSourceStart ||
             reviewedSourceEnd > source.PreparedSource.Media.Duration ||
-            elapsed < TimeSpan.Zero)
+            elapsed < TimeSpan.Zero || neuralEditorialValue.HasValue && (!double.IsFinite(neuralEditorialValue.Value) || neuralEditorialValue is < 0 or > 1))
         {
             throw new ArgumentException(
                 "A visual observation requires one bounded candidate/source identity.");
@@ -134,6 +135,7 @@ public sealed class GenerationVisualSemanticCandidateObservation
         Observation = observation;
         CanonicalizationAudit = canonicalizationAudit;
         Elapsed = elapsed;
+        NeuralEditorialValue = neuralEditorialValue;
     }
 
     public MomentCandidate Candidate { get; }
@@ -144,6 +146,7 @@ public sealed class GenerationVisualSemanticCandidateObservation
     public VisualSemanticEditorialObservation Observation { get; }
     public VisualSemanticEditorialCanonicalizationAudit CanonicalizationAudit { get; }
     public TimeSpan Elapsed { get; }
+    public double? NeuralEditorialValue { get; }
 }
 
 public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
@@ -252,10 +255,11 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
             previous.Observations.Concat(supplemental.Observations), previous.Elapsed + supplemental.Elapsed,
             previous.PeakAllocatedGpuBytes is null && supplemental.PeakAllocatedGpuBytes is null ? null :
                 Math.Max(previous.PeakAllocatedGpuBytes ?? 0, supplemental.PeakAllocatedGpuBytes ?? 0),
-            fallbackReason: supplemental.Outcome == GenerationVisualSemanticOutcome.RetainedDeterministicCandidates
-                ? "Some newly promoted moments could not be checked. Automatic selection uses the successfully reviewed candidates only."
+            fallbackReason: previous.NeedsReview || supplemental.NeedsReview
+                ? "Some picture checks could not finish. Automatic selection uses the successfully reviewed candidates only."
                 : null,
-            diagnosticDetails: supplemental.DiagnosticDetails);
+            diagnosticDetails: string.Join(Environment.NewLine, new[] { previous.DiagnosticDetails, supplemental.DiagnosticDetails }
+                .Where(value => !string.IsNullOrWhiteSpace(value))));
         combined._ownedReviews = [previous, supplemental];
         combined.SupplementalReviewAttempted = true;
         return combined;
@@ -289,6 +293,9 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
 
 public interface IGenerationVisualSemanticAnalysisService
 {
+    Task<GenerationCandidateIntelligenceResult> IndexRecordingAsync(GenerationCandidateIntelligenceResult intelligence,
+        IProgress<string>? progress, CancellationToken cancellationToken) => Task.FromResult(intelligence);
+
     Task<GenerationVisualSemanticAnalysisResult> AnalyzeAsync(
         GenerationCandidateIntelligenceResult candidateIntelligence,
         IProgress<GenerationVisualSemanticProgress>? progress,

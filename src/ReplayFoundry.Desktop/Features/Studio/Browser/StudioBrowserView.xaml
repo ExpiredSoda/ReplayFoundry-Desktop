@@ -93,7 +93,7 @@
                                         IsHitTestVisible="False"
                                         Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}" />
 
-                                    <Grid Grid.Column="1" Margin="10,9,10,10">
+                                    <Grid Grid.Column="1" Margin="12,11,12,12">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
@@ -128,10 +128,10 @@
                                                     Grid.Column="1"
                                                     Margin="6,1,0,0"
                                                     AutomationProperties.Name="Studio Browser clip name"
-                                                    FontSize="12"
+                                                    FontSize="13"
                                                     FontWeight="SemiBold"
                                                     Foreground="{DynamicResource Brush.TextPrimary}"
-                                                    LineHeight="16"
+                                                    LineHeight="18"
                                                     Text="{Binding Title}"
                                                     TextWrapping="Wrap" />
                                             </Grid>
@@ -167,31 +167,15 @@
                                                 Text="{Binding SourcePositionText}" />
                                         </WrapPanel>
 
-                                        <Border
-                                            Grid.Row="3"
-                                            Margin="0,6,0,0"
-                                            Padding="0"
-                                            Background="Transparent"
-                                            Visibility="{Binding HasClipRationale, Converter={StaticResource BoolToVisibility}}">
-                                            <Expander Header="Why this clip" IsExpanded="False"
-                                                Style="{DynamicResource Control.QuietExpander}">
-                                                <TextBlock
-                                                    Margin="0,6,0,0"
-                                                    FontSize="11"
-                                                    Foreground="{DynamicResource Brush.TextSecondary}"
-                                                    Text="{Binding WhyThisClip}"
-                                                    TextWrapping="Wrap" />
-                                            </Expander>
-                                        </Border>
+                                        <TextBlock Grid.Row="3" Margin="0,6,0,0" FontSize="11"
+                                            Foreground="{DynamicResource Brush.TextSecondary}"
+                                            Text="{Binding WhyThisClip}" TextWrapping="Wrap"
+                                            Visibility="{Binding IsChecked, ElementName=ClipRationaleToggle, Converter={StaticResource BoolToVisibility}}" />
 
-                                        <Grid Grid.Row="2" Margin="0,9,0,0">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="40" />
-                                                <RowDefinition Height="46" />
-                                            </Grid.RowDefinitions>
+                                        <WrapPanel Grid.Row="2" Margin="0,5,0,0">
                                             <Button
-                                                MinWidth="0"
-                                                Height="40" HorizontalAlignment="Stretch" Padding="8,6"
+                                                MinWidth="112"
+                                                Height="40" Margin="0,4,8,0" Padding="12,6"
                                                 AutomationProperties.Name="{Binding QueueActionAutomationName}"
                                                 AutomationProperties.HelpText="Adds this exact clip with its latest visible edits. Review is optional."
                                                 Command="{Binding DataContext.QueueBrowserAssetCommand, ElementName=Root}"
@@ -213,10 +197,9 @@
                                                 </Button.Style>
                                             </Button>
                                             <Button
-                                                Grid.Row="1"
                                                 MinWidth="0"
-                                                Height="40" HorizontalAlignment="Stretch" Padding="8,3"
-                                                Margin="0,6,0,0"
+                                                Height="40" Padding="12,3"
+                                                Margin="0,4,8,0"
                                                 AutomationProperties.Name="Remove clip from Studio"
                                                 AutomationProperties.HelpText="Moves this clip out of Studio and the render queue without deleting its saved edits."
                                                 Command="{Binding DataContext.RemoveBrowserAssetCommand, ElementName=Root}"
@@ -240,7 +223,7 @@
                                                 </Button.Style>
                                             </Button>
                                             <Button
-                                                Height="40" MinWidth="0" Padding="8,6" HorizontalAlignment="Stretch"
+                                                Height="40" MinWidth="112" Padding="12,6" Margin="0,4,8,0"
                                                 AutomationProperties.Name="Keep clip in Studio"
                                                 AutomationProperties.HelpText="Returns this saved clip to Studio. You can add it to the queue when ready."
                                                 Command="{Binding DataContext.RestoreBrowserAssetCommand, ElementName=Root}"
@@ -260,10 +243,13 @@
                                                     </Style>
                                                 </Button.Style>
                                             </Button>
-                                            <TextBlock Grid.Row="1" Margin="0,6,0,0" VerticalAlignment="Center"
-                                                HorizontalAlignment="Center" Style="{DynamicResource Text.Meta}"
-                                                Text="Saved edits kept" Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibility}}" />
-                                        </Grid>
+                                            <ToggleButton x:Name="ClipRationaleToggle" Content="Why this clip" IsChecked="False"
+                                                Height="40" MinWidth="0" Padding="10,6" Margin="0,4,0,0"
+                                                Background="Transparent" BorderThickness="0"
+                                                AutomationProperties.Name="Show why this clip was suggested"
+                                                AutomationProperties.HelpText="Shows or hides the explanation below this clip."
+                                                Visibility="{Binding HasClipRationale, Converter={StaticResource BoolToVisibility}}" />
+                                        </WrapPanel>
                                     </Grid>
                                 </Grid>
                             </Border>

@@ -546,6 +546,11 @@ public sealed class ReplayFoundryRuntimeEnvironment
             ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1",
             ["FORCE_QWENVL_VIDEO_READER"] = "torchcodec",
             ["PYTHONDONTWRITEBYTECODE"] = "1",
+            // The bounded worker has no APPDATA. Give CUDA its normal per-user
+            // kernel cache explicitly so each worker can reuse compiled kernels.
+            ["CUDA_CACHE_PATH"] = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "NVIDIA", "ComputeCache"),
             // PyTorch asks getpass.getuser() for its cache namespace while
             // TorchCodec imports. A scrubbed Windows environment otherwise
             // falls through to the unavailable Unix-only pwd module.

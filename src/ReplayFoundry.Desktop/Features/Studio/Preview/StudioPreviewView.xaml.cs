@@ -76,6 +76,29 @@ public partial class StudioPreviewView : UserControl
 
     internal MediaElement PreviewPlayer => _previewPlayer;
 
+    private void OnCaptionHelpClick(object sender, RoutedEventArgs e)
+    {
+        if (CaptionHelpButton.ToolTip is ToolTip tooltip) tooltip.IsOpen = false;
+        CaptionHelpPopup.IsOpen = !CaptionHelpPopup.IsOpen;
+    }
+
+    private void OnCaptionHelpKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Enter or Key.Space)
+        {
+            OnCaptionHelpClick(sender, e);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && CaptionHelpPopup.IsOpen)
+        {
+            CaptionHelpPopup.IsOpen = false;
+            e.Handled = true;
+        }
+    }
+
+    private void OnCaptionHelpLostFocus(object sender, KeyboardFocusChangedEventArgs e) =>
+        CaptionHelpPopup.IsOpen = false;
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         Bind(DataContext as StudioPreviewViewModel);
@@ -84,6 +107,7 @@ public partial class StudioPreviewView : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        CaptionHelpPopup.IsOpen = false;
         DeactivatePlaybackSurface();
         Bind(null);
     }

@@ -17,10 +17,10 @@ internal static partial class GenerationSpeechActivityTests
             VisualSemanticObservableContentType.Humor);
         ClipPreferenceFeature[] speech = [new(ClipPreferenceFeatureCode.CreatorSpeech, .6)];
         var complete = GenerationMomentContentClassifier.Classify(candidate, speech, Reviewed(intelligence, candidate, humor));
-        TestAssert.True(complete.Funny && complete.Commentary && complete.VisualReviewCompleted,
-            "A fully grounded humor review and confirmed creator speech may attach both labels.");
+        TestAssert.True(complete.Funny && !complete.Commentary && complete.VisualReviewCompleted,
+            "Visual humor can be labelled, but an audio track assignment cannot establish creator commentary.");
         var partial = GenerationMomentContentClassifier.Classify(candidate, speech, Reviewed(intelligence, candidate, humor, partial: true));
-        TestAssert.True(partial.Commentary && !partial.Funny && !partial.VisualReviewCompleted,
+        TestAssert.True(!partial.Commentary && !partial.Funny && !partial.VisualReviewCompleted,
             "A partial visual review cannot classify the whole moment as funny.");
         var action = CreateVisualObservation(VisualSemanticEditorialDisposition.Keep, VisualSemanticEditorialRejectReason.None,
             VisualSemanticTernary.Yes, "A bounded action event is visible.");

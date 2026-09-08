@@ -213,6 +213,19 @@ public sealed class GenerationCandidateRefinementService :
         GenerationSetupOptions setup)
     {
         VisualSemanticEditorialObservation observation = reviewed.Observation;
+        if (reviewed.NeuralEditorialValue is double neuralValue)
+        {
+            // The new model judges the complete context. Its score is not a sum
+            // of hand-authored bonuses for action or penalties for quiet/menu scenes.
+            var retained = existing.Components.Where(item => item.Code is not
+                (GenerationCandidateRefinementComponentCode.NeuralSceneValue or GenerationCandidateRefinementComponentCode.SemanticDiscoveryEvidence));
+            return new(existing.Candidate,
+                [.. retained,
+                    new(GenerationCandidateRefinementComponentCode.NeuralSceneValue, neuralValue, 0,
+                        "Editorial potential estimated by the pretrained scene model; personal training is tracked separately.", ["scene-review-1.4"]),
+                    new(GenerationCandidateRefinementComponentCode.SemanticDiscoveryEvidence, 1, 0,
+                        "This proposed cut received a complete scene assessment.", ["scene-review-1.4"])], "neural-scene-refinement-1");
+        }
         bool unavailableGameplay = GenerationGroundedVisualRejectionPolicy.HasCorroboratedUnavailableGameplay(reviewed, setup);
         double support =
             TernarySupport(observation.HasDistinctEvent, 0.30, 0.12) +
@@ -626,7 +639,7 @@ public sealed class GenerationCandidateRefinementService :
                         ? GenerationCandidateNaturalEndingAdjustment
                             .Unchanged(candidate)
                         : GenerationCandidateNaturalEndingPolicy.Adjust(
-                            candidate,
+                            GenerationEventBoundaryPolicy.IncludeRecovery(candidate, moments.Request.Settings.Options.MaximumDuration),
                             creatorSpeech,
                             moments.Request.Settings.Options.MaximumDuration,
                             creatorTranscript,
@@ -644,7 +657,7 @@ public sealed class GenerationCandidateRefinementService :
                 replacements.Add(candidate, repaired);
                 adjustments.Add(repaired, adjustment);
                 beginningAdjustments.Add(repaired, beginning);
-                sourceAdjusted |= adjustment.WasAdjusted || beginning.WasAdjusted;
+                sourceAdjusted |= !ReferenceEquals(candidate, repaired) || adjustment.WasAdjusted || beginning.WasAdjusted;
             }
 
             if (!sourceAdjusted)

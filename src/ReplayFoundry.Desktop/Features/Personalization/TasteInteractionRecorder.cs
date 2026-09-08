@@ -9,6 +9,7 @@ using ReplayFoundry.Desktop.Features.Studio.Editing;
 using ReplayFoundry.Desktop.Features.Studio.HiddenMoments;
 using ReplayFoundry.Desktop.Media.Intelligence.Learning;
 using ReplayFoundry.Desktop.Platform.Diagnostics;
+using ReplayFoundry.Desktop.Platform.Storage;
 
 namespace ReplayFoundry.Desktop.Features.Personalization;
 
@@ -23,6 +24,7 @@ public sealed class TasteInteractionRecorder : IDisposable
     private readonly ConcurrentDictionary<string, GenerationOutputAsset> _known = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, GenerationOutputAsset[]> _renderSnapshots = new(StringComparer.Ordinal);
     private readonly HashSet<string> _imported = new(StringComparer.Ordinal);
+    private readonly JsonMontageLearningStore _sequences = new();
     public TasteInteractionRecorder(ITasteLearningService learning, IGenerationOutputSession session, ILibraryCatalog library,
         StudioViewModel studio, IStudioCandidateDecisionStore? decisions = null)
     {
@@ -71,7 +73,10 @@ public sealed class TasteInteractionRecorder : IDisposable
     {
         foreach (var item in _library.Assets.Where(item => item.SourceCandidateIds.Count > 0 &&
             item.SourceCandidateIds.All(id => e.RenderedProject.IncludedAssets.Any(a => a.Id == id && Matches(item.SourceProvenance, a)))))
+        {
             _renderSnapshots.TryAdd(SnapshotKey(item), e.RenderedProject.IncludedAssets.Where(a => item.SourceCandidateIds.Contains(a.Id)).ToArray());
+            if (_learning.Status.Enabled) TryRecord(() => _sequences.Record(item.Id, "Rendered", item.SourceProvenance));
+        }
         foreach (var asset in e.RenderedProject.IncludedAssets)
         {
             // The Library commit must exist. Failed or rolled-back render attempts are not learning outcomes.
@@ -82,6 +87,7 @@ public sealed class TasteInteractionRecorder : IDisposable
     public void Published(LibraryMediaAsset asset, YouTubePublishOutcome outcome)
     {
         if (outcome is not (YouTubePublishOutcome.Published or YouTubePublishOutcome.UploadedUnlisted)) return;
+        if (_learning.Status.Enabled) TryRecord(() => _sequences.Record(asset.Id, "Published", asset.SourceProvenance));
         if (_renderSnapshots.TryGetValue(SnapshotKey(asset), out var snapshots))
         { foreach (var snapshot in snapshots) Record(snapshot, TasteSignal.Published); return; }
         if (asset.SourceProvenance is not { } provenance) return;

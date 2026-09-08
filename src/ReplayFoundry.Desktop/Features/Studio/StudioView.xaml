@@ -203,9 +203,20 @@
                         </Style>
                     </Grid.Style>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="260" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="400" />
+                        <ColumnDefinition Width="*" MinWidth="320" />
+                        <ColumnDefinition MinWidth="370">
+                            <ColumnDefinition.Style>
+                                <Style TargetType="ColumnDefinition">
+                                    <Setter Property="Width" Value="1.6*" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Preview.IsPortraitPreview}" Value="True">
+                                            <Setter Property="Width" Value="*" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ColumnDefinition.Style>
+                        </ColumnDefinition>
+                        <ColumnDefinition Width="*" MinWidth="340" />
                     </Grid.ColumnDefinitions>
                     <browser:StudioBrowserView Grid.Column="0" Margin="0,0,12,0" />
                     <preview:StudioPreviewView Grid.Column="1" Margin="0,0,12,0" DataContext="{Binding Preview}" />

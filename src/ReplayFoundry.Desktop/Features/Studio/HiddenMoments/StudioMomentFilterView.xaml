@@ -9,7 +9,8 @@
     <WrapPanel ToolTip="Choose two types to find moments with both. Unclassified moments stay available in All.">
         <ToggleButton Content="All moments" IsChecked="{Binding All}" />
         <ToggleButton Content="Gameplay" IsChecked="{Binding Gameplay}" />
-        <ToggleButton Content="Commentary" IsChecked="{Binding Commentary}" />
+        <ToggleButton Content="Creator commentary" IsChecked="{Binding Commentary}" />
+        <ToggleButton Content="Lore &amp; story" IsChecked="{Binding Lore}" />
         <ToggleButton Content="Funny" IsChecked="{Binding Funny}" />
         <ToggleButton Content="Not yet classified" IsChecked="{Binding Unclassified}" />
     </WrapPanel>

@@ -68,6 +68,22 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
                     ["prompt"] = JsonNode.Parse(prompt.GetRawText()), ["factSha256"] = row.GetProperty("factSha256").GetString(),
                     ["sourceGroup"] = SourceGroup(request.Context),
                     ["generated"] = Copy(TitleBody(title, request.Context), description, tags, metadata.GetProperty("grounding")),
+                    ["evidence"] = JsonSerializer.SerializeToNode(new
+                    {
+                        schema = "foundry-learning-source-1",
+                        sourcePath = request.Context.SourceFullPath,
+                        sourceLength = new FileInfo(request.Context.SourceFullPath).Length,
+                        sourceModifiedUtcTicks = File.GetLastWriteTimeUtc(request.Context.SourceFullPath).Ticks,
+                        startSeconds = request.Context.SourceStart.TotalSeconds,
+                        endSeconds = request.Context.SourceEnd.TotalSeconds,
+                        observations = request.Context.Evidence.Select(item => new { id = item.Id, text = item.Description }),
+                        transcripts = request.Context.Transcripts.Select(track => new {
+                            audioStreamIndex = track.AbsoluteAudioStreamIndex, authority = track.Authority.ToString(),
+                            text = track.Text, spans = track.Spans.Select(span => new {
+                                startSeconds = span.SourceStart.TotalSeconds, endSeconds = span.SourceEnd.TotalSeconds, text = span.Text }) }),
+                        reviewVideoSha256 = request.ReviewVideo?.ReviewVideoSha256,
+                        provenance = "ModelObservedNotHumanApproved"
+                    }),
                 };
                 string key = ContextKey(request.Context, title, description);
                 WriteAtomic(Path.Combine(directory, key + ".json"), context.ToJsonString(Options));
@@ -80,8 +96,15 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
     public bool Record(ClipEditorialContext context, string beforeTitle, string beforeDescription,
         IReadOnlyList<string> beforeTags, string afterTitle, string afterDescription,
         IReadOnlyList<string> afterTags, bool explicitApproval = false)
+        => Record(context, beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription,
+            afterTags, new EditorialWordingFeedback(), explicitApproval);
+
+    public bool Record(ClipEditorialContext context, string beforeTitle, string beforeDescription,
+        IReadOnlyList<string> beforeTags, string afterTitle, string afterDescription,
+        IReadOnlyList<string> afterTags, EditorialWordingFeedback feedback, bool explicitApproval = false)
     {
         if (!IsEnabled) return false;
+        feedback.Validate();
         beforeTitle = TitleBody(beforeTitle, context);
         afterTitle = TitleBody(afterTitle, context);
         bool changed = beforeTitle != afterTitle || beforeDescription.Trim() != afterDescription.Trim() ||
@@ -96,15 +119,23 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
             if (!File.Exists(source) || new FileInfo(source).Length > 65_536) return false;
             JsonNode captured = JsonNode.Parse(File.ReadAllText(source))!;
             if (captured["sourceGroup"]!.GetValue<string>() != SourceGroup(context)) return false;
+            if (feedback.Reason == "Unspecified" && captured["pendingFeedback"] is JsonObject pending)
+                feedback = new EditorialWordingFeedback(pending["reason"]!.GetValue<string>(), pending["correctedEvent"]!.GetValue<string>());
             JsonNode original = captured["generated"]!;
             using JsonDocument grounding = JsonDocument.Parse(original["grounding"]!.ToJsonString());
             JsonObject chosen = Copy(afterTitle, afterDescription.Trim(), afterTags, grounding.RootElement);
+            string[] fields = new[] { "titleBody", "description", "tags" }.Where(field => explicitApproval ||
+                !JsonNode.DeepEquals(chosen[field], original[field])).ToArray();
             var example = new JsonObject
             {
-                ["schema"] = "foundry-writer-example-1", ["sourceGroup"] = captured["sourceGroup"]!.DeepClone(),
+                ["schema"] = "foundry-writer-example-2", ["sourceGroup"] = captured["sourceGroup"]!.DeepClone(),
                 ["factSha256"] = captured["factSha256"]!.DeepClone(), ["prompt"] = captured["prompt"]!.DeepClone(),
                 ["chosen"] = chosen, ["rejected"] = changed ? original.DeepClone() : null,
                 ["kind"] = changed ? "HumanCorrection" : "ExplicitWordingApproval",
+                ["feedback"] = JsonSerializer.SerializeToNode(new { reason = feedback.Reason,
+                    correctedEvent = feedback.CorrectedEvent.Trim(), fields,
+                    factsReviewed = explicitApproval }),
+                ["evidence"] = captured["evidence"]?.DeepClone(),
             };
             using JsonDocument canonical = JsonDocument.Parse(example.ToJsonString());
             string id = Qwen3VlCanonicalJson.ComputeObjectSha256(canonical.RootElement, "id");
@@ -118,6 +149,7 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
             // Later edits stay linked to the same facts and compare against the
             // immediately previous saved wording, not an unrelated model draft.
             captured["generated"] = chosen.DeepClone();
+            captured["pendingFeedback"] = JsonSerializer.SerializeToNode(new { reason = feedback.Reason, correctedEvent = feedback.CorrectedEvent.Trim() });
             WriteAtomic(Path.Combine(_root, "contexts", ContextKey(context, afterTitle, afterDescription) + ".json"), captured.ToJsonString(Options));
             return true;
         }

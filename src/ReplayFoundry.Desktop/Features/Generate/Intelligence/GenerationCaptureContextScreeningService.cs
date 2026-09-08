@@ -42,6 +42,9 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
             if (next is null) break;
             screened.Add(next.Candidate);
             if (!refinements.TryGetValue(next.Candidate, out var existing)) continue;
+            // The neural path evaluates context itself. OCR terminology must not
+            // veto an unfamiliar game's interface or a worthwhile quiet scene.
+            if (existing.Components.Any(component => component.Code == GenerationCandidateRefinementComponentCode.NeuralTimelineValue)) continue;
             MomentCandidate candidate = existing.Candidate;
             GenerationSourceMomentResult source = intelligence.BaseMoments.Sources.Single(value => value.Moments.Proposals.Any(proposal => ReferenceEquals(proposal, candidate)));
             var media = source.AnalyzedSource.PreparedSource.Media;

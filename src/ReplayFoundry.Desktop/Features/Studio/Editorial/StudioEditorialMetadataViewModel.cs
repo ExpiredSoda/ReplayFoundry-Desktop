@@ -80,6 +80,7 @@ public sealed class StudioEditorialMetadataViewModel :
         VariantChoices = StudioEditorialVariantCatalog.CreateChoices();
         _selectedVariantChoice = VariantChoices[0];
         _preferenceRecorder = preferenceRecorder;
+        WordingLearning = new(() => _preferenceRecorder?.IsWordingLearningEnabled == true);
         _saveCommand = new DelegateCommand(Save, CanSave);
         _markReviewedCommand = new DelegateCommand(
             MarkReviewed,
@@ -106,6 +107,8 @@ public sealed class StudioEditorialMetadataViewModel :
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public StudioWordingLearningViewModel WordingLearning { get; }
 
     public string Title
     {
@@ -415,6 +418,7 @@ public sealed class StudioEditorialMetadataViewModel :
         GenerationOutputProject? project,
         GenerationOutputAsset? asset)
     {
+        WordingLearning.Bind(asset?.Id, asset?.SourceStart.Ticks, asset?.SourceEnd.Ticks);
         _project = project;
         _asset = asset;
         _copyContextRevision = asset?.EditorialContext is not null && asset.EditorialMetadata?.CopyVersions.Count > 0
@@ -436,17 +440,10 @@ public sealed class StudioEditorialMetadataViewModel :
     }
 
     internal StudioPendingEditorialDraft? CapturePendingDraft() =>
-        HasUnsavedChanges
-            ? new StudioPendingEditorialDraft(Title, Description, Tags)
-            : null;
+        HasUnsavedChanges ? WordingLearning.CaptureDraft(Title, Description, Tags) : null;
 
     internal StudioPendingEditorialProfileDraft? CapturePendingProfileDraft() =>
-        HasUnsavedProfileChanges
-            ? new StudioPendingEditorialProfileDraft(
-                AudienceAddress,
-                NamingGuidance,
-                DescriptionSignature)
-            : null;
+        HasUnsavedProfileChanges ? new StudioPendingEditorialProfileDraft(AudienceAddress, NamingGuidance, DescriptionSignature) : null;
 
     internal void RestorePendingDrafts(
         StudioPendingEditorialDraft? metadata,
@@ -462,6 +459,7 @@ public sealed class StudioEditorialMetadataViewModel :
             _title = metadata.Title;
             _description = metadata.Description;
             _tags = metadata.Tags;
+            WordingLearning.Restore(metadata);
         }
         if (profile is not null)
         {
@@ -520,7 +518,8 @@ public sealed class StudioEditorialMetadataViewModel :
                 beforeTags,
                 draft.Title,
                 draft.Description,
-                draft.Tags);
+                draft.Tags,
+                StudioWordingLearningViewModel.FeedbackFrom(draft));
             NotifyState();
             return true;
         }
@@ -595,7 +594,7 @@ public sealed class StudioEditorialMetadataViewModel :
                 beforeTags,
                 Title,
                 Description,
-                Tags);
+                Tags, WordingLearning.Snapshot());
         }
         catch (Exception exception)
         {

@@ -9,11 +9,13 @@ internal sealed class FfmpegEvidencePassRunner
     public const int VisualIntervalOutputLimit = 32 * 1024 * 1024;
 
     private readonly IProcessRunner _processRunner;
+    private readonly FfmpegEvidenceCache? _cache;
 
-    public FfmpegEvidencePassRunner(IProcessRunner processRunner)
+    public FfmpegEvidencePassRunner(IProcessRunner processRunner, bool cacheAnalysis = false)
     {
         _processRunner = processRunner ??
             throw new ArgumentNullException(nameof(processRunner));
+        _cache = cacheAnalysis ? new FfmpegEvidenceCache() : null;
     }
 
     public async Task<(ProcessRunResult Scene, ProcessRunResult Visual)>
@@ -106,9 +108,9 @@ internal sealed class FfmpegEvidencePassRunner
         ProcessRunResult result;
         try
         {
-            result = await MediaWorkBudget.RunAsync(_processRunner,
-                processRequest,
+            Task<ProcessRunResult> Run() => MediaWorkBudget.RunAsync(_processRunner, processRequest,
                 MediaWorkPriority.Background, cancellationToken);
+            result = _cache is null ? await Run() : await _cache.RunAsync(fullPath, processRequest, Run, cancellationToken);
         }
         catch (OperationCanceledException)
         {

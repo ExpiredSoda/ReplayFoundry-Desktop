@@ -332,9 +332,9 @@ public sealed class ClipEditorialMetadataGenerationService :
                     .Concat(rejectedTitles[originalIndex])
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToArray();
-                bool titleRejected = ClipEditorialBatchNoveltyPolicy.Rejects(
-                    draft.Title,
-                    comparisons);
+                bool titleRejected = HasNeuralCopyReview(draft)
+                    ? comparisons.Any(title => title.Equals(draft.Title, StringComparison.OrdinalIgnoreCase))
+                    : ClipEditorialBatchNoveltyPolicy.Rejects(draft.Title, comparisons);
                 IReadOnlyList<ClipEditorialMetadataQualityIssue> qualityIssues =
                     EditorialRetryIssues(draft, originalRequest);
                 if (titleRejected || qualityIssues.Count > 0)
@@ -465,12 +465,15 @@ public sealed class ClipEditorialMetadataGenerationService :
         EditorialRetryIssues(
         ClipEditorialMetadataDraft draft,
         ClipEditorialMetadataRequest request)
-        // Provenance reconciliation and an unmet packaging preference remain
-        // visible, but neither alone justifies repeating visual inference.
-        => MergedAdvisoryIssues(draft, request)
+        // Word lists and phrasing preferences remain advisory after a verified
+        // neural judgment. They must not trigger another generation decision.
+        => HasNeuralCopyReview(draft) ? [] : MergedAdvisoryIssues(draft, request)
             .Where(static issue => issue.SourceRuleCode is not
                 ("RerollDiversityProvenanceRecomputed" or "BalanceNotSatisfied"))
             .ToArray();
+
+    private static bool HasNeuralCopyReview(ClipEditorialMetadataDraft draft) =>
+        draft.AiProvenance?.NeuralCopyReview?.Accepted == true;
 
     private static bool RequiresDifferentTitle(
         ClipEditorialMetadataDraft draft,

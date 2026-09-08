@@ -10,4 +10,8 @@ public interface IEditorialWriterLearningStore
     bool Record(ClipEditorialContext context, string beforeTitle, string beforeDescription,
         IReadOnlyList<string> beforeTags, string afterTitle, string afterDescription,
         IReadOnlyList<string> afterTags, bool explicitApproval = false);
+    bool Record(ClipEditorialContext context, string beforeTitle, string beforeDescription,
+        IReadOnlyList<string> beforeTags, string afterTitle, string afterDescription,
+        IReadOnlyList<string> afterTags, EditorialWordingFeedback feedback, bool explicitApproval = false) =>
+        Record(context, beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription, afterTags, explicitApproval);
 }

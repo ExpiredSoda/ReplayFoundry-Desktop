@@ -7,6 +7,7 @@ internal static class GenerationAutomaticCandidateEligibility
 {
     public static bool IsEligible(MomentCandidate candidate,
         GenerationCandidateRefinement? refinement) =>
+        refinement?.HasNeuralSceneValue == true ||
         candidate.Disposition is not (MomentCandidateDisposition.RejectedBlack or
             MomentCandidateDisposition.RejectedFreeze) &&
         refinement?.HasIncompleteSpeechEnding != true &&

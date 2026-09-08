@@ -294,6 +294,8 @@ public sealed record VisualSemanticPromptManifest
     public const string QualifiedEditorialName =
         "ReplayFoundry Visual Semantic Editorial Observation Prompt";
     public const string QualifiedEditorialVersion = "2.7";
+    public const string GroundedSceneName = "ReplayFoundry Grounded Scene Review";
+    public const string GroundedSceneVersion = "scene-review-1.4";
 
     public VisualSemanticPromptManifest(
         string schemaVersion,
@@ -331,7 +333,8 @@ public sealed record VisualSemanticPromptManifest
                              StringComparison.Ordinal) &&
                          string.Equals(Name, QualifiedEditorialName, StringComparison.Ordinal) &&
                          string.Equals(Version, QualifiedEditorialVersion, StringComparison.Ordinal);
-        if (!legacy && !qualified)
+        bool groundedScene = SchemaVersion == QualifiedEditorialSchemaVersion && Name == GroundedSceneName && Version == GroundedSceneVersion;
+        if (!legacy && !qualified && !groundedScene)
         {
             throw new ArgumentException(
                 "The visual-semantic prompt must use a frozen ReplayFoundry prompt identity.");

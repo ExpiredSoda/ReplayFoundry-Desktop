@@ -4,11 +4,17 @@ This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
 downloadable version is [1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5).
 
-## 1.0.0 Beta 5 — 2026-09-07
+## 1.0.0 Beta 5 — refreshed 2026-09-08
+
+- Extended local wording learning: save a title or description correction with an optional reason, including wrong speaker, wrong event, or an invented outcome. A title-only edit supervises only that field; factual corrections wait for explicit review.
+- Matched writer training to the exact production prompt and output format. Supervised LoRA and wording-pair preference training use only edited or approved fields. Recording assignments stay fixed across training, development, and final qualification as the library grows.
+- Added local review preparation from time-stamped original frames and transcript evidence, plus a frame-conditioned neural adapter training workflow. These development candidates are never activated automatically; small smoke tests do not qualify a personal model.
+- Retained actual montage cut order from completed exports and publishing for future sequence review, separately from wording approval. Original recordings must remain available for later video review; personal examples and weights never ship in release artifacts.
+- Added lore/story moment labels, clearer speaker uncertainty, and montage-specific writing review. Grounded scenes may use a personal writer only after its exact prompt, weights, and independent qualification pass verification.
 
 - Accelerated AI titles and descriptions with compact prompts, finished first drafts, targeted corrections, reusable visual context, and a local worker that stays ready during a writing session. GPU cache placement follows available memory and retains a 2 GiB reserve; cancellation and inactivity release the worker.
 - Added opt-in local wording feedback and a trainable neural writer. Actual edits and explicit approvals retain their clip facts for supervised and preference training; clip ratings and publishing actions do not approve wording. The verified pretrained writer base ships with Advanced AI. Personal adapters need independent quality and speed checks, and synthetic test adapters never ship.
-- Updated the matching optional visual runtime/model packages to `0.8.26` and `4.0.22`. Personal writer provenance survives project save and reopen. Updates retain local learning data; a full uninstall still clears app data.
+- Updated the matching optional visual runtime/model packages to `0.8.27` and `4.0.23`. Personal writer provenance survives project save and reopen. Updates retain local learning data; a full uninstall still clears app data.
 - Corrected the Beta 5 installer and repair flow: missing media tools can be restored, damaged AI packages are replaced from verified downloads, and repair stays available when the cached setup is missing. Rerunning the retained installer no longer tries to overwrite itself.
 - Fixed a crash when clearing recent projects with captions, including projects whose source recordings have been deleted. Empty selections and switching recordings now clear stale caption frames safely.
 - Fixed caption regeneration, subtitle imports, and saved word edits after moving a clip to a different part of the recording. New speech now uses the current clip range for captions and editorial context.

@@ -133,9 +133,9 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
         "grounded-editorial-metadata-output-batch-1.10";
     internal const string PromptName =
         "ReplayFoundry Grounded Editorial Metadata";
-    internal const string PromptVersion = "1.47";
+    internal const string PromptVersion = "1.48";
     internal const string PromptSha256 =
-        "9696269b3370f1c1cd6ee6027c586245ef2867011e6879f54624cde1bb25451d";
+        "91bf2f413e12b7ce4aac80de0bf4e20242c3d217eaf9707934c84e3a425cf64f";
     internal const string PreviousCompactIsolatedFieldAuthoringPromptVersion = "1.45";
     internal const string PreviousCompactIsolatedFieldAuthoringPromptSha256 =
         "6fa6e96a7a33d28e4c1fdd8ee4a806f57d23cb267aab04aedc3ba591f9f1249d";
@@ -260,8 +260,9 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
             writerLearning);
     }
 
-    public ClipEditorialMetadataGeneratorIdentity Identity { get; } =
+    internal static ClipEditorialMetadataGeneratorIdentity SharedIdentity { get; } =
         new("Qwen3-VL grounded editorial metadata", ProviderVersion);
+    public ClipEditorialMetadataGeneratorIdentity Identity => SharedIdentity;
 
     public bool IsAvailable => true;
 

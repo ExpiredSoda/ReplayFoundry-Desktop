@@ -79,12 +79,9 @@ def balanced_copy_field_plan(
 ) -> dict[str, Any]:
     """One field allocation shared by compact authoring and constrained decoding."""
     openings = ("I wondered about", "I wondered whether", "I wondered if", "I compared")
-    # Very long exact game hashtags can leave too little room for an attributed
-    # title. Other eligible variants already permit attribution in either field.
-    attributed_field = "titleBody" if (
-        variant_intent == "SpecificCuriosity"
-        and title_maximum >= max(len(value) + 2 for value in openings)
-    ) else "description"
+    # Put the recognizable event in the title. Generic attributed uncertainty
+    # belongs beside that event, including for curiosity and outcome variants.
+    attributed_field = "description"
     return {
         "visualField": "description" if attributed_field == "titleBody" else "titleBody",
         "attributedThoughtField": attributed_field,

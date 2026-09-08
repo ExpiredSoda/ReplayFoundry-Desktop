@@ -26,7 +26,7 @@ The compact runtime path is intentional because deeply nested Windows paths can 
 
 ## Build runtime packs
 
-This Beta 5 build requires visual runtime `0.8.26` and model pack `4.0.22` as a matching
+This Beta 5 build requires visual runtime `0.8.27` and model pack `4.0.23` as a matching
 set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
 structured-decoding qualification lock for CPython `3.13.15`, PyTorch
 `2.13.0+cu130`, TorchVision `0.28.0+cu130`, TorchCodec `0.16.0`, and Transformers
@@ -66,7 +66,8 @@ module path. Use the user's channel-specific writer directory as `<writer-root>`
 ```text
 python -B -m replayfoundry_visual_semantic.editorial.writer.workflow status --root <writer-root>
 python -B -m replayfoundry_visual_semantic.editorial.writer.workflow train --root <writer-root> --base <verified-base>
-python -B -m replayfoundry_visual_semantic.editorial.writer.workflow evaluate --root <writer-root> --base <verified-base> --candidate <candidate-directory>
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow evaluate --root <writer-root> --base <verified-base> --candidate <candidate-directory> --partition development
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow evaluate --root <writer-root> --base <verified-base> --candidate <candidate-directory> --partition qualification
 python -B -m replayfoundry_visual_semantic.editorial.writer.workflow promote --root <writer-root> --base <verified-base> --candidate <candidate-directory>
 ```
 
@@ -79,6 +80,35 @@ wording, at least a 60% preference score and a median latency ratio at most 0.8.
 Synthetic qualification runs always remain ineligible. Promotion writes
 `active.json` only after the gate passes; inference rechecks the evidence and
 retains the existing writer if the personal adapter is unavailable.
+
+New feedback uses `foundry-writer-example-2`: only explicitly edited or approved
+fields receive supervised or preference loss. Scene-copy examples retain the
+production system prompt and four-field grammar. Factual corrections supply a
+reviewed central event without replacing the captured original facts. Clip
+ratings never become title approvals. Recording assignments in
+`recording-splits.json` persist across runs; development comparisons cannot
+qualify a writer. The 64-example/six-recording minimum starts an attempt, not an
+activation guarantee. Keep additional untouched recordings for final checks
+after tuning against any previously inspected test results.
+
+Prepare a local video review with the installed media tool:
+
+```text
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow prepare-review --root <writer-root> --output <new-review-directory> --ffmpeg <installed-ffmpeg>
+python -B -m replayfoundry_visual_semantic.editorial.writer.workflow train-video --root <writer-root> --base <verified-video-model> --review-pack <review.json> --output <new-candidate-directory> --model-manifest-sha256 <trusted-installed-manifest-hash> --steps 96
+```
+
+Review prepared frames and the original audio before supplying `targets` and
+marking a pack item reviewed. Speaker labels require actual audio review;
+unknown labels remain null. The video trainer uses chronological frames and
+reviewed speech, freezes the visual encoder, and adapts language attention
+with LoRA. It preserves a 2 GiB GPU reserve and requires 12 GiB free before
+starting. `--smoke --steps 2` tests machinery in a separate split registry and
+never qualifies or activates a model. Video candidates need independent
+production integration and source-video evaluation before release activation.
+Normal app use collects montage order for future sequence-quality review;
+rendering alone does not prove a coherent montage. No personal or experimental
+weights are included in the Beta 5 installer.
 
 All payload roots and outputs must remain outside the repository. Generate exact Python and wheel notices first; a missing license text is a hard failure unless a reviewed, hash-pinned official override is supplied.
 

@@ -58,7 +58,8 @@ foreach ($relative in $inventory.Paths) {
     $full = Join-Path $root $portable
     if (($portable.StartsWith('src/ReplayFoundry.Desktop/Media/Intelligence/Learning/', [StringComparison]::OrdinalIgnoreCase) -and
          $portable -ne 'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteContracts.cs') -or
-        $portable -eq 'src/ReplayFoundry.Desktop/Platform/Storage/JsonTasteLearningStore.cs') {
+        $portable -eq 'src/ReplayFoundry.Desktop/Platform/Storage/JsonTasteLearningStore.cs' -or
+        $portable -match '^src/ReplayFoundry\.VisualSemanticHost/replayfoundry_visual_semantic/curation(_train)?\.py$') {
         $violations.Add("$portable (proprietary learning implementation)")
         continue
     }

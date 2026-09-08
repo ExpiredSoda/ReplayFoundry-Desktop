@@ -112,7 +112,7 @@ public sealed class SourceAudioTranscriptionService : ISourceAudioTranscriptionS
                     }
                     _chunks.Add(key, result);
                 }
-                Report("source-chunk", chunkStart, chunkEnd, cacheHit, result!);
+                Report("source-chunk", chunkStart, chunkEnd, cacheHit || result!.WasReused, result!);
                 _recency.Remove(key);
                 _recency.AddLast(key);
                 while (_recency.Count > MaximumCachedChunks)
@@ -161,7 +161,7 @@ public sealed class SourceAudioTranscriptionService : ISourceAudioTranscriptionS
                     _recency.RemoveFirst();
                     _chunks.Remove(oldest);
                 }
-                Report(stage, start, end, cached, exact!);
+                Report(stage, start, end, cached || exact!.WasReused, exact!);
                 return SourceTranscriptProjection.Project(neighborhoodId, source.Duration, audioStreamIndex,
                     start, end, options, [exact!]);
             }

@@ -796,7 +796,7 @@ internal static partial class UiUxApplicationSurfaceTests
         [
             (GenerationCandidateSelectionReason.UserReservedRange, "Requested"),
             (GenerationCandidateSelectionReason.UserPriority, "Matches your request"),
-            (GenerationCandidateSelectionReason.QualityQualified, "Strong match"),
+            (GenerationCandidateSelectionReason.QualityQualified, "Suggested · review"),
             (GenerationCandidateSelectionReason.QualityQualifiedGameplayEventCoverage, "Gameplay moment"),
             (GenerationCandidateSelectionReason.CountFillBelowQualityTarget, "More variety"),
             (GenerationCandidateSelectionReason.CountFillRelaxedDiversity, "Similar option"),

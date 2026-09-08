@@ -60,7 +60,8 @@ public static class TasteClipFactory
             // Measurements may describe the moment, but detector scores/rejections cannot become training labels or content shortcuts.
             if (feature.Code is ClipPreferenceFeatureCode.DeterministicScore or ClipPreferenceFeatureCode.VisualSemanticSupport or
                 ClipPreferenceFeatureCode.VisualSemanticRejection) continue;
-            Set(8 + (int)feature.Code, feature.NormalizedValue);
+            // Slot 7 was reserved; keep the persisted 48-value layout stable.
+            Set(feature.Code == ClipPreferenceFeatureCode.ObservedLore ? 7 : 8 + (int)feature.Code, feature.NormalizedValue);
         }
         string group = SourceGroup(media);
         string id = Hash(group + "|" + start.Ticks.ToString(CultureInfo.InvariantCulture) + "|" + end.Ticks.ToString(CultureInfo.InvariantCulture));

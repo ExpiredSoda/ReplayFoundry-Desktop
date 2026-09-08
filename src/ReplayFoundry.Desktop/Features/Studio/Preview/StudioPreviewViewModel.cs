@@ -166,6 +166,7 @@ public sealed class StudioPreviewViewModel : ObservableObject, IDisposable
         : GenerationClipOutputProfile.FromAsset(_asset).DisplayText;
     public double PreviewCanvasWidth => PreviewProfile.Width;
     public double PreviewCanvasHeight => PreviewProfile.Height;
+    public bool IsPortraitPreview => PreviewCanvasHeight > PreviewCanvasWidth;
     public string PreviewScaleText => _asset?.RenderSettings.Canvas switch
     {
         StudioOutputCanvas.Portrait => "PORTRAIT · 9:16",

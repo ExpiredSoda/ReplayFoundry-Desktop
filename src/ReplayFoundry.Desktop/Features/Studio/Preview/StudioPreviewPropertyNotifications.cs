@@ -12,6 +12,7 @@ internal static class StudioPreviewPropertyNotifications
             nameof(StudioPreviewViewModel.PreviewFormatText),
             nameof(StudioPreviewViewModel.PreviewCanvasWidth),
             nameof(StudioPreviewViewModel.PreviewCanvasHeight),
+            nameof(StudioPreviewViewModel.IsPortraitPreview),
             nameof(StudioPreviewViewModel.PreviewScaleText),
             nameof(StudioPreviewViewModel.CanShowCaptionControls),
             nameof(StudioPreviewViewModel.IsCaptionContentVisible),

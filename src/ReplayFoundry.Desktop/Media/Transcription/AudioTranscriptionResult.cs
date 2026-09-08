@@ -20,7 +20,7 @@ public sealed class AudioTranscriptionResult
         IEnumerable<AudioTranscriptionSegment> segments,
         AudioTranscriptionManifest manifest,
         AudioTranscriptionLanguage? detectedLanguage = null,
-        IEnumerable<AudioTranscriptionWarning>? warnings = null)
+        IEnumerable<AudioTranscriptionWarning>? warnings = null, bool wasReused = false)
     {
         if (string.IsNullOrWhiteSpace(neighborhoodId) ||
             absoluteAudioStreamIndex < 0)
@@ -80,6 +80,7 @@ public sealed class AudioTranscriptionResult
         AbsoluteAudioStreamIndex = absoluteAudioStreamIndex;
         DetectedLanguage = detectedLanguage;
         Manifest = manifest;
+        WasReused = wasReused;
         _segments = Array.AsReadOnly(segmentSnapshot);
         _warnings = Array.AsReadOnly(warningSnapshot);
     }
@@ -94,6 +95,7 @@ public sealed class AudioTranscriptionResult
     public AudioTranscriptionLanguage? DetectedLanguage { get; }
 
     public AudioTranscriptionManifest Manifest { get; }
+    public bool WasReused { get; }
 
     public IReadOnlyList<AudioTranscriptionWarning> Warnings =>
         _warnings;

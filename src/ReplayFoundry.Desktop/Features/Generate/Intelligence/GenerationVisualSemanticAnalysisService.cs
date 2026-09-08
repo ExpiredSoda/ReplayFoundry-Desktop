@@ -21,6 +21,11 @@ public sealed class GenerationVisualSemanticAnalysisService :
     private readonly IVisualSemanticEditorialProvider _provider;
     private readonly IVisualSemanticReviewVideoMaterializer _materializer;
     private readonly GenerationVisualSemanticSettings _settings;
+    internal GenerationRecordingIndexService? RecordingIndex { get; init; }
+
+    public Task<GenerationCandidateIntelligenceResult> IndexRecordingAsync(GenerationCandidateIntelligenceResult intelligence,
+        IProgress<string>? progress, CancellationToken cancellationToken) => RecordingIndex?.AnalyzeAsync(intelligence, progress, cancellationToken)
+            ?? Task.FromResult(intelligence);
 
     public GenerationVisualSemanticAnalysisService(
         IVisualSemanticEditorialProvider provider,
@@ -40,10 +45,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
     {
         ArgumentNullException.ThrowIfNull(candidateIntelligence);
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<CandidateSource> shortlist = CreateShortlist(
-            candidateIntelligence,
-            GenerationSemanticReviewBudgetPolicy.Resolve(
-                candidateIntelligence.BaseMoments, _settings.MaximumCandidateCount));
+        int budget = ReviewBudget(candidateIntelligence);
+        IReadOnlyList<CandidateSource> shortlist = CreateShortlist(candidateIntelligence, budget);
         return AnalyzeShortlistAsync(candidateIntelligence, shortlist, progress, false, cancellationToken);
     }
 
@@ -88,6 +91,18 @@ public sealed class GenerationVisualSemanticAnalysisService :
         }
     }
 
+    private int ReviewBudget(GenerationCandidateIntelligenceResult intelligence)
+    {
+        int budget = GenerationSemanticReviewBudgetPolicy.Resolve(intelligence.BaseMoments, _settings.MaximumCandidateCount);
+        int mapped = intelligence.Refinements.Count(item => item.Components.Any(component =>
+            component.Code == GenerationCandidateRefinementComponentCode.NeuralIndexCoverage && component.RawValue >= .8));
+        // The full map already explored the recording; reserve close review for
+        // the requested picks and a few challengers, including the existing exploration slots.
+        if (intelligence.Refinements.Count > 0 && mapped >= intelligence.Refinements.Count * .9)
+            budget = Math.Min(budget, Math.Clamp(intelligence.BaseMoments.Request.Setup.DesiredResultCount + 3, 8, GenerationSemanticReviewBudgetPolicy.MaximumCandidates));
+        return budget;
+    }
+
     private async Task<GenerationVisualSemanticAnalysisResult> AnalyzeShortlistAsync(
         GenerationCandidateIntelligenceResult candidateIntelligence,
         IReadOnlyList<CandidateSource> shortlist,
@@ -106,126 +121,119 @@ public sealed class GenerationVisualSemanticAnalysisService :
         }
 
         var materialized = new List<MaterializedVisualSemanticReviewVideo>();
+        var prepared = new List<(CandidateSource Item, MaterializedVisualSemanticReviewVideo Video, VisualSemanticRequest Request)>();
+        var observed = new List<GenerationVisualSemanticCandidateObservation>();
+        var diagnostics = new List<GenerationVisualReviewDiagnostic>();
+        var failedIds = new HashSet<string>(StringComparer.Ordinal);
+        long? peakGpuBytes = null;
         bool ownershipTransferred = false;
         try
         {
-            for (int index = 0; index < shortlist.Count; index++)
+            foreach (CandidateSource item in shortlist)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                CandidateSource item = shortlist[index];
-                (TimeSpan start, TimeSpan end) = ReviewBounds(
-                    item.Candidate,
-                    item.Source.PreparedSource.Media.Duration,
-                    _settings.VideoPolicy.MaximumReviewDuration);
-                progress?.Report(new GenerationVisualSemanticProgress(
-                    GenerationVisualSemanticPhase.PreparingReviewVideo,
-                    supplemental ? "Framing newly selected moments" : "Framing the best moments",
-                    $"Preparing moment {index + 1} of {shortlist.Count} for a close visual read.",
-                    index,
-                    shortlist.Count,
-                    isIndeterminate: true));
-                materialized.Add(await _materializer.MaterializeAsync(
-                    new VisualSemanticReviewVideoMaterializationRequest(
-                        item.Candidate.Id,
-                        item.Source.PreparedSource.Media,
-                        start,
-                        end,
-                        GameplayRegion(item.Source, start, end)),
-                    cancellationToken));
+                var timer = Stopwatch.StartNew();
+                try
+                {
+                    (TimeSpan start, TimeSpan end) = ReviewBounds(item.Candidate,
+                        item.Source.PreparedSource.Media.Duration, _settings.VideoPolicy.MaximumReviewDuration);
+                    progress?.Report(new GenerationVisualSemanticProgress(
+                        GenerationVisualSemanticPhase.PreparingReviewVideo, "Preparing picture checks",
+                        $"Preparing moment {prepared.Count + failedIds.Count + 1} of {shortlist.Count}.",
+                        prepared.Count + failedIds.Count, shortlist.Count, isIndeterminate: true));
+                    var video = await _materializer.MaterializeAsync(
+                        new VisualSemanticReviewVideoMaterializationRequest(item.Candidate.Id,
+                            item.Source.PreparedSource.Media, start, end, GameplayRegion(item.Source, start, end)), cancellationToken);
+                    materialized.Add(video);
+                    var request = CreateRequest(item, video,
+                        candidateIntelligence.BaseMoments.Request.Settings.Options.OutputKind,
+                        candidateIntelligence.Transcripts?.Sources.SingleOrDefault(source => source.SourceFullPath.Equals(
+                            item.Source.PreparedSource.Media.FullPath, StringComparison.OrdinalIgnoreCase)));
+                    prepared.Add((item, video, request));
+                    diagnostics.Add(new(item.Candidate.Id, "Preparation", 1, true, timer.Elapsed.TotalSeconds, null));
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception exception)
+                {
+                    failedIds.Add(item.Candidate.Id);
+                    diagnostics.Add(new(item.Candidate.Id, "Preparation", 1, false, timer.Elapsed.TotalSeconds, SafeDiagnostics(exception)));
+                }
             }
 
-            VisualSemanticRequest[] requests = materialized
-                .Select((video, index) => CreateRequest(
-                    shortlist[index],
-                    video,
-                    candidateIntelligence.BaseMoments.Request.Settings.Options.OutputKind,
-                    candidateIntelligence.Transcripts?.Sources.SingleOrDefault(source =>
-                        source.SourceFullPath.Equals(shortlist[index].Source.PreparedSource.Media.FullPath,
-                            StringComparison.OrdinalIgnoreCase))))
-                .ToArray();
-            var observed = new List<GenerationVisualSemanticCandidateObservation>();
-            long? peakGpuBytes = null;
-            foreach (VisualSemanticRequest[] chunk in requests.Chunk(
-                         GenerationSemanticReviewBudgetPolicy.MaximumBatchSize))
+            foreach (var chunk in prepared.Chunk(GenerationSemanticReviewBudgetPolicy.MaximumBatchSize))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var batch = new VisualSemanticBatchRequest(chunk, _settings.VideoPolicy);
-                progress?.Report(new GenerationVisualSemanticProgress(
-                    GenerationVisualSemanticPhase.ReviewingCandidates,
-                    supplemental ? "Checking newly selected moments" : "Reading moments across your videos",
-                    $"Checking moments {observed.Count + 1}–{observed.Count + chunk.Length} of {shortlist.Count}, including alternatives outside the initial selection.",
-                    observed.Count, shortlist.Count, isIndeterminate: true));
-                VisualSemanticEditorialBatchResult providerResult =
-                    await _provider.ObserveAsync(batch, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                if (providerResult.PeakAllocatedGpuBytes is long peak)
+                var pending = chunk.ToArray();
+                // Successful cases are never sent a second time. Only unresolved cases get one retry.
+                for (int attempt = 1; attempt <= 2 && pending.Length > 0; attempt++)
                 {
-                    peakGpuBytes = Math.Max(peakGpuBytes ?? 0, peak);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var timer = Stopwatch.StartNew();
+                    progress?.Report(new GenerationVisualSemanticProgress(
+                        GenerationVisualSemanticPhase.ReviewingCandidates,
+                        attempt == 1 ? "Reading the moments" : "Retrying unfinished picture checks",
+                        $"{observed.Count} of {shortlist.Count} moments checked.", observed.Count,
+                        shortlist.Count, isIndeterminate: true));
+                    try
+                    {
+                        var batch = new VisualSemanticBatchRequest(pending.Select(item => item.Request), _settings.VideoPolicy);
+                        var result = await _provider.ObserveAsync(batch, cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (result.PeakAllocatedGpuBytes is long peak) peakGpuBytes = Math.Max(peakGpuBytes ?? 0, peak);
+                        foreach (var success in result.Results)
+                        {
+                            var owner = pending.Single(item => ReferenceEquals(item.Request, success.Request));
+                            observed.Add(new(owner.Item.Candidate, owner.Item.Source,
+                                owner.Video.Request.SourceStart, owner.Video.Request.SourceEnd,
+                                owner.Video.Input.ReviewVideoSha256, success.Observation, success.CanonicalizationAudit, success.Elapsed, success.NeuralEditorialValue));
+                            failedIds.Remove(owner.Item.Candidate.Id);
+                            diagnostics.Add(new(owner.Item.Candidate.Id, "Inference", attempt, true, success.Elapsed.TotalSeconds, null));
+                        }
+                        foreach (var failure in result.Failures)
+                        {
+                            failedIds.Add(failure.Request.CandidateId);
+                            diagnostics.Add(new(failure.Request.CandidateId, failure.Stage, attempt, false,
+                                failure.Elapsed.TotalSeconds, failure.ErrorCode));
+                        }
+                        pending = pending.Where(item => result.Failures.Any(failure => failure.CanRetry && ReferenceEquals(failure.Request, item.Request))).ToArray();
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception exception)
+                    {
+                        foreach (var item in pending)
+                        {
+                            failedIds.Add(item.Item.Candidate.Id);
+                            diagnostics.Add(new(item.Item.Candidate.Id, "Batch", attempt, false,
+                                timer.Elapsed.TotalSeconds, SafeDiagnostics(exception)));
+                        }
+                    }
                 }
-                int offset = observed.Count;
-                observed.AddRange(providerResult.Results.Select((result, index) =>
-                    new GenerationVisualSemanticCandidateObservation(
-                        shortlist[offset + index].Candidate,
-                        shortlist[offset + index].Source,
-                        materialized[offset + index].Request.SourceStart,
-                        materialized[offset + index].Request.SourceEnd,
-                        materialized[offset + index].Input.ReviewVideoSha256,
-                        result.Observation, result.CanonicalizationAudit, result.Elapsed)));
             }
-            GenerationVisualSemanticCandidateObservation[] observations = observed.ToArray();
-            progress?.Report(new GenerationVisualSemanticProgress(
-                GenerationVisualSemanticPhase.Completed,
-                supplemental ? "Newly selected moments checked" : "Picture check complete",
-                $"Checked {observations.Length} promising moments without rereading the full videos.",
-                observations.Length,
-                observations.Length,
-                isIndeterminate: false,
-                overallPercentage: 100));
-            var result = new GenerationVisualSemanticAnalysisResult(
-                candidateIntelligence,
-                _provider.Identity,
-                observations,
-                elapsed.Elapsed,
-                peakGpuBytes,
-                materialized);
+            string? reason = failedIds.Count == 0 ? null :
+                $"{failedIds.Count} of {shortlist.Count} picture checks could not finish. Successfully checked moments are kept; unchecked moments need your review.";
+            string details = System.Text.Json.JsonSerializer.Serialize(diagnostics);
+            GenerationVisualReviewDiagnostics.Save(_provider.Identity, diagnostics, elapsed.Elapsed, observed.Count, shortlist.Count);
+            progress?.Report(new GenerationVisualSemanticProgress(GenerationVisualSemanticPhase.Completed,
+                reason is null ? "Picture checks complete" : "Some picture checks need review",
+                reason ?? $"Checked {observed.Count} {(observed.Count == 1 ? "moment" : "moments")}.", observed.Count, shortlist.Count,
+                isIndeterminate: false, overallPercentage: 100));
+            if (observed.Count == 0)
+                return CreateFallbackResult(candidateIntelligence, elapsed.Elapsed,
+                    reason ?? "No picture checks completed. Review the suggested moments before using them.", details);
+
+            var acceptedMedia = materialized.Where(video => observed.Any(item =>
+                item.Candidate.Id == video.Request.CandidateId)).ToArray();
+            foreach (var unused in materialized.Except(acceptedMedia)) unused.Dispose();
+            var output = new GenerationVisualSemanticAnalysisResult(candidateIntelligence, _provider.Identity,
+                observed, elapsed.Elapsed, peakGpuBytes, acceptedMedia, fallbackReason: reason, diagnosticDetails: details);
             ownershipTransferred = true;
-            return result;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            string diagnostics = SafeDiagnostics(exception);
-            progress?.Report(new GenerationVisualSemanticProgress(
-                GenerationVisualSemanticPhase.Completed,
-                supplemental ? "Keeping previously reviewed moments" : "Moment selection kept for review",
-                supplemental ? "The added picture check was unavailable. Automatic selection will use the earlier successful review."
-                    : "The closer picture check was unavailable, so Replay Foundry kept the original moments and continued.",
-                shortlist.Count,
-                shortlist.Count,
-                isIndeterminate: false,
-                overallPercentage: 100));
-            return CreateFallbackResult(
-                candidateIntelligence,
-                elapsed.Elapsed,
-                "The closer picture check was unavailable. Replay Foundry kept the original moment selection so clip finding could continue.",
-                diagnostics);
+            return output;
         }
         finally
         {
             if (!ownershipTransferred)
-            {
-                foreach (MaterializedVisualSemanticReviewVideo video in
-                         materialized.AsEnumerable().Reverse())
-                {
-                    video.Dispose();
-                }
-            }
+                foreach (var video in materialized.AsEnumerable().Reverse()) video.Dispose();
         }
     }
-
     private GenerationVisualSemanticAnalysisResult CreateFallbackResult(
         GenerationCandidateIntelligenceResult candidateIntelligence,
         TimeSpan elapsed,
@@ -247,6 +255,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
         string failureType = exception.GetType().Name;
         return exception switch
         {
+            Qwen3VlQualifiedCaseException failure => $"failureType={failureType}; errorCode={failure.ErrorCode}; stage={failure.Stage}; exitCode={failure.ExitCode}",
             Qwen3VlInferenceException { HostFailure: { } failure } =>
                 $"failureType={failureType}; errorCode={failure.Failure.ErrorCode}; stage={failure.Stage}",
             Qwen3VlInferenceException =>
@@ -266,6 +275,12 @@ public sealed class GenerationVisualSemanticAnalysisService :
         {
             throw new ArgumentOutOfRangeException(nameof(maximumCandidateCount));
         }
+        var refinementByCandidate = candidateIntelligence.Refinements.ToDictionary(value => value.Candidate);
+        var neuralCandidates = candidateIntelligence.Refinements
+            .Where(value => value.Components.Any(component => component.Code is
+                GenerationCandidateRefinementComponentCode.NeuralTimelineValue or
+                GenerationCandidateRefinementComponentCode.NeuralPersonalValue))
+            .Select(value => value.Candidate).ToHashSet();
         var candidates = new List<CandidateSource>();
         foreach (GenerationMomentCandidate selected in
                  candidateIntelligence.RefinedMoments.SelectedCandidates)
@@ -273,7 +288,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
             candidates.Add(new CandidateSource(
                 selected.Candidate,
                 selected.AnalyzedSource,
-                selected.Refinement?.RankingScore ??
+                refinementByCandidate.GetValueOrDefault(selected.Candidate)?.RankingScore ?? selected.Refinement?.RankingScore ??
                     selected.Candidate.Score.RawComponentTotal,
                 selected.IsHumanPriority,
                 IsSelected: true));
@@ -285,8 +300,9 @@ public sealed class GenerationVisualSemanticAnalysisService :
                      .ThenBy(static value => value.Candidate.Window.Start)
                      .ThenBy(static value => value.Candidate.Id, StringComparer.Ordinal))
         {
-            if (refinement.Candidate.Disposition is MomentCandidateDisposition.RejectedBlack or
-                    MomentCandidateDisposition.RejectedFreeze ||
+            if ((!neuralCandidates.Contains(refinement.Candidate) &&
+                refinement.Candidate.Disposition is MomentCandidateDisposition.RejectedBlack or
+                    MomentCandidateDisposition.RejectedFreeze) ||
                 candidates.Any(value =>
                     ReferenceEquals(value.Candidate, refinement.Candidate)))
             {
@@ -316,6 +332,37 @@ public sealed class GenerationVisualSemanticAnalysisService :
             .ThenBy(static value => value.Candidate.Window.Start)
             .ThenBy(static value => value.Candidate.Id, StringComparer.Ordinal)
             .ToArray();
+        if (!candidateIntelligence.Refinements.Any(value => value.Components.Any(component =>
+                component.Code == GenerationCandidateRefinementComponentCode.NeuralPersonalValue)))
+        {
+            var nominated = candidates.Select(candidate => new
+                {
+                    Candidate = candidate,
+                    Priority = refinementByCandidate.GetValueOrDefault(candidate.Candidate)?.Components.FirstOrDefault(component =>
+                        component.Code == GenerationCandidateRefinementComponentCode.NeuralReviewPriority),
+                    Coverage = refinementByCandidate.GetValueOrDefault(candidate.Candidate)?.Components.FirstOrDefault(component =>
+                        component.Code == GenerationCandidateRefinementComponentCode.NeuralRegionCoverage)?.RawValue ?? 0
+                }).Where(item => item.Priority is not null && item.Priority.EvidenceReferences.Count > 0)
+                .GroupBy(item => item.Candidate.Source.PreparedSource.Media.FullPath + "\0" + item.Priority!.EvidenceReferences[0], StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group => group.First().Priority!.RawValue)
+                .Select(group => group.OrderByDescending(item => item.Coverage).ThenByDescending(item => item.Candidate.Score)
+                    .ThenBy(item => item.Candidate.Candidate.Window.Start).First().Candidate).ToArray();
+            if (nominated.Length > 0)
+                return ordered.Where(item => item.IsHumanPriority).Concat(nominated).Concat(ordered)
+                    .DistinctBy(item => item.Candidate, ReferenceEqualityComparer.Instance).Take(maximumCandidateCount).ToArray();
+        }
+        if (neuralCandidates.Count > 0)
+        {
+            // A model-reviewed quiet or dark scene may be the strongest moment.
+            // Preserve explicit user priorities, then spend the close-review budget
+            // according to the model's utility instead of a gameplay reservation.
+            return ordered.OrderByDescending(value => value.IsHumanPriority)
+                .ThenByDescending(value => value.Score)
+                .ThenBy(value => value.Source.PreparedSource.Media.FullPath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(value => value.Candidate.Window.Start)
+                .ThenBy(value => value.Candidate.Id, StringComparer.Ordinal)
+                .Take(maximumCandidateCount).ToArray();
+        }
         var shortlist = ordered
             .Where(static value => value.IsSelected)
             .Take(maximumCandidateCount)
@@ -382,6 +429,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
             .Select(group => group.OrderByDescending(value =>
                 GenerationSemanticRetrieval.Priority(candidateIntelligence.Transcripts?.SemanticRetrieval,
                     value.Source.PreparedSource.Media.FullPath, value.Candidate))
+                .ThenByDescending(static value => value.Score)
                 .ThenBy(static value =>
                 value.Candidate.Window.Start).ToArray())
             .ToArray();

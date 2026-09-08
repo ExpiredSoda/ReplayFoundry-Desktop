@@ -25,6 +25,18 @@ public enum GenerationCandidateRefinementComponentCode
     NonGameplayCapture,
     SemanticRetrievalRelevance,
     ApplicationStartupLeadIn,
+    NeuralIndexCoverage,
+    NeuralGameplay,
+    NeuralHumor,
+    NeuralCommentary,
+    NeuralMenu,
+    GameIdentityConflict,
+    NeuralTimelineValue,
+    NeuralSceneValue,
+    NeuralPersonalValue,
+    NeuralReviewPriority,
+    NeuralRegionCoverage,
+    NeuralLore,
 }
 
 public sealed record GenerationCandidateRefinementComponent
@@ -111,6 +123,15 @@ public sealed class GenerationCandidateRefinement
         FinalScore = Math.Clamp(UnclampedScore, 0, 100);
         RankingScore = candidate.Score.RawComponentTotal +
             refinementContribution;
+        var neuralValue = snapshot.FirstOrDefault(item => item.Code == GenerationCandidateRefinementComponentCode.NeuralPersonalValue)
+            ?? snapshot.FirstOrDefault(item => item.Code == GenerationCandidateRefinementComponentCode.NeuralSceneValue)
+            ?? snapshot.FirstOrDefault(item => item.Code == GenerationCandidateRefinementComponentCode.NeuralTimelineValue);
+        if (neuralValue is not null)
+        {
+            // This is the model's prediction expressed on the existing 0–100 UI scale.
+            // Category labels and old detector penalties do not rewrite a neural judgment.
+            UnclampedScore = FinalScore = RankingScore = neuralValue.RawValue * 100;
+        }
         PolicyVersion = policyVersion.Trim();
     }
 
@@ -142,6 +163,8 @@ public sealed class GenerationCandidateRefinement
 
     public bool HasNonGameplayCapture => _components.Any(static component =>
         component.Code == GenerationCandidateRefinementComponentCode.NonGameplayCapture && component.RawValue > 0);
+
+    public bool HasNeuralSceneValue => _components.Any(item => item.Code == GenerationCandidateRefinementComponentCode.NeuralSceneValue);
 
     public bool HasApplicationStartupLeadIn => _components.Any(static component =>
         component.Code == GenerationCandidateRefinementComponentCode.ApplicationStartupLeadIn && component.RawValue > 0);

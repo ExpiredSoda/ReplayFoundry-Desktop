@@ -235,6 +235,15 @@ internal static class LocalIntelligenceComposition
                 QualifiedQwenProcessTimeout,
                 selection.ModelDirectoryOverride,
                 selection.EnvironmentVariables);
+            try
+            {
+                Qwen3VlSceneReviewProvider.LoadPrompt(result.Host.HostScriptPath);
+            }
+            catch
+            {
+                result.Dispose();
+                throw;
+            }
             unavailableReason = null;
             return result;
         }
@@ -261,10 +270,10 @@ internal static class LocalIntelligenceComposition
             Qwen3VlQualifiedEditorialRuntime runtime,
             IVisualSemanticReviewVideoMaterializer materializer) =>
         new GenerationVisualSemanticAnalysisService(
-            runtime.Provider,
+            new Qwen3VlSceneReviewProvider(runtime),
             materializer,
             new GenerationVisualSemanticSettings(
-                runtime.Prompt,
+                Qwen3VlSceneReviewProvider.LoadPrompt(runtime.Host.HostScriptPath),
                 runtime.Model,
-                runtime.VideoPolicy));
+                runtime.VideoPolicy)) { RecordingIndex = new GenerationRecordingIndexService(runtime) };
 }

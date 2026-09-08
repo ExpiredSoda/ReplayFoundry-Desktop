@@ -7,7 +7,10 @@
     Assets = @(
         'replayfoundry-editorial-event-selection-prompt-1.2.txt'
         'replayfoundry-editorial-knowledge-selection-prompt-1.4.txt'
-        'replayfoundry-editorial-metadata-prompt-1.47.txt'
+        'replayfoundry-editorial-metadata-prompt-1.48.txt'
+        'replayfoundry-scene-review-prompt-1.4.txt'
+        'replayfoundry-scene-states-prompt-1.0.txt'
+        'replayfoundry-scene-fact-check-prompt-1.2.txt'
         'replayfoundry-editorial-visual-draft-prompt-1.4.txt'
         'replayfoundry-generation-watchdog-policy-1.0.txt'
         'replayfoundry-grounded-editorial-cuda-memory-policy-1.7.txt'
@@ -39,6 +42,13 @@
         'cli.py'
         'commands.py'
         'constants.py'
+        'recording_index.py'
+        'recording_comparison.py'
+        'scene_review.py'
+        'scene_value.py'
+        'scene_cache.py'
+        'scene_copy.py'
+        'copy_judgment.py'
         'editorial/__init__.py'
         'editorial/attempts.py'
         'editorial/canonicalization.py'
@@ -126,13 +136,24 @@
     )
 
     ForbiddenSourceFiles = @(
+        'replayfoundry_visual_semantic/curation.py'
         'replayfoundry_visual_semantic/editorial/writer/adapter.py'
+        'replayfoundry_visual_semantic/editorial/writer/contracts.py'
         'replayfoundry_visual_semantic/editorial/writer/evaluate.py'
+        'replayfoundry_visual_semantic/editorial/writer/review.py'
+        'replayfoundry_visual_semantic/editorial/writer/splits.py'
+        'replayfoundry_visual_semantic/editorial/writer/video.py'
         'replayfoundry_visual_semantic/editorial/writer/train.py'
         'replayfoundry_visual_semantic/editorial/writer/workflow.py'
     )
 
     PublicTests = @(
+        'tests/test_scene_copy.py'
+        'tests/test_scene_review.py'
+        'tests/test_scene_value.py'
+        'tests/test_scene_cache.py'
+        'tests/test_recording_index.py'
+        'tests/test_recording_comparison.py'
         '_test_bootstrap.py'
         'test_qwen3_vl_output_contract.py'
         'tests/__init__.py'
@@ -153,5 +174,10 @@
         'tests/test_qwen3_vl_generation_budget.py'
         'tests/test_qwen3_vl_structured_decoding.py'
         'tests/test_unexpected_failure_diagnostics.py'
+    )
+
+    ForbiddenPublicTests = @(
+        'tests/test_writer_learning_loop.py'
+        'tests/test_foundry_writer.py'
     )
 }

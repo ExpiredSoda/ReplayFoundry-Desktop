@@ -168,7 +168,7 @@ internal static class Qwen3VlBatchCommandBuilder
             "--ffmpeg-shared-library-dir",
             settings.FfmpegSharedLibraryDirectoryPath,
         };
-        AppendFailureOutput(settings, workspace, arguments);
+        AppendFailureOutput(settings, workspace, arguments, useOwnedWorkspaceFallback: true);
         return new Qwen3VlBatchCommand(arguments);
     }
 

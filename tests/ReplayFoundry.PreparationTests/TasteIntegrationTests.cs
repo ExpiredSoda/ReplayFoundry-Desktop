@@ -22,6 +22,7 @@ internal static class TasteIntegrationTests
         new("Taste source grouping recognizes copies while clip identities distinguish cuts", SourceIdentity),
         new("Taste personalized generation preserves quality and never rewrites evidence scores", GenerationRanking),
         new("Taste inactive learning leaves generation selection untouched", InactiveRanking),
+        new("Taste lore evidence preserves existing stored measurements", LoreMeasurements),
     ];
     private static Task RenderAndPublishProvenance() => Sta(() =>
     {
@@ -112,7 +113,9 @@ internal static class TasteIntegrationTests
         var learning = new Recorder { Active = true };
         var result = await new GenerationTasteRanking(learning).ApplyAsync(original, null, CancellationToken.None);
         TestAssert.Equal(1, result.SelectedCount, "Personalization must preserve the requested result count.");
-        TestAssert.True(result.SelectionPreferences.Count > 0, "Neural preferences must reach the subsequent capture-context check.");
+        TestAssert.True(result.Refinements.Values.Any(item => item.Components.Any(component =>
+            component.Code == GenerationCandidateRefinementComponentCode.NeuralPersonalValue)),
+            "The trained model's score must reach later selection through the refinement snapshot.");
         TestAssert.NearlyEqual(80, result.SelectedCandidates.Single().Candidate.Score.HeuristicScore, 1e-9,
             "A learned preference may choose the other qualified moment without changing its evidence score.");
         TestAssert.False(result.SelectedCandidates.Any(x => x.Candidate.Score.HeuristicScore < 70), "Personalization cannot bypass the chosen quality floor.");
@@ -126,6 +129,22 @@ internal static class TasteIntegrationTests
         var learning = new Recorder(); var result = await new GenerationTasteRanking(learning).ApplyAsync(original, null, CancellationToken.None);
         TestAssert.Same(original, result, "Learning without a qualified model must return the original selection.");
         TestAssert.Equal(0, learning.PredictionCalls, "Inactive learning must add no encoder or neural inference cost.");
+    }
+    private static Task LoreMeasurements()
+    {
+        using var scratch = new TasteScratch();
+        var asset = Asset(scratch.Path, "lore", 10, 40);
+        var values = Enum.GetValues<ReplayFoundry.Desktop.Media.Intelligence.Preferences.ClipPreferenceFeatureCode>()
+            .Select(code => new ReplayFoundry.Desktop.Media.Intelligence.Preferences.ClipPreferenceFeature(code, .75)).ToArray();
+        var richer = new GenerationOutputAsset(asset.Id, asset.Rank, asset.SourceMedia, null, asset.SourceStart, asset.SourceEnd,
+            asset.Score, asset.QualityTarget, asset.SelectionReason, asset.Explanation,
+            preferenceFeatures: new ReplayFoundry.Desktop.Media.Intelligence.Preferences.ClipPreferenceFeatureVector(values));
+        TasteClip clip = TasteClipFactory.FromAsset(richer);
+        clip.Validate();
+        TestAssert.Equal(TasteClip.MeasurementCount, clip.Measurements.Length,
+            "Adding the semantic lore feature must retain the persisted measurement shape.");
+        TestAssert.True(clip.Measurements.All(double.IsFinite), "Every semantic category must reach bounded learning storage safely.");
+        return Task.CompletedTask;
     }
     private static GenerationOutputAsset Asset(string directory, string id, int start, int end,
         GenerationCandidateSelectionReason reason = GenerationCandidateSelectionReason.QualityQualified) =>

@@ -220,6 +220,11 @@ internal static class AppRuntimePackIntegrationTests
             "The packaged Qwen process was not forced offline/read-only.");
         Assert(environment["USERNAME"] == "ReplayFoundry",
             "The bounded Qwen environment did not provide the deterministic Windows user identity required by PyTorch cache initialization.");
+        Assert(Path.IsPathFullyQualified(environment["CUDA_CACHE_PATH"]) &&
+               environment["CUDA_CACHE_PATH"] == Path.Combine(
+                   Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NVIDIA", "ComputeCache") &&
+               !environment.ContainsKey("APPDATA"),
+            "The bounded worker must locate CUDA's normal kernel cache without inheriting the user environment.");
         Assert(environment["PYTHONPATH"].Split(Path.PathSeparator).SequenceEqual(
                 new[] { @"C:\RF\host", @"C:\RF\site-packages" }),
             "The packaged host and site-packages paths were not explicit.");

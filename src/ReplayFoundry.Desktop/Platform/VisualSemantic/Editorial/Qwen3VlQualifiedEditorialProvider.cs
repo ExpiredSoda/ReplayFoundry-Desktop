@@ -138,11 +138,24 @@ public sealed class Qwen3VlQualifiedEditorialProvider :
                     inheritParentEnvironment: false),
                 MediaWorkPriority.FinalOutput, MediaWorkKind.HeavyAi, cancellationToken);
             QwenModelLoadDiagnostics.Report(process.StandardError);
-            if (!process.Succeeded)
+            // Exit 9 reports case failures after the host has written every outcome.
+            // No other process failure is allowed to supply usable observations.
+            if (!process.Succeeded && (process.ExitCode != 9 || !File.Exists(workspace.OutputBatchPath)))
             {
-                throw new Qwen3VlInferenceException(
-                    "The qualified local Qwen observation batch failed.",
-                    Qwen3VlProcessOutputReader.Diagnostics(process));
+                string? path = _settings.Host.FailureOutputPath ?? workspace.FailureOutputPath;
+                string code = "Unavailable", stage = "Process";
+                if (File.Exists(path) && new FileInfo(path).Length <= _settings.Host.MaximumStructuredOutputBytes)
+                {
+                    try
+                    {
+                        using var failure = JsonDocument.Parse(await File.ReadAllTextAsync(path, cancellationToken));
+                        if (failure.RootElement.TryGetProperty("failure", out var detail) && detail.TryGetProperty("errorCode", out var error))
+                            code = DiagnosticIdentifier(error.GetString());
+                        if (failure.RootElement.TryGetProperty("stage", out var phase)) stage = DiagnosticIdentifier(phase.GetString());
+                    }
+                    catch (JsonException) { }
+                }
+                throw new Qwen3VlQualifiedCaseException(code, stage, process.ExitCode);
             }
 
             string json = await Qwen3VlProcessOutputReader.ReadAsync(
@@ -167,6 +180,9 @@ public sealed class Qwen3VlQualifiedEditorialProvider :
             workspace.Cleanup();
         }
     }
+
+    private static string DiagnosticIdentifier(string? value) => value is { Length: > 0 and <= 80 } &&
+        value.All(char.IsLetterOrDigit) ? value : "Unknown";
 
     private static Task VerifyInstalledModelAsync(
         Qwen3VlVerifiedModelLease modelIntegrity,
@@ -277,6 +293,7 @@ public sealed class Qwen3VlQualifiedEditorialProvider :
         }
 
         var results = new List<VisualSemanticEditorialResult>();
+        var failures = new List<VisualSemanticEditorialFailure>();
         int index = 0;
         foreach (JsonElement row in resultsElement.EnumerateArray())
         {
@@ -289,6 +306,20 @@ public sealed class Qwen3VlQualifiedEditorialProvider :
                 "structuredDecodingAudit");
             RequireText(row, "caseId", expected.CaseId);
             RequireText(row, "candidateId", expected.CandidateId);
+            if (Qwen3VlEditorialJson.Text(row, "status") == "Failed")
+            {
+                RequireText(row, "runKind", "Primary");
+                if (Qwen3VlEditorialJson.Integer(row, "caseOrdinal") != index + 1 ||
+                    Qwen3VlEditorialJson.Property(row, "observation").ValueKind != JsonValueKind.Null ||
+                    Qwen3VlEditorialJson.Property(row, "canonicalizationAudit").ValueKind != JsonValueKind.Null ||
+                    Qwen3VlEditorialJson.Property(row, "notRunReason").ValueKind != JsonValueKind.Null)
+                    throw new Qwen3VlOutputParseException("Failed Qwen cases must preserve identity and cannot carry accepted observations.");
+                JsonElement failure = Qwen3VlEditorialJson.Object(row, "failure");
+                failures.Add(new(expected, Qwen3VlEditorialJson.Text(row, "stage"),
+                    Qwen3VlEditorialJson.Text(failure, "errorCode"), Seconds(row, "elapsedSeconds")));
+                index++;
+                continue;
+            }
             RequireText(row, "status", "Succeeded");
             RequireText(row, "stage", "Completed");
             ValidateCompletedGeneration(row, expected, index + 1);
@@ -319,7 +350,8 @@ public sealed class Qwen3VlQualifiedEditorialProvider :
             request,
             results,
             Seconds(root, "totalElapsedSeconds"),
-            peak);
+            peak,
+            failures);
     }
 
     private static void ValidateCompletedGeneration(
