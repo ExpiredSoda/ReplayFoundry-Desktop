@@ -28,8 +28,8 @@ internal static partial class UiUxApplicationSurfaceTests
         var media = TestMediaFactory.Create(path, TimeSpan.FromMinutes(20));
         var selected = new GenerationOutputAsset("selected", 1, media, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(40),
             80, 70, GenerationCandidateSelectionReason.QualityQualified, "Existing clip.");
-        MomentContentProfile[] profiles = [new(Gameplay: true, VisualReviewCompleted: true),
-            new(Commentary: true, Funny: true, VisualReviewCompleted: true), new()];
+        MomentContentProfile[] profiles = [new(Gameplay: true, RecordingIndexCompleted: true),
+            new(Commentary: true, Funny: true, VisualReviewCompleted: true, Lore: true), new()];
         var hidden = profiles.Select((profile, index) => GenerationHiddenMoment.RestoreStudioHandoff(
             "hidden-" + index, index + 1, 0, media, TimeSpan.FromSeconds(200 + index * 100), TimeSpan.FromSeconds(230 + index * 100),
             80, 70, GenerationHiddenMomentReason.RequestedCountReached, "More from this recording.",
@@ -46,10 +46,13 @@ internal static partial class UiUxApplicationSurfaceTests
             GenerationOutputProject project = TaggedMomentsProject(path);
             var doc = StudioProjectDocumentMapper.Capture(project, 1, DateTimeOffset.UtcNow);
             var reopened = StudioProjectDocumentMapper.Restore(JsonSerializer.Deserialize<StudioProjectDocument>(JsonSerializer.Serialize(doc))!);
-            TestAssert.True(reopened.HiddenMoments[1].PreferenceFeatures.DetectedContent is { Commentary: true, Funny: true },
+            TestAssert.True(reopened.HiddenMoments[1].PreferenceFeatures.DetectedContent is { Commentary: true, Funny: true, Lore: true },
                 "Detected categories must survive serialization, including moments beyond the requested clip count.");
+            TestAssert.True(reopened.HiddenMoments[0].PreferenceFeatures.DetectedContent is { RecordingIndexCompleted: true, VisualReviewCompleted: false },
+                "A saved recording label must not pretend a close picture check has completed.");
             var filters = new StudioMomentFilters(() => { });
             filters.Commentary = true; filters.Funny = true;
+            filters.Lore = true;
             TestAssert.Equal(1, reopened.HiddenMoments.Count(moment => filters.Matches(moment.PreferenceFeatures)), "Combined filters require both categories.");
             filters.Unclassified = true;
             TestAssert.Equal(1, reopened.HiddenMoments.Count(moment => filters.Matches(moment.PreferenceFeatures)), "Unreviewed moments remain discoverable.");
@@ -58,8 +61,8 @@ internal static partial class UiUxApplicationSurfaceTests
             var legacy = new ClipPreferenceFeatureVector([new(ClipPreferenceFeatureCode.ContinuousActivity, 1),
                 new(ClipPreferenceFeatureCode.CreatorSpeech, .5)], new("game", "IndividualClips", "Gameplay", "Humor"));
             MomentContentProfile legacyProfile = StudioMomentFilters.Profile(legacy);
-            TestAssert.True(legacyProfile.Commentary && !legacyProfile.Gameplay && !legacyProfile.Funny,
-                "Older projects may recover measured creator speech; motion and requested Humor are not detected categories.");
+            TestAssert.False(legacyProfile.HasLabels,
+                "Older track routing, motion and requested Humor are not evidence of semantic content categories.");
         }
         finally { File.Delete(path); }
         return Task.CompletedTask;

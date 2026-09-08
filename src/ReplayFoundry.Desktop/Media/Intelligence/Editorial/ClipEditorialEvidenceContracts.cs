@@ -176,6 +176,9 @@ public sealed record ClipEditorialAiProvenance
     public TimeSpan BatchElapsed { get; }
     public long? PeakAllocatedGpuBytes { get; }
     public IReadOnlyList<ClipEditorialWritingAttempt> WritingAttempts { get; init; } = [];
+    // Runtime evidence from the provider's verified model output. Saved projects
+    // cannot grant themselves this authority by adding a JSON property.
+    internal ClipEditorialNeuralCopyReview? NeuralCopyReview { get; init; }
 
     private static string Required(string value, string parameterName) =>
         string.IsNullOrWhiteSpace(value)
@@ -187,6 +190,13 @@ public sealed record ClipEditorialAiProvenance
         value.Any(static character => !Uri.IsHexDigit(character))
             ? throw new ArgumentException("AI provenance hashes must be SHA-256 values.", parameterName)
             : value.ToLowerInvariant();
+}
+
+internal sealed record ClipEditorialNeuralCopyReview(double Grounding, double Usefulness, string PolicySha256)
+{
+    internal bool Accepted => double.IsFinite(Grounding) && Grounding is > .5 and <= 1 &&
+        double.IsFinite(Usefulness) && Usefulness is > .5 and <= 1 &&
+        PolicySha256.Length == 64 && PolicySha256.All(Uri.IsHexDigit);
 }
 
 public sealed record ClipEditorialWritingAttempt(string CandidateId, int Attempt,

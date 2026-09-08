@@ -500,15 +500,15 @@ public sealed class SettingsViewModel :
 
     public string EditorialMetadataPreferenceLearningDetail =>
         IsEditorialMetadataPreferenceLearningEnabled
-            ? "Saved wording changes and titles you mark as reviewed help train your local writer. " +
-              "Each example stays linked to its clip facts. Clip likes and exports do not count as wording approval."
+            ? "Saved edits become training examples for the title or description you changed. Mark reviewed wording when it matches the video. " +
+              "You can explain a correction in Studio. Clip likes and exports stay separate from wording approval."
             : "Turn this on to learn from titles and descriptions you correct or mark as reviewed. " +
               "Saved learning stays on this PC until you reset app data in Files & storage.";
 
     public string EditorialMetadataPreferenceLearningPrivacy =>
-        "Your saved wording and its supporting clip facts stay on this PC. Nothing is uploaded. " +
-        "A trained writer must pass checks on separate recordings before it can be used. " +
-        "The existing writer stays available while yours is learning.";
+        "Wording, clip facts, correction notes, original recording references and montage order stay on this PC. Nothing is uploaded. " +
+        "Keep your recordings available for later video checks. Separate recordings are reserved for testing each new model. " +
+        "The existing writer stays available until a personal update passes review.";
 
     public string EditorialMetadataPreferenceLearningEnabledAtText =>
         _editorialMetadataPreferenceLearningConsent.EnabledAtUtc is

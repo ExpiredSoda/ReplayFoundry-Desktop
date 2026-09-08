@@ -123,6 +123,13 @@ internal static partial class GenerationSpeechActivityTests
         yield return new TestCase(
             "Unavailable Thorough visual review retains deterministic candidates",
             VisualReviewFailureKeepsDeterministicCandidates);
+        yield return new TestCase("Partial visual batches retain earlier successes and retry only unresolved cases",
+            PartialVisualReviewRetriesOnlyFailedCases);
+        yield return new TestCase("A failed later visual batch cannot erase earlier candidate ownership", LaterVisualFailurePreservesEarlierCases);
+        yield return new TestCase("Grounded scene review preserves contextual neural value and bounds its evidence", GroundedSceneEvidence);
+        yield return new TestCase("Close review follows updated neural scores instead of earlier selected positions", NeuralShortlistUsesCurrentScores);
+        yield return new TestCase("An exhausted factual correction keeps other successes without repeating the same review", ExhaustedGroundingIsNotRetried);
+        yield return new TestCase("Comparative review covers distinct nominated regions and preserves personal ranking", ComparativeReviewCoversRegions);
         yield return new TestCase(
             "Qualified visual model verification never blocks the UI caller",
             QualifiedVisualModelVerificationLeavesCallerFree);
@@ -1504,7 +1511,7 @@ internal static partial class GenerationSpeechActivityTests
         TestAssert.True(scoresBefore.SequenceEqual(
                 retained.Refinements.Select(static item => item.FinalScore)),
             "Visual fallback must preserve every deterministic score.");
-        TestAssert.Equal(provider.Requests.Single().Requests.Count,
+        TestAssert.Equal(provider.Requests.First().Requests.Count,
             materializer.CleanupCount,
             "Failed review artifacts must be released before generation continues.");
 
@@ -1522,6 +1529,45 @@ internal static partial class GenerationSpeechActivityTests
             GenerationVisualSemanticOutcome.RetainedDeterministicCandidates,
             materializationFallback.Outcome,
             "Materialization failures must retain deterministic candidates too.");
+    }
+
+    private static async Task PartialVisualReviewRetriesOnlyFailedCases()
+    {
+        var request = CreateRequest(GenerationAnalysisDepth.Thorough, [("partial-review.mkv", 1)],
+            sourceDuration: TimeSpan.FromMinutes(2), desiredCount: 1, qualityThreshold: 70);
+        var intelligence = CreateCandidateIntelligence(request, [80, 78]);
+        using var materializer = new FakeVisualReviewMaterializer();
+        string failedId = intelligence.BaseMoments.Sources[0].Moments.Proposals[1].Id;
+        var provider = new FakeVisualEditorialProvider { FailCase = (item, call) => item.CandidateId == failedId && call == 1 };
+        using var result = await new GenerationVisualSemanticAnalysisService(provider, materializer, CreateVisualSettings())
+            .AnalyzeAsync(intelligence, null, CancellationToken.None);
+        TestAssert.Equal(2, result.Observations.Count, "Successful cases and the recovered failed case must both survive.");
+        TestAssert.Equal(2, provider.Requests.Count, "Only one retry is allowed.");
+        TestAssert.Equal(1, provider.Requests[1].Requests.Count, "Successful cases must never be repeated.");
+        TestAssert.Equal(failedId, provider.Requests[1].Requests[0].CandidateId, "Retry must retain the failed case identity.");
+        TestAssert.False(result.NeedsReview, "A fully recovered review must not remain incomplete.");
+    }
+
+    private static async Task LaterVisualFailurePreservesEarlierCases()
+    {
+        var request = CreateRequest(GenerationAnalysisDepth.Thorough, [("partial-batches.mkv", 1)],
+            sourceDuration: TimeSpan.FromMinutes(12), desiredCount: 5, qualityThreshold: 70);
+        var intelligence = CreateCandidateIntelligence(request, Enumerable.Range(0, 12).Select(i => 95d-i).ToArray());
+        using var materializer = new FakeVisualReviewMaterializer();
+        string? failedId = null;
+        var provider = new FakeVisualEditorialProvider
+        {
+            FailCase = (item, call) => call > 1 && (failedId ??= item.CandidateId) == item.CandidateId,
+        };
+        using var result = await new GenerationVisualSemanticAnalysisService(provider, materializer, CreateVisualSettings())
+            .AnalyzeAsync(intelligence, null, CancellationToken.None);
+        TestAssert.True(result.NeedsReview, "An unresolved picture check remains visible.");
+        TestAssert.Equal(GenerationVisualSemanticOutcome.Completed, result.Outcome, "A partial result preserves its usable observations.");
+        TestAssert.Equal(3, provider.Requests.Count, "A later failed case receives one retry.");
+        TestAssert.Equal(1, provider.Requests[^1].Requests.Count, "Earlier successes must not be sent again.");
+        TestAssert.True(provider.Requests[0].Requests.All(first => result.Observations.Any(item => item.Candidate.Id == first.CandidateId)),
+            "The entire first batch survives a later case failure.");
+        TestAssert.False(result.Observations.Any(item => item.Candidate.Id == failedId), "A failed case never acquires another case's observation.");
     }
 
     private static GenerationCandidateIntelligenceResult CreateCandidateIntelligence(
@@ -2011,6 +2057,8 @@ internal static partial class GenerationSpeechActivityTests
 
         public Exception? Failure { get; init; }
 
+
+
         public List<VisualSemanticReviewVideoMaterializationRequest> Requests { get; } = [];
 
         public Task<MaterializedVisualSemanticReviewVideo> MaterializeAsync(
@@ -2063,6 +2111,9 @@ internal static partial class GenerationSpeechActivityTests
 
         public List<VisualSemanticBatchRequest> Requests { get; } = [];
 
+        public Func<VisualSemanticRequest, int, bool>? FailCase { get; init; }
+        public bool RetryFailures { get; init; } = true;
+
         public Exception? Failure { get; init; }
 
         public Func<VisualSemanticRequest, int, VisualSemanticEditorialObservation>
@@ -2096,6 +2147,7 @@ internal static partial class GenerationSpeechActivityTests
                 SemanticRepairCount: 0,
                 WireRepresentationVersion: "visual-semantic-editorial-wire-1.1");
             VisualSemanticEditorialResult[] results = request.Requests
+                .Where(item => FailCase?.Invoke(item, Requests.Count) != true)
                 .Select((item, index) => new VisualSemanticEditorialResult(
                     item,
                     ObservationFactory(item, index),
@@ -2106,7 +2158,9 @@ internal static partial class GenerationSpeechActivityTests
                 request,
                 results,
                 TimeSpan.FromMilliseconds(results.Length),
-                1024));
+                1024,
+                request.Requests.Where(item => FailCase?.Invoke(item, Requests.Count) == true)
+                    .Select(item => new VisualSemanticEditorialFailure(item, "Inference", "ProviderCaseFailuresDetected", TimeSpan.Zero, CanRetry: RetryFailures))));
         }
     }
 

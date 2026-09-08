@@ -37,13 +37,14 @@ internal sealed class FfmpegEvidenceAnalyzer :
     public FfmpegEvidenceAnalyzer(
         IProcessRunner processRunner,
         IFfmpegToolLocator toolLocator,
-        bool useCombinedVisualPass = false)
+        bool useCombinedVisualPass = false,
+        bool cacheAnalysis = false)
     {
         ArgumentNullException.ThrowIfNull(processRunner);
         ArgumentNullException.ThrowIfNull(toolLocator);
 
         _processRunner = processRunner;
-        _passRunner = new FfmpegEvidencePassRunner(processRunner);
+        _passRunner = new FfmpegEvidencePassRunner(processRunner, cacheAnalysis);
         _toolLocator = toolLocator;
         _useCombinedVisualPass = useCombinedVisualPass;
     }

@@ -64,9 +64,43 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid Margin="10,8,10,0" Visibility="{Binding ShowDetails, ElementName=PreviewRoot, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock FontSize="10" Foreground="{DynamicResource Brush.TextMuted}" Text="Local preview" />
-                    <TextBlock HorizontalAlignment="Right" FontSize="10" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewFormatText}" />
+                <Grid Margin="10,4,10,0" Visibility="{Binding ShowDetails, ElementName=PreviewRoot, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" Text="{Binding PreviewTimecode}" />
+                        <TextBlock Margin="5,0" Foreground="{DynamicResource Brush.TextMuted}" Text="/" />
+                        <TextBlock FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewDurationText}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Margin="8,0" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="10"
+                        Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewFormatText}" TextTrimming="CharacterEllipsis" />
+                    <Button x:Name="CaptionHelpButton" Grid.Column="2" Width="40" Height="40"
+                        Style="{DynamicResource Control.IconButton}" Content="i"
+                        FontFamily="Segoe UI" FontWeight="SemiBold"
+                        AutomationProperties.Name="Caption help"
+                        AutomationProperties.HelpText="{Binding LiveCaptionPresentationWarning}"
+                        Click="OnCaptionHelpClick" PreviewKeyDown="OnCaptionHelpKeyDown"
+                        LostKeyboardFocus="OnCaptionHelpLostFocus"
+                        Visibility="{Binding HasLiveCaptionPresentationWarning, Converter={StaticResource BoolToVisibility}}">
+                        <Button.ToolTip>
+                            <ToolTip MaxWidth="320" Placement="Bottom">
+                                <TextBlock Text="{Binding LiveCaptionPresentationWarning}" TextWrapping="Wrap" />
+                            </ToolTip>
+                        </Button.ToolTip>
+                    </Button>
+                    <Popup x:Name="CaptionHelpPopup" Grid.Column="2" Placement="Bottom"
+                        PlacementTarget="{Binding ElementName=CaptionHelpButton}"
+                        StaysOpen="False" AllowsTransparency="True" PopupAnimation="None">
+                        <Border MaxWidth="320" Margin="4" Padding="14"
+                            Background="{DynamicResource Brush.SurfaceElevated}"
+                            BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1" CornerRadius="10">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource Text.SectionTitle}" Text="About these captions" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Body}"
+                                    Text="{Binding LiveCaptionPresentationWarning}" TextWrapping="Wrap"
+                                    AutomationProperties.LiveSetting="Polite" />
+                            </StackPanel>
+                        </Border>
+                    </Popup>
                 </Grid>
 
                 <Grid x:Name="PreviewViewport" Grid.Row="1" MinHeight="0" Margin="8">
@@ -179,28 +213,17 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.ColumnSpan="3" Margin="0,0,0,6" MaxHeight="72" TextWrapping="Wrap"
-                        Style="{DynamicResource Text.Meta}" Foreground="{DynamicResource Brush.StatusInfo}"
-                        Text="{Binding LiveCaptionPresentationWarning}" ToolTip="{Binding LiveCaptionPresentationWarning}"
-                        AutomationProperties.Name="Caption layout review warning"
-                        Visibility="{Binding HasLiveCaptionPresentationWarning, Converter={StaticResource BoolToVisibility}}" />
                     <TextBlock
                         x:Name="InlinePreviewGuidance"
                         Grid.Row="1"
-                        Grid.Column="1"
-                        MaxWidth="380"
-                        HorizontalAlignment="Center"
+                        Grid.ColumnSpan="3"
+                        HorizontalAlignment="Stretch"
                         FontSize="10"
                         Foreground="{DynamicResource Brush.TextMuted}"
                         Text="{Binding PreviewStatus}"
                         TextAlignment="Center"
                         TextTrimming="CharacterEllipsis"
                         Visibility="{Binding UsesSecondaryGuidancePlacement, Converter={StaticResource InverseBoolToVisibility}}" />
-                    <StackPanel Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" Orientation="Horizontal">
-                        <TextBlock FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" Text="{Binding PreviewTimecode}" />
-                        <TextBlock Margin="5,0" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" Text="/" />
-                        <TextBlock FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewDurationText}" />
-                    </StackPanel>
                 </Grid>
             </Grid>
 
@@ -289,14 +312,9 @@
                         <controls:IconPath Width="14" Height="14" IconKey="Icon.SkipForward" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
                     </Button>
                 </StackPanel>
-                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock FontFamily="Consolas" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding PreviewTimecode}" />
-                    <TextBlock Margin="6,0" Foreground="{DynamicResource Brush.TextMuted}" Text="/" />
-                    <TextBlock FontFamily="Consolas" FontSize="12" Foreground="{DynamicResource Brush.TextMuted}" Text="{Binding PreviewDurationText}" />
-                </StackPanel>
                 <StackPanel Grid.Column="0" HorizontalAlignment="Left" Orientation="Horizontal">
                     <Button
-                        MinWidth="72"
+                        Width="40"
                         AutomationProperties.Name="{Binding CaptionVisibilityText}"
                         AutomationProperties.HelpText="Shows or hides the actual caption content in the Studio preview. This does not change the final render."
                         Command="{Binding ToggleCaptionVisibilityCommand}"
@@ -313,7 +331,6 @@
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
                             <controls:IconPath Width="15" Height="15" IconKey="Icon.Caption" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.3" />
-                            <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold" Text="{Binding CaptionVisibilityShortText}" />
                         </StackPanel>
                     </Button>
                     <StackPanel.Style>

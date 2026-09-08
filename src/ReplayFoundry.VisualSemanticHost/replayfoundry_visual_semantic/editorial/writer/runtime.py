@@ -20,3 +20,7 @@ def usage():
 
 def select(*args, **kwargs):
     return None
+
+
+def scene_selection(*args, **kwargs):
+    return None

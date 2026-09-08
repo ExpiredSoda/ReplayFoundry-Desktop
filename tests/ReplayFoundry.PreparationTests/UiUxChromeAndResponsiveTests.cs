@@ -1383,7 +1383,7 @@ internal static partial class UiUxApplicationSurfaceTests
                 ProjectName = "Short workspace layout",
                 Preview = new LayoutOnlyStudioPreview(),
             };
-            foreach ((double width, double height) in new[] { (1266d, 520d), (1920d, 880d), (760d, 400d) })
+            foreach ((double width, double height) in new[] { (1120d, 680d), (1266d, 520d), (1920d, 880d), (760d, 400d) })
             {
                 var compactTabs = (TabControl)studio.FindName("CompactLayout");
                 compactTabs.SelectedIndex = 1;
@@ -1424,7 +1424,32 @@ internal static partial class UiUxApplicationSurfaceTests
                 var videoViewport = (Grid)preview.FindName("PreviewViewport");
                 TestAssert.True(videoViewport.ActualHeight >= (studio.IsCompactLayout ? 220d : 100d),
                     "Compact tabs may scroll to preserve a useful portrait picture; full-size transport targets must never shrink with the video.");
+                if (!studio.IsCompactLayout)
+                {
+                    TestAssert.True(panes.ColumnDefinitions[0].ActualWidth >= 320,
+                        "Clip titles need a readable column even at the first desktop breakpoint.");
+                    Button captions = EnumerateVisualDescendants<Button>(preview).Single(button =>
+                        System.Windows.Automation.AutomationProperties.GetName(button) == "Hide captions");
+                    Rect captionBounds = captions.TransformToAncestor(preview).TransformBounds(new Rect(captions.RenderSize));
+                    Rect firstTransport = transport[0].TransformToAncestor(preview).TransformBounds(new Rect(transport[0].RenderSize));
+                    TestAssert.True(captionBounds.Right <= firstTransport.Left,
+                        "The caption toggle must not overlap playback controls beside a narrow portrait preview.");
+                }
             }
+
+            studio.Width = 1600; studio.Height = 880;
+            double PreviewWidth(bool portrait)
+            {
+                studio.DataContext = new { ShouldShowPlaceholder = false, ProjectName = "Aspect layout",
+                    Preview = new LayoutOnlyStudioPreview { IsPortraitPreview = portrait } };
+                studio.Measure(new Size(1600, 880)); studio.Arrange(new Rect(0, 0, 1600, 880));
+                Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
+                studio.UpdateLayout();
+                return ((Grid)studio.FindName("FullLayout")).ColumnDefinitions[1].ActualWidth;
+            }
+            double portraitWidth = PreviewWidth(true);
+            TestAssert.True(PreviewWidth(false) > portraitWidth * 1.2,
+                "Switching to landscape must give its preview appreciably more horizontal room.");
         });
         return Task.CompletedTask;
     }
@@ -1448,6 +1473,7 @@ internal static partial class UiUxApplicationSurfaceTests
         public string CaptionVisibilityShortText { get; } = "CC";
         public double PreviewCanvasWidth { get; } = 1080d;
         public double PreviewCanvasHeight { get; } = 1920d;
+        public bool IsPortraitPreview { get; init; } = true;
         public double PreviewPositionMinimumSeconds { get; } = 0d;
         public double PreviewPositionMaximumSeconds { get; } = 6d;
         public double PreviewPositionSeconds { get; set; }

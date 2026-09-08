@@ -106,6 +106,8 @@ internal static class StudioSurfaceCatalog
         GenerationOutputAsset asset)
     {
         ArgumentNullException.ThrowIfNull(asset);
+        if (asset.EditorialContext?.DeterministicReason.StartsWith("Check the game name:", StringComparison.Ordinal) == true)
+            return new("Check game name", asset.EditorialContext.DeterministicReason);
         string label = asset.SelectionReason switch
         {
             GenerationCandidateSelectionReason.UserReservedRange =>
@@ -113,7 +115,7 @@ internal static class StudioSurfaceCatalog
             GenerationCandidateSelectionReason.UserPriority =>
                 "Matches your request",
             GenerationCandidateSelectionReason.QualityQualified =>
-                "Strong match",
+                asset.PreferenceFeatures?.DetectedContent?.VisualReviewCompleted == true ? "Strong match" : "Suggested · review",
             GenerationCandidateSelectionReason.QualityQualifiedGameplayEventCoverage =>
                 "Gameplay moment",
             GenerationCandidateSelectionReason.CountFillBelowQualityTarget =>

@@ -92,6 +92,16 @@ internal sealed class Qwen3VlGroundedMetadataExecutor
                     "Grounded Qwen metadata requires a verified bounded review video.");
             await reviewVideo.VerifyIntegrityAsync(cancellationToken);
         }
+        // Personal adapters stay on the same scene-writing contract they learned.
+        if (requests.All(Qwen3VlSceneCopyGenerator.CanUse))
+        {
+            ReleaseIdleWorker();
+            var drafts = await new Qwen3VlSceneCopyGenerator(_runtime, _writerLearning).GenerateAsync(requests, cancellationToken);
+            object result = typeof(TResult) == typeof(IReadOnlyList<ClipEditorialMetadataBatchOutcome>)
+                ? drafts.Select(draft => new ClipEditorialMetadataBatchOutcome(draft, null)).ToArray()
+                : drafts;
+            return (TResult)result;
+        }
         Qwen3VlBatchWorkspace workspace = _workspaceFactory.Create();
         Exception? generationFailure = null;
         try

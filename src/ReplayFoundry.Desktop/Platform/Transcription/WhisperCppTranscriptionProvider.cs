@@ -17,20 +17,21 @@ public sealed class WhisperCppTranscriptionProvider :
         _workspaceFactory;
     private readonly object _initializationSync = new();
     private Task<WhisperCppInitialization>? _initializationTask;
+    private readonly WhisperCppTranscriptCache? _cache;
 
     public WhisperCppTranscriptionProvider(
         WhisperCppProviderSettings settings)
         : this(
             settings,
             new WindowsProcessRunner(),
-            new SystemWhisperCppWorkspaceFactory())
+            new SystemWhisperCppWorkspaceFactory(), usePersistentCache: true)
     {
     }
 
     internal WhisperCppTranscriptionProvider(
         WhisperCppProviderSettings settings,
         IProcessRunner processRunner,
-        IWhisperCppWorkspaceFactory workspaceFactory)
+        IWhisperCppWorkspaceFactory workspaceFactory, bool usePersistentCache = false)
     {
         _settings =
             settings ??
@@ -41,6 +42,7 @@ public sealed class WhisperCppTranscriptionProvider :
         _workspaceFactory =
             workspaceFactory ??
             throw new ArgumentNullException(nameof(workspaceFactory));
+        _cache = usePersistentCache ? new WhisperCppTranscriptCache() : null;
     }
 
     public InferenceProviderIdentity Identity { get; } =
@@ -101,7 +103,16 @@ public sealed class WhisperCppTranscriptionProvider :
                     initialization.VadModelSha256);
             DateTimeOffset startedAtUtc =
                 DateTimeOffset.UtcNow;
-            ProcessRunResult result =
+            string? cacheKey = _cache is null ? null : await WhisperCppTranscriptCache.KeyAsync(request,
+                initialization.Model.Sha256, initialization.ExecutableSha256, command.NormalizedOptions, cancellationToken);
+            WhisperCppCachedTranscript? cached = cacheKey is null ? null : await _cache!.ReadAsync(cacheKey, cancellationToken);
+            if (cached is not null)
+            {
+                try { _ = Parse(cached.Json, new(0, cached.Output, cached.Error, cached.Duration)); }
+                catch (Exception error) when (error is WhisperCppTranscriptionException or System.Text.Json.JsonException or ArgumentException)
+                { cached = null; }
+            }
+            ProcessRunResult result = cached is not null ? new(0, cached.Output, cached.Error, cached.Duration) :
                 await MediaWorkBudget.RunAsync(_processRunner,
                     new ProcessRunRequest(
                         _settings.ExecutablePath,
@@ -116,6 +127,7 @@ public sealed class WhisperCppTranscriptionProvider :
                     MediaWorkPriority.Foreground, MediaWorkKind.HeavyAi, cancellationToken);
             DateTimeOffset completedAtUtc =
                 DateTimeOffset.UtcNow;
+            if (cached is not null) { startedAtUtc = cached.StartedAtUtc; completedAtUtc = cached.CompletedAtUtc; }
 
             if (!result.Succeeded)
             {
@@ -124,31 +136,37 @@ public sealed class WhisperCppTranscriptionProvider :
                     Diagnostics(result));
             }
 
-            if (!File.Exists(command.OutputJsonPath))
+            if (cached is null && !File.Exists(command.OutputJsonPath))
             {
                 throw new WhisperCppTranscriptionException(
                     "whisper.cpp completed without creating structured JSON output.");
             }
 
             string json =
-                await File.ReadAllTextAsync(
+                cached?.Json ?? await File.ReadAllTextAsync(
                     command.OutputJsonPath,
                     cancellationToken);
-            WhisperCppVadTimeMap? vadTimeMap =
+            WhisperCppParsedOutput Parse(string payload, ProcessRunResult executionResult)
+            {
+                WhisperCppVadTimeMap? vadTimeMap =
                 request.Options.RequestWordTimestamps &&
                 command.NormalizedOptions.ContainsKey("vad")
                     ? WhisperCppVadTimeMap.TryParse(
                         TimeSpan.FromSeconds(
                             WhisperCppCommandBuilder
                                 .VadSamplesOverlapSeconds),
-                        result.StandardOutput,
-                        result.StandardError)
+                        executionResult.StandardOutput,
+                        executionResult.StandardError)
                     : null;
-            WhisperCppParsedOutput parsed =
-                WhisperCppOutputParser.Parse(
-                    json,
+                return WhisperCppOutputParser.Parse(
+                    payload,
                     request,
                     vadTimeMap);
+            }
+            WhisperCppParsedOutput parsed = Parse(json, result);
+            if (cached is null && cacheKey is not null)
+                await _cache!.SaveAsync(new(cacheKey, json, result.StandardOutput, result.StandardError,
+                    startedAtUtc, completedAtUtc, result.Duration), cancellationToken);
             string? backend =
                 TryReadBackend(
                     result.StandardOutput,
@@ -195,7 +213,7 @@ public sealed class WhisperCppTranscriptionProvider :
                 parsed.Segments,
                 manifest,
                 parsed.DetectedLanguage,
-                parsed.Warnings);
+                parsed.Warnings, wasReused: cached is not null);
         }
         catch (OperationCanceledException)
         {

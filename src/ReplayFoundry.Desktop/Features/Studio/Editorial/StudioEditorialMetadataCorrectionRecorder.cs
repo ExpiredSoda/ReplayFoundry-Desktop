@@ -8,6 +8,7 @@ namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 
 public interface IStudioEditorialMetadataCorrectionRecorder
 {
+    bool IsWordingLearningEnabled => false;
     bool TryRecordCorrection(
         string beforeTitle,
         string beforeDescription,
@@ -19,6 +20,9 @@ public interface IStudioEditorialMetadataCorrectionRecorder
         string beforeTags, string afterTitle, string afterDescription, string afterTags) =>
         TryRecordCorrection(beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription, afterTags);
     bool TryRecordApproval(GenerationOutputAsset asset) => false;
+    bool TryRecordCorrection(GenerationOutputAsset asset, string beforeTitle, string beforeDescription,
+        string beforeTags, string afterTitle, string afterDescription, string afterTags, EditorialWordingFeedback feedback) =>
+        TryRecordCorrection(asset, beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription, afterTags);
 }
 
 /// <summary>
@@ -30,6 +34,7 @@ public sealed class StudioEditorialMetadataCorrectionRecorder :
 {
     private readonly EditorialMetadataPreferenceRecorder _recorder;
     private readonly IEditorialWriterLearningStore? _writer;
+    public bool IsWordingLearningEnabled => _writer?.IsEnabled == true;
 
     public StudioEditorialMetadataCorrectionRecorder(
         EditorialMetadataPreferenceRecorder recorder,
@@ -42,13 +47,17 @@ public sealed class StudioEditorialMetadataCorrectionRecorder :
 
     public bool TryRecordCorrection(GenerationOutputAsset asset, string beforeTitle, string beforeDescription,
         string beforeTags, string afterTitle, string afterDescription, string afterTags)
+        => TryRecordCorrection(asset, beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription, afterTags, new EditorialWordingFeedback());
+
+    public bool TryRecordCorrection(GenerationOutputAsset asset, string beforeTitle, string beforeDescription,
+        string beforeTags, string afterTitle, string afterDescription, string afterTags, EditorialWordingFeedback feedback)
     {
         bool structural = TryRecordCorrection(beforeTitle, beforeDescription, beforeTags, afterTitle, afterDescription, afterTags);
         try
         {
             bool wording = _writer?.Record(asset.CreateCurrentCutEditorialContext().PrepareForEditorialGeneration(),
                 beforeTitle, beforeDescription, ClipEditorialProfileTags.Parse(beforeTags),
-                afterTitle, afterDescription, ClipEditorialProfileTags.Parse(afterTags)) == true;
+                afterTitle, afterDescription, ClipEditorialProfileTags.Parse(afterTags), feedback) == true;
             return structural || wording;
         }
         catch (Exception exception)

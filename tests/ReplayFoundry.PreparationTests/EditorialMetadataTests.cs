@@ -71,6 +71,7 @@ internal static partial class EditorialMetadataTests
         new("Optional AI metadata batch failures propagate without hidden reruns", OptionalAiBatchFailurePropagatesOnce),
         new("Grounded metadata rejects a batch with one typed case failure", FailSoftBatchRejectsFailedCase),
         new("AI batches retry only abstract or colliding titles", AiBatchRetriesOnlyNoveltyFailures),
+        new("Neural wording overrides phrase rules while exact duplicates still retry", NeuralWordingKeepsDuplicateProtection),
         new("Editorial retry diagnostics match submitted cases and attempts", RetryDiagnosticsMatchProviderCalls),
         new("Editorial retry captures restore scopes and cannot change generation", RetryDiagnosticCapturesAreScoped),
         new("Grounded executor pass timing is opt-in and preserves provider failures", GroundedExecutorPassDiagnosticsAreOptIn),

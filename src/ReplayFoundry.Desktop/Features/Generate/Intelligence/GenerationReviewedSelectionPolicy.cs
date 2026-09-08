@@ -16,6 +16,7 @@ internal static class GenerationReviewedSelectionPolicy
         var refinements = intelligence.Refinements.ToDictionary(item => item.Candidate);
         foreach (var review in visual.Observations)
         {
+            if (review.NeuralEditorialValue.HasValue) continue;
             if (review.Observation.EditorialDisposition != VisualSemanticEditorialDisposition.Reject ||
                 review.Observation.UncertaintyReasons.Count != 0 ||
                 review.ReviewedSourceStart > review.Candidate.Window.Start ||
@@ -37,7 +38,7 @@ internal static class GenerationReviewedSelectionPolicy
         var preferences = GenerationSemanticFinalSelectionPreference.Create(intelligence);
         GenerationMomentFindingResult source = intelligence.RefinedMoments;
         var selected = new GenerationMomentPortfolioSelector().SelectEligible(source.Request, source.Sources, refinements, eligible, preferences, cancellationToken);
-        string note = visual.FallbackReason ?? "Automatic selection was limited to the visually reviewed pool. Inspect other moments manually in Studio.";
+        string note = visual.FallbackReason ?? "Automatic picks are limited to the moments checked in this run. You can explore more moments in Studio.";
         var moments = new GenerationMomentFindingResult(source.Request, source.Sources, selected, refinements, eligible, note);
         return new(intelligence.BaseMoments, intelligence.SpeechActivity, refinements.Values, moments, visual, intelligence.Transcripts);
     }

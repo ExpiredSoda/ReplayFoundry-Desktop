@@ -101,7 +101,7 @@ internal static partial class GenerationSpeechActivityTests
         TestAssert.Equal(8, final.RefinedMoments.SelectedCount, "Count fill must not promote another unreviewed candidate after the supplemental pass.");
         TestAssert.True(final.RefinedMoments.SelectedCandidates.All(item => combined.Observations.Any(observation => ReferenceEquals(item.Candidate, observation.Candidate))),
             "Every final automatically selected candidate must belong to the successfully reviewed pool.");
-        TestAssert.True(final.RefinedMoments.FulfillmentMessage.Contains("visually reviewed pool", StringComparison.Ordinal),
+        TestAssert.True(final.RefinedMoments.FulfillmentMessage.Contains("moments checked in this run", StringComparison.Ordinal),
             "A bounded review shortfall must explain why fewer results are returned.");
 
         var limitedBaseline = PromotedIntelligence(9, 9);

@@ -81,7 +81,13 @@ public static class GenerationClipPreferenceFeatureExtractor
             refinement,
             GenerationCandidateRefinementComponentCode.VisualSemanticEditorialPenalty,
             ClipPreferenceFeatureCode.VisualSemanticRejection);
-        return new ClipPreferenceFeatureVector(features, context, GenerationMomentContentClassifier.Classify(moment, features, review));
+        AddRefinement(features, refinement, GenerationCandidateRefinementComponentCode.NeuralGameplay, ClipPreferenceFeatureCode.ObservedGameplay);
+        AddRefinement(features, refinement, GenerationCandidateRefinementComponentCode.NeuralHumor, ClipPreferenceFeatureCode.ObservedHumor);
+        AddRefinement(features, refinement, GenerationCandidateRefinementComponentCode.NeuralCommentary, ClipPreferenceFeatureCode.ObservedCommentary);
+        AddRefinement(features, refinement, GenerationCandidateRefinementComponentCode.NeuralMenu, ClipPreferenceFeatureCode.ObservedMenu);
+        AddRefinement(features, refinement, GenerationCandidateRefinementComponentCode.NeuralLore, ClipPreferenceFeatureCode.ObservedLore);
+        AddRefinement(features, refinement, GenerationCandidateRefinementComponentCode.NeuralIndexCoverage, ClipPreferenceFeatureCode.RecordingCoverage);
+        return new ClipPreferenceFeatureVector(features, context, GenerationMomentContentClassifier.Classify(moment, features, review, refinement));
     }
 
     public static ClipPreferenceContext CreateContext(GenerationSetupOptions setup, string sourcePath)

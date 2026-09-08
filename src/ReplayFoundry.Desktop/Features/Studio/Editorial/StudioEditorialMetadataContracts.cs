@@ -3,7 +3,9 @@ namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 internal sealed record StudioPendingEditorialDraft(
     string Title,
     string Description,
-    string Tags);
+    string Tags,
+    string CorrectionReason = "Unspecified",
+    string CorrectedEvent = "");
 
 internal sealed record StudioPendingEditorialProfileDraft(
     string AudienceAddress,

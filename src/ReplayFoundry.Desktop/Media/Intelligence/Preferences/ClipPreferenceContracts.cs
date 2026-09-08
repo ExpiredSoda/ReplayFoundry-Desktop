@@ -42,6 +42,12 @@ public enum ClipPreferenceFeatureCode
     GameDialogue,
     VisualSemanticSupport,
     VisualSemanticRejection,
+    ObservedGameplay,
+    ObservedHumor,
+    ObservedCommentary,
+    ObservedMenu,
+    RecordingCoverage,
+    ObservedLore,
 }
 
 public sealed record ClipPreferenceFeature

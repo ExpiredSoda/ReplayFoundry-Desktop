@@ -22,6 +22,7 @@ public sealed class GenerationMomentFindingResult
         _sources;
     private readonly ReadOnlyCollection<GenerationMomentCandidate>
         _selectedCandidates;
+    internal IReadOnlyDictionary<MomentCandidate, GenerationCandidateRefinement> Refinements { get; }
 
     public GenerationMomentFindingResult(
         GenerationMomentFindingRequest request,
@@ -34,6 +35,8 @@ public sealed class GenerationMomentFindingResult
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(selectedCandidates);
+        Refinements = new ReadOnlyDictionary<MomentCandidate, GenerationCandidateRefinement>(
+            refinements is null ? [] : new Dictionary<MomentCandidate, GenerationCandidateRefinement>(refinements));
 
         GenerationSourceMomentResult[] sourceSnapshot =
             sources.ToArray();

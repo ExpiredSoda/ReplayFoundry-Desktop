@@ -51,10 +51,12 @@ public sealed class GenerationMomentPortfolioSelector
                         source.Moments.Proposals
                             .Where(candidate => eligibleCandidates is null || eligibleCandidates.Contains(candidate))
                             .Where(
-                                static candidate =>
+                                candidate =>
                                     candidate.Disposition is not
                                         (MomentCandidateDisposition.RejectedBlack or
-                                         MomentCandidateDisposition.RejectedFreeze))
+                                         MomentCandidateDisposition.RejectedFreeze) ||
+                                    (refinements is not null && refinements.TryGetValue(candidate, out var reviewed) &&
+                                     reviewed.HasNeuralSceneValue))
                             .Select(
                                 candidate =>
                                     new PortfolioEntry(
@@ -69,6 +71,8 @@ public sealed class GenerationMomentPortfolioSelector
                     static entry =>
                         entry.Refinement?.RankingScore ??
                         entry.Candidate.Score.RawComponentTotal)
+                .ThenByDescending(static entry => entry.Refinement?.Components.FirstOrDefault(component =>
+                    component.Code == GenerationCandidateRefinementComponentCode.NeuralReviewPriority)?.RawValue ?? 0)
                 .ThenByDescending(
                     static entry =>
                         entry.Candidate.Score.RawComponentTotal)

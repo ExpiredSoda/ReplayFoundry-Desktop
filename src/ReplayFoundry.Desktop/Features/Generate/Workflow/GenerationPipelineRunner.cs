@@ -137,11 +137,22 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         transcripts,
                         cancellationToken),
                     cancellationToken);
+                if (_visualSemantic is not null && request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Thorough)
+                    candidateIntelligence = await _visualSemantic.IndexRecordingAsync(candidateIntelligence,
+                        new SynchronousProgress<string>(detail => progress.Report(new GenerationProgressUpdate(
+                            "Mapping your recording", detail, isIndeterminate: true))), cancellationToken);
                 if (_captureScreening is not null && request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Thorough)
                 {
                     candidateIntelligence = await _captureScreening.ScreenAsync(candidateIntelligence,
                         new SynchronousProgress<string>(detail => progress.Report(new GenerationProgressUpdate(
                             "Checking recording context", detail, isIndeterminate: true))), cancellationToken);
+                }
+                if (_tasteRanking is not null)
+                {
+                    var personalized = await _tasteRanking.ApplyAsync(candidateIntelligence.RefinedMoments, candidateIntelligence, cancellationToken);
+                    candidateIntelligence = new(candidateIntelligence.BaseMoments, candidateIntelligence.SpeechActivity,
+                        personalized.Refinements.Count > 0 ? personalized.Refinements.Values : candidateIntelligence.Refinements,
+                        personalized, candidateIntelligence.VisualSemantic, candidateIntelligence.Transcripts);
                 }
                 moments = candidateIntelligence.RefinedMoments;
 
@@ -200,7 +211,8 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                 moments = await _tasteRanking.ApplyAsync(moments, candidateIntelligence, cancellationToken);
                 if (candidateIntelligence is not null)
                     candidateIntelligence = new(candidateIntelligence.BaseMoments, candidateIntelligence.SpeechActivity,
-                        candidateIntelligence.Refinements, moments, candidateIntelligence.VisualSemantic, candidateIntelligence.Transcripts);
+                        moments.Refinements.Count > 0 ? moments.Refinements.Values : candidateIntelligence.Refinements,
+                        moments, candidateIntelligence.VisualSemantic, candidateIntelligence.Transcripts);
             }
             if (_captureScreening is not null && candidateIntelligence is not null &&
                 request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Balanced)

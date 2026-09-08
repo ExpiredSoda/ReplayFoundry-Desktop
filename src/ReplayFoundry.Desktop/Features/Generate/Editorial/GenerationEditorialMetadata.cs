@@ -4,6 +4,7 @@ using ReplayFoundry.Desktop.Features.Generate.Captions;
 using ReplayFoundry.Desktop.Features.Generate.Evidence;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.Moments;
+using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
 using ReplayFoundry.Desktop.Features.Generate.Intelligence;
 using ReplayFoundry.Desktop.Features.Generate.Editorial.GameKnowledge;
 using ReplayFoundry.Desktop.Features.Generate.Editorial.VisualText;
@@ -246,7 +247,7 @@ public sealed class GenerationEditorialMetadataService :
                         StringComparison.Ordinal)),
                 moments.Request.Setup.GameContextSettings.Find(
                     candidate.AnalyzedSource.PreparedSource.Media.FullPath),
-                visualObservation);
+                visualObservation, moments.Request.Setup.Mode);
             if (_visualText is not null)
             {
                 context = await _visualText.EnrichAsync(
@@ -373,7 +374,7 @@ public sealed class GenerationEditorialMetadataService :
                 hiddenMoments.SelectedMoments.Request.Setup.GameContextSettings.Find(
                     hidden.SourceFullPath),
                 visualResult?.Observations.SingleOrDefault(value =>
-                    ReferenceEquals(value.Candidate, hidden.Candidate)));
+                    ReferenceEquals(value.Candidate, hidden.Candidate)), hiddenMoments.SelectedMoments.Request.Setup.Mode);
             if (_visualText is not null && !deferAiMetadata)
             {
                 context = await _visualText.EnrichAsync(
@@ -551,10 +552,14 @@ public sealed class GenerationEditorialMetadataService :
         GenerationMomentCandidate selected,
         GenerationCandidateCaptionTrack? captions,
         GenerationSourceGameContext? gameContext,
-        GenerationVisualSemanticCandidateObservation? visualObservation)
+        GenerationVisualSemanticCandidateObservation? visualObservation,
+        GenerationMode mode = GenerationMode.IndividualClips)
     {
         string sourcePath = selected.AnalyzedSource.PreparedSource
             .Media.FullPath;
+        string? gameWarning = selected.Refinement?.Components.SingleOrDefault(component =>
+            component.Code == GenerationCandidateRefinementComponentCode.GameIdentityConflict)?.Explanation;
+        if (gameWarning is not null) gameContext = null;
         ClipEditorialTranscriptContext[] transcripts = captions is null
             ? []
             : RetainedCaptionEditorialTranscriptProjector.Project(
@@ -562,7 +567,7 @@ public sealed class GenerationEditorialMetadataService :
                 selected.Candidate.Window.Start,
                 selected.Candidate.Window.End);
         ClipEditorialEvidenceReference[] evidence =
-            BuildEvidence(selected, gameContext, visualObservation);
+            BuildEvidence(selected, gameContext, visualObservation, mode);
         ClipEditorialGameContext editorialGame = gameContext is null
             ? new ClipEditorialGameContext(
                 ClipEditorialGameContext.UnconfirmedGameName,
@@ -597,7 +602,7 @@ public sealed class GenerationEditorialMetadataService :
             selected.Candidate.Window.End,
             selected.AnalyzedSource.PreparedSource.Media.Duration,
             selected.FinalScore,
-            selected.Candidate.Score.Components
+            gameWarning ?? selected.Candidate.Score.Components
                 .OrderByDescending(
                     static component =>
                         component.SignedContribution)
@@ -667,7 +672,7 @@ public sealed class GenerationEditorialMetadataService :
     private static ClipEditorialEvidenceReference[] BuildEvidence(
         GenerationMomentCandidate selected,
         GenerationSourceGameContext? gameContext,
-        GenerationVisualSemanticCandidateObservation? visualObservation)
+        GenerationVisualSemanticCandidateObservation? visualObservation, GenerationMode mode)
     {
         var evidence = new List<ClipEditorialEvidenceReference>
         {
@@ -703,6 +708,23 @@ public sealed class GenerationEditorialMetadataService :
         }
         if (visualObservation is not null)
         {
+            if (visualObservation.CanonicalizationAudit.WireRepresentationVersion == "scene-review-1.4" &&
+                visualObservation.Candidate.Window.Start == selected.Candidate.Window.Start &&
+                visualObservation.Candidate.Window.End == selected.Candidate.Window.End)
+            {
+                // Only this version contains descriptive, frame-bound facts. Legacy compact
+                // qualifications and coarse timeline summaries must never become copy facts.
+                foreach (var interval in visualObservation.Observation.EvidenceIntervals)
+                    evidence.Add(new ClipEditorialEvidenceReference("scene-review-1.4-" + interval.Id,
+                        ClipEditorialEvidenceKind.VisualObservation, interval.Description));
+                var sourceFile = new FileInfo(selected.AnalyzedSource.PreparedSource.Media.FullPath);
+                if (sourceFile.Exists)
+                    evidence.Add(new ClipEditorialEvidenceReference("scene-review-source-binding", ClipEditorialEvidenceKind.SourceIdentity,
+                        System.Text.Json.JsonSerializer.Serialize(new { start = selected.Candidate.Window.Start.Ticks,
+                            end = selected.Candidate.Window.End.Ticks, length = sourceFile.Length, modified = sourceFile.LastWriteTimeUtc.Ticks,
+                            source = sourceFile.FullName,
+                            candidateMode = mode == GenerationMode.Montage ? "MontageSegment" : "StandaloneClip" })));
+            }
             // Prompt 2.3 observations qualify and rank a candidate; their
             // compact evidence text is not descriptive audience-copy prose.
             evidence.AddRange(

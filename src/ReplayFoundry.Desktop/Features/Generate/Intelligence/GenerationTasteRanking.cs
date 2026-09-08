@@ -25,8 +25,12 @@ internal sealed class GenerationTasteRanking(ITasteLearningService learning)
         foreach (var entry in entries)
             if (predictions.TryGetValue(entry.Clip.Id, out var prediction) && prediction.IsActive)
             {
-                // Bounded selection preference preserves the detector's quality, hard exclusions, explicit guidance and diversity rules.
-                preferences[entry.Candidate] = preferences.GetValueOrDefault(entry.Candidate) + Math.Clamp(prediction.Preference, -1, 1) * 4;
+                var existing = refinements.GetValueOrDefault(entry.Candidate) ?? new(entry.Candidate, [], "neural-personal-ranking-1");
+                refinements[entry.Candidate] = new(entry.Candidate,
+                    [.. existing.Components.Where(item => item.Code != GenerationCandidateRefinementComponentCode.NeuralPersonalValue),
+                        new(GenerationCandidateRefinementComponentCode.NeuralPersonalValue, (Math.Clamp(prediction.Preference, -1, 1) + 1) / 2, 0,
+                            "Preference predicted by the user's trained neural model.", [prediction.ModelId])], "neural-personal-ranking-1");
+                preferences.Remove(entry.Candidate);
                 applied = true;
             }
         if (!applied) return moments;

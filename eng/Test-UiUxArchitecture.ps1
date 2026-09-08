@@ -135,6 +135,7 @@ $reviewedValueAliases = @{
     'StudioOutputEditorViewModel.cs' = 'using NormalizedRectangle = ReplayFoundry.Desktop.Media.Composition.NormalizedRectangle;'
     'StudioCaptionTrackEditorViewModel.cs' = 'using SubtitleSidecarFormat = ReplayFoundry.Desktop.Media.Subtitles.SubtitleSidecarFormat;'
     'StudioEditorialMetadataViewModel.cs' = 'using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialCopyVersion;'
+    'StudioWordingLearningViewModel.cs' = 'using EditorialWordingFeedback = ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences.EditorialWordingFeedback;'
 }
 foreach ($feature in $featureRoots) {
     $root = "src/ReplayFoundry.Desktop/Features/$feature"

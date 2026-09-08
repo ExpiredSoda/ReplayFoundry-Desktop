@@ -149,6 +149,11 @@ def run_qualified_editorial_batch(
                 QUALIFIED_CACHE_IMPLEMENTATION,
             )
         cuda_attention_policy = qualified_cuda_attention_payload()
+        for outcome in attempted["outcomes"]:
+            outcome.setdefault("structuredDecodingAudit", None)
+        # Include the normalized failure rows in the attempt's provenance too.
+        attempted.pop("canonicalHash", None)
+        attempted["canonicalHash"] = _canonical_json_sha256(attempted)
         _set_failure_stage("MediaRevalidation")
         _revalidate_media_inputs(requests)
         attempt = {
@@ -163,12 +168,6 @@ def run_qualified_editorial_batch(
         attempt["canonicalHash"] = _canonical_json_sha256(attempt)
         _set_failure_stage("OutputWrite")
         _write_json_atomic(attempt_output_path, attempt)
-        if attempted["failedCount"]:
-            _set_failure_stage("AttemptCompletedWithCaseFailures")
-            _fail(
-                ProviderCaseFailuresDetected,
-                "One or more qualified Qwen observation cases failed; all outcomes were retained.",
-            )
         result = {
             "schemaVersion": QUALIFIED_OUTPUT_SCHEMA,
             "policyVersion": POLICY_VERSION,
@@ -181,6 +180,12 @@ def run_qualified_editorial_batch(
         }
         result["canonicalHash"] = _canonical_json_sha256(result)
         _write_json_atomic(output_path, result)
+        if attempted["failedCount"]:
+            _set_failure_stage("AttemptCompletedWithCaseFailures")
+            _fail(
+                ProviderCaseFailuresDetected,
+                "One or more qualified Qwen observation cases failed; all outcomes were retained.",
+            )
     finally:
         del processor
         del model
