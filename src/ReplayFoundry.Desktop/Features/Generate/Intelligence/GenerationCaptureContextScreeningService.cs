@@ -30,6 +30,14 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
         var screened = new HashSet<MomentCandidate>(ReferenceEqualityComparer.Instance);
         var selector = new GenerationMomentPortfolioSelector();
         var pool = new HashSet<MomentCandidate>(intelligence.BaseMoments.Sources.SelectMany(source => source.Moments.Proposals), ReferenceEqualityComparer.Instance);
+        // A later screen can narrow the reviewed pool, but cannot promote an
+        // unchecked replacement after visual selection has finished.
+        if (intelligence.RefinedMoments.SelectionEligibleCandidates is { } retainedPool)
+            pool.IntersectWith(retainedPool);
+        // Mapped candidates already bypass OCR. Preserve all such reviewed
+        // alternatives, not only the current top picks, for a later replacement.
+        screened.UnionWith(pool.Where(candidate => refinements.TryGetValue(candidate, out var refinement) &&
+            refinement.Components.Any(component => component.Code == GenerationCandidateRefinementComponentCode.NeuralTimelineValue)));
         var preferences = intelligence.RefinedMoments.SelectionPreferences;
         for (int index = 0; index < reviewLimit; index++)
         {
@@ -139,7 +147,8 @@ public sealed class GenerationCaptureContextScreeningService(IGenerationVisualTe
             intelligence.BaseMoments.Sources, refinements, screened, preferences, cancellationToken);
         return new(intelligence.BaseMoments, intelligence.SpeechActivity, refinements.Values,
             new GenerationMomentFindingResult(intelligence.BaseMoments.Request, intelligence.BaseMoments.Sources, selected, refinements,
-                screened, "Checked automatic picks for menus and startup screens. Other moments remain available in Find More.", preferences),
+                screened, intelligence.RefinedMoments.SelectionReviewNote ??
+                    "Checked automatic picks for menus and startup screens. Other moments remain available in Find More.", preferences),
             intelligence.VisualSemantic, intelligence.Transcripts);
     }
 

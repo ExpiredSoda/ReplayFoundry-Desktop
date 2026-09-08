@@ -148,6 +148,7 @@
     )
 
     PublicTests = @(
+        'tests/test_accelerate_checkpoint_backport.py'
         'tests/test_scene_copy.py'
         'tests/test_scene_review.py'
         'tests/test_scene_value.py'

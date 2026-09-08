@@ -361,7 +361,7 @@ if ($Profile -eq 'Advanced') {
         -DestinationRoot $packagedHostRoot
     Test-QwenRuntimeHost $visualRuntimePack $mediaPack
     $visualRuntime = Seal-Pack 'replayfoundry-qwen3-vl-runtime' (Recipe-Base `
-        'replayfoundry-qwen3-vl-runtime' 'VisualRuntime' '0.8.27' 'Qwen3-VL CUDA runtime' 'Cuda' `
+        'replayfoundry-qwen3-vl-runtime' 'VisualRuntime' '0.8.28' 'Qwen3-VL CUDA runtime' 'Cuda' `
         @{PythonExecutable='python/python.exe';VisualHostScript='host/qwen3_vl_batch_host.py'} `
         @([ordered]@{componentName='CPython and pinned Qwen runtime wheels';licenseIdentifier='Multiple-see-notices';textRelativePath='notices/THIRD-PARTY-NOTICES.md';textSha256=(File-Hash (Join-Path $visualRuntimePack 'notices\THIRD-PARTY-NOTICES.md'));sourceUrl='https://www.python.org/downloads/windows/';redistributionNotes='Exact component inventory and retained license texts are included under notices/licenses.'}) `
         @([ordered]@{officialUrl='https://www.python.org/downloads/release/python-31315/';revision='3.13.15';artifactSha256=(File-Hash (Join-Path $pythonRoot 'python.exe'))},[ordered]@{officialUrl='https://download.pytorch.org/whl/cu130/torch/';revision='torch-2.13.0+cu130';artifactSha256='CF23236E9DEED7D3510D14D9B9592D75D272EF7B35BBFEE31A02BEA339C73971'}) `
@@ -385,11 +385,11 @@ if ($Profile -eq 'Advanced') {
     Copy-VerifiedWriterBase $WriterBaseRoot (Join-Path $visualModelPack 'writer-base')
     Assert-QwenDeploymentQualification $visualRuntimePack $qualificationLock
     $visualModel = Seal-Pack 'replayfoundry-qwen3-vl-4b-instruct' (Recipe-Base `
-        'replayfoundry-qwen3-vl-4b-instruct' 'VisualModel' '4.0.23' 'Qwen3-VL 4B Instruct' 'Cuda' `
+        'replayfoundry-qwen3-vl-4b-instruct' 'VisualModel' '4.0.24' 'Qwen3-VL 4B Instruct' 'Cuda' `
         @{QwenModelManifest='config/model-manifest.json';QwenPromptManifest='config/prompt-manifest.json';QwenQualificationLock='config/qualification-lock.json'} `
         @([ordered]@{componentName='Qwen3-VL 4B Instruct';licenseIdentifier='Apache-2.0';textRelativePath='LICENSE-Qwen.txt';textSha256=(File-Hash (Join-Path $visualModelPack 'LICENSE-Qwen.txt'));sourceUrl='https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/tree/ebb281ec70b05090aa6165b016eac8ec08e71b17';redistributionNotes='Locally qualified for the bounded Replay Foundry workflow. Generated wording remains user-reviewable and no universal semantic-accuracy claim is made.'},[ordered]@{componentName='Qwen3-0.6B writer base';licenseIdentifier='Apache-2.0';textRelativePath='writer-base/LICENSE';textSha256=(File-Hash (Join-Path $visualModelPack 'writer-base\LICENSE'));sourceUrl='https://huggingface.co/Qwen/Qwen3-0.6B/tree/c1899de289a04d12100db370d81485cdf75e47ca';redistributionNotes='Pinned pretrained base for optional local writer training. No personal examples or test adapters are distributed.'}) `
         @([ordered]@{officialUrl='https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/tree/ebb281ec70b05090aa6165b016eac8ec08e71b17';revision='ebb281ec70b05090aa6165b016eac8ec08e71b17';artifactSha256='2018FFABE5257D8045BD565A232D82DA382679C9E71C388F6880BFF01ACF17B4'},[ordered]@{officialUrl='https://huggingface.co/Qwen/Qwen3-0.6B/tree/c1899de289a04d12100db370d81485cdf75e47ca';revision='c1899de289a04d12100db370d81485cdf75e47ca';artifactSha256='F47F71177F32BCD101B7573EC9171E6A57F4F4D31148D38E382306F42996874B'}) `
-        @([ordered]@{packageId='replayfoundry-qwen3-vl-runtime';minimumVersion='0.8.27';requiredManifestHash=$visualRuntime.manifest.manifestHash}))
+        @([ordered]@{packageId='replayfoundry-qwen3-vl-runtime';minimumVersion='0.8.28';requiredManifestHash=$visualRuntime.manifest.manifestHash}))
     $results.Add($visualModel)
 }
 

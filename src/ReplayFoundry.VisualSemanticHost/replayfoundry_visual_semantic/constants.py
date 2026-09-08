@@ -134,7 +134,7 @@ EXPECTED_PACKAGE_VERSIONS = {
     "torch": "2.13.0+cu130",
     "torchvision": "0.28.0+cu130",
     "transformers": "5.16.1",
-    "accelerate": "1.14.0",
+    "accelerate": "1.14.0+replayfoundry.1",
     "qwen-vl-utils": "0.0.14",
     "torchcodec": "0.16.0",
     "psutil": "7.2.2",

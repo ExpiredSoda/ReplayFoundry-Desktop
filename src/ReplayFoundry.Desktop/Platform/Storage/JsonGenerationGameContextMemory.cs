@@ -83,7 +83,7 @@ public sealed class JsonGenerationGameContextMemory :
                     sourceFullPath,
                     entry.GameName,
                     entry.ContextNotes,
-                    GenerationGameContextOrigin.ReusedUserMemory,
+                    GenerationGameContextOrigin.RememberedSuggestion,
                     entry.UseOpenGameKnowledge ?? false,
                     RestoreIdentity(entry.ConfirmedIdentity));
         }

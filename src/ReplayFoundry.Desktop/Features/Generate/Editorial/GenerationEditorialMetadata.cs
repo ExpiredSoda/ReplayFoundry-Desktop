@@ -580,7 +580,7 @@ public sealed class GenerationEditorialMetadataService :
                 gameContext.ContextNotes,
                 gameContext.Origin switch
                 {
-                    GenerationGameContextOrigin.SourcePathHint =>
+                    GenerationGameContextOrigin.SourcePathHint or GenerationGameContextOrigin.RememberedSuggestion =>
                         ClipEditorialGameContextSource.SourcePathHint,
                     GenerationGameContextOrigin.ReusedUserMemory =>
                         ClipEditorialGameContextSource.ReusedUserMemory,

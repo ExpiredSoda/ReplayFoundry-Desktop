@@ -75,7 +75,8 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
                 host.EnvironmentVariables, inheritParentEnvironment: false),
                 MediaWorkPriority.FinalOutput, MediaWorkKind.HeavyAi, cancellationToken);
             QwenModelLoadDiagnostics.Report(process.StandardError);
-            if (!process.Succeeded) throw new InvalidOperationException("Grounded scene review did not finish.");
+            if (!process.Succeeded) throw new InvalidOperationException("Grounded scene review did not finish. " +
+                Qwen3VlProcessOutputReader.FailureSummary(process));
             await Task.Run(() => runtime.ModelIntegrity.Verify(cancellationToken), cancellationToken);
             foreach (var item in request.Requests) await item.Input.VerifyIntegrityAsync(cancellationToken);
             using var document = JsonDocument.Parse(await File.ReadAllTextAsync(output, cancellationToken));
@@ -117,6 +118,8 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
                 catch (Exception exception) when (exception is ArgumentException or InvalidDataException or InvalidOperationException or KeyNotFoundException)
                 { failures.Add(new(item, "SceneValidation", exception.GetType().Name, elapsed)); }
             }
+            if (failures.Count > 0)
+                new SystemQwen3VlGroundedFailureArchive().Archive(output, 2_097_152);
             return new(request, results, process.Duration, root.GetProperty("peakAllocatedGpuBytes").GetInt64(), failures);
         }
         finally

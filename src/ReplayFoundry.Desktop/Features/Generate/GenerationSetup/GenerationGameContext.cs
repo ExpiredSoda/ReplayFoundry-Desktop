@@ -10,6 +10,7 @@ public enum GenerationGameContextOrigin
     SourcePathHint,
     ReusedUserMemory,
     UserConfirmed,
+    RememberedSuggestion,
 }
 
 public sealed class GenerationSourceGameContext

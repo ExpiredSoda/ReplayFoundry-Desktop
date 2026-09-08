@@ -429,13 +429,13 @@ internal static partial class GenerationSpeechActivityTests
 
     private static GenerationVisualSemanticCandidateObservation Reviewed(
         GenerationCandidateIntelligenceResult intelligence, MomentCandidate candidate,
-        VisualSemanticEditorialObservation observation, bool partial = false)
+        VisualSemanticEditorialObservation observation, bool partial = false, double? neuralValue = null)
     {
         var canonical = VisualSemanticEditorialCanonicalizer.Canonicalize(
             observation.ObservedChanges, observation.EvidenceIntervals, observation.UncertaintyReasons);
         return new(candidate, intelligence.BaseMoments.Sources.Single(source =>
                 source.Moments.Proposals.Contains(candidate)).AnalyzedSource,
             candidate.Window.Start + (partial ? TimeSpan.FromSeconds(1) : TimeSpan.Zero), candidate.Window.End,
-            new string('A', 64), observation, canonical.Audit, TimeSpan.Zero);
+            new string('A', 64), observation, canonical.Audit, TimeSpan.Zero, neuralEditorialValue: neuralValue);
     }
 }

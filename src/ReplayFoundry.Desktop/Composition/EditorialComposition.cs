@@ -34,7 +34,8 @@ internal static class EditorialComposition
             new HeuristicClipEditorialMetadataGenerator(),
             aiProvider,
             dependencies.VisualReview.Materializer,
-            dependencies.VisualReview.RuntimeCapabilities.EditorialAiUnavailableReason);
+            dependencies.VisualReview.RuntimeCapabilities.EditorialAiUnavailableReason,
+            dependencies.VisualReview.Runtime is { } runtime ? new Qwen3VlEditorialSceneContextReviewer(runtime) : null);
         var generationMetadata = new GenerationEditorialMetadataService(
             metadataGenerator,
             profileSession,

@@ -7,14 +7,14 @@ internal static class GenerationAutomaticCandidateEligibility
 {
     public static bool IsEligible(MomentCandidate candidate,
         GenerationCandidateRefinement? refinement) =>
-        refinement?.HasNeuralSceneValue == true ||
+        refinement?.HasGroundedVisualRejection != true &&
+        (refinement?.HasNeuralSceneValue == true ||
         candidate.Disposition is not (MomentCandidateDisposition.RejectedBlack or
             MomentCandidateDisposition.RejectedFreeze) &&
         refinement?.HasIncompleteSpeechEnding != true &&
         refinement?.HasIncompleteSpeechBeginning != true &&
-        refinement?.HasGroundedVisualRejection != true &&
         refinement?.HasNonGameplayCapture != true &&
         refinement?.HasApplicationStartupLeadIn != true &&
         (candidate.ConstructionReason != MomentCandidateConstructionReason.SemanticExploration ||
-            refinement?.RequiresSemanticReview == false);
+            refinement?.RequiresSemanticReview == false));
 }

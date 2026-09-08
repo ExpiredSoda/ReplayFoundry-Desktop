@@ -46,9 +46,23 @@ $results = @(for ($index = 0; $index -lt $packages.Count; $index++) {
             [string]$_.id
         })
     }
-    [pscustomobject]@{ Name = $packages[$index].Name; Version = $packages[$index].Version; Advisories = $advisories }
+    $remediated = @()
+    $package = $packages[$index]
+    if ($package.Name -ceq 'accelerate' -and $package.Version -ceq '1.14.0+replayfoundry.1' -and
+        $advisories -contains 'GHSA-4j2p-28q2-5m79') {
+        # This local wheel applies the checkpoint path fix in source. Accept
+        # only the reviewed file bytes, keeping the upstream advisory visible.
+        $loader = Join-Path $packageRoot 'accelerate\utils\modeling.py'
+        if ((Get-FileHash -LiteralPath $loader -Algorithm SHA256).Hash -cne
+            'D6C9EAB1CE0BA939D660A969F8C788A5659A871642B492393DA09AA7947BCEE1') {
+            throw 'The Accelerate security backport does not match its reviewed source.'
+        }
+        $remediated = @('GHSA-4j2p-28q2-5m79')
+    }
+    [pscustomobject]@{ Name = $package.Name; Version = $package.Version; Advisories = $advisories;
+        RemediatedAdvisories = $remediated; UnresolvedAdvisories = @($advisories | Where-Object { $_ -notin $remediated }) }
 })
-$affected = @($results | Where-Object { $_.Advisories.Count -gt 0 })
+$affected = @($results | Where-Object { $_.UnresolvedAdvisories.Count -gt 0 })
 $report = @{ SchemaVersion = 1; CheckedAtUtc = [DateTimeOffset]::UtcNow.ToString('O');
     Service = 'https://api.osv.dev'; Passed = $affected.Count -eq 0; Packages = $results }
 $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ReportPath -Encoding utf8

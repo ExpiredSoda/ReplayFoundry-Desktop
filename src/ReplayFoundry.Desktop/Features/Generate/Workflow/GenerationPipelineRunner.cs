@@ -137,7 +137,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         transcripts,
                         cancellationToken),
                     cancellationToken);
-                if (_visualSemantic is not null && request.SetupOptions.AnalysisDepth == GenerationAnalysisDepth.Thorough)
+                if (_visualSemantic is not null && request.SetupOptions.RequiresVisualSelectionReview)
                     candidateIntelligence = await _visualSemantic.IndexRecordingAsync(candidateIntelligence,
                         new SynchronousProgress<string>(detail => progress.Report(new GenerationProgressUpdate(
                             "Mapping your recording", detail, isIndeterminate: true))), cancellationToken);
@@ -156,13 +156,12 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                 }
                 moments = candidateIntelligence.RefinedMoments;
 
-                if (request.SetupOptions.AnalysisDepth ==
-                    GenerationAnalysisDepth.Thorough)
+                if (request.SetupOptions.RequiresVisualSelectionReview)
                 {
                     if (_visualSemantic is null)
                     {
                         throw new GenerationEngineUnavailableException(
-                            "Thorough needs the visual tool from Advanced AI. Install or repair Advanced AI, or choose Balanced.");
+                            "AI moment selection needs the visual tool from Advanced AI. Install or repair Advanced AI, or choose Fast or simple writing.");
                     }
 
                     var visualProgress =
@@ -182,6 +181,10 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                             cancellationToken);
                     retainedReviewMedia = visual;
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (visual.Outcome != GenerationVisualSemanticOutcome.Completed &&
+                        request.SetupOptions.MetadataAuthoringMode == GenerationMetadataAuthoringMode.AiRequired)
+                        throw new GenerationEngineUnavailableException(
+                            "AI could not verify any shortlisted moments. Retry the picture check or repair Advanced AI. " + visual.FallbackReason);
                     progress.Report(new GenerationProgressUpdate(
                         "Applying picture details",
                         "Combining what Replay Foundry saw with timing, audio, and story clues.",
@@ -227,7 +230,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                 if (candidateIntelligence?.VisualSemantic?.Outcome == GenerationVisualSemanticOutcome.Completed)
                     throw new GenerationSourceException(
                         "The bounded picture check found no eligible moments for automatic selection. " +
-                        "Choose Balanced to inspect deterministic candidates manually, or try another source.");
+                        "Try a different source or mark a moment you want to include during setup.");
                 throw new GenerationSourceException(
                     request.SetupOptions.ClipFulfillmentPreference ==
                         ClipFulfillmentPreference.QualityFirst
@@ -235,53 +238,74 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         : "Replay Foundry found no safe renderable moments in the selected sources.");
             }
 
-            progress.Report(
-                new GenerationProgressUpdate(
-                    "Moments selected",
-                    moments.FulfillmentMessage,
-                    isIndeterminate: false,
-                    progressPercent: 50));
-            GenerationCaptionPreparationResult? captions = null;
-            if (request.SetupOptions.CaptionSettings.IsEnabled)
+            GenerationCaptionPreparationResult? captions;
+            GenerationHiddenMomentDeck hiddenMoments;
+            GenerationEditorialMetadataResult editorialMetadata;
+            for (int editorialReplacements = 0; ; editorialReplacements++)
             {
-                if (_captionPreparation is null)
+                progress.Report(
+                    new GenerationProgressUpdate(
+                        "Moments selected",
+                        moments.FulfillmentMessage,
+                        isIndeterminate: false,
+                        progressPercent: 50));
+                captions = null;
+                if (request.SetupOptions.CaptionSettings.IsEnabled)
                 {
-                    throw new GenerationEngineUnavailableException(
-                        "Spoken captions need the speech-to-text tool from Advanced AI. Install or repair Advanced AI, or turn off spoken captions.");
-                }
+                    if (_captionPreparation is null)
+                    {
+                        throw new GenerationEngineUnavailableException(
+                            "Spoken captions need the speech-to-text tool from Advanced AI. Install or repair Advanced AI, or turn off spoken captions.");
+                    }
 
-                var captionProgress =
-                    new SynchronousProgress<GenerationCaptionPreparationProgress>(
-                        update =>
-                            progress.Report(
-                                new GenerationProgressUpdate(
-                                    update.Title,
-                                    update.Detail,
-                                    isIndeterminate: false,
-                                    progressPercent:
-                                        50 + update.Percentage * 0.20)));
-                captions = await _captionPreparation.PrepareAsync(
-                    moments,
-                    captionProgress,
-                    cancellationToken);
+                    var captionProgress =
+                        new SynchronousProgress<GenerationCaptionPreparationProgress>(
+                            update =>
+                                progress.Report(
+                                    new GenerationProgressUpdate(
+                                        update.Title,
+                                        update.Detail,
+                                        isIndeterminate: false,
+                                        progressPercent:
+                                            50 + update.Percentage * 0.20)));
+                    captions = await _captionPreparation.PrepareAsync(
+                        moments,
+                        captionProgress,
+                        cancellationToken);
+                }
+                cancellationToken.ThrowIfCancellationRequested();
+                hiddenMoments =
+                    GenerationHiddenMomentPlanner.Create(
+                        moments,
+                        candidateIntelligence,
+                        cancellationToken);
+                progress.Report(
+                    new GenerationProgressUpdate(
+                        "Shaping each clip's story",
+                        "Writing titles and descriptions from what happens in each moment.",
+                        isIndeterminate: true));
+                try
+                {
+                    editorialMetadata = await _editorialMetadata.GenerateAsync(
+                        moments,
+                        captions,
+                        cancellationToken,
+                        candidateIntelligence);
+                    break;
+                }
+                catch (ClipEditorialAiGenerationException exception) when (
+                    exception.FailureKind == ClipEditorialAiFailureKind.CaseRejected && editorialReplacements < 2)
+                {
+                    var replacement = GenerationEditorialReplacementPolicy.RejectAutomaticCut(
+                        candidateIntelligence, exception.CandidateId, cancellationToken);
+                    if (replacement is null) throw;
+                    candidateIntelligence = replacement;
+                    moments = replacement.RefinedMoments;
+                    progress.Report(new GenerationProgressUpdate("Choosing another reviewed moment",
+                        "AI could not write reliable copy for one automatic pick. Checking another reviewed cut; the original stays in Find More.",
+                        isIndeterminate: true));
+                }
             }
-            cancellationToken.ThrowIfCancellationRequested();
-            GenerationHiddenMomentDeck hiddenMoments =
-                GenerationHiddenMomentPlanner.Create(
-                    moments,
-                    candidateIntelligence,
-                    cancellationToken);
-            progress.Report(
-                new GenerationProgressUpdate(
-                    "Shaping each clip's story",
-                    "Writing titles and descriptions from what happens in each moment.",
-                    isIndeterminate: true));
-            GenerationEditorialMetadataResult editorialMetadata =
-                await _editorialMetadata.GenerateAsync(
-                    moments,
-                    captions,
-                    cancellationToken,
-                    candidateIntelligence);
             hiddenMoments = await _editorialMetadata.GenerateHiddenAsync(
                 hiddenMoments,
                 candidateIntelligence,

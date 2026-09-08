@@ -113,6 +113,7 @@ public sealed class GameContextSourceViewModel : INotifyPropertyChanged
     {
         GenerationGameContextOrigin.UserConfirmed => "Confirmed by you",
         GenerationGameContextOrigin.ReusedUserMemory => "Remembered on this PC",
+        GenerationGameContextOrigin.RememberedSuggestion => "Remembered from this folder · confirm for this recording",
         GenerationGameContextOrigin.SourcePathHint => HasMeaningfulGameName
             ? "Suggested from the folder name · not used until confirmed"
             : "No confirmed game",

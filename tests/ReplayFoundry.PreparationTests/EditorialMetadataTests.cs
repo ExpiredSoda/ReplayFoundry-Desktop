@@ -4460,9 +4460,15 @@ internal static partial class EditorialMetadataTests
                 recalled!.GameName,
                 "Recalled game name.");
             TestAssert.Equal(
-                GenerationGameContextOrigin.ReusedUserMemory,
+                GenerationGameContextOrigin.RememberedSuggestion,
                 recalled.Origin,
                 "Recalled provenance.");
+            TestAssert.False(recalled.IsUserGrounded, "Sharing a recording folder does not confirm the same game.");
+            var suggestion = new ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.GameContext.GameContextSourceViewModel(recalled, () => { });
+            TestAssert.True(suggestion.CanConfirmGame && !suggestion.IsConfirmed,
+                "Remembered games must remain easy to confirm, without silently adding the wrong game hashtag.");
+            suggestion.ConfirmGameCommand.Execute(null);
+            TestAssert.True(suggestion.IsConfirmed, "Explicit confirmation promotes the remembered suggestion.");
             TestAssert.True(
                 Directory.GetFiles(root, "*.tmp").Length == 0,
                 "Atomic memory writes must clean staging files.");

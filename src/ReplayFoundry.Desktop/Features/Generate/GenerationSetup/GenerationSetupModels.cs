@@ -343,6 +343,11 @@ public sealed class GenerationSetupOptions
 
     public GenerationMetadataAuthoringMode MetadataAuthoringMode { get; }
 
+    // AI wording should describe moments that were checked before selection.
+    // Thorough additionally maps the whole recording and searches its speech.
+    public bool RequiresVisualSelectionReview => AnalysisDepth == GenerationAnalysisDepth.Thorough ||
+        (AnalysisDepth == GenerationAnalysisDepth.Balanced && MetadataAuthoringMode == GenerationMetadataAuthoringMode.AiRequired);
+
     public GenerationGameContextSettings GameContextSettings { get; }
 
     public GenerationDiscoveryIntent DiscoveryIntent { get; }

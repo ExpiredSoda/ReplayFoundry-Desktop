@@ -203,14 +203,14 @@
                         </Style>
                     </Grid.Style>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MinWidth="320" />
+                        <ColumnDefinition Width="1.15*" MinWidth="360" />
                         <ColumnDefinition MinWidth="370">
                             <ColumnDefinition.Style>
                                 <Style TargetType="ColumnDefinition">
-                                    <Setter Property="Width" Value="1.6*" />
+                                <Setter Property="Width" Value="1.6*" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Preview.IsPortraitPreview}" Value="True">
-                                            <Setter Property="Width" Value="*" />
+                                        <Setter Property="Width" Value="*" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -219,7 +219,8 @@
                         <ColumnDefinition Width="*" MinWidth="340" />
                     </Grid.ColumnDefinitions>
                     <browser:StudioBrowserView Grid.Column="0" Margin="0,0,12,0" />
-                    <preview:StudioPreviewView Grid.Column="1" Margin="0,0,12,0" DataContext="{Binding Preview}" />
+                    <preview:StudioPreviewView Grid.Column="1" Margin="0,0,12,0" DataContext="{Binding Preview}"
+                        ClipPreference="{Binding DataContext.Inspector.Preference, ElementName=Root}" />
                     <inspector:StudioInspectorView
                         Grid.Column="2"
                         DataContext="{Binding Inspector}" />
@@ -248,7 +249,8 @@
                         <browser:StudioBrowserView />
                     </TabItem>
                     <TabItem Header="Preview">
-                        <preview:StudioPreviewView Height="{Binding PaneHeight, ElementName=Root}" MinHeight="540" DataContext="{Binding Preview}" />
+                        <preview:StudioPreviewView Height="{Binding PaneHeight, ElementName=Root}" MinHeight="540" DataContext="{Binding Preview}"
+                            ClipPreference="{Binding DataContext.Inspector.Preference, ElementName=Root}" />
                     </TabItem>
                     <TabItem Header="Edit">
                         <inspector:StudioInspectorView
