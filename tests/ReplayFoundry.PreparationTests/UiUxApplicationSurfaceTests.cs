@@ -51,6 +51,7 @@ internal static partial class UiUxApplicationSurfaceTests
     public static IReadOnlyList<TestCase> GetTests() =>
     [
         .. MenuConsolidationTests(),
+        new("Preview ratings follow the selected clip without implicit feedback", PreviewFeedbackTracksCurrentClip),
         new("Manual range gestures undo atomically, cancel and clamp without resizing", ManualRangeEditsAreReversible),
         new("Manual shortcuts step actual source frames and preserve range length", ManualShortcutsUseSourceFrames),
         new("Effect comparison leaves the saved draft intact and resets only video effects", EffectComparisonPreservesDraft),

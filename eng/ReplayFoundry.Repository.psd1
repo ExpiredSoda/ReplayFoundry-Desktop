@@ -78,6 +78,7 @@
             'eng/Copy-ReplayFoundryProductionVisualHost.ps1'
             'eng/Invoke-ReplayFoundryArtifactSigning.ps1'
             'eng/New-PythonRuntimeNotices.ps1'
+            'eng/New-AccelerateSecurityWheel.py'
             'eng/New-ReplayFoundryBrandAssets.ps1'
             'eng/New-ReplayFoundryInstallerBranding.ps1'
             'eng/New-ReplayFoundryRuntimePackCatalog.ps1'

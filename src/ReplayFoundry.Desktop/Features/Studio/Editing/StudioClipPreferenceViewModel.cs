@@ -98,6 +98,8 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged, IDis
         }
     }
     public ICommand SetPreferenceCommand => _setCommand;
+    public string? PreferenceError => _error;
+    public bool HasPreferenceError => _error is not null;
 
     public bool IsIncludedInFinalRender
     {
@@ -262,6 +264,8 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged, IDis
             nameof(PreferenceSelectionText),
             nameof(PreferenceActionText),
             nameof(PreferenceLearningStatus),
+            nameof(PreferenceError),
+            nameof(HasPreferenceError),
             nameof(IsIncludedInFinalRender),
             nameof(CanChangeRenderInclusion),
             nameof(RenderDispositionText),

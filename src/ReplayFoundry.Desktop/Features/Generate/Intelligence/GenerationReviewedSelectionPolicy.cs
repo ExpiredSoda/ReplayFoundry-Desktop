@@ -16,8 +16,12 @@ internal static class GenerationReviewedSelectionPolicy
         var refinements = intelligence.Refinements.ToDictionary(item => item.Candidate);
         foreach (var review in visual.Observations)
         {
-            if (review.NeuralEditorialValue.HasValue) continue;
-            if (review.Observation.EditorialDisposition != VisualSemanticEditorialDisposition.Reject ||
+            // At or below the binary comparison boundary, the scene network
+            // does not prefer keeping this cut. Filling a requested count must
+            // not override that judgment with the older timing score.
+            bool rejected = review.Observation.EditorialDisposition == VisualSemanticEditorialDisposition.Reject ||
+                review.NeuralEditorialValue is <= .5;
+            if (!rejected ||
                 review.Observation.UncertaintyReasons.Count != 0 ||
                 review.ReviewedSourceStart > review.Candidate.Window.Start ||
                 review.ReviewedSourceEnd < review.Candidate.Window.End ||

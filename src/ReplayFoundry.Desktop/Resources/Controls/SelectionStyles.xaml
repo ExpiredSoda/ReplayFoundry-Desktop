@@ -420,15 +420,15 @@
                         CornerRadius="7">
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <ContentPresenter
+                            <ContentPresenter Grid.Column="1"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                 VerticalAlignment="Center"
                                 RecognizesAccessKey="True" />
-                            <Path x:Name="Chevron" Grid.Column="1" Width="10" Height="6" Margin="12,0,2,0"
-                                VerticalAlignment="Center" Data="{DynamicResource Icon.ChevronDown}"
+                            <Path x:Name="Chevron" Grid.Column="0" Width="8" Height="8" Margin="0,0,10,0"
+                                VerticalAlignment="Center" Data="{DynamicResource Icon.ChevronRight}"
                                 Stretch="Uniform" Stroke="{DynamicResource Brush.TextSecondary}" StrokeThickness="1.5"
                                 StrokeStartLineCap="Round" StrokeEndLineCap="Round" IsHitTestVisible="False" />
                         </Grid>
@@ -438,7 +438,7 @@
                             <Setter TargetName="HeaderSurface" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Chevron" Property="Data" Value="{DynamicResource Icon.ChevronUp}" />
+                            <Setter TargetName="Chevron" Property="Data" Value="{DynamicResource Icon.ChevronDown}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="HeaderSurface" Property="Opacity" Value="0.78" />
@@ -499,68 +499,20 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Expander}">
                     <StackPanel>
-                        <ToggleButton
-                            x:Name="HeaderSite"
-                            Padding="10,8"
-                            HorizontalContentAlignment="Stretch"
-                            Background="{DynamicResource Brush.SurfaceInset}"
-                            BorderBrush="{DynamicResource Brush.BorderSubtle}"
-                            BorderThickness="1"
-                            Cursor="Arrow"
-                            FocusVisualStyle="{StaticResource Control.KeyboardFocusAdorner}"
-                            IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}">
-                            <ToggleButton.Template>
-                                <ControlTemplate TargetType="{x:Type ToggleButton}">
-                                    <Border
-                                        x:Name="HeaderSurface"
-                                        Padding="{TemplateBinding Padding}"
-                                        Background="{TemplateBinding Background}"
-                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        CornerRadius="8">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <ContentPresenter
-                                                VerticalAlignment="Center"
-                                                Content="{Binding Header, RelativeSource={RelativeSource AncestorType={x:Type Expander}}}"
-                                                TextElement.FontWeight="SemiBold" />
-                                            <Path
-                                                x:Name="Chevron"
-                                                Grid.Column="1"
-                                                Width="10"
-                                                Height="6"
-                                                Margin="12,0,2,0"
-                                                VerticalAlignment="Center"
-                                                Data="{DynamicResource Icon.ChevronDown}"
-                                                Stretch="Uniform"
-                                                Stroke="{DynamicResource Brush.TextSecondary}"
-                                                StrokeStartLineCap="Round"
-                                                StrokeEndLineCap="Round"
-                                                StrokeThickness="1.5" />
-                                        </Grid>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="HeaderSurface" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" />
-                                        </Trigger>
-                                        <Trigger Property="IsChecked" Value="True">
-                                            <Setter TargetName="Chevron" Property="Data" Value="{DynamicResource Icon.ChevronUp}" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </ToggleButton.Template>
-                        </ToggleButton>
-                        <ContentPresenter
-                            x:Name="ExpandSite"
-                            Content="{TemplateBinding Content}"
-                            Visibility="Collapsed" />
+                        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Brush.BorderSubtle}" Padding="0,3,0,0">
+                            <ToggleButton x:Name="HeaderSite" Content="{TemplateBinding Header}"
+                                IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                                Style="{StaticResource Control.ExpanderHeaderToggle}" />
+                        </Border>
+                        <Border x:Name="ExpandSite" Margin="3,0,0,6" Padding="18,2,0,6"
+                            BorderThickness="1,0,0,0" BorderBrush="{DynamicResource Brush.BorderStrong}" Visibility="Collapsed">
+                            <ContentPresenter Content="{TemplateBinding Content}" />
+                        </Border>
                     </StackPanel>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="True">
                             <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="HeaderSite" Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -94,6 +94,9 @@ public sealed class GenerationVisualSemanticAnalysisService :
     private int ReviewBudget(GenerationCandidateIntelligenceResult intelligence)
     {
         int budget = GenerationSemanticReviewBudgetPolicy.Resolve(intelligence.BaseMoments, _settings.MaximumCandidateCount);
+        if (intelligence.BaseMoments.Request.Setup.AnalysisDepth == GenerationAnalysisDepth.Balanced)
+            return Math.Min(budget, Math.Clamp(intelligence.BaseMoments.Request.Setup.DesiredResultCount + 3,
+                8, GenerationSemanticReviewBudgetPolicy.MaximumCandidates));
         int mapped = intelligence.Refinements.Count(item => item.Components.Any(component =>
             component.Code == GenerationCandidateRefinementComponentCode.NeuralIndexCoverage && component.RawValue >= .8));
         // The full map already explored the recording; reserve close review for

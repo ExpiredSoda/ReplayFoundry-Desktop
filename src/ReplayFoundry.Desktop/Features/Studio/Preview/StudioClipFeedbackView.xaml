@@ -1,0 +1,45 @@
+<UserControl x:Class="ReplayFoundry.Desktop.Features.Studio.Preview.StudioClipFeedbackView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    xmlns:editing="clr-namespace:ReplayFoundry.Desktop.Features.Studio.Editing">
+    <StackPanel AutomationProperties.Name="Rate the previewed clip">
+        <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBlock Text="Rate this moment" Style="{DynamicResource Text.Meta}"
+                ToolTip="Your ratings teach future clip choices on this PC. They do not approve the title or description." />
+            <TextBlock Grid.Column="1" Text="{Binding PreferenceSelectionText}" Style="{DynamicResource Text.Meta}"
+                AutomationProperties.LiveSetting="Polite" ToolTip="{Binding PreferenceLearningStatus}" />
+        </Grid>
+        <UniformGrid Columns="3">
+            <RadioButton Margin="0,0,4,0" AutomationProperties.Name="Like this clip"
+                Command="{Binding SetPreferenceCommand}" CommandParameter="{x:Static editing:StudioClipPreferenceRating.Like}"
+                IsChecked="{Binding IsLikeSelected, Mode=OneWay}" Style="{DynamicResource Control.PreferenceChoice}">
+                <StackPanel Orientation="Horizontal">
+                    <controls:IconPath Width="13" Height="13" Margin="0,0,5,0" IconKey="Icon.Heart" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                    <TextBlock Text="Like" />
+                </StackPanel>
+            </RadioButton>
+            <RadioButton Margin="2,0" AutomationProperties.Name="Keep this clip neutral"
+                Command="{Binding SetPreferenceCommand}" CommandParameter="{x:Static editing:StudioClipPreferenceRating.Neutral}"
+                IsChecked="{Binding IsNeutralSelected, Mode=OneWay}" Style="{DynamicResource Control.PreferenceChoice}">
+                <StackPanel Orientation="Horizontal">
+                    <controls:IconPath Width="13" Height="13" Margin="0,0,5,0" IconKey="Icon.Minus" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                    <TextBlock Text="Neutral" />
+                </StackPanel>
+            </RadioButton>
+            <RadioButton Margin="4,0,0,0" AutomationProperties.Name="Dislike this clip"
+                Command="{Binding SetPreferenceCommand}" CommandParameter="{x:Static editing:StudioClipPreferenceRating.Dislike}"
+                IsChecked="{Binding IsDislikeSelected, Mode=OneWay}" Style="{DynamicResource Control.PreferenceChoice}">
+                <StackPanel Orientation="Horizontal">
+                    <controls:IconPath Width="13" Height="13" Margin="0,0,5,0" IconKey="Icon.Close" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                    <TextBlock Text="Dislike" />
+                </StackPanel>
+            </RadioButton>
+        </UniformGrid>
+        <TextBlock Margin="0,6,0,0" Text="{Binding PreferenceError}" TextWrapping="Wrap"
+            Foreground="{DynamicResource Brush.StatusError}" Style="{DynamicResource Text.Meta}"
+            AutomationProperties.LiveSetting="Assertive"
+            Visibility="{Binding HasPreferenceError, Converter={StaticResource BoolToVisibility}}" />
+    </StackPanel>
+</UserControl>

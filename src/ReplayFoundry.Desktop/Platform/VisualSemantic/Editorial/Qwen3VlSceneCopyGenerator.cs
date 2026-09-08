@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using ReplayFoundry.Desktop.Features.Generate.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences;
 using ReplayFoundry.Desktop.Platform.Diagnostics;
@@ -94,13 +95,17 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                 var row = rows[i]; var request = requests[i];
                 if (row.GetProperty("candidateId").GetString() != request.Context.CandidateId || row.GetProperty("attempt").GetInt32() != request.Attempt)
                     throw new InvalidDataException("Scene writer case identity changed.");
+                if (row.GetProperty("status").GetString() is not ("Succeeded" or "Failed"))
+                    throw new InvalidDataException("Unknown scene writing status.");
                 if (row.GetProperty("status").GetString() != "Succeeded" || !row.GetProperty("review").GetProperty("grounded").GetBoolean() ||
                     !row.GetProperty("review").GetProperty("useful").GetBoolean())
                 {
                     // Keep bounded local evidence of a failed model judgment;
                     // the successful drafts must not be mistaken for a parser failure.
                     new SystemQwen3VlGroundedFailureArchive().Archive(output, 1_048_576);
-                    throw new InvalidDataException($"The scene writer could not verify wording for {request.Context.CandidateId} after one correction.");
+                    throw new ClipEditorialAiGenerationException(ClipEditorialAiFailureKind.CaseRejected,
+                        "AI could not produce supported, useful wording for this clip after a correction. Try another cut or writing angle.",
+                        request.Context.CandidateId);
                 }
                 foreach (string key in new[] { "neuralGrounding", "neuralQuality" })
                 {

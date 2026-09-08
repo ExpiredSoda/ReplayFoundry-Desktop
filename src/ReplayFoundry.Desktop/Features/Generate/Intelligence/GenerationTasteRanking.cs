@@ -15,6 +15,8 @@ internal sealed class GenerationTasteRanking(ITasteLearningService learning)
         var eligible = intelligence?.VisualSemantic is { Outcome: GenerationVisualSemanticOutcome.Completed } visual
             ? new HashSet<MomentCandidate>(visual.Observations.Select(x => x.Candidate), ReferenceEqualityComparer.Instance)
             : new HashSet<MomentCandidate>(moments.Sources.SelectMany(x => x.Moments.Proposals), ReferenceEqualityComparer.Instance);
+        if (moments.SelectionEligibleCandidates is { } retainedPool)
+            eligible.IntersectWith(retainedPool);
         var entries = moments.Sources.SelectMany(source => source.Moments.Proposals.Where(eligible.Contains)
             .Select(candidate => (Candidate: candidate, Clip: TasteClipFactory.FromCandidate(source, candidate,
                 refinements.GetValueOrDefault(candidate), moments, intelligence)))).ToArray();

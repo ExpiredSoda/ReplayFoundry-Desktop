@@ -6,6 +6,13 @@ downloadable version is [1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoun
 
 ## 1.0.0 Beta 5 — refreshed 2026-09-08
 
+- Updated the matching visual runtime/model packages to `0.8.28` and `4.0.24`. The runtime contains a reproducible Accelerate `1.14.0+replayfoundry.1` security backport that rejects checkpoint shard paths outside their model folder and non-regular files. The dependency audit retains the upstream advisory and verifies the exact corrected source before accepting its remediation.
+- Balanced AI now reviews a recording-wide visual map and a bounded shortlist before choosing automatic clips. Fully reviewed rejections remain excluded through later screening and personal ranking; user-marked ranges retain priority. First-time visual analysis takes longer, and completed reviews are reused.
+- Refreshes stale scene evidence before writing titles and descriptions for supported Studio cuts. Remembered folder game names now need confirmation for each recording, avoiding unrelated inherited game tags.
+- If AI cannot produce accepted wording for an automatic cut, generation can try another already-reviewed moment, with at most two replacement passes. Required-AI failures remain explicit and do not silently switch to simple titles.
+- Widened Project Clips, distinguished collapsible sections from dropdown fields throughout Studio, and moved Like / Neutral / Dislike below the preview playback controls. Unrated clips remain visibly unrated.
+- These selection and writing changes were checked on an actual five-clip recording run and with regression tests. AI wording can still be vague or inaccurate, and captions can require timing edits; generated drafts remain subject to creator review.
+
 - Extended local wording learning: save a title or description correction with an optional reason, including wrong speaker, wrong event, or an invented outcome. A title-only edit supervises only that field; factual corrections wait for explicit review.
 - Matched writer training to the exact production prompt and output format. Supervised LoRA and wording-pair preference training use only edited or approved fields. Recording assignments stay fixed across training, development, and final qualification as the library grows.
 - Added local review preparation from time-stamped original frames and transcript evidence, plus a frame-conditioned neural adapter training workflow. These development candidates are never activated automatically; small smoke tests do not qualify a personal model.

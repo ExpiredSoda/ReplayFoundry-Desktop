@@ -58,14 +58,14 @@ public sealed class DetectionStepViewModel : INotifyPropertyChanged
             new SelectionOption<GenerationAnalysisDepth>(
                 GenerationAnalysisDepth.Balanced,
                 "Balanced",
-                "Also listens for when speech starts and stops. Recommended for most projects; it does not use visual AI.",
+                "Uses picture changes and speech timing. With AI writing, maps the recording and checks shortlisted moments.",
                 runtimeCapabilities.IsSpeechActivityAvailable,
                 "Balanced needs speech analysis. Add Advanced AI in Settings or choose Fast."),
 
             new SelectionOption<GenerationAnalysisDepth>(
                 GenerationAnalysisDepth.Thorough,
                 "Thorough",
-                "Adds local AI review of the picture for the most detailed scan.",
+                "Maps the whole recording, searches spoken moments, and reviews shortlisted footage with local AI.",
                 runtimeCapabilities.IsSpeechActivityAvailable &&
                 runtimeCapabilities.IsVisualSemanticReviewAvailable,
                 !runtimeCapabilities.IsSpeechActivityAvailable
@@ -205,8 +205,8 @@ public sealed class DetectionStepViewModel : INotifyPropertyChanged
                 : MetadataValidationMessage;
 
     public string OptionalIntelligenceStatus =>
-        "Fast looks at picture changes. Balanced also checks speech timing. " +
-        "Thorough adds local visual AI. Choose title writing separately; " +
+        "Fast looks at picture changes. Balanced adds speech timing and, with AI writing, a visual recording map. " +
+        "Thorough also searches full-recording transcripts. Choose title writing separately; " +
         "Replay Foundry never switches methods without telling you.";
 
     private string MetadataValidationMessage

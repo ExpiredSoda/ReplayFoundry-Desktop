@@ -5,11 +5,19 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ReplayFoundry.Desktop.Platform.Diagnostics;
+using ReplayFoundry.Desktop.Features.Studio.Editing;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Preview;
 
 public partial class StudioPreviewView : UserControl
 {
+    public static readonly DependencyProperty ClipPreferenceProperty = DependencyProperty.Register(
+        nameof(ClipPreference), typeof(StudioClipPreferenceViewModel), typeof(StudioPreviewView), new PropertyMetadata(null));
+    public StudioClipPreferenceViewModel? ClipPreference
+    {
+        get => (StudioClipPreferenceViewModel?)GetValue(ClipPreferenceProperty);
+        set => SetValue(ClipPreferenceProperty, value);
+    }
     public static readonly DependencyProperty ShowHeaderProperty = DependencyProperty.Register(
         nameof(ShowHeader), typeof(bool), typeof(StudioPreviewView), new PropertyMetadata(true));
     public static readonly DependencyProperty ShowPositionSliderProperty = DependencyProperty.Register(

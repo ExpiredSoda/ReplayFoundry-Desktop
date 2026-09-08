@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Frozen;
 using ReplayFoundry.Desktop.Features.Generate.Evidence;
 using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Features.Generate.Intelligence;
@@ -152,6 +153,7 @@ public sealed class GenerationMomentFindingResult
         SelectionPreferences = new ReadOnlyDictionary<MomentCandidate, double>(
             selectionPreferences is null ? new Dictionary<MomentCandidate, double>() : new Dictionary<MomentCandidate, double>(selectionPreferences));
         SelectionReviewNote = selectionReviewNote;
+        SelectionEligibleCandidates = eligibleCandidates?.ToFrozenSet<MomentCandidate>(ReferenceEqualityComparer.Instance);
         _sources = Array.AsReadOnly(sourceSnapshot);
         _selectedCandidates =
             Array.AsReadOnly(selectedSnapshot);
@@ -193,6 +195,7 @@ public sealed class GenerationMomentFindingResult
     public GenerationClipFulfillmentOutcome FulfillmentOutcome { get; }
     public string? SelectionReviewNote { get; }
     internal IReadOnlyDictionary<MomentCandidate, double> SelectionPreferences { get; }
+    internal IReadOnlySet<MomentCandidate>? SelectionEligibleCandidates { get; }
 
     public string FulfillmentMessage => FulfillmentSummary + (SelectionReviewNote is null ? "" : " " + SelectionReviewNote);
 

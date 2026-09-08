@@ -2,6 +2,18 @@
 
 This document records engineering provenance and release requirements; it is not legal advice. The generated manifests and notice trees for the exact candidate remain authoritative. Review them before every public release because a dependency, build configuration, source archive, or license can change independently of this baseline.
 
+The current visual runtime includes an Apache-2.0 Accelerate security backport,
+version `1.14.0+replayfoundry.1`. The reproducible wheel builder is retained at
+`eng/New-AccelerateSecurityWheel.py`, together with real-loader regression tests.
+The original upstream wheel SHA-256 is
+`E94390C2863B873BE18F623F9DF48A0D8FE5EFF13EA7F1A00092B0A7904888C6`;
+the patched wheel SHA-256 is
+`B309E4BF9A7DE5D1023211780394FD0D525BD51CCD1043439A5280BA26A8BAFD`.
+The wheel retains its upstream license and identifies the modification in
+`REPLAYFOUNDRY-SECURITY-PATCH.txt`. The release dependency report records
+[GHSA-4j2p-28q2-5m79](https://github.com/advisories/GHSA-4j2p-28q2-5m79)
+as remediated by the exact verified checkpoint-loader bytes, not absent.
+
 | Component | Qualified baseline | Required release evidence |
 | --- | --- | --- |
 | .NET Windows Desktop Runtime | Exact .NET 10 `win-x64` runtime resolved by the release SDK for the self-contained app | Record the SDK and runtime versions, preserve Microsoft's license and third-party notices, and hash the final framework files shipped with the candidate. |
@@ -17,7 +29,7 @@ This document records engineering provenance and release requirements; it is not
 | CPython | `3.13.15` | PSF license text, official distribution source, and executable hash. |
 | Python, CUDA, and Qwen dependencies | Exact qualified environment, including PyTorch `2.13.0+cu130` | Generated component inventory and a retained license text and hash for every distribution. Missing wheel texts require reviewed, official, hash-pinned overrides. Review NVIDIA and CUDA terms for the exact redistributed files. |
 | Qwen3-VL 4B Instruct | Model revision `ebb281ec70b05090aa6165b016eac8ec08e71b17` | Apache-2.0 text, official source, model and configuration hashes, prompt manifest, and qualification lock. Generated wording remains subject to user review; qualification is not a universal semantic-accuracy claim. |
-| Optional personal writer base | `Qwen/Qwen3-0.6B`, revision `c1899de289a04d12100db370d81485cdf75e47ca`; weights SHA-256 `F47F71177F32BCD101B7573EC9171E6A57F4F4D31148D38E382306F42996874B` | Preserve the Apache-2.0 license and all eight pinned model/tokenizer files under `writer-base` in model pack `4.0.23`. The canonical local manifest hash is `f76861238256bfe8537860a92d1918fc3a0fe781d56c184609e48ce57a322256`. Test adapters cannot activate a personal writer. Keep training examples, checkpoints and the proprietary training implementation outside the public source export. |
+| Optional personal writer base | `Qwen/Qwen3-0.6B`, revision `c1899de289a04d12100db370d81485cdf75e47ca`; weights SHA-256 `F47F71177F32BCD101B7573EC9171E6A57F4F4D31148D38E382306F42996874B` | Preserve the Apache-2.0 license and all eight pinned model/tokenizer files under `writer-base` in model pack `4.0.24`. The canonical local manifest hash is `f76861238256bfe8537860a92d1918fc3a0fe781d56c184609e48ce57a322256`. Test adapters cannot activate a personal writer. Keep training examples, checkpoints and the proprietary training implementation outside the public source export. |
 | Inno Setup | Exact supported Inno Setup 6.7 or 7 compiler selected for the release | Record the compiler version and hash, retain the applicable Inno license evidence, confirm the licensed build environment, and preserve the signed setup and uninstaller verification report. |
 
 Each runtime pack repeats its own package identity, license, source, build provenance, dependency closure, file lengths, and SHA-256 hashes. Generated Python and Qwen notice trees are external build inputs copied into the runtime pack; they do not belong in Git.

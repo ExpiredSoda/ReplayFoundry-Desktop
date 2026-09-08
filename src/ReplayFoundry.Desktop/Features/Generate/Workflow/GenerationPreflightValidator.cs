@@ -96,12 +96,12 @@ internal static class GenerationPreflightValidator
             throw new GenerationEngineUnavailableException(
                 "Balanced and Thorough need the speech tool from Advanced AI. Install or repair Advanced AI, or choose Fast.");
         }
-        if (setupOptions.AnalysisDepth == GenerationAnalysisDepth.Thorough &&
+        if (setupOptions.RequiresVisualSelectionReview &&
             runtimeCapabilities is not null &&
             !runtimeCapabilities.IsVisualSemanticReviewAvailable)
         {
             throw new GenerationEngineUnavailableException(
-                "Thorough needs the visual tool from Advanced AI. Install or repair Advanced AI, or choose Balanced or Fast.");
+                "AI moment selection needs the visual tool from Advanced AI. Install or repair Advanced AI, or choose Fast or simple writing.");
         }
         if (setupOptions.CaptionSettings.IsEnabled &&
             runtimeCapabilities is not null &&

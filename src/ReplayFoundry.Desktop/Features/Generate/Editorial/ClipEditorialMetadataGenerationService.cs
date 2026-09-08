@@ -7,31 +7,6 @@ using ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Editorial;
 
-public interface IClipEditorialMetadataGenerationService
-{
-    bool IsAiAvailable { get; }
-
-    string? AiUnavailableReason => null;
-
-    Task<ClipEditorialMetadataDraft> GenerateAsync(
-        ClipEditorialMetadataRequest request,
-        CancellationToken cancellationToken);
-
-    async Task<IReadOnlyList<ClipEditorialMetadataDraft>> GenerateBatchAsync(
-        IReadOnlyList<ClipEditorialMetadataRequest> requests,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(requests);
-        var drafts = new List<ClipEditorialMetadataDraft>(requests.Count);
-        foreach (ClipEditorialMetadataRequest request in requests)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            drafts.Add(await GenerateAsync(request, cancellationToken));
-        }
-
-        return drafts.AsReadOnly();
-    }
-}
 public sealed class ClipEditorialMetadataGenerationService :
     IClipEditorialMetadataGenerationService
 {
@@ -42,12 +17,14 @@ public sealed class ClipEditorialMetadataGenerationService :
     private readonly string? _aiUnavailableReason;
     private readonly IVisualSemanticReviewVideoMaterializer?
         _reviewVideoMaterializer;
+    private readonly IClipEditorialSceneContextReviewer? _sceneReviewer;
 
     public ClipEditorialMetadataGenerationService(
         IClipEditorialMetadataGenerator heuristic,
         IClipEditorialMetadataGenerator? ai = null,
         IVisualSemanticReviewVideoMaterializer? reviewVideoMaterializer = null,
-        string? aiUnavailableReason = null)
+        string? aiUnavailableReason = null,
+        IClipEditorialSceneContextReviewer? sceneReviewer = null)
     {
         _heuristic = heuristic ??
             throw new ArgumentNullException(nameof(heuristic));
@@ -62,6 +39,7 @@ public sealed class ClipEditorialMetadataGenerationService :
         _aiUnavailableReason = string.IsNullOrWhiteSpace(aiUnavailableReason)
             ? null : aiUnavailableReason.Trim();
         _reviewVideoMaterializer = reviewVideoMaterializer;
+        _sceneReviewer = sceneReviewer;
     }
 
     public bool IsAiAvailable =>
@@ -123,6 +101,13 @@ public sealed class ClipEditorialMetadataGenerationService :
                     effectiveRequest,
                     cancellationToken);
                 effectiveRequest = request.WithReviewVideo(reviewVideo.Input);
+            }
+
+            if (_sceneReviewer is not null)
+            {
+                var reviewed = await _sceneReviewer.ReviewAsync([effectiveRequest], cancellationToken);
+                if (reviewed.Count != 1) throw new InvalidDataException("Scene review did not preserve the requested clip.");
+                effectiveRequest = reviewed[0];
             }
 
             ClipEditorialMetadataDraft aiDraft =
@@ -234,6 +219,8 @@ public sealed class ClipEditorialMetadataGenerationService :
                     }
                     effectiveRequests = prepared.AsReadOnly();
                 }
+                if (_sceneReviewer is not null)
+                    effectiveRequests = await _sceneReviewer.ReviewAsync(effectiveRequests, cancellationToken);
                 return await GenerateNovelBatchAsync(
                     requests,
                     effectiveRequests,

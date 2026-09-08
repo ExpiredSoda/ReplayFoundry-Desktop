@@ -26,13 +26,23 @@ The compact runtime path is intentional because deeply nested Windows paths can 
 
 ## Build runtime packs
 
-This Beta 5 build requires visual runtime `0.8.27` and model pack `4.0.23` as a matching
+This Beta 5 build requires visual runtime `0.8.28` and model pack `4.0.24` as a matching
 set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
 structured-decoding qualification lock for CPython `3.13.15`, PyTorch
 `2.13.0+cu130`, TorchVision `0.28.0+cu130`, TorchCodec `0.16.0`, and Transformers
 `5.16.1`. The release also updates Pillow, pip, and setuptools. Exact installed
 distribution versions, retained licenses, and dependency-audit results belong
 in the external release evidence. Do not reuse the Beta 4 qualification lock.
+
+Accelerate is pinned to the reproducible local wheel `1.14.0+replayfoundry.1`.
+`eng/New-AccelerateSecurityWheel.py` verifies the official 1.14.0 wheel hash,
+applies the bounded checkpoint-shard fix for `GHSA-4j2p-28q2-5m79`, and rebuilds
+wheel metadata and file hashes. Its regression tests exercise both real loading
+APIs with hostile indexes and valid sibling safetensors. The advisory audit
+retains the upstream finding and accepts this remediation only for the exact
+patched loader hash. All other advisories still block release. Stage this wheel
+in a fresh dependency directory, regenerate notices and the GPU qualification
+lock, then build new runtime packs; never edit a sealed or installed pack.
 
 For a pre-installation Debug qualification, the existing explicit Qwen override
 opt-in also accepts `REPLAYFOUNDRY_QWEN_SITE_PACKAGES` as an absolute existing
