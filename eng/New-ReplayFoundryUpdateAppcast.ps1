@@ -80,7 +80,17 @@ Add-TextElement $channel 'title' 'Replay Foundry updates'
 $item = $document.CreateElement('item')
 $channel.AppendChild($item) | Out-Null
 Add-TextElement $item 'title' "Replay Foundry $($manifest.productVersion)"
-Add-TextElement $item 'description' $ReleaseNotes
+$safeNotes = [Net.WebUtility]::HtmlEncode($ReleaseNotes)
+$safeVersion = [Net.WebUtility]::HtmlEncode([string]$manifest.productVersion)
+$notesHtml = @"
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="color-scheme" content="dark light">
+<style>body{margin:0;padding:22px;background:#131c24;color:#edf4f8;font:15px/1.55 "Segoe UI",sans-serif}
+.brand{color:#58d6ff;font-size:12px;font-weight:600;letter-spacing:.08em}h1{font-size:21px;line-height:1.25;margin:10px 0 16px}
+.notes{white-space:pre-wrap}footer{border-top:1px solid #34414b;margin-top:22px;padding-top:14px;color:#bdcbd5;font-size:12px}</style>
+</head><body><div class="brand">REPLAY FOUNDRY</div><h1>What's new in $safeVersion</h1><div class="notes">$safeNotes</div>
+<footer>Signed by Expired Soda Studios LLC. You choose when to install.</footer></body></html>
+"@
+Add-TextElement $item 'description' $notesHtml
 Add-TextElement $item 'pubDate' ([DateTimeOffset]::UtcNow.ToString('r'))
 $minimum = $document.CreateElement('sparkle', 'minimumSystemVersion', $sparkle)
 $minimum.InnerText = '10.0.19041'
