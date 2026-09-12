@@ -45,6 +45,7 @@ internal static partial class GenerationClipRenderingTests
         new("Named caption typography persists and renders", NamedCaptionTypographyPersistsAndRenders),
         new("Generate captures complete named caption looks before discovery", GenerateCapturesNamedCaptionLook),
         new("Clean video retains cut-aware SRT and WebVTT delivery", CleanCaptionDeliveryPreservesCutClocks),
+        new("Burned captions keep optional files out of player auto-loading", BurnedCaptionsDoNotAutoLoadSidecars),
         new("Independent caption styling survives persistence and render projection", IndependentCaptionStyleControlsRender),
         new("Caption casing and line placement preserve observed word clocks", CaptionStyleProjectionPreservesSpeech),
         new("Caption readability and vocabulary remain explicit", CaptionReadabilityAndVocabularyRemainExplicit),

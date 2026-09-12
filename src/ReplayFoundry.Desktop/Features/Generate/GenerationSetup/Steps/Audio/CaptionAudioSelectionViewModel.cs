@@ -387,7 +387,7 @@ public sealed class CaptionAudioSelectionViewModel :
         }
     }
 
-    private void StopAudition()
+    public void StopAudition()
     {
         _auditionCancellation?.Cancel();
         _auditionCancellation?.Dispose();

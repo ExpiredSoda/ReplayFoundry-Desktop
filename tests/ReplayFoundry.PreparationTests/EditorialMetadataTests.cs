@@ -37,6 +37,7 @@ internal static partial class EditorialMetadataTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
+        new("Studio typing updates only draft-dependent surfaces", StudioTypingKeepsSavedSurfacesStable),
         new("Editorial profile snapshots reusable tags", ProfileIsImmutable),
         new("Editorial copy objectives remain typed and independent of custom guidance", CopyObjectiveIsTypedAndIndependentOfGuidance),
         new("Editorial copy objectives survive session and request clones", CopyObjectiveSurvivesSessionAndRequestClones),
@@ -143,7 +144,8 @@ internal static partial class EditorialMetadataTests
         new("Studio asset edits retain editorial metadata", AssetEditsRetainMetadata),
         new("Studio metadata editor saves through its focused MVVM boundary", StudioEditorSavesMetadata),
         new("Studio wording preferences preserve explicit default tags", WordingPreferencesPreserveDefaultTags),
-        new("Studio rerolls require a clean saved metadata draft", StudioRerollRequiresCleanDraft),
+        new("Studio rewrites save valid edits before generating", StudioRerollSavesPendingDraft),
+        new("Failed Studio rewrites keep the saved user edits", FailedStudioRewriteKeepsEdits),
         new("Studio metadata changes preserve newer clip edits", StudioMetadataPreservesNewerEdits),
         new("Studio AI rerolls use the shared audience-copy review", StudioAiRerollUsesSharedQualityReview),
         new("Caption edits stale grounded copy until a fresh Studio reroll", CaptionEditsStaleGroundedCopyUntilReroll),
@@ -5111,7 +5113,7 @@ internal static partial class EditorialMetadataTests
         return Task.CompletedTask;
     }
 
-    private static async Task StudioRerollRequiresCleanDraft()
+    private static async Task StudioRerollSavesPendingDraft()
     {
         (GenerationOutputAsset asset, ClipEditorialMetadataDraft original) =
             await CreateAssetAsync();
@@ -5134,25 +5136,19 @@ internal static partial class EditorialMetadataTests
             generator,
             new ClipEditorialProfileSession());
         StudioEditorialMetadataViewModel editor = studio.Inspector.Editorial;
+        editor.SelectedVariantChoice = editor.VariantChoices.Last();
+        TestAssert.True(editor.RerollCommand.CanExecute(null), "Style and rewrite work before any manual edit.");
+        TestAssert.False(editor.HasUnsavedChanges, "Choosing a style does not change the current wording.");
         const string unsavedTitle = "My unsaved title must not mask a reroll";
         editor.Title = unsavedTitle;
 
-        TestAssert.False(
-            editor.RerollCommand.CanExecute(null),
-            "A reroll must stay disabled while title, description, or tag edits are unsaved.");
-        TestAssert.True(
-            editor.RerollProviderText.Contains(
-                "Save",
-                StringComparison.OrdinalIgnoreCase),
-            "The disabled reroll must explain how to preserve the pending edit.");
-
-        editor.SaveCommand.Execute(null);
-        TestAssert.False(
-            editor.HasUnsavedChanges,
-            "Saving the visible metadata must establish a clean reroll boundary.");
-        TestAssert.True(
-            editor.RerollCommand.CanExecute(null),
-            "The same reroll action must become available after the edit is saved.");
+        TestAssert.True(editor.RerollCommand.CanExecute(null), "Valid pending edits can be saved and rewritten in one action.");
+        TestAssert.Equal("Save & rewrite", editor.RerollButtonText, "The action must disclose that it saves first.");
+        TestAssert.True(editor.RerollProviderText.Contains("History"), "The editor explains where the saved copy remains.");
+        string validDescription = editor.Description;
+        editor.Description = "";
+        TestAssert.False(editor.RerollCommand.CanExecute(null), "Invalid pending edits cannot be overwritten by a rewrite.");
+        editor.Description = validDescription;
 
         await ((AsyncDelegateCommand)editor.RerollCommand).ExecuteAsync();
 
@@ -5162,6 +5158,8 @@ internal static partial class EditorialMetadataTests
             "Studio must exclude the generated title and the saved user edit from the next exact-cut reroll.");
         ClipEditorialMetadataDraft rerolled = session.Current!.PrimaryAsset
             .EditorialMetadata!;
+        TestAssert.True(rerolled.CopyVersions.Any(copy => copy.Title == unsavedTitle),
+            "Save and rewrite must keep the user's edited wording available in History.");
         TestAssert.Equal(
             original.Attempt + 1,
             rerolled.Attempt,

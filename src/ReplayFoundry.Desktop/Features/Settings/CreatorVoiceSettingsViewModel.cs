@@ -54,6 +54,12 @@ public sealed class CreatorVoiceSettingsViewModel : ObservableObject
 
     public string Status => _status;
 
+    public bool HasUnsavedChanges =>
+        AudienceAddress != _profileEditor.CurrentCreatorVoice.AudienceAddress ||
+        NamingGuidance != _profileEditor.CurrentCreatorVoice.NamingGuidance ||
+        DescriptionSignature != _profileEditor.CurrentCreatorVoice.DescriptionSignature ||
+        DefaultTags != string.Join(", ", _profileEditor.CurrentCreatorVoice.DefaultTags);
+
     public bool IsAvailable => true;
 
     public ICommand SaveCommand => _saveCommand;

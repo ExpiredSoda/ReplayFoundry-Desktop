@@ -80,7 +80,7 @@ public sealed class PublishEditorialMetadataViewModel :
             string normalized = value ?? string.Empty;
             if (_audienceAddress == normalized) return;
             _audienceAddress = normalized;
-            NotifyState();
+            OnPropertyChanged();
         }
     }
 
@@ -92,7 +92,7 @@ public sealed class PublishEditorialMetadataViewModel :
             string normalized = value ?? string.Empty;
             if (_namingGuidance == normalized) return;
             _namingGuidance = normalized;
-            NotifyState();
+            OnPropertyChanged();
         }
     }
 
@@ -104,7 +104,7 @@ public sealed class PublishEditorialMetadataViewModel :
             string normalized = value ?? string.Empty;
             if (_descriptionSignature == normalized) return;
             _descriptionSignature = normalized;
-            NotifyState();
+            OnPropertyChanged();
         }
     }
 

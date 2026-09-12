@@ -310,6 +310,13 @@ public sealed class MomentGuidanceSourceViewModel :
         OnPropertyChanged(nameof(PlaybackStatus));
     }
 
+    public void ReportPlaybackClosed()
+    {
+        _isPlaybackOpen = false;
+        ReportPlaybackState(false);
+        OnPropertyChanged(nameof(IsPlaybackOpen));
+    }
+
     public void ReportPlaybackState(bool isPlaying)
     {
         _isPlaybackPlaying = isPlaying && IsPlaybackOpen;

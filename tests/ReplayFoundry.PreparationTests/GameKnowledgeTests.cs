@@ -24,10 +24,11 @@ using ReplayFoundry.Desktop.Presentation.Commands;
 
 namespace ReplayFoundry.PreparationTests;
 
-internal static class GameKnowledgeTests
+internal static partial class GameKnowledgeTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
+        new("Informal game names fall back to verified full-text identities", InformalGameNamesUseFullTextDiscovery),
         new("Game knowledge contracts snapshot values immutably", ContractsAreImmutable),
         new("Game knowledge cache verifies deterministic snapshots", CacheRoundTripsAndRejectsCorruption),
         new("Game knowledge cache loads legacy snapshots without re-saving them", CacheLoadsLegacyBoundedly),

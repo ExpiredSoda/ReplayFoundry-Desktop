@@ -5,13 +5,18 @@
     <Border
         Margin="0,12,0,8"
         AutomationProperties.Name="Clip title and description editor"
-        Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
+        Style="{DynamicResource Control.CanvasInsetCard}"
+        Background="Transparent"
+        BorderThickness="0"
+        Padding="0"
         Visibility="{Binding IsMetadataEditorVisible, Converter={StaticResource BoolToVisibility}}">
         <StackPanel>
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition
+                        Width="*" />
+                    <ColumnDefinition
+                        Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock
                     FontWeight="SemiBold"
@@ -30,12 +35,42 @@
                         Text="{Binding Editorial.DraftState}" />
                 </Border>
             </Grid>
-            <TextBlock
-                Margin="0,4,0,12"
-                Style="{DynamicResource Text.Meta}"
-                Text="Edit what viewers will see. Adding this clip to the queue also saves valid changes."
-                TextWrapping="Wrap" />
-
+            <Border
+                Margin="0,10,0,12"
+                Padding="12"
+                Style="{DynamicResource Control.CanvasGhostZone}">
+                <StackPanel>
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource Brush.TextPrimary}"
+                        Text="Writing style" />
+                    <ComboBox
+                        Margin="0,6,0,0"
+                        AutomationProperties.Name="Title and description angle"
+                        DisplayMemberPath="Name"
+                        IsEnabled="{Binding IsProjectDraft}"
+                        ItemsSource="{Binding Editorial.VariantChoices}"
+                        SelectedItem="{Binding Editorial.SelectedVariantChoice, Mode=TwoWay}" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        Text="{Binding Editorial.SelectedVariantDescription}"
+                        TextWrapping="Wrap" />
+                    <Button
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.HelpText="{Binding Editorial.RerollProviderText}"
+                        AutomationProperties.Name="{Binding Editorial.RerollAutomationName}"
+                        Command="{Binding Editorial.RerollCommand}"
+                        Content="{Binding Editorial.RerollButtonText}"
+                        Style="{DynamicResource Control.StudioSecondaryButton}" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        TextWrapping="Wrap"
+                        Text="{Binding Editorial.RerollProviderText}" />
+                </StackPanel>
+            </Border>
             <TextBlock
                 Margin="0,0,0,12"
                 AutomationProperties.Name="Title and description review status"
@@ -43,16 +78,21 @@
                 Text="{Binding Editorial.Status}"
                 TextWrapping="Wrap">
                 <TextBlock.Style>
-                    <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Meta}">
+                    <Style
+                        TargetType="TextBlock"
+                        BasedOn="{StaticResource Text.Meta}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding Editorial.HasCopyReview}" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource Brush.StatusWarning}" />
+                            <DataTrigger
+                                Binding="{Binding Editorial.HasCopyReview}"
+                                Value="True">
+                                <Setter
+                                    Property="Foreground"
+                                    Value="{DynamicResource Brush.StatusWarning}" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-
             <Border
                 Margin="0,0,0,12"
                 Padding="10"
@@ -79,14 +119,20 @@
                         Style="{DynamicResource Control.StudioSecondaryButton}" />
                 </StackPanel>
             </Border>
-
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition
+                        Width="*" />
+                    <ColumnDefinition
+                        Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Title" />
-                <TextBlock Grid.Column="1" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.TitleCharacterCount}" />
+                <TextBlock
+                    Style="{DynamicResource Text.FormLabel}"
+                    Text="Title" />
+                <TextBlock
+                    Grid.Column="1"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding Editorial.TitleCharacterCount}" />
             </Grid>
             <TextBox
                 Margin="0,4,0,0"
@@ -95,14 +141,21 @@
                 MaxLength="100"
                 Style="{DynamicResource Control.FormTextBox}"
                 Text="{Binding Editorial.Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-            <Grid Margin="0,10,0,0">
+            <Grid
+                Margin="0,10,0,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition
+                        Width="*" />
+                    <ColumnDefinition
+                        Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Description" />
-                <TextBlock Grid.Column="1" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.DescriptionCharacterCount}" />
+                <TextBlock
+                    Style="{DynamicResource Text.FormLabel}"
+                    Text="Description" />
+                <TextBlock
+                    Grid.Column="1"
+                    Style="{DynamicResource Text.Meta}"
+                    Text="{Binding Editorial.DescriptionCharacterCount}" />
             </Grid>
             <TextBox
                 MinHeight="92"
@@ -114,15 +167,10 @@
                 Style="{DynamicResource Control.FormTextBox}"
                 Text="{Binding Editorial.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 TextWrapping="Wrap" />
-
             <TextBlock
-                Margin="0,8,0,0"
-                AutomationProperties.Name="Title and description writing guidance"
-                Style="{DynamicResource Text.Meta}"
-                Text="{Binding Editorial.PackagingGuidance}"
-                TextWrapping="Wrap" />
-
-            <TextBlock Margin="0,10,0,0" Style="{DynamicResource Text.FormLabel}" Text="Tags" />
+                Margin="0,10,0,0"
+                Style="{DynamicResource Text.FormLabel}"
+                Text="Tags" />
             <TextBox
                 Margin="0,4,0,0"
                 AutomationProperties.Name="Studio clip tags"
@@ -130,181 +178,314 @@
                 IsEnabled="{Binding IsProjectDraft}"
                 Style="{DynamicResource Control.FormTextBox}"
                 Text="{Binding Editorial.Tags, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-            <TextBlock
-                Margin="0,5,0,0"
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource Brush.TextSecondary}"
-                Text="{Binding Editorial.SaveGuidance}"
-                TextWrapping="Wrap" />
             <ProgressBar
                 Margin="0,8,0,0"
                 AutomationProperties.Name="Preparing title and description"
                 IsIndeterminate="True"
                 Style="{DynamicResource Control.ProgressBar.Compact}"
                 Visibility="{Binding Editorial.IsGenerating, Converter={StaticResource BoolToVisibility}}" />
-            <Button
-                Margin="0,12,0,0"
-                HorizontalAlignment="Stretch"
-                AutomationProperties.Name="Save title and description changes"
-                Command="{Binding Editorial.SaveCommand}"
-                Content="{Binding Editorial.SaveButtonText}"
-                Style="{DynamicResource Control.StudioPrimaryButton}" />
-
-            <Expander Margin="0,10,0,0" Header="Help the writer learn (optional)"
-                      Visibility="{Binding Editorial.WordingLearning.CanTeachWording, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel Margin="0,8,0,2">
-                    <ComboBox ItemsSource="{Binding Editorial.WordingLearning.CorrectionChoices}" DisplayMemberPath="Name"
-                              SelectedItem="{Binding Editorial.WordingLearning.CorrectionChoice, Mode=TwoWay}"
-                              AutomationProperties.Name="What this wording change improves" />
-                    <StackPanel Margin="0,8,0,0" Visibility="{Binding Editorial.WordingLearning.CorrectionNeedsFacts, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="What actually happens in this cut?" />
-                        <TextBox Margin="0,4,0,0" MinHeight="64" MaxLength="600" AcceptsReturn="True" TextWrapping="Wrap"
-                                 Style="{DynamicResource Control.FormTextBox}"
-                                 Text="{Binding Editorial.WordingLearning.CorrectedEvent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 AutomationProperties.Name="Corrected account of this clip" />
-                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
-                                   Text="Save your changes, then mark the wording as reviewed when it matches the video. Corrections to facts wait for that review before writer training." />
-                    </StackPanel>
-                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
-                               Text="Saved edits teach the fields you changed. Your clip ratings stay separate. Learning stays on this PC." />
-                </StackPanel>
-            </Expander>
-
-            <Border Margin="0,14,0,0" Padding="10" Style="{DynamicResource Control.CanvasGhostZone}">
-                <StackPanel>
-                    <TextBlock
-                        FontWeight="SemiBold"
-                        Foreground="{DynamicResource Brush.TextPrimary}"
-                        Text="Writing style" />
-                    <TextBlock
-                        Margin="0,3,0,8"
-                        Style="{DynamicResource Text.Meta}"
-                        Text="Choose what your title should lead with."
-                        TextWrapping="Wrap" />
-                    <ComboBox
-                        AutomationProperties.Name="Title and description angle"
-                        DisplayMemberPath="Name"
-                        IsEnabled="{Binding IsProjectDraft}"
-                        ItemsSource="{Binding Editorial.VariantChoices}"
-                        SelectedItem="{Binding Editorial.SelectedVariantChoice, Mode=TwoWay}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        Text="{Binding Editorial.SelectedVariantDescription}"
-                        TextWrapping="Wrap" />
-                    <Button
-                        Margin="0,8,0,0"
-                        HorizontalAlignment="Stretch"
-                        AutomationProperties.HelpText="{Binding Editorial.RerollProviderText}"
-                        AutomationProperties.Name="{Binding Editorial.RerollAutomationName}"
-                        Command="{Binding Editorial.RerollCommand}"
-                        Content="{Binding Editorial.RerollButtonText}"
-                        Style="{DynamicResource Control.StudioSecondaryButton}" />
-                </StackPanel>
-            </Border>
-
-            <Expander Margin="0,12,0,0" Header="Compare earlier versions"
-                      Visibility="{Binding Editorial.HasCopyVersions, Converter={StaticResource BoolToVisibility}}"
-                      Style="{DynamicResource Control.QuietExpander}">
-                <StackPanel Margin="0,8,0,0">
-                    <ComboBox AutomationProperties.Name="Earlier title and description"
-                              DisplayMemberPath="Title" ItemsSource="{Binding Editorial.CopyVersions}"
-                              SelectedItem="{Binding Editorial.SelectedCopyVersion, Mode=TwoWay}" />
-                    <TextBlock Margin="0,8,0,0" Text="{Binding Editorial.SelectedCopyPreview}"
-                               TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
-                    <Button Margin="0,8,0,0" Content="Load this version" Command="{Binding Editorial.RestoreCopyCommand}"
-                            Style="{DynamicResource Control.StudioSecondaryButton}" />
-                    <TextBlock Margin="0,6,0,0" Text="Earlier wording can be loaded when the clip and captions still match."
-                               TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
-                </StackPanel>
-            </Expander>
-
+            <WrapPanel
+                Margin="0,12,0,0">
+                <Button
+                    Margin="0,0,8,6"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Save title and description changes"
+                    Command="{Binding Editorial.SaveCommand}"
+                    Content="{Binding Editorial.SaveButtonText}"
+                    Style="{DynamicResource Control.StudioPrimaryButton}" />
+                <Button
+                    Margin="0,0,0,6"
+                    HorizontalAlignment="Left"
+                    AutomationProperties.Name="Mark title and description as reviewed"
+                    AutomationProperties.HelpText="Optional. Review status never blocks queueing or rendering."
+                    Command="{Binding Editorial.MarkReviewedCommand}"
+                    Content="Mark reviewed"
+                    Style="{DynamicResource Control.StudioQuietButton}" />
+            </WrapPanel>
             <Expander
                 Margin="0,12,0,0"
-                AutomationProperties.Name="How the title and description were written"
-                Header="How this was written"
-                IsExpanded="False"
+                Header="History, learning &amp; sources"
+                AutomationProperties.Name="Additional writing details"
                 Style="{DynamicResource Control.QuietExpander}">
-                <StackPanel Margin="0,8,0,0">
-                    <TextBlock
-                        FontWeight="SemiBold"
-                        Foreground="{DynamicResource Brush.TextSecondary}"
-                        Text="{Binding Editorial.MetadataOriginText}" />
-                    <TextBlock
-                        Margin="0,3,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        Text="{Binding Editorial.WhyThisTitleText}"
-                        TextWrapping="Wrap" />
-
-                    <Border
-                        Margin="0,10,0,0"
-                        Padding="10"
-                        AutomationProperties.Name="Details used for this title and description"
-                        Style="{DynamicResource Control.CanvasGhostZone}"
-                        Visibility="{Binding Editorial.HasContextReceipt, Converter={StaticResource BoolToVisibility}}">
-                        <StackPanel>
+                <StackPanel
+                    Margin="0,8,0,0">
+                    <ListBox
+                        x:Name="MoreSections"
+                        SelectedIndex="0"
+                        Style="{DynamicResource Control.SectionList}"
+                        AutomationProperties.Name="Writing details sections"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid
+                                    Columns="3" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style
+                                TargetType="ListBoxItem"
+                                BasedOn="{StaticResource Control.StudioNavigationItem}">
+                                <Setter
+                                    Property="HorizontalContentAlignment"
+                                    Value="Center" />
+                                <Setter
+                                    Property="Padding"
+                                    Value="6,7" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBoxItem
+                            Content="History" />
+                        <ListBoxItem
+                            Content="Learning" />
+                        <ListBoxItem
+                            Content="Sources" />
+                    </ListBox>
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style
+                                TargetType="StackPanel">
+                                <Setter
+                                    Property="Visibility"
+                                    Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger
+                                        Binding="{Binding SelectedIndex, ElementName=MoreSections}"
+                                        Value="0">
+                                        <Setter
+                                            Property="Visibility"
+                                            Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <StackPanel
+                            Margin="0,8,0,0"
+                            Visibility="{Binding Editorial.HasCopyVersions, Converter={StaticResource BoolToVisibility}}">
+                            <ComboBox
+                                AutomationProperties.Name="Earlier title and description"
+                                DisplayMemberPath="Title"
+                                ItemsSource="{Binding Editorial.CopyVersions}"
+                                SelectedItem="{Binding Editorial.SelectedCopyVersion, Mode=TwoWay}" />
+                            <TextBlock
+                                Margin="0,8,0,0"
+                                Text="{Binding Editorial.SelectedCopyPreview}"
+                                TextWrapping="Wrap"
+                                Style="{DynamicResource Text.Meta}" />
+                            <Button
+                                Margin="0,8,0,0"
+                                Content="Load this version"
+                                Command="{Binding Editorial.RestoreCopyCommand}"
+                                Style="{DynamicResource Control.StudioSecondaryButton}" />
+                            <TextBlock
+                                Margin="0,6,0,0"
+                                Text="Earlier wording can be loaded when the clip and captions still match."
+                                TextWrapping="Wrap"
+                                Style="{DynamicResource Text.Meta}" />
+                        </StackPanel>
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            Style="{DynamicResource Text.Meta}"
+                            TextWrapping="Wrap"
+                            Text="Earlier wording will appear here after a rewrite."
+                            Visibility="{Binding Editorial.HasCopyVersions, Converter={StaticResource InverseBoolToVisibility}}" />
+                    </StackPanel>
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style
+                                TargetType="StackPanel">
+                                <Setter
+                                    Property="Visibility"
+                                    Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger
+                                        Binding="{Binding SelectedIndex, ElementName=MoreSections}"
+                                        Value="1">
+                                        <Setter
+                                            Property="Visibility"
+                                            Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <StackPanel
+                            Margin="0,8,0,2"
+                            Visibility="{Binding Editorial.WordingLearning.CanTeachWording, Converter={StaticResource BoolToVisibility}}">
+                            <ComboBox
+                                ItemsSource="{Binding Editorial.WordingLearning.CorrectionChoices}"
+                                DisplayMemberPath="Name"
+                                SelectedItem="{Binding Editorial.WordingLearning.CorrectionChoice, Mode=TwoWay}"
+                                AutomationProperties.Name="What this wording change improves" />
+                            <StackPanel
+                                Margin="0,8,0,0"
+                                Visibility="{Binding Editorial.WordingLearning.CorrectionNeedsFacts, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock
+                                    Style="{DynamicResource Text.FormLabel}"
+                                    Text="What actually happens in this cut?" />
+                                <TextBox
+                                    Margin="0,4,0,0"
+                                    MinHeight="64"
+                                    MaxLength="600"
+                                    AcceptsReturn="True"
+                                    TextWrapping="Wrap"
+                                    Style="{DynamicResource Control.FormTextBox}"
+                                    Text="{Binding Editorial.WordingLearning.CorrectedEvent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    AutomationProperties.Name="Corrected account of this clip" />
+                                <TextBlock
+                                    Margin="0,5,0,0"
+                                    Style="{DynamicResource Text.Meta}"
+                                    TextWrapping="Wrap"
+                                    Text="Save your changes, then mark the wording as reviewed when it matches the video. Corrections to facts wait for that review before writer training." />
+                            </StackPanel>
+                            <TextBlock
+                                Margin="0,6,0,0"
+                                Style="{DynamicResource Text.Meta}"
+                                TextWrapping="Wrap"
+                                Text="Saved edits teach the fields you changed. Your clip ratings stay separate. Learning stays on this PC." />
+                        </StackPanel>
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            Style="{DynamicResource Text.Meta}"
+                            TextWrapping="Wrap"
+                            Text="Writing learning is off. Turn it on in Settings → Local tools &amp; AI to learn from your saved corrections."
+                            Visibility="{Binding Editorial.WordingLearning.CanTeachWording, Converter={StaticResource InverseBoolToVisibility}}" />
+                    </StackPanel>
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style
+                                TargetType="StackPanel">
+                                <Setter
+                                    Property="Visibility"
+                                    Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger
+                                        Binding="{Binding SelectedIndex, ElementName=MoreSections}"
+                                        Value="2">
+                                        <Setter
+                                            Property="Visibility"
+                                            Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <StackPanel
+                            Margin="0,8,0,0">
                             <TextBlock
                                 FontWeight="SemiBold"
-                                Foreground="{DynamicResource Brush.TextPrimary}"
-                                Text="Based on" />
-                            <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.ContextUsedSummary}" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.ContextAuthoritySummary}" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,7,0,0" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" Text="{Binding Editorial.CanonicalGameContextText}" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,2,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.GameContextFreshnessText}" TextWrapping="Wrap" />
+                                Foreground="{DynamicResource Brush.TextSecondary}"
+                                Text="{Binding Editorial.MetadataOriginText}" />
                             <TextBlock
-                                Margin="0,5,0,0"
-                                Foreground="{DynamicResource Brush.StatusWarning}"
-                                Text="{Binding Editorial.ContextReviewSummary}"
-                                TextWrapping="Wrap"
-                                Visibility="{Binding Editorial.ContextNeedsReview, Converter={StaticResource BoolToVisibility}}" />
-                            <Expander
                                 Margin="0,8,0,0"
-                                Header="Source details"
-                                IsExpanded="False"
-                                Style="{DynamicResource Control.QuietExpander}">
-                                <StackPanel Margin="0,7,0,0">
-                                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Sources" />
-                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.GameContextSourcesText}" TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Verified details" />
-                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.SupportedGameContextClaimsText}" TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Unconfirmed details left out" />
-                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.AmbiguousGameContextSuggestionsText}" TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Saved game info" />
-                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding Editorial.GameContextComponentsText}" TextWrapping="Wrap" />
-                                    <WrapPanel Margin="0,10,0,0">
-                                        <Button
-                                            Margin="0,0,8,6"
-                                            AutomationProperties.Name="Refresh game information"
-                                            Command="{Binding Editorial.RefreshGameContextCommand}"
-                                            Content="Refresh game info"
-                                            Style="{DynamicResource Control.StudioSecondaryButton}"
-                                            Visibility="{Binding Editorial.CanRefreshPublicGameContext, Converter={StaticResource BoolToVisibility}}" />
-                                        <Button
-                                            Margin="0,0,0,6"
-                                            AutomationProperties.Name="Remove saved game information"
-                                            Command="{Binding Editorial.RemoveCachedGameContextCommand}"
-                                            Content="Remove saved info"
-                                            Style="{DynamicResource Control.StudioDestructiveButton}"
-                                            Visibility="{Binding Editorial.HasCachedPublicGameContext, Converter={StaticResource BoolToVisibility}}" />
-                                    </WrapPanel>
+                                AutomationProperties.Name="Title and description writing guidance"
+                                Style="{DynamicResource Text.Meta}"
+                                Text="{Binding Editorial.PackagingGuidance}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Margin="0,3,0,0"
+                                Style="{DynamicResource Text.Meta}"
+                                Text="{Binding Editorial.WhyThisTitleText}"
+                                TextWrapping="Wrap" />
+                            <Border
+                                Margin="0,10,0,0"
+                                Padding="10"
+                                AutomationProperties.Name="Details used for this title and description"
+                                Style="{DynamicResource Control.CanvasGhostZone}"
+                                Visibility="{Binding Editorial.HasContextReceipt, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource Brush.TextPrimary}"
+                                        Text="Based on" />
+                                    <TextBlock
+                                        Margin="0,3,0,0"
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Editorial.ContextUsedSummary}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,3,0,0"
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Editorial.ContextAuthoritySummary}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,7,0,0"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource Brush.TextPrimary}"
+                                        Text="{Binding Editorial.CanonicalGameContextText}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,2,0,0"
+                                        Style="{DynamicResource Text.Meta}"
+                                        Text="{Binding Editorial.GameContextFreshnessText}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,5,0,0"
+                                        Foreground="{DynamicResource Brush.StatusWarning}"
+                                        Text="{Binding Editorial.ContextReviewSummary}"
+                                        TextWrapping="Wrap"
+                                        Visibility="{Binding Editorial.ContextNeedsReview, Converter={StaticResource BoolToVisibility}}" />
+                                    <StackPanel
+                                        Margin="0,7,0,0">
+                                        <TextBlock
+                                            Style="{DynamicResource Text.FormLabel}"
+                                            Text="Sources" />
+                                        <TextBlock
+                                            Margin="0,3,0,0"
+                                            Style="{DynamicResource Text.Meta}"
+                                            Text="{Binding Editorial.GameContextSourcesText}"
+                                            TextWrapping="Wrap" />
+                                        <TextBlock
+                                            Margin="0,8,0,0"
+                                            Style="{DynamicResource Text.FormLabel}"
+                                            Text="Verified details" />
+                                        <TextBlock
+                                            Margin="0,3,0,0"
+                                            Style="{DynamicResource Text.Meta}"
+                                            Text="{Binding Editorial.SupportedGameContextClaimsText}"
+                                            TextWrapping="Wrap" />
+                                        <TextBlock
+                                            Margin="0,8,0,0"
+                                            Style="{DynamicResource Text.FormLabel}"
+                                            Text="Unconfirmed details left out" />
+                                        <TextBlock
+                                            Margin="0,3,0,0"
+                                            Style="{DynamicResource Text.Meta}"
+                                            Text="{Binding Editorial.AmbiguousGameContextSuggestionsText}"
+                                            TextWrapping="Wrap" />
+                                        <TextBlock
+                                            Margin="0,8,0,0"
+                                            Style="{DynamicResource Text.FormLabel}"
+                                            Text="Saved game info" />
+                                        <TextBlock
+                                            Margin="0,3,0,0"
+                                            Style="{DynamicResource Text.Meta}"
+                                            Text="{Binding Editorial.GameContextComponentsText}"
+                                            TextWrapping="Wrap" />
+                                        <WrapPanel
+                                            Margin="0,10,0,0">
+                                            <Button
+                                                Margin="0,0,8,6"
+                                                AutomationProperties.Name="Refresh game information"
+                                                Command="{Binding Editorial.RefreshGameContextCommand}"
+                                                Content="Refresh game info"
+                                                Style="{DynamicResource Control.StudioSecondaryButton}"
+                                                Visibility="{Binding Editorial.CanRefreshPublicGameContext, Converter={StaticResource BoolToVisibility}}" />
+                                            <Button
+                                                Margin="0,0,0,6"
+                                                AutomationProperties.Name="Remove saved game information"
+                                                Command="{Binding Editorial.RemoveCachedGameContextCommand}"
+                                                Content="Remove saved info"
+                                                Style="{DynamicResource Control.StudioDestructiveButton}"
+                                                Visibility="{Binding Editorial.HasCachedPublicGameContext, Converter={StaticResource BoolToVisibility}}" />
+                                        </WrapPanel>
+                                    </StackPanel>
                                 </StackPanel>
-                            </Expander>
+                            </Border>
                         </StackPanel>
-                    </Border>
-
-                    <Button
-                        Margin="0,10,0,0"
-                        HorizontalAlignment="Left"
-                        AutomationProperties.Name="Mark title and description as reviewed"
-                        AutomationProperties.HelpText="Optional. Review status never blocks queueing or rendering."
-                        Command="{Binding Editorial.MarkReviewedCommand}"
-                        Content="Mark reviewed (optional)"
-                        Style="{DynamicResource Control.StudioQuietButton}" />
+                    </StackPanel>
                 </StackPanel>
             </Expander>
-
-            <Button Margin="0,12,0,0" HorizontalAlignment="Left"
+            <Button
+                Margin="0,12,0,0"
+                HorizontalAlignment="Left"
                 AutomationProperties.Name="Open writing defaults"
                 Command="{Binding DataContext.OpenWritingDefaultsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                 Content="Writing defaults in Settings  →"

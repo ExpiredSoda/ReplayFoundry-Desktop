@@ -4,6 +4,8 @@ using ReplayFoundry.Desktop.Features.Library;
 using ReplayFoundry.Desktop.Features.Studio.Projects;
 using ReplayFoundry.Desktop.Platform.Dialogs;
 using ReplayFoundry.Desktop.Platform.RuntimePacks;
+using ReplayFoundry.Desktop.Platform.Updates;
+using ReplayFoundry.Desktop.Features.Generate.Workflow;
 using ReplayFoundry.Desktop.Shell;
 using ReplayFoundry.Desktop.Shell.Navigation;
 
@@ -65,6 +67,7 @@ internal sealed class ApplicationComposition : IDisposable
 
     public MainWindowViewModel MainWindowViewModel { get; }
     public UserReportCoordinator UserReports { get; }
+    public WinSparkleUpdateService? Updates { get; init; }
 
     public Task StopAsync(CancellationToken cancellationToken = default)
     {
@@ -126,6 +129,7 @@ internal sealed class ApplicationComposition : IDisposable
         }
 
         _generationFailureReporting?.Dispose();
+        Updates?.Dispose();
         _tasteInteractions?.Dispose();
         _tasteLearning?.Dispose();
         MainWindowViewModel.Dispose();
@@ -252,6 +256,23 @@ internal static class ApplicationCompositionRoot
             speech.SpeechActivity as IDisposable,
             feedback.TasteLearning,
             tasteInteractions,
-            new GenerationFailureReporting(primaryFeatures.Generate.GenerationProgress, diagnostics.Coordinator));
+            new GenerationFailureReporting(primaryFeatures.Generate.GenerationProgress, diagnostics.Coordinator))
+        {
+            Updates = CreateUpdates(),
+        };
+
+        WinSparkleUpdateService CreateUpdates()
+        {
+            var studio = primaryFeatures.Studio;
+            var updates = new WinSparkleUpdateService(() => ApplicationUpdateReadiness.GetBlockReason(new(
+                Generation: primaryFeatures.Generate.WorkflowState is GenerateWorkflowState.PreparingSources or GenerateWorkflowState.AnalyzingEvidence or GenerateWorkflowState.Generating,
+                Rendering: studio.FinalRender.IsRendering || studio.HiddenMoments.HasUnfinishedQueueItems,
+                Publishing: publish.ViewModel.IsBusy || studio.Inspector.Editorial.IsGenerating,
+                Learning: settings.Learning.IsWorking,
+                UnsavedEdits: studio.Inspector.Editorial.HasUnsavedChanges || studio.Inspector.Editorial.HasUnsavedProfileChanges || studio.Inspector.Clip.HasPendingEdit || settings.CreatorVoice.HasUnsavedChanges,
+                OpenWorkflow: primaryFeatures.Generate.WorkflowState == GenerateWorkflowState.ReviewingComposition || studio.ManualClips.IsOpen)));
+            settings.Updates.Attach(updates);
+            return updates;
+        }
     }
 }

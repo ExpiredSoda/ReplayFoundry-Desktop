@@ -383,10 +383,45 @@ public sealed partial class WikimediaGameKnowledgeProvider :
                 "Wikidata candidate discovery returned an unexpected result.");
         }
 
-        var candidates = new List<GameIdentityCandidate>();
-        foreach (string qid in search.EnumerateArray()
+        IReadOnlyList<GameIdentityCandidate> candidates = await DiscoverCandidatesAsync(
+            request,
+            search.EnumerateArray()
                      .Where(static value => value.ValueKind == JsonValueKind.Object)
-                     .Select(static value => Text(value, "id", allowBlank: false))
+                     .Select(static value => Text(value, "id", allowBlank: false)),
+            cancellationToken);
+        if (candidates.Count == 0)
+        {
+            // Label/alias matching misses ordinary plural words and reordered
+            // franchise names. Wikidata's full-text index can find those QIDs;
+            // every result still needs the same video-game identity checks.
+            using JsonDocument fallback = await GetJsonAsync(
+                BuildUri(_wikidataApi, new Dictionary<string, string>
+                {
+                    ["action"] = "query", ["format"] = "json", ["formatversion"] = "2",
+                    ["list"] = "search", ["srsearch"] = confirmedTitle,
+                    ["srnamespace"] = "0", ["srprop"] = string.Empty,
+                    ["uselang"] = request.Locale,
+                    ["srlimit"] = GameIdentityCandidateSet.MaximumCandidates.ToString(CultureInfo.InvariantCulture),
+                }, WikimediaRequestMode.Interactive), cancellationToken);
+            JsonElement matches = Property(Property(fallback.RootElement, "query"), "search");
+            if (matches.ValueKind != JsonValueKind.Array)
+                throw new InvalidDataException("Wikidata full-text discovery returned an unexpected result.");
+            candidates = await DiscoverCandidatesAsync(request,
+                matches.EnumerateArray()
+                    .Where(static value => value.ValueKind == JsonValueKind.Object)
+                    .Select(static value => Text(value, "title", allowBlank: false)),
+                cancellationToken);
+        }
+        return new GameIdentityCandidateSet(request, candidates);
+    }
+
+    private async Task<IReadOnlyList<GameIdentityCandidate>> DiscoverCandidatesAsync(
+        GameIdentityDiscoveryRequest request,
+        IEnumerable<string> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var candidates = new List<GameIdentityCandidate>();
+        foreach (string qid in entityIds
                      .Where(static value => EntityIdPattern().IsMatch(value))
                      .Distinct(StringComparer.Ordinal)
                      .Take(GameIdentityCandidateSet.MaximumCandidates))
@@ -411,7 +446,7 @@ public sealed partial class WikimediaGameKnowledgeProvider :
                 "Wikidata",
                 request.Locale));
         }
-        return new GameIdentityCandidateSet(request, candidates);
+        return candidates;
     }
 
     private static string? CandidateEdition(string? description) =>

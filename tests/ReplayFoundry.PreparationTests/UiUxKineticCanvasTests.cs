@@ -69,6 +69,33 @@ internal static partial class UiUxApplicationSurfaceTests
                 comboBox.Template.FindName("DropDownCaret", comboBox) is System.Windows.Shapes.Path &&
                 comboBox.Template.FindName("OpenRail", comboBox) is null,
                 "The shared selector should expose its stateful caret without a disconnected partial underline rail.");
+            TestAssert.True(comboBox.Template.FindName("ArrowWell", comboBox) is Border { IsHitTestVisible: false },
+                "The selector's arrow area must remain decorative so the full field stays clickable.");
+
+            foreach (string key in new[] { "Control.SectionExpander", "Control.QuietExpander", "Control.DisclosureExpander" })
+            {
+                var disclosure = new Expander
+                {
+                    Width = 260, Header = "A long section title that must remain readable in a narrow inspector",
+                    Content = new TextBlock { Text = "Section settings" }, Style = (Style)app.FindResource(key),
+                };
+                disclosure.Measure(new Size(260, double.PositiveInfinity));
+                disclosure.Arrange(new Rect(0, 0, 260, disclosure.DesiredSize.Height));
+                disclosure.UpdateLayout();
+                var header = (ToggleButton)disclosure.Template.FindName("HeaderSite", disclosure);
+                TestAssert.True(header.ActualWidth >= 250 && header.ActualHeight >= 40,
+                    "A disclosure needs a complete, practical header target even when its label wraps.");
+                var toggle = (System.Windows.Automation.Provider.IToggleProvider)
+                    new System.Windows.Automation.Peers.ToggleButtonAutomationPeer(header).GetPattern(
+                        System.Windows.Automation.Peers.PatternInterface.Toggle)!;
+                toggle.Toggle();
+                TestAssert.True(disclosure.IsExpanded, "Accessible header activation must expand the actual section.");
+                var expand = (System.Windows.Automation.Provider.IExpandCollapseProvider)
+                    new System.Windows.Automation.Peers.ExpanderAutomationPeer(disclosure).GetPattern(
+                        System.Windows.Automation.Peers.PatternInterface.ExpandCollapse)!;
+                expand.Collapse();
+                TestAssert.False(header.IsChecked == true, "Collapsing through UI Automation must keep the header state in sync.");
+            }
 
             var checkBox = new CheckBox
             {
@@ -686,8 +713,8 @@ internal static partial class UiUxApplicationSurfaceTests
             !storageSettings.Contains("Also forget", StringComparison.Ordinal),
             "Settings must distinguish visible turn-off actions from clearly destructive data-removal actions using plain language.");
         TestAssert.True(
-            aiSettings.Contains("Title rewriting", StringComparison.Ordinal) &&
-            aiSettings.Contains("Use local AI for Studio and Publish rewrites", StringComparison.Ordinal) &&
+            aiSettings.Contains("Title &amp; description", StringComparison.Ordinal) &&
+            aiSettings.Contains("Use local AI for rewrites", StringComparison.Ordinal) &&
             aiSettings.Contains("Control.DestructiveButton", StringComparison.Ordinal),
             "Local AI settings should explain title rewriting and present model removal as a destructive action.");
 

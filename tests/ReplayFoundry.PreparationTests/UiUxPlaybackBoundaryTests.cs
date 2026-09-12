@@ -4,6 +4,29 @@ namespace ReplayFoundry.PreparationTests;
 
 internal static partial class UiUxApplicationSurfaceTests
 {
+    private static Task PausedPreviewNavigationStaysMuted()
+    {
+        RunOnSta(() =>
+        {
+            EnsureApplication();
+            var view = new ReplayFoundry.Desktop.Features.Studio.Preview.StudioPreviewView();
+            TestAssert.True(view.PreviewPlayer.IsMuted, "A newly opened preview must remain silent until playback is requested.");
+            void Invoke(string name, params object[] arguments) => view.GetType().GetMethod(name,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(view, arguments);
+            Invoke("BeginPausedSeekPrime", 0d);
+            var priming = view.PreviewPlayer;
+            TestAssert.True(priming.IsMuted, "Decoder warm-up is silent.");
+            Invoke("CancelSeekPrime");
+            TestAssert.True(priming.IsMuted, "Cancellation must not expose queued audio while the decoder is still playing.");
+            priming.IsMuted = false; // Simulate a graph that was audibly playing before navigation.
+            Invoke("DeactivatePlaybackSurface");
+            TestAssert.True(priming.IsMuted, "Navigation mutes the retiring graph before closing it.");
+            TestAssert.True(view.PreviewPlayer.IsMuted, "Its replacement also starts muted.");
+            TestAssert.True(priming.Source is null, "A retired graph releases its source.");
+        });
+        return Task.CompletedTask;
+    }
+
     private static Task VideoPreviewsRestartFromZeroAfterEnd()
     {
         TestAssert.False(

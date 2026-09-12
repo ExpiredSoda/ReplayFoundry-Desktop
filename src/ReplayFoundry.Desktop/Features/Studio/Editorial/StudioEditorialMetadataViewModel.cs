@@ -121,8 +121,9 @@ public sealed class StudioEditorialMetadataViewModel :
                 return;
             }
 
+            bool wasDirty = HasUnsavedChanges;
             _title = normalized;
-            NotifyState();
+            NotifyDraftEdited(nameof(Title), wasDirty);
         }
     }
 
@@ -137,8 +138,9 @@ public sealed class StudioEditorialMetadataViewModel :
                 return;
             }
 
+            bool wasDirty = HasUnsavedChanges;
             _description = normalized;
-            NotifyState();
+            NotifyDraftEdited(nameof(Description), wasDirty);
         }
     }
 
@@ -153,8 +155,9 @@ public sealed class StudioEditorialMetadataViewModel :
                 return;
             }
 
+            bool wasDirty = HasUnsavedChanges;
             _tags = normalized;
-            NotifyState();
+            NotifyDraftEdited(nameof(Tags), wasDirty);
         }
     }
 
@@ -170,7 +173,7 @@ public sealed class StudioEditorialMetadataViewModel :
             }
 
             _audienceAddress = normalized;
-            NotifyState();
+            NotifyProfileEdited(nameof(AudienceAddress));
         }
     }
 
@@ -186,7 +189,7 @@ public sealed class StudioEditorialMetadataViewModel :
             }
 
             _namingGuidance = normalized;
-            NotifyState();
+            NotifyProfileEdited(nameof(NamingGuidance));
         }
     }
 
@@ -202,7 +205,7 @@ public sealed class StudioEditorialMetadataViewModel :
             }
 
             _descriptionSignature = normalized;
-            NotifyState();
+            NotifyProfileEdited(nameof(DescriptionSignature));
         }
     }
 
@@ -351,17 +354,17 @@ public sealed class StudioEditorialMetadataViewModel :
     public bool CanGenerate => _service.CanGenerate;
     public bool UsesLocalAiForRerolls => _rerollPreference.UseLocalAi;
 
-    public string RerollButtonText => StudioEditorialDraftPresentation.IsUnwritten(_asset)
+    public string RerollButtonText => HasUnsavedChanges ? "Save & rewrite" : StudioEditorialDraftPresentation.IsUnwritten(_asset)
         ? "Write title & description" : UsesLocalAiForRerolls
         ? "Rewrite with local AI"
         : "Try another angle";
 
-    public string RerollAutomationName => UsesLocalAiForRerolls
+    public string RerollAutomationName => HasUnsavedChanges ? "Save changes and rewrite title and description" : UsesLocalAiForRerolls
         ? "Rewrite title and description with local AI"
         : "Try another title and description angle";
 
     public string RerollProviderText => HasUnsavedChanges
-        ? "Save your changes before trying another angle so they are not replaced."
+        ? "Saves your edits before writing another version. Your saved wording remains in History."
         : UsesLocalAiForRerolls
             ? IsAiAvailable
                 ? "Local AI will write a title and description for this clip. Your current draft stays in place if it cannot finish."
@@ -635,6 +638,12 @@ public sealed class StudioEditorialMetadataViewModel :
             return;
         }
 
+        if (HasUnsavedChanges)
+        {
+            Save();
+            if (HasUnsavedChanges) return; // A failed save must never start a rewrite.
+        }
+
         var generationCancellation = new CancellationTokenSource();
         var generationCompletion = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -865,7 +874,7 @@ public sealed class StudioEditorialMetadataViewModel :
         _service.CanEdit(_project, _asset) &&
         !_isHostBusy &&
         !IsGenerating &&
-        !HasUnsavedChanges;
+        (!HasUnsavedChanges || CanSave());
 
     private bool CanRefreshCurrentCut() =>
         NeedsCurrentCutRefresh &&
@@ -921,62 +930,38 @@ public sealed class StudioEditorialMetadataViewModel :
         _savedDescriptionSignature = snapshot.DescriptionSignature;
     }
 
+    private void NotifyDraftEdited(string propertyName, bool wasDirty)
+    {
+        // Typing changes the draft, not the saved copy history, clip evidence,
+        // or game context. Rebinding those surfaces on every key blocks input.
+        OnPropertyChanged(propertyName);
+        if (propertyName == nameof(Title)) OnPropertyChanged(nameof(TitleCharacterCount));
+        if (propertyName == nameof(Description)) OnPropertyChanged(nameof(DescriptionCharacterCount));
+        if (propertyName != nameof(Tags)) OnPropertyChanged(nameof(PackagingGuidance));
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(DraftState));
+        OnPropertyChanged(nameof(SaveGuidance));
+        OnPropertyChanged(nameof(RerollProviderText));
+        if (wasDirty != HasUnsavedChanges)
+        {
+            OnPropertyChanged(nameof(RerollButtonText));
+            OnPropertyChanged(nameof(RerollAutomationName));
+        }
+        _saveCommand.RaiseCanExecuteChanged();
+        _markReviewedCommand.RaiseCanExecuteChanged();
+        _rerollCommand.RaiseCanExecuteChanged();
+        _refreshCurrentCutCommand.RaiseCanExecuteChanged();
+    }
+
+    private void NotifyProfileEdited(string propertyName)
+    {
+        OnPropertyChanged(propertyName);
+        OnPropertyChanged(nameof(HasUnsavedProfileChanges));
+    }
+
     private void NotifyState()
     {
-        foreach (string propertyName in new[]
-        {
-            nameof(Title),
-            nameof(Description),
-            nameof(Tags),
-            nameof(AudienceAddress),
-            nameof(NamingGuidance),
-            nameof(DescriptionSignature),
-            nameof(TitleCharacterCount),
-            nameof(DescriptionCharacterCount),
-            nameof(PackagingGuidance),
-            nameof(CopyVersions),
-            nameof(HasCopyVersions),
-            nameof(SelectedCopyVersion),
-            nameof(SelectedCopyPreview),
-            nameof(Status),
-            nameof(HasCopyReview),
-            nameof(DraftState),
-            nameof(MetadataOriginText),
-            nameof(WhyThisTitleText),
-            nameof(NeedsCurrentCutRefresh),
-            nameof(CurrentCutStatus),
-            nameof(HasContextReceipt),
-            nameof(ContextUsedSummary),
-            nameof(ContextAuthoritySummary),
-            nameof(ContextNeedsReview),
-            nameof(ContextReviewSummary),
-            nameof(CanonicalGameContextText),
-            nameof(GameContextFreshnessText),
-            nameof(HasGameContextSources),
-            nameof(GameContextSourcesText),
-            nameof(HasSupportedGameContextClaims),
-            nameof(SupportedGameContextClaimsText),
-            nameof(HasAmbiguousGameContextSuggestions),
-            nameof(AmbiguousGameContextSuggestionsText),
-            nameof(GameContextComponentsText),
-            nameof(CanRefreshPublicGameContext),
-            nameof(HasCachedPublicGameContext),
-            nameof(IsGameContextUpdating),
-            nameof(RefreshCurrentCutText),
-            nameof(HasUnsavedChanges),
-            nameof(HasUnsavedProfileChanges),
-            nameof(SaveButtonText),
-            nameof(SaveGuidance),
-            nameof(IsGenerating),
-            nameof(IsAiAvailable),
-            nameof(UsesLocalAiForRerolls),
-            nameof(RerollButtonText),
-            nameof(RerollAutomationName),
-            nameof(RerollProviderText),
-            nameof(VariantChoices),
-            nameof(SelectedVariantChoice),
-            nameof(SelectedVariantDescription),
-        })
+        foreach (string propertyName in StudioEditorialPropertyNotifications.All)
         {
             OnPropertyChanged(propertyName);
         }

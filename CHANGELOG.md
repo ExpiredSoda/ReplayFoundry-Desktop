@@ -2,7 +2,15 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5).
+downloadable version is [1.0.0 Beta 5.1](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.1).
+
+## 1.0.0 Beta 5.1 — 2026-09-12
+
+- Added signed in-app updates and Settings → About & updates, including a manual check and optional automatic checks. Installation waits for safe shutdown and keeps saved projects, feedback and installed AI packs.
+- Kept paused preview decoders muted through frame refresh, cancellation and navigation to prevent brief audio bursts. Leaving the audio setup step stops pending auditions.
+- Made section headers and value dropdowns easier to distinguish across the app, and simplified access to Studio writing controls and local learning preferences.
+- Reduced unnecessary refreshes while typing titles/descriptions. Added a bounded full-text game lookup fallback for names such as Space Marines 40K.
+- Kept editable subtitle files in a separate folder when captions are already burned into an export, preventing external players from automatically displaying a second set. Added preview/export caption placement checks.
 
 ## 1.0.0 Beta 5 — refreshed 2026-09-08
 

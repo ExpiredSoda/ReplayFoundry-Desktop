@@ -22,6 +22,7 @@ public sealed class StudioWordingLearningViewModel(Func<bool> enabled) : INotify
     private string _event = string.Empty;
     private (string?, long?, long?) _cut;
     public bool CanTeachWording => enabled();
+    public void RefreshAvailability() => Changed(nameof(CanTeachWording));
     public StudioWordingCorrectionChoice CorrectionChoice
     {
         get => _choice ?? CorrectionChoices[0];
@@ -56,7 +57,7 @@ public sealed class StudioWordingLearningViewModel(Func<bool> enabled) : INotify
             CorrectedEvent = string.Empty;
             _cut = (id, start, end);
         }
-        Changed(nameof(CanTeachWording));
+        RefreshAvailability();
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

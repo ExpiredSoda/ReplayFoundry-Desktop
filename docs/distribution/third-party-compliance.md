@@ -1,5 +1,18 @@
 # Third-party compliance record
 
+## Application updater
+
+The Windows app includes WinSparkle 0.9.4 (MIT), from the
+[official release](https://github.com/vslavik/winsparkle/releases/tag/v0.9.4).
+The official SDK archive is pinned to SHA-256
+`6037df37fc263bd1650a1c4949681a9d40ffe991d01f35892a406cb5d103c976`.
+`Resolve-ReplayFoundryWinSparkle.ps1` verifies the archive before extracting the
+x64 DLL. Installer payloads retain the full SDK `COPYING` and `COPYING.expat`
+under `ThirdParty/WinSparkle-LICENSE.txt` and
+`ThirdParty/WinSparkle-Expat-LICENSE.txt`, including bundled dependency notices.
+The companion signing utility is used only by release engineering and is not
+distributed with the desktop app.
+
 This document records engineering provenance and release requirements; it is not legal advice. The generated manifests and notice trees for the exact candidate remain authoritative. Review them before every public release because a dependency, build configuration, source archive, or license can change independently of this baseline.
 
 The current visual runtime includes an Apache-2.0 Accelerate security backport,

@@ -403,42 +403,55 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <!-- Section disclosures use a filled header and plus/minus, distinct from value selectors. -->
     <Style x:Key="Control.ExpanderHeaderToggle" TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource Control.KeyboardFocus}">
         <Setter Property="MinHeight" Value="{DynamicResource Dimension.InteractiveTarget}" />
-        <Setter Property="Padding" Value="0,8" />
+        <Setter Property="Padding" Value="10,8" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border
-                        x:Name="HeaderSurface"
-                        Padding="{TemplateBinding Padding}"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="7">
+                    <Border x:Name="HeaderSurface" Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="22" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <ContentPresenter Grid.Column="1"
+                            <Border x:Name="DisclosureBadge" Width="24" Height="24" Margin="0,0,10,0"
+                                Background="{DynamicResource Brush.SurfaceInset}" CornerRadius="5"
+                                VerticalAlignment="Center" IsHitTestVisible="False">
+                                <Path x:Name="DisclosureGlyph" Width="14" Height="14"
+                                    Data="{DynamicResource Icon.Plus}" Stretch="None"
+                                    Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                    StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            </Border>
+                            <ContentPresenter Grid.Column="1" VerticalAlignment="Center"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                VerticalAlignment="Center"
-                                RecognizesAccessKey="True" />
-                            <Path x:Name="Chevron" Grid.Column="0" Width="8" Height="8" Margin="0,0,10,0"
-                                VerticalAlignment="Center" Data="{DynamicResource Icon.ChevronRight}"
-                                Stretch="Uniform" Stroke="{DynamicResource Brush.TextSecondary}" StrokeThickness="1.5"
-                                StrokeStartLineCap="Round" StrokeEndLineCap="Round" IsHitTestVisible="False" />
+                                RecognizesAccessKey="True">
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="{x:Type TextBlock}">
+                                        <Setter Property="TextWrapping" Value="Wrap" />
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="HeaderSurface" Property="Background" Value="{DynamicResource Brush.InteractiveHover}" />
-                        </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Chevron" Property="Data" Value="{DynamicResource Icon.ChevronDown}" />
+                            <Setter TargetName="DisclosureGlyph" Property="Data" Value="{DynamicResource Icon.Minus}" />
+                            <Setter TargetName="HeaderSurface" Property="Background" Value="{DynamicResource Brush.SurfacePanel}" />
+                            <Setter TargetName="HeaderSurface" Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HeaderSurface" Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+                            <Setter TargetName="HeaderSurface" Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="HeaderSurface" Property="Opacity" Value="0.78" />
@@ -451,38 +464,26 @@
             </Setter.Value>
         </Setter>
     </Style>
-    <Style TargetType="{x:Type Expander}" BasedOn="{StaticResource Control.KeyboardFocus}">
+    <Style x:Key="Control.SectionExpander" TargetType="{x:Type Expander}" BasedOn="{StaticResource Control.KeyboardFocus}">
         <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Expander}">
-                    <Border Background="Transparent" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="0,1,0,0" Padding="0">
-                        <StackPanel>
-                            <ToggleButton x:Name="HeaderSite" Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" Style="{StaticResource Control.ExpanderHeaderToggle}" />
-                            <ContentPresenter x:Name="ExpandSite" Margin="0,8,0,0" Content="{TemplateBinding Content}" Visibility="Collapsed" />
-                        </StackPanel>
-                    </Border>
-                    <ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="True"><Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" /></Trigger></ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-    <Style x:Key="Control.QuietExpander" TargetType="{x:Type Expander}" BasedOn="{StaticResource Control.KeyboardFocus}">
-        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Expander}">
                     <StackPanel>
-                        <ToggleButton
-                            x:Name="HeaderSite"
-                            Content="{TemplateBinding Header}"
-                            IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                        <ToggleButton x:Name="HeaderSite" Content="{TemplateBinding Header}"
+                            ContentTemplate="{TemplateBinding HeaderTemplate}"
+                            ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                            ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+                            IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                             Style="{StaticResource Control.ExpanderHeaderToggle}" />
-                        <ContentPresenter
-                            x:Name="ExpandSite"
-                            Margin="0,8,0,0"
-                            Content="{TemplateBinding Content}"
-                            Visibility="Collapsed" />
+                        <Border x:Name="ExpandSite" Margin="0,4,0,0" Padding="12"
+                            Background="{DynamicResource Brush.SurfacePanel}" CornerRadius="8" Visibility="Collapsed">
+                            <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
                     </StackPanel>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="True">
@@ -493,32 +494,9 @@
             </Setter.Value>
         </Setter>
     </Style>
-    <Style x:Key="Control.DisclosureExpander" TargetType="{x:Type Expander}" BasedOn="{StaticResource Control.KeyboardFocus}">
-        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Expander}">
-                    <StackPanel>
-                        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Brush.BorderSubtle}" Padding="0,3,0,0">
-                            <ToggleButton x:Name="HeaderSite" Content="{TemplateBinding Header}"
-                                IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
-                                Style="{StaticResource Control.ExpanderHeaderToggle}" />
-                        </Border>
-                        <Border x:Name="ExpandSite" Margin="3,0,0,6" Padding="18,2,0,6"
-                            BorderThickness="1,0,0,0" BorderBrush="{DynamicResource Brush.BorderStrong}" Visibility="Collapsed">
-                            <ContentPresenter Content="{TemplateBinding Content}" />
-                        </Border>
-                    </StackPanel>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsExpanded" Value="True">
-                            <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" />
-                            <Setter TargetName="HeaderSite" Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+    <Style TargetType="{x:Type Expander}" BasedOn="{StaticResource Control.SectionExpander}" />
+    <Style x:Key="Control.QuietExpander" TargetType="{x:Type Expander}" BasedOn="{StaticResource Control.SectionExpander}" />
+    <Style x:Key="Control.DisclosureExpander" TargetType="{x:Type Expander}" BasedOn="{StaticResource Control.SectionExpander}" />
     <Style TargetType="{x:Type GridSplitter}" BasedOn="{StaticResource Control.KeyboardFocus}">
         <Setter Property="Background" Value="{DynamicResource Brush.BorderSubtle}" />
         <Setter Property="Width" Value="6" />

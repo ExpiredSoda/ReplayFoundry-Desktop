@@ -4,6 +4,9 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$')]
     [string]$Version,
 
+    [ValidateRange(0, 65535)]
+    [int]$BuildRevision = 0,
+
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^[^\s]+\.apps\.googleusercontent\.com$')]
     [string]$YouTubeClientId,
@@ -57,6 +60,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
 $versionMatch = [regex]::Match(
     $Version,
     '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)')
@@ -67,7 +71,7 @@ $fileVersionParts = @(
     $versionMatch.Groups['major'].Value,
     $versionMatch.Groups['minor'].Value,
     $versionMatch.Groups['patch'].Value,
-    '0')
+    [string]$BuildRevision)
 if (@($fileVersionParts | Where-Object { [uint64]$_ -gt 65535 }).Count -ne 0) {
     throw "Version '$Version' contains a Windows file-version component above 65535."
 }
@@ -141,11 +145,12 @@ foreach ($pack in $packIndex.packs) {
             $runtimePackRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar,
             [StringComparison]::OrdinalIgnoreCase) -or
         -not (Test-Path -LiteralPath $archive -PathType Leaf) -or
-        (Get-Item -LiteralPath $archive).Length -ne [long]$pack.byteLength -or
-        (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash -ne $pack.sha256) {
+        (Get-Item -LiteralPath $archive).Length -ne [long]$pack.byteLength) {
         throw "Runtime pack archive failed index verification: $($pack.packageId)"
     }
 }
+# This boundary verifies every complete archive hash and every payload entry;
+# avoid reading the same multi-gigabyte archive twice back-to-back here.
 & (Join-Path $PSScriptRoot 'Test-ReleaseDataBoundary.ps1') `
     -Profile RuntimePacks `
     -Path $runtimePackRoot
@@ -179,6 +184,7 @@ if ($SigningMode -eq 'ArtifactSigning' -and [string]::IsNullOrWhiteSpace($Signin
 }
 $publishArguments = @{
     Version = $Version
+    BuildRevision = $BuildRevision
     YouTubeClientId = $YouTubeClientId
     AdvancedInstallerUri = $AdvancedInstallerUri
     OutputDirectory = $publishDirectory
@@ -331,6 +337,7 @@ $appManifestPath = Join-Path $publishDirectory 'release-manifest.json'
 $installerManifest = [ordered]@{
     schemaVersion = 'replayfoundry-installer-release-manifest-1.1'
     productVersion = $Version
+    fileVersion = $fileVersion
     releaseChannel = $ReleaseChannel
     profile = $Profile
     sourceCommit = $sourceCommit

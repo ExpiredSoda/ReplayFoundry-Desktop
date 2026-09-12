@@ -24,6 +24,7 @@ $forbiddenFileNames = @(
     'youtube-connection-permission.json', 'youtube-publish-drafts.json',
     'youtube-publish-history.json', 'youtube-publish-preferences.json',
     'pending-local-data-reset.json'
+    'updates-eddsa.dpapi'
 )
 $forbiddenMediaExtensions = @('.avi', '.m4a', '.mkv', '.mov', '.mp3', '.mp4', '.wav', '.webm')
 $textExtensions = @(
@@ -37,7 +38,10 @@ function ConvertTo-PortablePath([string]$Value) {
 }
 
 function Get-Sha256([string]$Value) {
-    return (Get-FileHash -Algorithm SHA256 -LiteralPath $Value).Hash
+    $stream = [IO.FileStream]::new($Value, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+        [IO.FileShare]::Read, 1048576, [IO.FileOptions]::SequentialScan)
+    try { return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) }
+    finally { $stream.Dispose() }
 }
 
 function Test-Sha256Equal([string]$Left, [string]$Right) {

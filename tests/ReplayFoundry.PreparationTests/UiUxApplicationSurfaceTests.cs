@@ -204,6 +204,7 @@ internal static partial class UiUxApplicationSurfaceTests
         new("Drop-down fields open from the complete control surface", DropDownFieldsUseCompleteHitTarget),
         new("Kinetic canvas controls preserve semantic interaction", KineticCanvasControlsPreserveSemanticInteraction),
         new("Video previews restart from zero after reaching the end", VideoPreviewsRestartFromZeroAfterEnd),
+        new("Paused preview priming and navigation never unmute retiring decoders", PausedPreviewNavigationStaysMuted),
         new("Kinetic canvas surfaces reuse shared styles", KineticCanvasSurfacesReuseSharedStyles),
         new("Studio clip cards select from their complete surface and preserve nested actions", StudioClipCardsUseCompleteHitSurface),
         new("Settings navigation stays aligned while section content scrolls", SettingsNavigationStaysAlignedWhileContentScrolls),

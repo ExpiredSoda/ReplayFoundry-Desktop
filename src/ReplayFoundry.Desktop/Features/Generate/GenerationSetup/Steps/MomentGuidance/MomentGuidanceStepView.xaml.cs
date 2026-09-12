@@ -24,6 +24,7 @@ public partial class MomentGuidanceStepView : UserControl
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         DataContextChanged += OnDataContextChanged;
+        IsVisibleChanged += OnIsVisibleChanged;
     }
 
     private void RefreshPreview()
@@ -49,6 +50,7 @@ public partial class MomentGuidanceStepView : UserControl
     {
         _isScrubbing = true;
         _resumeAfterScrub = _viewModel?.SelectedSource.IsPlaybackPlaying == true;
+        PriorityPlayer.IsMuted = true;
         PriorityPlayer.Pause();
         _viewModel?.SelectedSource.ReportPlaybackState(false);
     }
@@ -66,9 +68,27 @@ public partial class MomentGuidanceStepView : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        _positionTimer.Stop();
-        PriorityPlayer.Stop();
+        ClosePreview();
         Bind(null);
+    }
+
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        if (IsVisible) { OpenSelectedSource(); _positionTimer.Start(); }
+        else ClosePreview();
+    }
+
+    private void ClosePreview()
+    {
+        _positionTimer.Stop();
+        _isScrubbing = false;
+        _resumeAfterScrub = false;
+        PriorityPlayer.IsMuted = true;
+        PriorityPlayer.Stop();
+        PriorityPlayer.Close();
+        PriorityPlayer.Source = null;
+        _viewModel?.SelectedSource.ReportPlaybackClosed();
     }
 
     private void OnDataContextChanged(
@@ -108,26 +128,31 @@ public partial class MomentGuidanceStepView : UserControl
 
     private void OpenSelectedSource()
     {
+        PriorityPlayer.IsMuted = true;
         PriorityPlayer.Stop();
-        if (_viewModel?.SelectedSource is not { } source)
+        _isScrubbing = false;
+        _resumeAfterScrub = false;
+        if (!IsLoaded || !IsVisible || _viewModel?.SelectedSource is not { } source)
         {
             PriorityPlayer.Source = null;
             return;
         }
-        source.ReportPlaybackState(false);
+        source.ReportPlaybackClosed();
         PriorityPlayer.Source = new Uri(source.SourceFullPath, UriKind.Absolute);
         PriorityPlayer.Position = TimeSpan.FromSeconds(source.CurrentPositionSeconds);
     }
 
     private void PriorityPlayer_MediaOpened(object sender, RoutedEventArgs e)
     {
-        if (_viewModel?.SelectedSource is not { } source) return;
+        if (!IsLoaded || !IsVisible || _viewModel?.SelectedSource is not { } source ||
+            PriorityPlayer.Source?.LocalPath != source.SourceFullPath) return;
         source.ReportPlaybackOpened();
         PriorityPlayer.Position = TimeSpan.FromSeconds(source.CurrentPositionSeconds);
     }
 
     private void PriorityPlayer_MediaEnded(object sender, RoutedEventArgs e)
     {
+        PriorityPlayer.IsMuted = true;
         PriorityPlayer.Pause();
         if (_viewModel?.SelectedSource is not { } source)
         {
@@ -151,6 +176,7 @@ public partial class MomentGuidanceStepView : UserControl
         }
         if (source.IsPlaybackPlaying)
         {
+            PriorityPlayer.IsMuted = true;
             PriorityPlayer.Pause();
             source.ReportPlaybackState(false);
         }
@@ -166,6 +192,7 @@ public partial class MomentGuidanceStepView : UserControl
                 source.CurrentPositionSeconds = 0;
                 PriorityPlayer.Position = TimeSpan.Zero;
             }
+            PriorityPlayer.IsMuted = false;
             PriorityPlayer.Play();
             source.ReportPlaybackState(true);
         }
@@ -209,6 +236,7 @@ public partial class MomentGuidanceStepView : UserControl
         PriorityPlayer.Position = TimeSpan.FromSeconds(source.CurrentPositionSeconds);
         if (_resumeAfterScrub && source.IsPlaybackOpen)
         {
+            PriorityPlayer.IsMuted = false;
             PriorityPlayer.Play();
             source.ReportPlaybackState(true);
         }
