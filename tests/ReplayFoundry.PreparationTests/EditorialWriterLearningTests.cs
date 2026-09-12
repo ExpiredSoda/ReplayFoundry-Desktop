@@ -21,7 +21,8 @@ internal static class EditorialWriterLearningTests
 
     private static Task FeedbackTracksCut()
     {
-        var model = new ReplayFoundry.Desktop.Features.Studio.Editorial.StudioWordingLearningViewModel(() => true);
+        bool enabled = true;
+        var model = new ReplayFoundry.Desktop.Features.Studio.Editorial.StudioWordingLearningViewModel(() => enabled);
         model.Bind("clip", 0, 100);
         model.CorrectionChoice = model.CorrectionChoices.Single(choice => choice.Code == "WrongSpeaker");
         model.CorrectedEvent = "The game character spoke.";
@@ -31,6 +32,13 @@ internal static class EditorialWriterLearningTests
         model.Restore(draft);
         TestAssert.Equal("WrongSpeaker", model.CorrectionChoice.Code, "Restoring an unsaved draft must keep its correction reason.");
         TestAssert.Equal("The game character spoke.", model.Snapshot().CorrectedEvent, "Corrected facts survive a draft handoff.");
+        var changed = new List<string>();
+        model.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+        enabled = false;
+        model.RefreshAvailability();
+        TestAssert.True(changed.Contains(nameof(model.CanTeachWording)) && !model.CanTeachWording,
+            "Returning from Settings refreshes learning availability without rebinding the cut.");
+        TestAssert.Equal("The game character spoke.", model.CorrectedEvent, "Refreshing consent preserves the pending correction note.");
         return Task.CompletedTask;
     }
 

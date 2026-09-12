@@ -74,6 +74,7 @@ public partial class App : Application
         MainWindow = window;
         window.Closing += MainWindow_Closing;
         window.Show();
+        _composition.Updates?.Initialize(window);
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -42,6 +42,12 @@
     <AssemblyMetadata Include="ReplayFoundry.UserReportDestinationName" Value="Replay Foundry support" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(ReplayFoundryUpdatesEnabled)' == 'true'">
+    <AssemblyMetadata Include="ReplayFoundry.UpdatesEnabled" Value="true" />
+    <AssemblyMetadata Include="ReplayFoundry.UpdatePublicKey" Value="$(ReplayFoundryUpdatePublicKey)" />
+    <AssemblyMetadata Include="ReplayFoundry.UpdateChannel" Value="$(ReplayFoundryUpdateChannel)" />
+  </ItemGroup>
+
   <Target Name="ValidateReplayFoundryUserReportEndpoint" BeforeTargets="GenerateAssemblyInfo">
     <Error
       Condition="'$(ReplayFoundryUserReportEndpoint)' != 'https://replayfoundry.com/api/v1/user-reports'"

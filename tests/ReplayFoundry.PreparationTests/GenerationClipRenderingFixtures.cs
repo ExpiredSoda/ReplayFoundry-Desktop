@@ -397,12 +397,17 @@ internal static partial class GenerationClipRenderingTests
         CancellationTokenSource? cancellation = null) : IProcessRunner
     {
         public List<ProcessRunRequest> Requests { get; } = [];
+        public List<string> CaptionScripts { get; } = [];
 
         public Task<ProcessRunResult> RunAsync(
             ProcessRunRequest request,
             CancellationToken cancellationToken)
         {
             Requests.Add(request);
+            foreach (string argument in request.Arguments)
+                foreach (System.Text.RegularExpressions.Match match in
+                         System.Text.RegularExpressions.Regex.Matches(argument, "ass=filename='(caption-[^']+)'"))
+                    CaptionScripts.Add(File.ReadAllText(Path.Combine(request.WorkingDirectory!, match.Groups[1].Value)));
             int call = Requests.Count;
             if (call == cancelOnCall)
             {

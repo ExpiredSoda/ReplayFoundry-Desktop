@@ -494,8 +494,7 @@ internal static class EditorialMetadataPreferenceLearningTests
                 "The local-learning disclosure must state: " + required);
         }
 
-        settings.EnableEditorialMetadataPreferenceLearningCommand.Execute(
-            null);
+        settings.IsEditorialMetadataPreferenceLearningEnabled = true;
         TestAssert.True(
             consent.IsEnabled,
             "Only the explicit Settings action should enable learning.");
@@ -513,11 +512,15 @@ internal static class EditorialMetadataPreferenceLearningTests
                 StringComparison.OrdinalIgnoreCase),
             "Enabling local learning must not imply any upload.");
 
-        settings.DisableEditorialMetadataPreferenceLearningCommand.Execute(
-            null);
+        settings.UseLocalAiForEditorialRerolls = false;
+        TestAssert.True(consent.IsEnabled, "Choosing a different writer cannot disable writing learning.");
+        settings.IsEditorialMetadataPreferenceLearningEnabled = false;
         TestAssert.False(
             consent.IsEnabled,
             "The explicit Settings opt-out should stop future learning.");
+        TestAssert.False(settings.UseLocalAiForEditorialRerolls, "Learning consent cannot change the chosen writer.");
+        settings.SelectSectionCommand.Execute(settings.AiModelsSection);
+        TestAssert.Equal(SettingsSection.AiModels, settings.SelectedSection, "The privacy shortcut opens the canonical learning controls.");
         return Task.CompletedTask;
     }
 

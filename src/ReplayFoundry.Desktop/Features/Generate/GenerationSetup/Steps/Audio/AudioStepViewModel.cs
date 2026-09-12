@@ -91,6 +91,12 @@ public sealed class AudioStepViewModel :
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public void StopAuditions()
+    {
+        foreach (CaptionAudioSelectionViewModel source in _captionSources)
+            source.StopAudition();
+    }
+
     public IReadOnlyList<SelectionOption<AudioSelectionMode>>
         Options =>
         _options;

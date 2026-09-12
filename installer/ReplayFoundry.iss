@@ -152,10 +152,11 @@ Source: "{#AdvancedCatalogPath}"; DestDir: "{tmp}\ReplayFoundryPacks"; DestName:
 
 [Icons]
 Name: "{autoprograms}\Replay Foundry"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\Replay Foundry"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\Replay Foundry"; Filename: "{app}\{#MyAppExeName}"; Check: ShouldCreateDesktopIcon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch Replay Foundry"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch Replay Foundry"; Flags: nowait postinstall skipifsilent; Check: IsRegularInstall
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait; Check: IsApplicationUpdate
 
 [InstallDelete]
 Type: files; Name: "{autoprograms}\ReplayFoundry.lnk"
@@ -179,6 +180,64 @@ const
   CredentialTypeGeneric = 1;
   ErrorNotFound = 1168;
 
+var
+  HadDesktopIcon: Boolean;
+
+function OpenProcess(Access: LongWord; InheritHandle: Boolean; ProcessId: LongWord): THandle;
+  external 'OpenProcess@kernel32.dll stdcall';
+function WaitForSingleObject(Handle: THandle; Milliseconds: LongWord): LongWord;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function CloseHandle(Handle: THandle): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+function IsApplicationUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
+
+function IsRegularInstall: Boolean;
+begin
+  Result := not IsApplicationUpdate;
+end;
+
+function ShouldCreateDesktopIcon: Boolean;
+begin
+  if IsApplicationUpdate then Result := HadDesktopIcon
+  else Result := WizardIsTaskSelected('desktopicon');
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ProcessId: Integer;
+  ProcessHandle: THandle;
+  WaitResult: LongWord;
+begin
+  Result := '';
+  if not IsApplicationUpdate then exit;
+  ProcessId := StrToIntDef(ExpandConstant('{param:UPDATEPID|0}'), 0);
+  if ProcessId <= 0 then
+  begin
+    Result := 'The app update is missing its shutdown reference. Use Check for updates in Replay Foundry.';
+    exit;
+  end;
+  { Wait before replacing any files. Never terminate the application or a render. }
+  ProcessHandle := OpenProcess($00100000, False, ProcessId);
+  if ProcessHandle = 0 then
+  begin
+    if DLLGetLastError <> 87 then
+      Result := 'Unable to confirm Replay Foundry has closed. Close it and retry the update.';
+    exit;
+  end;
+  try
+    WizardForm.StatusLabel.Caption := 'Waiting for Replay Foundry to save and close...';
+    WaitResult := WaitForSingleObject(ProcessHandle, 60000);
+    if WaitResult <> 0 then
+      Result := 'Replay Foundry is still closing. No application files were replaced. Let it finish, then retry the update.';
+  finally
+    CloseHandle(ProcessHandle);
+  end;
+end;
+
 function CredDelete(
   TargetName: String;
   CredentialType: Cardinal;
@@ -187,6 +246,7 @@ function CredDelete(
 
 procedure InitializeWizard;
 begin
+  HadDesktopIcon := FileExists(ExpandConstant('{autodesktop}\Replay Foundry.lnk'));
   if HighContrastActive then
   begin
     WizardSetBackImage([], True, True, 255);
@@ -274,7 +334,7 @@ begin
   #endif
 #endif
 #if OfferAdvancedAi == "1"
-    if WizardIsTaskSelected('advancedai') then
+    if (not IsApplicationUpdate) and WizardIsTaskSelected('advancedai') then
     begin
       RequireRuntimeInstallerSuccess(
         'install-catalog --catalog "' + ExpandConstant('{tmp}\ReplayFoundryPacks\advanced-runtime-catalog.json') + '" --store-root "' + StoreRoot + '"',

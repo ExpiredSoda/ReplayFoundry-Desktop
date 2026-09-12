@@ -19,5 +19,13 @@ public partial class StudioEffectEditorView : UserControl
 
 public partial class StudioMetadataEditorView : UserControl
 {
-    public StudioMetadataEditorView() => InitializeComponent();
+    public StudioMetadataEditorView()
+    {
+        InitializeComponent();
+        Loaded += (_, _) =>
+        {
+            if (DataContext is StudioInspectorViewModel inspector)
+                inspector.Editorial.WordingLearning.RefreshAvailability();
+        };
+    }
 }

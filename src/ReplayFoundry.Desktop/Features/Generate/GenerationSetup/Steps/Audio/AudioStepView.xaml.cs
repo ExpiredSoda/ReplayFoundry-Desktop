@@ -8,6 +8,11 @@ public partial class AudioStepView : UserControl
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += (_, _) => (DataContext as AudioStepViewModel)?.StopAuditions();
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible) (DataContext as AudioStepViewModel)?.StopAuditions();
+        };
     }
 
     private async void OnLoaded(object sender, System.Windows.RoutedEventArgs e)

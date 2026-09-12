@@ -35,8 +35,14 @@ public static class StudioPlatformExportPackageWriter
             string fileName = Path.GetFileName(path);
             string stem = Path.GetFileNameWithoutExtension(path);
             string? ExistingSibling(string extension) => File.Exists(Path.Combine(root, stem + extension)) ? stem + extension : null;
+            bool burnedCaptions = clips.Any(asset => asset.RenderSettings.BurnCaptions && asset.Captions is not null);
+            string? ExistingCaption(string extension)
+            {
+                string caption = StudioCaptionSidecarPaths.Resolve(path, extension, burnedCaptions);
+                return File.Exists(caption) ? Path.GetRelativePath(root, caption).Replace('\\', '/') : null;
+            }
             string[] platforms = clips.Select(static asset => StudioPlatformExportPresets.DisplayName(asset.RenderSettings.PlatformPreset)).Distinct().ToArray();
-            var files = new { video = fileName, subtitlesSrt = ExistingSibling(".srt"), subtitlesVtt = ExistingSibling(".vtt"), thumbnail = ExistingSibling(".thumbnail.jpg"),
+            var files = new { video = fileName, subtitlesSrt = ExistingCaption(".srt"), subtitlesVtt = ExistingCaption(".vtt"), thumbnail = ExistingSibling(".thumbnail.jpg"),
                 originalTimeline = "source-cuts.otio", renderedTimeline = "rendered.otio" };
             bool montage = project.Mode == GenerationMode.Montage;
             var document = new
@@ -73,7 +79,7 @@ public static class StudioPlatformExportPackageWriter
             {
                 if (montage) readable.AppendLine().Append("## Clip ").AppendLine(asset.Rank.ToString(CultureInfo.InvariantCulture));
                 readable.AppendLine().AppendLine(asset.RenderSettings.BurnCaptions
-                    ? "Caption delivery: enabled captions are burned into this clip; subtitle files are also supplied when available."
+                    ? "Caption delivery: enabled captions are burned into this clip. Optional subtitle files are in caption-files for separate upload or editing; opening them during playback adds a second caption layer."
                     : "Clean video: available captions are supplied in the adjacent SRT/VTT files and are not burned into the MP4.");
                 readable.AppendLine().AppendLine("### Title").AppendLine().AppendLine(asset.EditorialMetadata?.Title ?? "Add a title before uploading.")
                     .AppendLine().AppendLine("### Description").AppendLine().AppendLine(asset.EditorialMetadata?.Description ?? "Add a description before uploading.")

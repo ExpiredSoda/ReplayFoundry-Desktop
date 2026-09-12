@@ -32,7 +32,7 @@ public sealed class TasteLearningSettingsViewModel : ObservableObject, IDisposab
     }
     public bool IsWorking => _learning?.Status.IsWorking == true;
     public int Ratings => _learning?.Status.Ratings ?? 0;
-    public string State => !IsAvailable ? "Unavailable" : !Enabled ? "Paused" : IsWorking ? "Updating" : _learning!.Status.IsActive ? "Active" : "Learning";
+    public string State => !IsAvailable ? "Unavailable" : !Enabled ? "Paused" : IsWorking ? "Updating" : _learning!.Status.IsActive ? "Active" : "Collecting feedback";
     public string Summary => $"{Ratings} rated clips · {_learning?.Status.Recordings ?? 0} recordings";
     public string Status => _notice ?? _learning?.Status.Message ?? "Local learning is unavailable right now.";
     public ICommand TrainCommand => _train;

@@ -122,6 +122,7 @@
                                     LoadedBehavior="Manual"
                                     UnloadedBehavior="Manual"
                                     ScrubbingEnabled="True"
+                                    IsMuted="True"
                                     Stretch="Uniform"
                                     MediaOpened="PriorityPlayer_MediaOpened"
                                     MediaEnded="PriorityPlayer_MediaEnded"

@@ -4,12 +4,14 @@ A Windows app for finding moments in gameplay recordings, editing clips, styling
 
 ## Download and install
 
-The current public release is **[1.0.0 Beta 5](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5)**.
+The current public release is **[1.0.0 Beta 5.1](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.1)**.
 
-- [Download the publisher-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.5/ReplayFoundry-1.0.0-beta.5-Base-win-x64-setup.exe).
+- [Download the publisher-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.5.1/ReplayFoundry-1.0.0-beta.5.1-Base-win-x64-setup.exe).
 - Windows 10 or 11, x64. Setup installs for the current user.
 - Advanced AI is optional and unchecked by default. Setup shows its download size before installation; the qualified visual AI configuration uses a compatible NVIDIA GPU with 16 GB VRAM. Readiness also depends on available memory.
 - The Base app works without the optional AI package. Use Settings or the installer to add, repair, or remove optional capabilities.
+
+**Beta 5.1 adds in-app updates** under Settings → About & updates. Install this version over your current copy once; future updates can be downloaded and installed from inside the app. Automatic checks are optional, and updates preserve projects, feedback and installed AI packs.
 
 **Beta 5 adds** full-recording timelines, visually reviewed Balanced AI picks, draggable clip ranges, clearer Studio controls, preview-area ratings, animated caption previews, and a local personal learning model in official downloads. Titles and descriptions use refreshed scene evidence, and remembered game names require confirmation for each recording. First-time visual analysis takes longer; completed reviews are reused. New profiles start without trained preferences, and independent quality checks are required before personal ranking activates. Review generated captions and wording before publishing. [CHANGELOG.md](CHANGELOG.md) records the release scope.
 

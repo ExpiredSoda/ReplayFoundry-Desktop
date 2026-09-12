@@ -24,6 +24,56 @@ The application and its runtime packs are deliberately separate:
 
 The compact runtime path is intentional because deeply nested Windows paths can prevent pinned native Python modules from loading. Manifests retain full package names, versions, kinds, licenses, dependencies, file sizes, and hashes even though physical directory names are shortened.
 
+
+## Application updates
+
+Settings → About & updates provides **Check for updates** and an optional daily
+check. Automatic checks default off and the choice is stored per user and release
+channel. Checks contact GitHub; they do not upload projects, recordings or learning
+data. Download and installation require the user's choice. Development builds do
+not contact the production feed.
+
+WinSparkle 0.9.4 downloads the existing signed Inno installer and verifies Ed25519
+signatures with the public key in eng/ReplayFoundry.Updates.psd1. Packaging verifies
+the official SDK archive's pinned SHA-256 and includes the x64 DLL and full notices.
+See the [integration guide](https://winsparkle.org/guides/integrating-winsparkle/).
+
+Every production build requires -BuildRevision (1–65535), increasing within its
+three-part product version. The first updater release is 1.0.0-beta.5.1, file
+version 1.0.0.1. Later Beta 5 updates increment both suffix and revision. Never
+replace an installer already referenced by a feed. Beta and stable feeds are
+separate beta.xml and stable.xml assets on the public repository's app-updates
+release. Publish a stable feed only when a stable product is available.
+
+Initialize-ReplayFoundryUpdateSigning.ps1 creates a key once and retains it encrypted
+by Windows DPAPI under the current user's protected LOCALAPPDATA/ReplayFoundryBuildSecrets
+directory, outside source and distribution roots. Subsequent runs recover the same
+key instead of rotating it. A company backup of the signing identity is needed
+before moving release builds to another account: the encrypted file is tied to
+this Windows account and is not itself a portable backup. Never commit or package
+a private key. The current Inno installer license is already owned.
+
+After Authenticode-signing the installer, run New-ReplayFoundryUpdateAppcast.ps1 with
+-InstallerManifestPath, -OutputPath, -ReleaseNotes and -PreviousAppcastPath. Omit the
+previous feed only for the first release in a channel. Feed generation rejects
+unsigned, dirty, non-increasing or mismatched packages and verifies the finished
+EdDSA signature. Upload the immutable installer and release evidence to its
+v<product-version> release first; verify public bytes match before replacing the
+channel feed. Failed or offline checks leave the current application usable.
+
+Restart is blocked during generation, rendering, publishing, local training,
+pending edits and open setup workflows. The native installer callback uses fixed
+application-controlled arguments. Setup waits up to 60 seconds for the initiating
+process to finish its normal save/close flow before replacing any files. It never
+force-terminates a render. Updates preserve desktop-shortcut choice, retain installed
+Advanced AI packs and relaunch afterward. Existing users need one install-over-existing
+upgrade to receive the updater. Do not uninstall first: the uninstaller removes app data.
+
+Qualify current/no-update checks, a newer signed update, signature rejection after
+byte modification, same/older versions, offline errors, deferred restart and an
+installed upgrade with saved-data fingerprints compared before and after. Confirm
+runtime packs remain available.
+
 ## Build runtime packs
 
 This Beta 5 build requires visual runtime `0.8.28` and model pack `4.0.24` as a matching

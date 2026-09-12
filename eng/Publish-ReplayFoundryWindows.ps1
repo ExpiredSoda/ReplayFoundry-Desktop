@@ -4,6 +4,9 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$')]
     [string]$Version,
 
+    [ValidateRange(0, 65535)]
+    [int]$BuildRevision = 0,
+
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^[^\s]+\.apps\.googleusercontent\.com$')]
     [string]$YouTubeClientId,
@@ -122,10 +125,20 @@ $arguments = @(
     '-p:DebugSymbols=false',
     '-p:DebugType=None',
     "-p:Version=$Version",
+    "-p:FileVersion=$($Version.Split('-')[0]).$BuildRevision",
     "-p:ReplayFoundryDataChannel=$dataChannel",
     "-p:ReplayFoundryYouTubeClientId=$YouTubeClientId",
     "-p:ReplayFoundryAdvancedInstallerUri=$AdvancedInstallerUri"
 )
+
+$updateConfiguration = Import-PowerShellDataFile (Join-Path $PSScriptRoot 'ReplayFoundry.Updates.psd1')
+$updateChannel = if ($Version.Contains('-')) { 'beta' } else { 'stable' }
+if ($ReleaseChannel -eq 'Production') {
+    if ($BuildRevision -lt 1) { throw 'Updater-enabled production releases require a distinct positive BuildRevision.' }
+    $arguments += @('-p:ReplayFoundryUpdatesEnabled=true',
+        "-p:ReplayFoundryUpdatePublicKey=$($updateConfiguration.PublicKey)",
+        "-p:ReplayFoundryUpdateChannel=$updateChannel")
+}
 
 try {
     $previousBuildSecret = $env:ReplayFoundryYouTubeClientSecret
@@ -138,6 +151,13 @@ try {
 if ($publishExitCode -ne 0) {
     throw "Replay Foundry publish failed with exit code $publishExitCode."
 }
+
+$winSparkleSdk = & (Join-Path $PSScriptRoot 'Resolve-ReplayFoundryWinSparkle.ps1')
+Copy-Item -LiteralPath (Join-Path $winSparkleSdk 'x64\Release\WinSparkle.dll') -Destination (Join-Path $resolvedOutput 'WinSparkle.dll')
+$notices = Join-Path $resolvedOutput 'ThirdParty'
+New-Item -ItemType Directory -Path $notices -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $winSparkleSdk 'COPYING') -Destination (Join-Path $notices 'WinSparkle-LICENSE.txt')
+Copy-Item -LiteralPath (Join-Path $winSparkleSdk 'COPYING.expat') -Destination (Join-Path $notices 'WinSparkle-Expat-LICENSE.txt')
 
 # ONNX Runtime's NuGet package currently copies tiny linker import libraries
 # into publish output. They are build-time inputs, not Windows runtime payloads.
@@ -221,6 +241,15 @@ $files = Get-ChildItem -LiteralPath $resolvedOutput -File -Recurse |
 $manifest = [ordered]@{
     schemaVersion = 'replayfoundry-release-manifest-1.1'
     productVersion = $Version
+    fileVersion = "$($Version.Split('-')[0]).$BuildRevision"
+    updates = [ordered]@{
+        enabled = $ReleaseChannel -eq 'Production'
+        channel = $updateChannel
+        feed = "$($updateConfiguration.FeedRoot)/$updateChannel.xml"
+        publicKey = $updateConfiguration.PublicKey
+        sdkVersion = $updateConfiguration.SdkVersion
+        sdkSha256 = $updateConfiguration.SdkSha256
+    }
     releaseChannel = $ReleaseChannel
     dataChannel = $dataChannel
     sourceCommit = $commit

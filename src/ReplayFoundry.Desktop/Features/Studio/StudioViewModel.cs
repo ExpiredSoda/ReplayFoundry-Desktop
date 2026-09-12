@@ -681,13 +681,10 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         object? sender,
         PropertyChangedEventArgs e)
     {
-        ManualClips.RefreshAvailability();
         if (e.PropertyName is nameof(Inspector.Editorial.HasUnsavedChanges) or
-            nameof(Inspector.Editorial.Title) or
-            nameof(Inspector.Editorial.Description) or
-            nameof(Inspector.Editorial.Tags) or
             nameof(Inspector.Editorial.IsGenerating))
         {
+            ManualClips.RefreshAvailability();
             FinalRender.RefreshReadiness();
             _selectBrowserAssetCommand.RaiseCanExecuteChanged();
             _queueBrowserAssetCommand.RaiseCanExecuteChanged();

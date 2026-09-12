@@ -285,7 +285,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
             assets.Add(asset.WithRenderedOutput(output, thumbnail));
             if (asset.Captions is not null)
                 await WriteSidecarsAsync(output, SubtitleSidecarSerializer.Project(asset.Captions,
-                    asset.SourceStart, asset.Duration), cancellationToken);
+                    asset.SourceStart, asset.Duration), asset.RenderSettings.BurnCaptions, cancellationToken);
             progress.Report(
                 new StudioProjectRenderProgress(
                     "Rendering final clips",
@@ -423,7 +423,8 @@ internal sealed class FfmpegStudioProjectRenderingService :
                     .Select(cue => cue with { Start = cue.Start + offset, End = cue.End + offset }));
             offset += asset.Duration;
         }
-        if (cues.Count > 0) await WriteSidecarsAsync(montage, cues, cancellationToken);
+        if (cues.Count > 0) await WriteSidecarsAsync(montage, cues,
+            included.Any(asset => asset.RenderSettings.BurnCaptions && asset.Captions is not null), cancellationToken);
         progress.Report(
             new StudioProjectRenderProgress(
                 "Finishing montage",
@@ -531,12 +532,17 @@ internal sealed class FfmpegStudioProjectRenderingService :
         }
     }
 
-    private static async Task WriteSidecarsAsync(string video, IEnumerable<SubtitleCue> cues, CancellationToken cancellationToken)
+    private static async Task WriteSidecarsAsync(string video, IEnumerable<SubtitleCue> cues, bool burnedCaptions, CancellationToken cancellationToken)
     {
         SubtitleCue[] snapshot = cues.ToArray();
         foreach (SubtitleSidecarFormat format in Enum.GetValues<SubtitleSidecarFormat>())
-            await File.WriteAllTextAsync(Path.ChangeExtension(video, format == SubtitleSidecarFormat.Srt ? ".srt" : ".vtt"),
+        {
+            string path = StudioCaptionSidecarPaths.Resolve(video,
+                format == SubtitleSidecarFormat.Srt ? ".srt" : ".vtt", burnedCaptions);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllTextAsync(path,
                 SubtitleSidecarSerializer.Build(snapshot, format), new UTF8Encoding(false), cancellationToken);
+        }
     }
 
     private static async Task<string?> WriteTimedTextScriptAsync(GenerationOutputAsset asset,

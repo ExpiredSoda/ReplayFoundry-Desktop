@@ -81,11 +81,15 @@
                                     ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                     IsHitTestVisible="False"
                                     TextElement.Foreground="{TemplateBinding Foreground}" />
+                                <Border x:Name="ArrowWell" Grid.Column="1" Margin="3,4,4,4"
+                                    Background="{DynamicResource Brush.SurfaceElevated}" CornerRadius="5"
+                                    BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1"
+                                    IsHitTestVisible="False" />
                                 <Path
                                     x:Name="DropDownCaret"
                                     Grid.Column="1"
-                                    Width="14"
-                                    Height="14"
+                                    Width="12"
+                                    Height="12"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Data="{DynamicResource Icon.ChevronDown}"
@@ -94,7 +98,7 @@
                                     StrokeThickness="1.4"
                                     Stretch="Uniform">
                                     <Path.RenderTransform>
-                                        <RotateTransform Angle="0" CenterX="7" CenterY="7" />
+                                        <RotateTransform Angle="0" CenterX="6" CenterY="6" />
                                     </Path.RenderTransform>
                                 </Path>
                             </Grid>
@@ -125,12 +129,17 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" /></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+                            <Setter TargetName="ArrowWell" Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+                        </Trigger>
                         <Trigger Property="IsDropDownOpen" Value="True">
-                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Brush.SurfaceElevated}" />
+                            <Setter TargetName="ArrowWell" Property="BorderBrush" Value="{DynamicResource Brush.BorderStrong}" />
+                            <Setter TargetName="DropDownCaret" Property="Stroke" Value="{DynamicResource Brush.TextPrimary}" />
                             <Setter TargetName="DropDownCaret" Property="RenderTransform">
                                 <Setter.Value>
-                                    <RotateTransform Angle="180" CenterX="7" CenterY="7" />
+                                    <RotateTransform Angle="180" CenterX="6" CenterY="6" />
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -143,16 +152,16 @@
     </Style>
     <Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource Control.ThemedComboBox}" />
     <!--
-        A borderless editorial selector for dense filter rows. It reuses the
+        A compact bounded selector for dense filter rows. It reuses the
         complete shared ComboBox template, popup, keyboard behavior, and UIA
         semantics instead of introducing a second dropdown control.
     -->
     <Style x:Key="Control.InlineSelectorComboBox" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource Control.ThemedComboBox}">
         <Setter Property="MinHeight" Value="{DynamicResource Dimension.InteractiveTarget}" />
         <Setter Property="Padding" Value="8,2" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceInset}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style x:Key="Control.InlineSearchTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource Control.ThemedTextBox}">
         <Setter Property="Background" Value="Transparent" />

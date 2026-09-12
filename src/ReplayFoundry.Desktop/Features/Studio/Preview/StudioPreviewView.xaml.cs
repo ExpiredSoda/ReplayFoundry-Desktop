@@ -55,7 +55,7 @@ public partial class StudioPreviewView : UserControl
         InitializeComponent();
         _previewPlayer = CreateNativeMediaPlayer();
         PreviewPlayerHost.Children.Add(_previewPlayer);
-        ConfigureNativeAudio();
+        PreviewPlayer.IsMuted = true;
         _positionTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(1000d / 30d),
             DispatcherPriority.Normal,
@@ -250,7 +250,7 @@ public partial class StudioPreviewView : UserControl
         if (_viewModel.IsPreviewPlaying)
         {
             CancelSeekPrime();
-            StartPlaybackClock();
+            ApplyPlayback();
             return;
         }
         BeginPausedSeekPrime(proxyPosition);
@@ -263,7 +263,7 @@ public partial class StudioPreviewView : UserControl
             UpdatePositionSampling();
             return;
         }
-        if (_viewModel?.IsPreviewPlaying == true &&
+        if (_isPlaybackSurfaceActive && _viewModel?.IsPreviewPlaying == true &&
             IsBoundToCurrentPreviewSession())
         {
             ConfigureNativeAudio();
@@ -273,6 +273,7 @@ public partial class StudioPreviewView : UserControl
         else
         {
             ReportBestPlaybackPosition();
+            PreviewPlayer.IsMuted = true;
             PreviewPlayer.Pause();
             StopPlaybackClock();
         }
@@ -457,10 +458,12 @@ public partial class StudioPreviewView : UserControl
 
         player.Pause();
         _isSeekPrimePending = false;
-        ConfigureNativeAudio();
+        // Pause reaches Media Foundation asynchronously. Keep the decoder
+        // muted until an explicit playback request, including buffered audio.
         _viewModel?.ReportPlaybackPosition(
             TimeSpan.FromSeconds(proxyPosition),
             sessionVersion);
+        if (_viewModel?.IsPreviewPlaying == true) ApplyPlayback();
         UpdatePositionSampling();
     }
 
@@ -483,7 +486,7 @@ public partial class StudioPreviewView : UserControl
         _isSeekPrimePending = false;
         if (_previewPlayer is not null)
         {
-            ConfigureNativeAudio();
+            _previewPlayer.IsMuted = true;
         }
     }
 
@@ -499,7 +502,7 @@ public partial class StudioPreviewView : UserControl
             return;
         }
 
-        ConfigureNativeAudio();
+        PreviewPlayer.IsMuted = true;
         PreviewPlayer.Source = source;
     }
 
@@ -530,6 +533,7 @@ public partial class StudioPreviewView : UserControl
             LoadedBehavior = MediaState.Manual,
             UnloadedBehavior = MediaState.Manual,
             ScrubbingEnabled = true,
+            IsMuted = true,
             Stretch = System.Windows.Media.Stretch.Fill,
         };
         player.MediaOpened += PreviewPlayer_OnMediaOpened;
@@ -624,7 +628,7 @@ public partial class StudioPreviewView : UserControl
         int openedSourceVersion = _mediaSourceVersion;
         int openedSessionVersion = _boundPreviewSessionVersion;
         _viewModel?.ReportOpened(openedSessionVersion);
-        ConfigureNativeAudio();
+        PreviewPlayer.IsMuted = true;
         SafeDiagnosticTrace.Write(
             "Studio preview media opened",
             $"retry={_mediaOpenRetryCount}; " +

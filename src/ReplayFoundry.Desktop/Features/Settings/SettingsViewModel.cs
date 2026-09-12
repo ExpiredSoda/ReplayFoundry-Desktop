@@ -56,6 +56,8 @@ public sealed class SettingsViewModel :
     private string _editorialMetadataPreferenceLearningNotice = string.Empty;
     private bool _isDisposed;
 
+    public ApplicationUpdateViewModel Updates { get; } = new();
+
     public SettingsViewModel()
         : this(
             new YouTubeConnectionPermissionState(
@@ -228,7 +230,7 @@ public sealed class SettingsViewModel :
                 SettingsSection.AiModels,
                 "Local tools & AI",
                 "Icon.Spark",
-                "What is installed on this PC"),
+                "Clip learning, writing and installed tools"),
             new SettingsSectionItem(
                 SettingsSection.PrivacyDiagnostics,
                 "Privacy & connections",
@@ -236,7 +238,7 @@ public sealed class SettingsViewModel :
                 "YouTube and optional research sharing"),
             new SettingsSectionItem(
                 SettingsSection.About,
-                "About Replay Foundry",
+                "About & updates",
                 "Icon.Info",
                 "Version and local-first promise"),
         });
@@ -330,6 +332,7 @@ public sealed class SettingsViewModel :
 
     public IReadOnlyList<SettingsSectionItem> Sections { get; }
     public IReadOnlyList<SettingsCapabilityItem> AiCapabilities { get; }
+    public SettingsSectionItem AiModelsSection => GetSection(SettingsSection.AiModels);
     public CreatorVoiceSettingsViewModel CreatorVoice { get; }
     public BugReportSettingsViewModel BugReports { get; }
     public LocalDataSettingsViewModel LocalData { get; }
@@ -474,10 +477,8 @@ public sealed class SettingsViewModel :
 
     public string EditorialRerollPreferenceDetail =>
         UseLocalAiForEditorialRerolls
-            ? "Local AI reviews the saved clip details and writes a genuinely different title and description. " +
-              "It takes longer and uses more computer memory. If it cannot finish, your current wording stays in place."
-            : "The built-in writer quickly creates another version from the saved clip details. " +
-              "It offers fewer variations but does not load visual AI.";
+            ? "Uses Advanced AI on this PC for Studio and Publish rewrites. Takes longer; keeps your wording if it cannot finish."
+            : "Uses the faster built-in writer for Studio and Publish rewrites, with fewer variations.";
 
     public string EditorialRerollPreferencePersistence =>
         _editorialRerollPreference.IsPersistent
@@ -490,8 +491,16 @@ public sealed class SettingsViewModel :
     public bool HasEditorialRerollPreferenceNotice =>
         !string.IsNullOrWhiteSpace(EditorialRerollPreferenceNotice);
 
-    public bool IsEditorialMetadataPreferenceLearningEnabled =>
-        _editorialMetadataPreferenceLearningConsent.IsEnabled;
+    public bool IsEditorialMetadataPreferenceLearningEnabled
+    {
+        get => _editorialMetadataPreferenceLearningConsent.IsEnabled;
+        set
+        {
+            if (value == IsEditorialMetadataPreferenceLearningEnabled) return;
+            if (value) _actions.EnableEditorialLearningCommand.Execute(null);
+            else _actions.DisableEditorialLearningCommand.Execute(null);
+        }
+    }
 
     public string EditorialMetadataPreferenceLearningStatus =>
         IsEditorialMetadataPreferenceLearningEnabled
@@ -625,6 +634,7 @@ public sealed class SettingsViewModel :
             EditorialMetadataPreferenceLearningConsent_Changed;
         LocalData.ResetScheduled -= LocalData_ResetScheduled;
         BugReports.Dispose();
+        Updates.Dispose();
         Learning.Dispose();
     }
 

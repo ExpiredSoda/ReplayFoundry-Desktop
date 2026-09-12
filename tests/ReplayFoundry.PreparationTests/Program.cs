@@ -18,6 +18,7 @@ internal static class Program
             .. GenerationSourcePreparationRequestTests.GetTests(),
             .. GenerationSourcePreparationServiceTests.GetTests(),
             .. AsyncDelegateCommandTests.GetTests(),
+            .. ApplicationUpdateTests.GetTests(),
             .. GenerationSourceFreshnessTests.GetTests(),
             .. GenerationSourcePreparationCoordinatorTests.GetTests(),
             .. GenerationEvidenceAnalysisTests.GetTests(),
