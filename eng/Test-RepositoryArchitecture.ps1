@@ -157,6 +157,11 @@ $actualEngineeringFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'eng') `
 Assert-SameSet 'Production engineering files' `
     @($manifest.PublicSource.EngineeringFiles) $actualEngineeringFiles
 
+$actualStandaloneTools = @(Get-ChildItem -LiteralPath (Join-Path $root 'tools') `
+    -File | ForEach-Object { Get-RepositoryPath $_.FullName })
+Assert-SameSet 'Production standalone tools' `
+    @($manifest.PublicSource.StandaloneTools) $actualStandaloneTools
+
 $actualWorkflowFiles = @(Get-ChildItem `
     -LiteralPath (Join-Path $root '.github\workflows') `
     -Recurse -File | ForEach-Object { Get-RepositoryPath $_.FullName })
