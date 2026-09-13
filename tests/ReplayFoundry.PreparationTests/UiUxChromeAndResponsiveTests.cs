@@ -1038,6 +1038,7 @@ internal static partial class UiUxApplicationSurfaceTests
                     WhyThisClip: "The explanation resolves cleanly."),
             ];
             SelectedAsset = new StudioBrowserHitSurfaceAsset("clip-a");
+            ClipBrowser = new(this, () => null, () => BrowserPreviewItems);
             SelectBrowserAssetCommand = new DelegateCommand<string>(
                 SelectAsset);
             QueueBrowserAssetCommand = new DelegateCommand<string>(
@@ -1058,6 +1059,7 @@ internal static partial class UiUxApplicationSurfaceTests
         }
 
         public StudioBrowserHitSurfaceAsset SelectedAsset { get; private set; }
+        public StudioClipBrowserViewModel ClipBrowser { get; }
 
         public ICommand SelectBrowserAssetCommand { get; }
 

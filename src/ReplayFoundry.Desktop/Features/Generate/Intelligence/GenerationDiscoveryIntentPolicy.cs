@@ -23,7 +23,7 @@ internal static class GenerationDiscoveryIntentPolicy
             foreach (MomentCandidate candidate in source.Moments.Proposals)
             {
                 GenerationCandidateRefinement existing = intelligence.Refinements.Single(value => ReferenceEquals(value.Candidate, candidate));
-                var matches = transcript?.Segments.Where(segment =>
+                var matches = transcript?.AllSegments.Where(segment =>
                     segment.AbsoluteSourceStart >= candidate.Window.Start &&
                     segment.AbsoluteSourceEnd <= candidate.Window.End && intent.CountMatches(segment.Text) > 0).ToArray() ?? [];
                 GenerationCandidateRefinement updated = matches.Length == 0 ? existing : new(candidate,
@@ -69,13 +69,28 @@ internal static class GenerationDiscoveryIntentPolicy
             GenerationMomentIntent.Dialogue => observation.ObservableContentType == VisualSemanticObservableContentType.Dialogue,
             _ => false,
         };
+        if (reviewed.MomentEvidence is { } timed)
+            matches = intent.MomentType switch
+            {
+                GenerationMomentIntent.Action => timed.Supports(SceneMomentCategory.Action),
+                GenerationMomentIntent.Humor => timed.Supports(SceneMomentCategory.Humor),
+                GenerationMomentIntent.Story => timed.Supports(SceneMomentCategory.Lore),
+                GenerationMomentIntent.Dialogue => timed.Supports(SceneMomentCategory.Commentary) ||
+                    observation.ObservableContentType == VisualSemanticObservableContentType.Dialogue,
+                GenerationMomentIntent.Discovery => timed.Supports(SceneMomentCategory.Discovery),
+                GenerationMomentIntent.Failure => timed.Supports(SceneMomentCategory.Failure),
+                GenerationMomentIntent.Clutch => timed.Supports(SceneMomentCategory.Clutch),
+                GenerationMomentIntent.Tutorial => timed.Supports(SceneMomentCategory.Tutorial),
+                GenerationMomentIntent.Reaction => timed.Supports(SceneMomentCategory.Reaction),
+                _ => false,
+            };
         bool grounded = observation.EditorialDisposition == VisualSemanticEditorialDisposition.Keep &&
             observation.UncertaintyReasons.Count == 0 && observation.EvidenceIntervals.Count > 0 &&
             reviewed.ReviewedSourceStart <= reviewed.Candidate.Window.Start &&
             reviewed.ReviewedSourceEnd >= reviewed.Candidate.Window.End;
         return new(GenerationCandidateRefinementComponentCode.CreatorIntentMatch,
             matches && grounded ? 1 : 0, 6,
-            intent.MomentType is GenerationMomentIntent.Clutch or GenerationMomentIntent.Tutorial or GenerationMomentIntent.Reaction
+            reviewed.MomentEvidence is null && intent.MomentType is GenerationMomentIntent.Clutch or GenerationMomentIntent.Tutorial or GenerationMomentIntent.Reaction
                 ? "The requested objective guides transcript retrieval and review priority only. This review does not label a clutch, tutorial, or reaction as detected."
                 : $"A complete grounded review can prioritize the requested {intent.MomentType} content type while preserving capture and editorial eligibility.",
             observation.EvidenceIntervals.Select(value => $"qwen:{reviewed.Candidate.Id}:{value.Id}:{value.Start:c}"));

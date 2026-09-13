@@ -8,6 +8,7 @@ using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
 using ReplayFoundry.Desktop.Media.Subtitles;
 using ReplayFoundry.Desktop.Platform.Processes;
+using ReplayFoundry.Desktop.Presentation;
 
 namespace ReplayFoundry.Desktop.Platform.Media;
 
@@ -19,6 +20,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
     private readonly IStudioRenderedMediaValidator? _validator;
     private readonly FfmpegEncodingExecutor? _encoding;
     private readonly StudioRenderCheckpointCache? _checkpoints;
+    private readonly ICorrectedCaptionAlignmentService? _captionAlignment;
     private readonly object _completedRenderLock = new();
     private readonly Dictionary<string, string> _completedRenderOwners =
         new(StringComparer.OrdinalIgnoreCase);
@@ -29,7 +31,8 @@ internal sealed class FfmpegStudioProjectRenderingService :
         bool verifyOutput = false,
         bool hardwareEncoding = false,
         bool resumeCompletedSegments = false,
-        IStudioRenderedMediaValidator? validator = null)
+        IStudioRenderedMediaValidator? validator = null,
+        ICorrectedCaptionAlignmentService? captionAlignment = null)
     {
         _processRunner = processRunner ??
             throw new ArgumentNullException(nameof(processRunner));
@@ -38,6 +41,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
         _validator = validator ?? (verifyOutput ? new StudioRenderedMediaValidator(processRunner, toolLocator) : null);
         if (hardwareEncoding) _encoding = new FfmpegEncodingExecutor(processRunner);
         if (resumeCompletedSegments) _checkpoints = new StudioRenderCheckpointCache();
+        _captionAlignment = captionAlignment;
     }
 
     public async Task<StudioProjectRenderResult> FinalizeAsync(
@@ -63,6 +67,15 @@ internal sealed class FfmpegStudioProjectRenderingService :
         cancellationToken.ThrowIfCancellationRequested();
         string finalDirectory = draft.OutputDirectory;
         RequireNewOutputDirectory(finalDirectory);
+        GenerationOutputProject originalDraft = draft;
+        foreach (GenerationOutputAsset asset in draft.IncludedAssets)
+        {
+            var captionProgress = new SynchronousProgress<string>(message => progress.Report(
+                new StudioProjectRenderProgress("Preparing Pop captions", message, 0, draft.IncludedCount)));
+            GenerationOutputAsset prepared = await StudioPopCaptionPreparation.PrepareAsync(asset,
+                _captionAlignment, captionProgress, cancellationToken);
+            if (!ReferenceEquals(asset, prepared)) draft = draft.ReplaceAsset(prepared);
+        }
         string parent = Path.GetDirectoryName(finalDirectory)!;
         Directory.CreateDirectory(parent);
         string staging = Path.Combine(
@@ -70,6 +83,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
             $".{Path.GetFileName(finalDirectory)}.studio-rendering-" +
             Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(staging);
+        Directory.CreateDirectory(GenerationExportPackagePaths.SupportingDirectory(staging));
         string captionWorkspace = Path.Combine(
             staging,
             ".caption-work");
@@ -117,7 +131,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
                                     asset.OutputFullPath!)),
                             Path.Combine(
                                 finalDirectory,
-                                Path.GetFileName(
+                                Path.GetRelativePath(staging,
                                     asset.ThumbnailFullPath!))))
                 .ToArray();
             stopwatch.Stop();
@@ -125,7 +139,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
                 finalAssets,
                 DateTimeOffset.UtcNow);
             var result = new StudioProjectRenderResult(
-                draft,
+                originalDraft,
                 finalized,
                 stopwatch.Elapsed);
             lock (_completedRenderLock)
@@ -285,7 +299,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
             assets.Add(asset.WithRenderedOutput(output, thumbnail));
             if (asset.Captions is not null)
                 await WriteSidecarsAsync(output, SubtitleSidecarSerializer.Project(asset.Captions,
-                    asset.SourceStart, asset.Duration), asset.RenderSettings.BurnCaptions, cancellationToken);
+                    asset.SourceStart, asset.Duration), cancellationToken);
             progress.Report(
                 new StudioProjectRenderProgress(
                     "Rendering final clips",
@@ -423,8 +437,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
                     .Select(cue => cue with { Start = cue.Start + offset, End = cue.End + offset }));
             offset += asset.Duration;
         }
-        if (cues.Count > 0) await WriteSidecarsAsync(montage, cues,
-            included.Any(asset => asset.RenderSettings.BurnCaptions && asset.Captions is not null), cancellationToken);
+        if (cues.Count > 0) await WriteSidecarsAsync(montage, cues, cancellationToken);
         progress.Report(
             new StudioProjectRenderProgress(
                 "Finishing montage",
@@ -532,13 +545,13 @@ internal sealed class FfmpegStudioProjectRenderingService :
         }
     }
 
-    private static async Task WriteSidecarsAsync(string video, IEnumerable<SubtitleCue> cues, bool burnedCaptions, CancellationToken cancellationToken)
+    private static async Task WriteSidecarsAsync(string video, IEnumerable<SubtitleCue> cues, CancellationToken cancellationToken)
     {
         SubtitleCue[] snapshot = cues.ToArray();
         foreach (SubtitleSidecarFormat format in Enum.GetValues<SubtitleSidecarFormat>())
         {
-            string path = StudioCaptionSidecarPaths.Resolve(video,
-                format == SubtitleSidecarFormat.Srt ? ".srt" : ".vtt", burnedCaptions);
+            string path = GenerationExportPackagePaths.ForVideo(video,
+                format == SubtitleSidecarFormat.Srt ? ".srt" : ".vtt");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             await File.WriteAllTextAsync(path,
                 SubtitleSidecarSerializer.Build(snapshot, format), new UTF8Encoding(false), cancellationToken);
@@ -615,10 +628,7 @@ internal sealed class FfmpegStudioProjectRenderingService :
     }
 
     private static string ThumbnailPath(string renderedOutputPath) =>
-        Path.Combine(
-            Path.GetDirectoryName(renderedOutputPath)!,
-            Path.GetFileNameWithoutExtension(renderedOutputPath) +
-            ".thumbnail.jpg");
+        GenerationExportPackagePaths.ForVideo(renderedOutputPath, ".thumbnail.jpg");
 
     private static string EscapeConcatPath(string path) =>
         path.Replace("'", "'\\''", StringComparison.Ordinal)

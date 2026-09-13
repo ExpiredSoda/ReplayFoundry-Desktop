@@ -64,25 +64,29 @@ internal static partial class GenerationClipRenderingTests
         var appearance = StudioPlatformExportPresets.Apply(StudioPlatformExportPreset.TikTok, asset.Appearance);
         TestAssert.Equal(StudioCaptionSafeArea.TikTok, appearance.CaptionTypography.SafeArea, "The preset must align caption placement with its preview guide.");
         string folder = Path.Combine(fixture.Root, "publishing"); Directory.CreateDirectory(folder);
-        string output = Path.Combine(folder, "clip.mp4"); File.WriteAllBytes(output, [1]);
-        File.WriteAllText(Path.Combine(folder, "clip.srt"), "captions");
+        string supporting = Path.Combine(folder, "Supporting files"); Directory.CreateDirectory(supporting);
+        string output = Path.Combine(folder, "clip #1.mp4"); File.WriteAllBytes(output, [1]);
+        File.WriteAllText(Path.Combine(supporting, "clip #1.srt"), "captions");
         var exported = asset.WithStudioEdits(asset.SourceStart, asset.SourceEnd, appearance).WithRenderSettings(settings).WithRenderedOutput(output);
         await StudioPlatformExportPackageWriter.WriteAsync(project, [exported], folder, CancellationToken.None);
-        using var package = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(folder, "clip.publish.json")));
-        TestAssert.Equal("clip.mp4", package.RootElement.GetProperty("files").GetProperty("video").GetString()!, "Publishing bundles should use portable relative filenames.");
-        TestAssert.Equal("clip.srt", package.RootElement.GetProperty("files").GetProperty("subtitlesSrt").GetString()!, "The package should reference the actual exported sidecar.");
+        using var package = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(supporting, "clip #1.publish.json")));
+        TestAssert.Equal("../clip #1.mp4", package.RootElement.GetProperty("files").GetProperty("video").GetString()!, "Publishing paths should resolve from their document's folder.");
+        TestAssert.Equal("clip #1.srt", package.RootElement.GetProperty("files").GetProperty("subtitlesSrt").GetString()!, "The package should reference the actual exported sidecar.");
         TestAssert.True(package.RootElement.GetProperty("files").GetProperty("subtitlesVtt").ValueKind == JsonValueKind.Null, "The package must not promise files that were not emitted.");
-        TestAssert.True(File.Exists(Path.Combine(folder, "Publishing Guide.md")) && File.Exists(Path.Combine(folder, "clip.publish.md")), "Each output should contain human-readable publishing text and a guide.");
-        using var sourceTimeline = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(folder, "source-cuts.otio")));
+        TestAssert.True(File.Exists(Path.Combine(supporting, "Publishing Guide.md")) && File.Exists(Path.Combine(supporting, "clip #1.publish.md")), "Supporting files should retain human-readable publishing text and a guide.");
+        using var sourceTimeline = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(supporting, "source-cuts.otio")));
         JsonElement sourceClip = sourceTimeline.RootElement.GetProperty("tracks").GetProperty("children")[0].GetProperty("children")[0];
         JsonElement clock = sourceClip.GetProperty("source_range").GetProperty("start_time");
         TestAssert.Equal(exported.SourceStart.TotalSeconds, clock.GetProperty("value").GetDouble() / clock.GetProperty("rate").GetDouble(),
             "OTIO source timelines must retain the actual source clock.");
         TestAssert.Equal(new Uri(exported.SourceFullPath).AbsoluteUri, sourceClip.GetProperty("media_reference").GetProperty("target_url").GetString()!,
             "Original-cut handoff must reference the original source, not a staging render.");
-        using var renderedTimeline = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(folder, "rendered.otio")));
+        using var renderedTimeline = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(supporting, "rendered.otio")));
         JsonElement renderedClip = renderedTimeline.RootElement.GetProperty("tracks").GetProperty("children")[0].GetProperty("children")[0];
-        TestAssert.Equal("clip.mp4", Uri.UnescapeDataString(renderedClip.GetProperty("media_reference").GetProperty("target_url").GetString()!),
+        string targetUrl = renderedClip.GetProperty("media_reference").GetProperty("target_url").GetString()!;
+        TestAssert.Equal("../clip%20%231.mp4", targetUrl,
+            "OTIO references must escape spaces and hashtag characters without escaping directory separators.");
+        TestAssert.Equal(output, Path.GetFullPath(Path.Combine(supporting, Uri.UnescapeDataString(targetUrl))),
             "Rendered handoff must survive the staging directory's atomic move.");
     }
 

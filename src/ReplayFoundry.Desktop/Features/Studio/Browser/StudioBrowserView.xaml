@@ -54,8 +54,25 @@
                     Text="Select, edit, then add to export."
                     TextWrapping="Wrap" />
             </StackPanel>
-
-
+            <StackPanel Grid.Row="1" Margin="0,10,0,8" Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="Find a clip" Style="{DynamicResource Text.Meta}" Margin="0,0,0,4" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Clear" Command="{Binding ClipBrowser.ClearCommand}" Margin="6,0,0,0"
+                        Style="{DynamicResource Control.StudioSecondaryButton}"
+                        Visibility="{Binding ClipBrowser.HasQuery, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBox Text="{Binding ClipBrowser.Query, UpdateSourceTrigger=PropertyChanged, Delay=180}" MaxLength="200"
+                        AutomationProperties.Name="Find clips by saved title, description, caption, or recording name" />
+                </DockPanel>
+                <DockPanel Margin="0,6,0,0">
+                    <TextBlock Text="Order" DockPanel.Dock="Left" Style="{DynamicResource Text.Meta}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox ItemsSource="{Binding ClipBrowser.OrderOptions}" SelectedItem="{Binding ClipBrowser.SelectedOrder}"
+                        DisplayMemberPath="Label" AutomationProperties.Name="Clip list order" />
+                </DockPanel>
+                <TextBlock Text="{Binding ClipBrowser.Summary}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Margin="0,6,0,0"
+                    AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Text="No clips match. Try fewer words or clear the search." TextWrapping="Wrap" Margin="0,6,0,0"
+                    Visibility="{Binding ClipBrowser.HasNoMatches, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
             <ScrollViewer
                 Grid.Row="2"
                 HorizontalScrollBarVisibility="Disabled"
@@ -68,7 +85,7 @@
                     BorderThickness="0"
                     ClipToBounds="False"
                     ItemContainerStyle="{StaticResource StudioBrowser.ClipItem}"
-                    ItemsSource="{Binding BrowserPreviewItems}"
+                    ItemsSource="{Binding ClipBrowser.Items}"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
                     SelectedValue="{Binding SelectedAsset.Id, Mode=OneWay}"

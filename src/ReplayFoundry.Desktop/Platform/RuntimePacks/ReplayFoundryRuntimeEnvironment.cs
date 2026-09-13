@@ -33,10 +33,10 @@ public sealed class ReplayFoundryRuntimeEnvironment
         new(8, 1, 2, 32);
 
     private static readonly Version MinimumQwenRuntimeVersion =
-        new(0, 8, 25);
+        new(0, 8, 29);
 
     private static readonly Version MinimumQwenModelVersion =
-        new(4, 0, 21);
+        new(4, 0, 25);
 
     private static readonly ReplayFoundryRuntimePackKind[] RuntimePackKinds =
         Enum.GetValues<ReplayFoundryRuntimePackKind>();

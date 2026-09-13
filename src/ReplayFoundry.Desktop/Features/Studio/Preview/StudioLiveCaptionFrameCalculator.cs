@@ -58,7 +58,8 @@ internal sealed class StudioLiveCaptionFrameCalculator
             style,
             position,
             rangeStart);
-        if (cue is null)
+        if (cue is null || style == GenerationCaptionStylePreset.Pop &&
+            (cue.WordSpans.Count == 0 || cue.Words.Any(word => word.Text.Trim().Any(char.IsWhiteSpace))))
         {
             return LiveCaptionFrameState.Empty with { SecondaryText = secondary };
         }

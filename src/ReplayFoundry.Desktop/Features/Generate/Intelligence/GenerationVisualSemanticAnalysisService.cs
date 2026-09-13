@@ -74,7 +74,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
         CandidateSource[] promoted = selected.Where(item => !previous.Observations.Any(observation =>
                 ReferenceEquals(observation.Candidate, item.Candidate)))
             .DistinctBy(item => item.Candidate, ReferenceEqualityComparer.Instance)
-            .Take(Math.Min(GenerationSemanticReviewBudgetPolicy.MaximumBatchSize, remaining))
+            .Take(Math.Min(GenerationSemanticReviewBudgetPolicy.MaximumSupplementalCandidates, remaining))
             .Select(item => new CandidateSource(item.Candidate, owners[item.Candidate],
                 item.Refinement?.RankingScore ?? item.Candidate.Score.RawComponentTotal, item.IsHumanPriority, true)).ToArray();
         if (promoted.Length == 0) return previous;
@@ -151,7 +151,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
                     var request = CreateRequest(item, video,
                         candidateIntelligence.BaseMoments.Request.Settings.Options.OutputKind,
                         candidateIntelligence.Transcripts?.Sources.SingleOrDefault(source => source.SourceFullPath.Equals(
-                            item.Source.PreparedSource.Media.FullPath, StringComparison.OrdinalIgnoreCase)));
+                            item.Source.PreparedSource.Media.FullPath, StringComparison.OrdinalIgnoreCase)),
+                        candidateIntelligence.BaseMoments.Request.Setup);
                     prepared.Add((item, video, request));
                     diagnostics.Add(new(item.Candidate.Id, "Preparation", 1, true, timer.Elapsed.TotalSeconds, null));
                 }
@@ -187,7 +188,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
                             var owner = pending.Single(item => ReferenceEquals(item.Request, success.Request));
                             observed.Add(new(owner.Item.Candidate, owner.Item.Source,
                                 owner.Video.Request.SourceStart, owner.Video.Request.SourceEnd,
-                                owner.Video.Input.ReviewVideoSha256, success.Observation, success.CanonicalizationAudit, success.Elapsed, success.NeuralEditorialValue));
+                            owner.Video.Input.ReviewVideoSha256, success.Observation, success.CanonicalizationAudit,
+                            success.Elapsed, success.NeuralEditorialValue, success.MomentEvidence));
                             failedIds.Remove(owner.Item.Candidate.Id);
                             diagnostics.Add(new(owner.Item.Candidate.Id, "Inference", attempt, true, success.Elapsed.TotalSeconds, null));
                         }
@@ -335,6 +337,10 @@ public sealed class GenerationVisualSemanticAnalysisService :
             .ThenBy(static value => value.Candidate.Window.Start)
             .ThenBy(static value => value.Candidate.Id, StringComparer.Ordinal)
             .ToArray();
+        IReadOnlyList<CandidateSource> ReviewCoverage(IEnumerable<CandidateSource> values) =>
+            GenerationCategoryReviewAdmission.Select(values, maximumCandidateCount,
+                candidateIntelligence.BaseMoments.Request.Setup.DiscoveryIntent.MomentType,
+                value => value.IsHumanPriority, value => refinementByCandidate.GetValueOrDefault(value.Candidate)?.Components ?? []);
         if (!candidateIntelligence.Refinements.Any(value => value.Components.Any(component =>
                 component.Code == GenerationCandidateRefinementComponentCode.NeuralPersonalValue)))
         {
@@ -351,28 +357,26 @@ public sealed class GenerationVisualSemanticAnalysisService :
                 .Select(group => group.OrderByDescending(item => item.Coverage).ThenByDescending(item => item.Candidate.Score)
                     .ThenBy(item => item.Candidate.Candidate.Window.Start).First().Candidate).ToArray();
             if (nominated.Length > 0)
-                return ordered.Where(item => item.IsHumanPriority).Concat(nominated).Concat(ordered)
-                    .DistinctBy(item => item.Candidate, ReferenceEqualityComparer.Instance).Take(maximumCandidateCount).ToArray();
+                return ReviewCoverage(ordered.Where(item => item.IsHumanPriority).Concat(nominated).Concat(ordered)
+                    .DistinctBy(item => item.Candidate, ReferenceEqualityComparer.Instance));
         }
         if (neuralCandidates.Count > 0)
         {
             // A model-reviewed quiet or dark scene may be the strongest moment.
             // Preserve explicit user priorities, then spend the close-review budget
             // according to the model's utility instead of a gameplay reservation.
-            return ordered.OrderByDescending(value => value.IsHumanPriority)
+            return ReviewCoverage(ordered.OrderByDescending(value => value.IsHumanPriority)
                 .ThenByDescending(value => value.Score)
                 .ThenBy(value => value.Source.PreparedSource.Media.FullPath, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(value => value.Candidate.Window.Start)
-                .ThenBy(value => value.Candidate.Id, StringComparer.Ordinal)
-                .Take(maximumCandidateCount).ToArray();
+                .ThenBy(value => value.Candidate.Id, StringComparer.Ordinal));
         }
         var shortlist = ordered
             .Where(static value => value.IsSelected)
             .Take(maximumCandidateCount)
             .ToList();
 
-        if (candidateIntelligence.BaseMoments.Request.Setup.ContentEmphasis !=
-            ContentEmphasis.CommentaryFocused)
+        if (GenerationGameplayEventCoveragePolicy.MayReserveGameplay(candidateIntelligence.BaseMoments.Request.Setup))
         {
             CandidateSource? gameplayChallenger = ordered
                 .Where(value =>
@@ -462,7 +466,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
             }
         }
 
-        return shortlist;
+        return ReviewCoverage(shortlist.Concat(ordered));
 
         bool Reserve(CandidateSource candidate)
         {
@@ -527,7 +531,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
         CandidateSource item,
         MaterializedVisualSemanticReviewVideo video,
         MomentOutputKind outputKind,
-        GenerationSourceTranscript? sourceTranscript)
+        GenerationSourceTranscript? sourceTranscript,
+        ReplayFoundry.Desktop.Features.Generate.GenerationSetup.GenerationSetupOptions setup)
     {
         TimeSpan duration = video.Request.Duration;
         VisualSemanticTranscriptContext transcript = GenerationVisualTranscriptContextBuilder.Build(
@@ -575,7 +580,11 @@ public sealed class GenerationVisualSemanticAnalysisService :
                         .Select(static region => region.Role).ToArray()))
                 : null,
             _settings.Prompt,
-            _settings.Model);
+            _settings.Model,
+            GenerationSceneReviewContextBuilder.Build(setup, item.Source.PreparedSource.FileSnapshot,
+                item.Source.PreparedSource.Media.AudioStreams.Select(stream => stream.Index),
+                video.Request.SourceStart, video.Request.SourceEnd, sourceTranscript,
+                item.Candidate.Anchors.OrderByDescending(anchor => anchor.NormalizedStrength).Select(anchor => anchor.Timestamp)));
     }
 
     private static VisualSemanticCompositionMetadata Composition(

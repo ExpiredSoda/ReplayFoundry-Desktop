@@ -107,7 +107,8 @@ public sealed class GenerationVisualSemanticCandidateObservation
         VisualSemanticEditorialObservation observation,
         VisualSemanticEditorialCanonicalizationAudit canonicalizationAudit,
         TimeSpan elapsed,
-        double? neuralEditorialValue = null)
+        double? neuralEditorialValue = null,
+        SceneMomentEvidence? momentEvidence = null)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(source);
@@ -136,6 +137,7 @@ public sealed class GenerationVisualSemanticCandidateObservation
         CanonicalizationAudit = canonicalizationAudit;
         Elapsed = elapsed;
         NeuralEditorialValue = neuralEditorialValue;
+        MomentEvidence = momentEvidence;
     }
 
     public MomentCandidate Candidate { get; }
@@ -147,6 +149,7 @@ public sealed class GenerationVisualSemanticCandidateObservation
     public VisualSemanticEditorialCanonicalizationAudit CanonicalizationAudit { get; }
     public TimeSpan Elapsed { get; }
     public double? NeuralEditorialValue { get; }
+    public SceneMomentEvidence? MomentEvidence { get; }
 }
 
 public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
@@ -249,7 +252,7 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
         if (previous._disposed || supplemental._disposed ||
             !ReferenceEquals(previous.CandidateIntelligence, supplemental.CandidateIntelligence) ||
             previous.Outcome != GenerationVisualSemanticOutcome.Completed ||
-            previous.SupplementalReviewAttempted || supplemental.Observations.Count > GenerationSemanticReviewBudgetPolicy.MaximumBatchSize)
+            previous.SupplementalReviewAttempted || supplemental.Observations.Count > GenerationSemanticReviewBudgetPolicy.MaximumSupplementalCandidates)
             throw new ArgumentException("Supplemental review must extend one live initial review from the same intelligence.");
         var combined = new GenerationVisualSemanticAnalysisResult(previous.CandidateIntelligence, previous.Provider,
             previous.Observations.Concat(supplemental.Observations), previous.Elapsed + supplemental.Elapsed,

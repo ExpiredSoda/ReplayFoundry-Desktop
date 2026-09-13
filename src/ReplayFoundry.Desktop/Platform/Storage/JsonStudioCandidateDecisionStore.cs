@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
+using ReplayFoundry.Desktop.Media.Intelligence.Learning;
 
 namespace ReplayFoundry.Desktop.Platform.Storage;
 
@@ -87,7 +88,7 @@ public sealed class JsonStudioCandidateDecisionStore :
                     entry.Rating is null
                         ? null
                         : Enum.Parse<StudioClipPreferenceRating>(entry.Rating),
-                    entry.RecordedAtUtc))
+                    entry.RecordedAtUtc, entry.Correction))
                 .ToDictionary(
                     static value => value.CandidateId,
                     StringComparer.Ordinal);
@@ -118,6 +119,7 @@ public sealed class JsonStudioCandidateDecisionStore :
                     Disposition = value.Disposition.ToString(),
                     Rating = value.Rating?.ToString(),
                     RecordedAtUtc = value.RecordedAtUtc,
+                    Correction = value.Correction,
                 }).ToArray(),
         };
         AtomicJsonFile.Write(_path, document, JsonOptions);
@@ -139,5 +141,6 @@ public sealed class JsonStudioCandidateDecisionStore :
         public string Disposition { get; set; } = string.Empty;
         public string? Rating { get; set; }
         public DateTimeOffset RecordedAtUtc { get; set; }
+        public TasteMomentCorrection? Correction { get; set; }
     }
 }

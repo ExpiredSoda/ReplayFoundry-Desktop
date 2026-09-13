@@ -74,10 +74,8 @@ public static class StudioCaptionPresentationPolicy
         {
             throw new ArgumentOutOfRangeException(nameof(requestedStyle));
         }
-        // Word timing controls animation granularity, not whether the user's
-        // selected visual treatment is honored. When only a phrase interval
-        // is trustworthy, preview and render animate that complete phrase
-        // instead of silently changing the requested effect to Clean.
+        // Preserve the selected treatment. Pop requires measured word timing;
+        // an incomplete phrase must be repaired before it can be rendered.
         return requestedStyle;
     }
 
@@ -116,6 +114,9 @@ public static class StudioCaptionPresentationPolicy
             return null;
         }
 
+        if (appearance.CaptionStyle == GenerationCaptionStylePreset.Pop && track.Segments.Any(segment => !HasPopWordCoverage(segment)))
+            return "Pop needs timing for every word. Use Match words to speech in Captions to preview this phrase. " +
+                "Export attempts English word alignment automatically; unresolved timing stops the render.";
         var coverage = GetTimingCoverage(track, effectiveWordLimit);
         if (coverage.PhrasePages == 0) return null;
         return coverage.TimedPages > 0
@@ -127,13 +128,22 @@ public static class StudioCaptionPresentationPolicy
         AudioTranscriptionSegment segment)
     {
         ArgumentNullException.ThrowIfNull(segment);
-        return segment.Words.Count > 0 &&
-            segment.Words.All(HasRenderableProviderTiming) &&
+        IReadOnlyList<AudioTranscriptionWord> words = GetSpokenWords(segment);
+        return words.Count > 0 &&
+            words.All(HasRenderableProviderTiming) &&
             TryCreateWordSpans(
                 segment.Text,
-                segment.Words,
+                words,
                 out _);
     }
+
+    internal static IReadOnlyList<AudioTranscriptionWord> GetSpokenWords(AudioTranscriptionSegment segment) =>
+        segment.Words.All(word => word.Text.Any(char.IsLetterOrDigit)) ? segment.Words :
+            segment.Words.Where(word => word.Text.Any(char.IsLetterOrDigit)).ToArray();
+
+    internal static bool HasPopWordCoverage(AudioTranscriptionSegment segment) =>
+        HasCompleteTimedWordCoverage(segment) && segment.Words.All(word =>
+            !word.Text.Trim().Any(char.IsWhiteSpace));
 
     public static bool HasPresentationTimedWordCoverage(
         GenerationCandidateCaptionTrack track)
@@ -186,7 +196,9 @@ public static class StudioCaptionPresentationPolicy
     {
         ArgumentNullException.ThrowIfNull(segment);
         int? maximumWords = GetMaximumVisibleWords(preset);
-        IReadOnlyList<AudioTranscriptionWord> words = segment.Words;
+        // Punctuation can arrive as its own provider token. Retain it in the
+        // display text, but do not treat a dash as another spoken word.
+        IReadOnlyList<AudioTranscriptionWord> words = GetSpokenWords(segment);
         if (!TryCreateWordSpans(segment.Text, words, out var sourceSpans))
         {
             // Older transcripts can retain correct word clocks but omit a few

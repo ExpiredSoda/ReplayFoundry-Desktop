@@ -10,6 +10,8 @@ public sealed class NeuralStudioClipPreferenceService(ITasteLearningService lear
     public event EventHandler? Changed { add => learning.Changed += value; remove => learning.Changed -= value; }
     public string LearningStatus => learning.Status.Message;
     public bool CanRate(GenerationOutputAsset asset) => asset is not null && asset.Duration > TimeSpan.Zero;
+    public void Correct(GenerationOutputAsset asset, TasteMomentCorrection? correction) =>
+        learning.Correct(TasteClipFactory.FromAsset(asset), correction);
     public void Update(GenerationOutputAsset asset, StudioClipPreferenceRating? previous, StudioClipPreferenceRating current)
     {
         var signal = current switch

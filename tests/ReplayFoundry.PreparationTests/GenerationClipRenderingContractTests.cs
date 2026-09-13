@@ -1420,13 +1420,12 @@ internal static partial class GenerationClipRenderingTests
         preview.PreviewPositionSeconds =
             partiallyTimed.Segments[0].AbsoluteSourceStart.TotalSeconds +
             0.12;
-        TestAssert.Equal(
-            partiallyTimed.Segments[0].Text,
-            preview.LiveCaptionText!,
-            "Phrase-timed Pop must keep the complete caption visible.");
+        TestAssert.Null(
+            preview.LiveCaptionText,
+            "Pop must not preview an untimed phrase as a full sentence.");
         TestAssert.True(
-            Math.Abs(preview.LiveCaptionScale - 1.12) < 0.001,
-            "Phrase-timed Pop must use the same onset animation as a timed word.");
+            preview.HasLiveCaptionPresentationWarning,
+            "Pop must explain that word timing needs repair before rendering.");
         return Task.CompletedTask;
     }
 
@@ -1959,7 +1958,6 @@ internal static partial class GenerationClipRenderingTests
         {
             GenerationCaptionStylePreset.KaraokeSweep,
             GenerationCaptionStylePreset.WordFocus,
-            GenerationCaptionStylePreset.Pop,
         })
         {
             AssSubtitleDocument document = AssSubtitleDocumentBuilder.Build(

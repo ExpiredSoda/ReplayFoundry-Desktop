@@ -101,8 +101,9 @@ internal static partial class GenerationSpeechActivityTests
             value.Candidate.Window.End >= TimeSpan.FromSeconds(1025)).ToArray();
         var nomination = alternatives.Single(value =>
             value.Candidate.Window.Duration == original.Sources.Single().Moments.Request.Options.MinimumDuration);
-        TestAssert.True(alternatives.Length > 1,
-            "The minimal semantic edit and the longer spoken-passage edit may both cover this passage without being identical cuts.");
+        TestAssert.True(alternatives.Length >= 1 && intelligence.Refinements.Any(value =>
+            value.Candidate.Window.Start <= TimeSpan.FromSeconds(600) && value.Candidate.Window.End >= TimeSpan.FromSeconds(604)),
+            "Sorted multi-track speech retains the relevant semantic passage while reserving spoken discovery for another source moment.");
         foreach (var alternative in alternatives)
         {
             TestAssert.Equal(0d, alternative.Candidate.Score.RawComponentTotal, "Retrieval must add no heuristic event score.");

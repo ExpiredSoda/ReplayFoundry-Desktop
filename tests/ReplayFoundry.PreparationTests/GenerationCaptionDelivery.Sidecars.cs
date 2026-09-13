@@ -40,12 +40,19 @@ internal static partial class GenerationClipRenderingTests
             {
                 TestAssert.False(File.Exists(Path.ChangeExtension(video, ".srt")) || File.Exists(Path.ChangeExtension(video, ".vtt")),
                     "A burned MP4 must not have matching adjacent files for a player to load a second time.");
-                using var package = JsonDocument.Parse(await File.ReadAllTextAsync(Path.ChangeExtension(video, ".publish.json")));
+                string supporting = Path.Combine(Path.GetDirectoryName(video)!, "Supporting files");
+                using var package = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(supporting,
+                    Path.GetFileNameWithoutExtension(video) + ".publish.json")));
+                TestAssert.True(Directory.GetFiles(Path.GetDirectoryName(video)!).All(path => Path.GetExtension(path) == ".mp4"),
+                    "The final output folder should expose only ready-to-upload videos.");
+                foreach (JsonProperty file in package.RootElement.GetProperty("files").EnumerateObject())
+                    if (file.Value.ValueKind == JsonValueKind.String)
+                        TestAssert.True(File.Exists(Path.Combine(supporting, file.Value.GetString()!)),
+                            "Every publishing reference must still resolve after the staging directory is moved.");
                 foreach (string field in new[] { "subtitlesSrt", "subtitlesVtt" })
                 {
                     string relative = package.RootElement.GetProperty("files").GetProperty(field).GetString()!;
-                    TestAssert.True(relative.StartsWith("caption-files/", StringComparison.Ordinal), "Upload captions have an explicit relative location.");
-                    string sidecar = Path.Combine(Path.GetDirectoryName(video)!, relative);
+                    string sidecar = Path.Combine(supporting, relative);
                     TestAssert.True(File.Exists(sidecar), "Package links must resolve to retained captions.");
                     var cues = SubtitleSidecarSerializer.Parse(await File.ReadAllTextAsync(sidecar),
                         field == "subtitlesSrt" ? SubtitleSidecarFormat.Srt : SubtitleSidecarFormat.WebVtt);

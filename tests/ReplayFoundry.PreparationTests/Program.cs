@@ -30,6 +30,7 @@ internal static class Program
 #if !REPLAYFOUNDRY_PUBLIC_SOURCE
             .. TasteLearningTests.GetTests(),
             .. TasteStorageTests.GetTests(),
+            .. MomentCorrectionTests.GetTests(),
 #endif
             .. TasteIntegrationTests.GetTests(),
             .. ReportConnectionTests.GetTests(),

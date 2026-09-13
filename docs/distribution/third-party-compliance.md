@@ -49,6 +49,15 @@ Each runtime pack repeats its own package identity, license, source, build prove
 
 For the complete packaging and signing sequence, see [Windows distribution](windows.md).
 
+The pending audio-evidence model is `laion/clap-htsat-unfused`, revision
+`8fa0f1c6d0433df6e97c127f64b2a1d6c0dcda8a`, under Apache-2.0. Its weights are
+614,525,833 bytes with SHA-256
+`1CD3C601BC4AFE0FA87BE3DE4C13DD2CFADD249FAC1E29ACF74A9B296C3219BB`.
+The remaining tokenizer/configuration hashes are pinned in
+`src/ReplayFoundry.VisualSemanticHost/audio-evidence-model-lock.json`.
+Model pack `4.0.25` retains the full license, source revision and file identities.
+See the [pinned official model tree](https://huggingface.co/laion/clap-htsat-unfused/tree/8fa0f1c6d0433df6e97c127f64b2a1d6c0dcda8a).
+
 ## Official references
 
 - [FFmpeg legal guidance](https://ffmpeg.org/legal.html)

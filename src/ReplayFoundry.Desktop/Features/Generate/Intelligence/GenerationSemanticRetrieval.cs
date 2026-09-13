@@ -65,7 +65,7 @@ internal static class GenerationSemanticRetrieval
     {
         cancellationToken.ThrowIfCancellationRequested();
         var bySource = new List<List<GenerationSemanticTextWindow>>();
-        foreach (GenerationSourceTranscript source in sources)
+        foreach (GenerationSourceTranscript source in sources.SelectMany(source => source.Tracks))
         {
             var windows = new List<GenerationSemanticTextWindow>();
             bool Eligible(ReplayFoundry.Desktop.Media.Transcription.AudioTranscriptionSegment segment) =>

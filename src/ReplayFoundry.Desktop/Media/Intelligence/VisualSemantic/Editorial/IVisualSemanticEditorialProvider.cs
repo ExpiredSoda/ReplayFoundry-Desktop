@@ -18,7 +18,8 @@ public sealed record VisualSemanticEditorialResult
         VisualSemanticEditorialObservation observation,
         VisualSemanticEditorialCanonicalizationAudit canonicalizationAudit,
         TimeSpan elapsed,
-        double? neuralEditorialValue = null)
+        double? neuralEditorialValue = null,
+        SceneMomentEvidence? momentEvidence = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(observation);
@@ -33,6 +34,7 @@ public sealed record VisualSemanticEditorialResult
         CanonicalizationAudit = canonicalizationAudit;
         Elapsed = elapsed;
         NeuralEditorialValue = neuralEditorialValue;
+        MomentEvidence = momentEvidence;
     }
 
     public VisualSemanticRequest Request { get; }
@@ -43,6 +45,7 @@ public sealed record VisualSemanticEditorialResult
 
     public TimeSpan Elapsed { get; }
     public double? NeuralEditorialValue { get; }
+    public SceneMomentEvidence? MomentEvidence { get; }
 }
 
 public sealed record VisualSemanticEditorialFailure(

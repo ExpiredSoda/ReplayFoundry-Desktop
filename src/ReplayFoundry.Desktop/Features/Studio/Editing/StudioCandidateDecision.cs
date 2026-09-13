@@ -1,4 +1,5 @@
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
+using ReplayFoundry.Desktop.Media.Intelligence.Learning;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editing;
 
@@ -12,7 +13,8 @@ public sealed class StudioCandidateDecision
         TimeSpan sourceEnd,
         GenerationOutputAssetDisposition disposition,
         StudioClipPreferenceRating? rating,
-        DateTimeOffset recordedAtUtc)
+        DateTimeOffset recordedAtUtc,
+        TasteMomentCorrection? correction = null)
     {
         if (string.IsNullOrWhiteSpace(candidateId) ||
             string.IsNullOrWhiteSpace(projectId) ||
@@ -35,6 +37,8 @@ public sealed class StudioCandidateDecision
         Disposition = disposition;
         Rating = rating;
         RecordedAtUtc = recordedAtUtc;
+        correction?.Validate();
+        Correction = correction;
     }
 
     public string CandidateId { get; }
@@ -45,6 +49,7 @@ public sealed class StudioCandidateDecision
     public GenerationOutputAssetDisposition Disposition { get; }
     public StudioClipPreferenceRating? Rating { get; }
     public DateTimeOffset RecordedAtUtc { get; }
+    public TasteMomentCorrection? Correction { get; }
 }
 
 public interface IStudioCandidateDecisionStore

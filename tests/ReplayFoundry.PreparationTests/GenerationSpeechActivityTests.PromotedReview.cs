@@ -50,6 +50,7 @@ internal static partial class GenerationSpeechActivityTests
         var provider = RejectFirstReviews(8);
         var service = new GenerationVisualSemanticAnalysisService(provider, materializer, CreateVisualSettings());
         using var initial = await service.AnalyzeAsync(baseline, null, CancellationToken.None);
+        int initialCalls = provider.Requests.Count;
         var refinement = new GenerationCandidateRefinementService();
         var promoted = refinement.ApplyVisualSemantic(baseline, initial);
         var candidate = promoted.RefinedMoments.SelectedCandidates.Single().Candidate;
@@ -57,9 +58,9 @@ internal static partial class GenerationSpeechActivityTests
             "The rejected initial pool must actually promote a previously unreviewed candidate in this regression.");
         using var combined = await service.ReviewPromotedAsync(baseline, promoted.RefinedMoments.SelectedCandidates,
             initial, null, CancellationToken.None);
-        TestAssert.Equal(2, provider.Requests.Count, "A promoted candidate requires exactly one supplemental provider call.");
-        TestAssert.Equal(1, provider.Requests[1].Requests.Count, "The supplemental batch must not rerun already reviewed candidates.");
-        TestAssert.True(provider.Requests[1].Requests[0].Transcript.Spans.Single().Text.Contains("retained words", StringComparison.Ordinal),
+        TestAssert.Equal(initialCalls + 1, provider.Requests.Count, "A promoted candidate requires exactly one supplemental provider call.");
+        TestAssert.Equal(1, provider.Requests[^1].Requests.Count, "The supplemental batch must not rerun already reviewed candidates.");
+        TestAssert.True(provider.Requests[^1].Requests[0].Transcript.Spans.Single().Text.Contains("retained words", StringComparison.Ordinal),
             "The new review must reuse source-relative in-memory transcript context without another ASR pass.");
         var rescored = refinement.ApplyVisualSemantic(baseline, combined);
         var final = GenerationReviewedSelectionPolicy.Apply(rescored, CancellationToken.None);
@@ -90,12 +91,14 @@ internal static partial class GenerationSpeechActivityTests
         var service = new GenerationVisualSemanticAnalysisService(provider, materializer, CreateVisualSettings());
         using var initial = await service.AnalyzeAsync(baseline, null, CancellationToken.None);
         TestAssert.Equal(18, initial.Observations.Count, "The test uses the existing adaptive initial-review budget.");
+        int initialCalls = provider.Requests.Count;
         var refinement = new GenerationCandidateRefinementService();
         var promoted = refinement.ApplyVisualSemantic(baseline, initial);
         using var combined = await service.ReviewPromotedAsync(baseline, promoted.RefinedMoments.SelectedCandidates,
             initial, null, CancellationToken.None);
-        TestAssert.Equal(8, provider.Requests[^1].Requests.Count, "One supplemental batch is capped at eight even when nine new moments are selected.");
-        TestAssert.True(provider.Requests.All(request => request.Requests.Count <= 8) && combined.Observations.Count <= 32,
+        TestAssert.Equal(8, provider.Requests.Skip(initialCalls).Sum(batch => batch.Requests.Count),
+            "The supplemental budget retains eight candidates across smaller calls even when nine new moments are selected.");
+        TestAssert.True(provider.Requests.All(request => request.Requests.Count <= 2) && combined.Observations.Count <= 32,
             "Both per-call and aggregate qualified-provider bounds must remain intact.");
         var final = GenerationReviewedSelectionPolicy.Apply(refinement.ApplyVisualSemantic(baseline, combined), CancellationToken.None);
         TestAssert.Equal(8, final.RefinedMoments.SelectedCount, "Count fill must not promote another unreviewed candidate after the supplemental pass.");
@@ -111,11 +114,12 @@ internal static partial class GenerationSpeechActivityTests
         var limited = new GenerationVisualSemanticAnalysisService(limitedProvider, limitedMaterializer,
             new(settings.Prompt, settings.Model, settings.VideoPolicy, maximumCandidateCount: 8));
         using var limitedReview = await limited.AnalyzeAsync(limitedBaseline, null, CancellationToken.None);
+        int limitedCalls = limitedProvider.Requests.Count;
         var limitedRefined = refinement.ApplyVisualSemantic(limitedBaseline, limitedReview);
         var unchanged = await limited.ReviewPromotedAsync(limitedBaseline, limitedRefined.RefinedMoments.SelectedCandidates,
             limitedReview, null, CancellationToken.None);
         TestAssert.Same(limitedReview, unchanged, "A configured total limit smaller than 32 must remain authoritative.");
-        TestAssert.Equal(1, limitedProvider.Requests.Count, "Exhausted configured budget must prevent another provider invocation.");
+        TestAssert.Equal(limitedCalls, limitedProvider.Requests.Count, "Exhausted configured budget must prevent another provider invocation.");
         TestAssert.Equal(8, GenerationReviewedSelectionPolicy.Apply(limitedRefined, CancellationToken.None).RefinedMoments.SelectedCount,
             "Exhausted review budgets must still respect final pool eligibility.");
     }

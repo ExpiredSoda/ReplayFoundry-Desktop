@@ -362,10 +362,10 @@ internal static partial class GenerationClipRenderingTests
                 FinalDirectory);
 
         public FfmpegStudioProjectRenderingService CreateStudioRenderer(
-            IProcessRunner runner) =>
+            IProcessRunner runner, ICorrectedCaptionAlignmentService? captionAlignment = null) =>
             new(
                 runner,
-                new FixedFfmpegToolLocator(_ffmpegPath));
+                new FixedFfmpegToolLocator(_ffmpegPath), captionAlignment: captionAlignment);
 
         public void Dispose()
         {

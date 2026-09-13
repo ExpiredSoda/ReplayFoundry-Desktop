@@ -37,6 +37,16 @@
                 </StackPanel>
             </RadioButton>
         </UniformGrid>
+        <StackPanel Margin="0,8,0,0" DataContext="{Binding Correction}">
+            <ComboBox ItemsSource="{Binding Reasons}" SelectedItem="{Binding SelectedReason}"
+                DisplayMemberPath="Label" IsEnabled="{Binding IsEnabled}"
+                AutomationProperties.Name="What should improve about this moment?"
+                ToolTip="Optional: distinguish a category, speaker or editing problem from your personal taste." />
+            <ComboBox Margin="0,6,0,0" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
+                DisplayMemberPath="Label" IsEnabled="{Binding IsEnabled}"
+                Visibility="{Binding NeedsCategory, Converter={StaticResource BoolToVisibility}}"
+                AutomationProperties.Name="Correct moment category" />
+        </StackPanel>
         <TextBlock Margin="0,6,0,0" Text="{Binding PreferenceError}" TextWrapping="Wrap"
             Foreground="{DynamicResource Brush.StatusError}" Style="{DynamicResource Text.Meta}"
             AutomationProperties.LiveSetting="Assertive"

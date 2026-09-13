@@ -5,6 +5,7 @@
     EntryPoint = 'qwen3_vl_batch_host.py'
 
     Assets = @(
+        'audio-evidence-model-lock.json'
         'replayfoundry-editorial-event-selection-prompt-1.2.txt'
         'replayfoundry-editorial-knowledge-selection-prompt-1.4.txt'
         'replayfoundry-editorial-metadata-prompt-1.48.txt'
@@ -45,6 +46,8 @@
         'recording_index.py'
         'recording_comparison.py'
         'scene_review.py'
+        'audio_evidence.py'
+        'moment_evidence.py'
         'scene_value.py'
         'scene_cache.py'
         'scene_copy.py'

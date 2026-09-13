@@ -235,8 +235,7 @@ public sealed class GenerationMomentPortfolioSelector
         {
             if (request.Setup.DesiredResultCount < 3 ||
                 selected.Count < 3 ||
-                request.Setup.ContentEmphasis ==
-                    ContentEmphasis.CommentaryFocused)
+                !GenerationGameplayEventCoveragePolicy.MayReserveGameplay(request.Setup))
             {
                 return;
             }

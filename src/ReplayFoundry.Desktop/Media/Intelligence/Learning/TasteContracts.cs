@@ -32,11 +32,13 @@ public sealed record TasteInput(double[] Content, double[] Context, double[] Mea
 public sealed record TasteExample(TasteClip Clip, DateTimeOffset FirstObservedUtc, DateTimeOffset UpdatedUtc,
     int? Rating, TasteSignal[] Actions, TasteInput? Input = null, string Schema = "foundry-taste-example-1")
 {
+    public TasteMomentCorrection? Correction { get; init; }
     public void Validate()
     {
         if (Schema != "foundry-taste-example-1" || Clip is null || Actions is null)
             throw new ArgumentException("Invalid learning example schema.");
         Clip.Validate(); Input?.Validate();
+        Correction?.Validate();
         if (Rating is < 0 or > 2 || FirstObservedUtc.Offset != TimeSpan.Zero || UpdatedUtc.Offset != TimeSpan.Zero ||
             UpdatedUtc < FirstObservedUtc || Actions.Length > 4 || Actions.Distinct().Count() != Actions.Length ||
             Actions.Any(x => !Enum.IsDefined(x) || x < TasteSignal.Rendered))
@@ -58,6 +60,7 @@ public interface ITasteLearningService
     DateTimeOffset HistoryStartUtc => DateTimeOffset.MinValue;
     event EventHandler? Changed;
     void Observe(TasteClip clip, TasteSignal? signal);
+    void Correct(TasteClip clip, TasteMomentCorrection? correction) { }
     Task<IReadOnlyDictionary<string, TastePrediction>> PredictAsync(IReadOnlyList<TasteClip> clips, CancellationToken cancellationToken);
     Task TrainAsync(CancellationToken cancellationToken);
     void SetEnabled(bool enabled);

@@ -278,7 +278,7 @@ internal static class QwenRuntimeResolutionTests
         await fixture.InstallValidStaleRuntimeAsync();
         AssertIncompatiblePackSetFailsClosed(
             fixture,
-            "Installed version 0.8.21; required version 0.8.25 or newer.");
+            "Installed version 0.8.21; required version 0.8.29 or newer.");
     }
 
     private static async Task ValidStaleModelFailsClosed()
@@ -287,7 +287,7 @@ internal static class QwenRuntimeResolutionTests
         await fixture.InstallValidStaleModelAsync();
         AssertIncompatiblePackSetFailsClosed(
             fixture,
-            "Installed version 4.0.17; required version 4.0.21 or newer.");
+            "Installed version 4.0.17; required version 4.0.25 or newer.");
     }
 
     private static async Task ModelRuntimeManifestMismatchFailsClosed()
@@ -799,7 +799,7 @@ internal static class QwenRuntimeResolutionTests
                     store,
                     media.Manifest,
                     sourceName: "visual-runtime-first",
-                    version: "0.8.25");
+                    version: "0.8.29");
             _ = await InstallVisualModelAsync(
                 store,
                 firstRuntime.Manifest);
@@ -807,7 +807,7 @@ internal static class QwenRuntimeResolutionTests
                 store,
                 media.Manifest,
                 sourceName: "visual-runtime-second",
-                version: "0.8.25");
+                version: "0.8.29");
         }
 
         public async Task InstallRuntimeMediaMismatchAsync()
@@ -945,7 +945,7 @@ internal static class QwenRuntimeResolutionTests
                 ReplayFoundryRuntimePackStore store,
                 ReplayFoundryRuntimePackManifest media,
                 string sourceName = "visual-runtime",
-                string version = "0.8.25")
+                string version = "0.8.29")
         {
             string source =
                 Source(
@@ -994,8 +994,8 @@ internal static class QwenRuntimeResolutionTests
             InstallVisualModelAsync(
                 ReplayFoundryRuntimePackStore store,
                 ReplayFoundryRuntimePackManifest runtime,
-                string version = "4.0.21",
-                string runtimeMinimumVersion = "0.8.25")
+                string version = "4.0.25",
+                string runtimeMinimumVersion = "0.8.29")
         {
             string source =
                 Source(

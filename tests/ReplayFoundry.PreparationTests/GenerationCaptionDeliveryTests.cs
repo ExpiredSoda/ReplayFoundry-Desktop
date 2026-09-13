@@ -109,7 +109,10 @@ internal static partial class GenerationClipRenderingTests
                 if (output.OutputFullPath is null) continue;
                 foreach (SubtitleSidecarFormat format in Enum.GetValues<SubtitleSidecarFormat>())
                 {
-                    string path = Path.ChangeExtension(output.OutputFullPath, format == SubtitleSidecarFormat.Srt ? ".srt" : ".vtt");
+                    string path = Path.Combine(Path.GetDirectoryName(output.OutputFullPath)!, "Supporting files",
+                        Path.GetFileNameWithoutExtension(output.OutputFullPath) + (format == SubtitleSidecarFormat.Srt ? ".srt" : ".vtt"));
+                    TestAssert.True(Directory.GetFiles(Path.GetDirectoryName(output.OutputFullPath)!).All(file => Path.GetExtension(file) == ".mp4"),
+                        "Clean exports should also keep supporting material out of the video folder.");
                     var actual = SubtitleSidecarSerializer.Parse(await File.ReadAllTextAsync(path), format);
                     var expected = mode == GenerationMode.Montage ? cues : SubtitleSidecarSerializer.Project(output.Captions!, output.SourceStart, output.Duration);
                     TestAssert.Equal(expected.Count, actual.Count, "Clean outputs must retain all cut-aware subtitle cues.");

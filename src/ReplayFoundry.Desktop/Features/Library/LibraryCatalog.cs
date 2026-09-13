@@ -449,7 +449,7 @@ public sealed class GenerationLibraryCatalog :
         }
 
         string candidateThumbnail =
-            Path.ChangeExtension(replacement, ".thumbnail.jpg");
+            GenerationExportPackagePaths.FindThumbnail(replacement);
         LibraryMediaAsset rebound = current.Relink(
             replacement,
             File.Exists(candidateThumbnail) ? candidateThumbnail : null);

@@ -39,11 +39,12 @@ internal static class GenerationReviewedSelectionPolicy
                         "AI review did not recommend this moment. You can still choose it manually in Find More.", ["visual-review:editorial-reject"])],
                 refinement.PolicyVersion);
         }
-        var preferences = GenerationSemanticFinalSelectionPreference.Create(intelligence);
+        var preferences = new Dictionary<MomentCandidate, double>(GenerationSemanticFinalSelectionPreference.Create(intelligence));
+        GenerationMomentIntentPreference.Apply(intelligence, refinements, preferences);
         GenerationMomentFindingResult source = intelligence.RefinedMoments;
         var selected = new GenerationMomentPortfolioSelector().SelectEligible(source.Request, source.Sources, refinements, eligible, preferences, cancellationToken);
         string note = visual.FallbackReason ?? "Automatic picks are limited to the moments checked in this run. You can explore more moments in Studio.";
-        var moments = new GenerationMomentFindingResult(source.Request, source.Sources, selected, refinements, eligible, note);
+        var moments = new GenerationMomentFindingResult(source.Request, source.Sources, selected, refinements, eligible, note, preferences);
         return new(intelligence.BaseMoments, intelligence.SpeechActivity, refinements.Values, moments, visual, intelligence.Transcripts);
     }
 }

@@ -1,0 +1,15 @@
+{
+  "repository": "laion/clap-htsat-unfused",
+  "revision": "8fa0f1c6d0433df6e97c127f64b2a1d6c0dcda8a",
+  "license": "Apache-2.0",
+  "files": {
+    "config.json": "70624c940dc3d35b36bc9de57ee5a958c86e032a",
+    "merges.txt": "6636bda4a1fd7a63653dffb22683b8162c8de956",
+    "preprocessor_config.json": "e8636819eeb1b19f1e5b6f572eca1a101144062e",
+    "special_tokens_map.json": "d5698132694f4f1bcff08fa7d937b1701812598e",
+    "tokenizer.json": "99f518e1ee65361b4d772c6f805508dbf30cfd8b",
+    "tokenizer_config.json": "058e2e071e2a76af9dc9a10940053477ce8329d3",
+    "vocab.json": "4ebe4bb3f3114daf2e4cc349f24873a1175a35d7",
+    "pytorch_model.bin": "1cd3c601bc4afe0fa87be3de4c13dd2cfadd249fac1e29acf74a9b296c3219bb"
+  }
+}

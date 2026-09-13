@@ -1567,8 +1567,10 @@ internal static partial class GenerationSpeechActivityTests
             .AnalyzeAsync(intelligence, null, CancellationToken.None);
         TestAssert.True(result.NeedsReview, "An unresolved picture check remains visible.");
         TestAssert.Equal(GenerationVisualSemanticOutcome.Completed, result.Outcome, "A partial result preserves its usable observations.");
-        TestAssert.Equal(3, provider.Requests.Count, "A later failed case receives one retry.");
-        TestAssert.Equal(1, provider.Requests[^1].Requests.Count, "Earlier successes must not be sent again.");
+        var attempted = provider.Requests.SelectMany(batch => batch.Requests).ToArray();
+        TestAssert.Equal(2, attempted.Count(item => item.CandidateId == failedId), "A later failed case receives exactly one retry.");
+        TestAssert.True(attempted.Where(item => item.CandidateId != failedId).GroupBy(item => item.CandidateId).All(group => group.Count() == 1),
+            "Successful cases must never be sent again, including cases after the failed batch.");
         TestAssert.True(provider.Requests[0].Requests.All(first => result.Observations.Any(item => item.Candidate.Id == first.CandidateId)),
             "The entire first batch survives a later case failure.");
         TestAssert.False(result.Observations.Any(item => item.Candidate.Id == failedId), "A failed case never acquires another case's observation.");

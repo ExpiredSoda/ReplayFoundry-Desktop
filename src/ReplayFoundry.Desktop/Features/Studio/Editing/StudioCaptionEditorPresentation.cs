@@ -12,6 +12,9 @@ internal static class StudioCaptionEditorPresentation
     {
         if (asset?.HasCaptions != true)
             return "Choose a phrase size now. It will apply when you create captions for this clip.";
+        if (style == GenerationCaptionStylePreset.Pop && asset.Captions is { } captions &&
+            captions.Segments.Any(segment => !StudioCaptionPresentationPolicy.HasPopWordCoverage(segment)))
+            return "Pop shows one word at a time. Open Caption review to repair phrases with missing word timing.";
         if (StudioCaptionPresentationPolicy.RequiresTimedWords(style) &&
             asset?.Captions is { } track &&
             !StudioCaptionPresentationPolicy

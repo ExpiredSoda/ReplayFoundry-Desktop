@@ -112,7 +112,8 @@
             <Expander Header="Export options" Margin="0,8,0,8" Style="{DynamicResource Control.DisclosureExpander}">
                 <StackPanel Margin="0,8,0,0">
             <CheckBox Margin="0,4,0,8" Content="Include visible captions in the video" IsChecked="{Binding BurnCaptions, Mode=TwoWay}" AutomationProperties.Name="Burn captions into final video" />
-            <TextBlock Margin="0,0,0,8" Style="{DynamicResource Text.Meta}" Text="Turn off for clean video with separate SRT/VTT subtitle files. The saved caption track remains editable." TextWrapping="Wrap" />
+            <TextBlock Margin="0,0,0,8" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                       Text="Turn off for clean video. Optional SRT/VTT captions are saved in Supporting files with thumbnails and publishing notes. Your caption track remains editable." />
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Export quality" />
             <ComboBox Margin="0,4,0,8" AutomationProperties.Name="Export quality" ItemTemplate="{DynamicResource StudioOptionTemplate}" ItemsSource="{Binding Qualities}" SelectedItem="{Binding Quality, Mode=TwoWay}" />
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Export resolution" />

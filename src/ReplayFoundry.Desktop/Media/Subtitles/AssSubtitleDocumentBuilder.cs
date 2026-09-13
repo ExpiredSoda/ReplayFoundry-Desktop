@@ -16,7 +16,7 @@ public sealed record AssSubtitleDocument(
 
 public static class AssSubtitleDocumentBuilder
 {
-    public const string PolicyVersion = "2.3";
+    public const string PolicyVersion = "2.4";
 
     public static AssSubtitleDocument Build(
         GenerationCandidateCaptionTrack track,
@@ -57,6 +57,9 @@ public static class AssSubtitleDocumentBuilder
 
         GenerationCaptionStylePreset effective =
             StudioCaptionPresentationPolicy.ResolveEffectiveStyle(track);
+        if (effective == GenerationCaptionStylePreset.Pop && track.Segments.Any(segment =>
+                !StudioCaptionPresentationPolicy.HasPopWordCoverage(segment)))
+            throw new InvalidOperationException("Pop needs timing for every word. Match words to speech in Captions before rendering; whole-sentence Pop is not supported.");
         StudioCaptionWordLimitPreset effectiveWordLimit =
             StudioCaptionPresentationPolicy.ResolveEffectiveWordLimit(
                 effective,
@@ -595,24 +598,7 @@ public static class AssSubtitleDocumentBuilder
     {
         if (cue.WordSpans.Count == 0)
         {
-            (TimeSpan start, TimeSpan end) = ClampPartitionedRange(
-                cue.RelativeStart + shift,
-                cue.RelativeEnd + shift,
-                clipDuration);
-            if (end > start)
-            {
-                WriteDialogue(
-                    builder,
-                    0,
-                    start,
-                    end,
-                    "Pop",
-                    positionOverride +
-                    "{\\fscx82\\fscy82\\t(0,120,\\fscx112\\fscy112)" +
-                    "\\t(120,260,\\fscx100\\fscy100)}" +
-                    EscapeCue(cue));
-            }
-            return;
+            throw new InvalidOperationException("Pop requires measured word timing; a whole phrase cannot be used as a Pop event.");
         }
 
         TimeSpan cueStart = cue.RelativeStart + shift;

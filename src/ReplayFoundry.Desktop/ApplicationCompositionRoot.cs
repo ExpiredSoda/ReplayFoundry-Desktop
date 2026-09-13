@@ -175,7 +175,7 @@ internal static class ApplicationCompositionRoot
             new EditorialCompositionDependencies(
                 visualReview,
                 experience,
-                workspace));
+                workspace, speech.TranscriptAnalysis));
         PrimaryFeatureViewModels primaryFeatures =
             PrimaryFeatureComposition.Create(
                 new PrimaryFeatureDependencies(

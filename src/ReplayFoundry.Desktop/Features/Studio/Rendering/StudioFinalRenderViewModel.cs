@@ -35,6 +35,7 @@ public sealed class StudioFinalRenderViewModel :
     private readonly Func<bool> _hasPendingEdit;
     private readonly Func<bool> _isPendingEditValid;
     private readonly Func<bool> _hasUnsavedMetadata;
+    private readonly Func<bool> _hasUnsavedCaptions;
     private readonly Func<bool> _isPendingMetadataValid;
     private readonly Func<bool> _commitPendingMetadata;
     private readonly Func<bool> _hasActiveProjectMutation;
@@ -60,6 +61,9 @@ public sealed class StudioFinalRenderViewModel :
     private string? _error;
     private double _percent;
     private bool _isDisposed;
+    private bool _needsCaptionReview;
+    private readonly StudioRenderCaptionReview _captionReview = new();
+    public StudioCaptionReviewViewModel CaptionReview => _captionReview.Panel;
 
     public StudioFinalRenderViewModel(
         IGenerationOutputEditor? outputEditor,
@@ -74,7 +78,8 @@ public sealed class StudioFinalRenderViewModel :
         Func<bool>? hasActiveProjectMutation = null,
         Func<GenerationOutputAsset?>? selectedAsset = null,
         ILibraryCatalog? libraryCatalog = null,
-        Func<string>? renderTokenFactory = null)
+        Func<string>? renderTokenFactory = null,
+        Func<bool>? hasUnsavedCaptions = null)
     {
         _outputEditor = outputEditor;
         _renderedOutputSink = outputEditor as IGenerationRenderedOutputSink;
@@ -87,6 +92,7 @@ public sealed class StudioFinalRenderViewModel :
         _hasPendingEdit = hasPendingEdit ?? (() => false);
         _isPendingEditValid = isPendingEditValid ?? (() => true);
         _hasUnsavedMetadata = hasUnsavedMetadata ?? (() => false);
+        _hasUnsavedCaptions = hasUnsavedCaptions ?? (() => false);
         _isPendingMetadataValid = isPendingMetadataValid ?? (() => true);
         _commitPendingMetadata = commitPendingMetadata ?? (() => true);
         _hasActiveProjectMutation = hasActiveProjectMutation ?? (() => false);
@@ -186,6 +192,7 @@ public sealed class StudioFinalRenderViewModel :
         FindSelectedIncludedAsset() is null;
     public bool NeedsMetadataSave =>
         _project is { IsFinalized: false } && _hasUnsavedMetadata();
+    public bool NeedsCaptionSave => _project is { IsFinalized: false } && _hasUnsavedCaptions();
     public bool NeedsMetadataFix =>
         _project is { IsFinalized: false } &&
         FindSelectedIncludedAsset() is { } selected &&
@@ -200,6 +207,7 @@ public sealed class StudioFinalRenderViewModel :
         !IsRendering &&
         (NeedsIncludedCandidate ||
          NeedsValidClipEdit ||
+         NeedsCaptionSave ||
          NeedsMetadataFix);
     public string ButtonText => _project switch
     {
@@ -225,6 +233,7 @@ public sealed class StudioFinalRenderViewModel :
             "Wait for the current Studio update to finish",
         _ when NeedsMetadataFix =>
             "Fix the title and description before queueing",
+        _ when NeedsCaptionSave => "Save caption words and timing before rendering",
         _ when IsSelectedAssetQueued =>
             "The selected clip is already queued",
         _ when NeedsMetadataSave =>
@@ -250,6 +259,7 @@ public sealed class StudioFinalRenderViewModel :
 
         if (changedProject)
         {
+            _needsCaptionReview = false;
             _queue.Clear();
             _percent = 0;
             _error = null;
@@ -474,6 +484,7 @@ public sealed class StudioFinalRenderViewModel :
             _project is null ||
             _queue.Count == 0 ||
             _queue.All(static item => item.IsCompleted) ||
+            NeedsCaptionSave ||
             NeedsValidClipEdit ||
             NeedsMetadataFix)
         {
@@ -606,6 +617,13 @@ public sealed class StudioFinalRenderViewModel :
             }
             _status =
                 "Rendering was cancelled. The queue and open Studio session are unchanged.";
+        }
+        catch (StudioCaptionTimingException exception)
+        {
+            _needsCaptionReview = true;
+            _error = null;
+            _status = "Pop captions need timing review. The queue is ready to retry after the flagged phrases are corrected.";
+            CaptionReview.ShowMessage(exception.Message);
         }
         catch (Exception exception)
         {
@@ -895,6 +913,12 @@ public sealed class StudioFinalRenderViewModel :
 
     private void NotifyProperties()
     {
+        _captionReview.Refresh(_project, _queue, IsRendering);
+        if (_needsCaptionReview && !CaptionReview.HasBlockingIssues)
+        {
+            _needsCaptionReview = false;
+            _status = "Caption timing updated. The queue is ready to render again.";
+        }
         foreach (string propertyName in new[]
         {
             nameof(IsRendering),
@@ -915,6 +939,7 @@ public sealed class StudioFinalRenderViewModel :
             nameof(NeedsIncludedCandidate),
             nameof(NeedsValidClipEdit),
             nameof(NeedsMetadataSave),
+            nameof(NeedsCaptionSave),
             nameof(NeedsMetadataFix),
             nameof(NeedsRenderAttention),
         })

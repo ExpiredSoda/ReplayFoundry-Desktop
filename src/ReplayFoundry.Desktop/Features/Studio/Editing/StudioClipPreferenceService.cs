@@ -1,5 +1,6 @@
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Media.Intelligence.Preferences;
+using ReplayFoundry.Desktop.Media.Intelligence.Learning;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editing;
 
@@ -24,6 +25,7 @@ public interface IStudioClipPreferenceService
     event EventHandler? Changed { add { } remove { } }
 
     bool CanRate(GenerationOutputAsset asset);
+    void Correct(GenerationOutputAsset asset, TasteMomentCorrection? correction) { }
 
     void Update(
         GenerationOutputAsset asset,
