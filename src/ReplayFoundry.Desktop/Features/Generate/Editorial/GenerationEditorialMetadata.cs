@@ -717,6 +717,8 @@ public sealed class GenerationEditorialMetadataService :
                 foreach (var interval in visualObservation.Observation.EvidenceIntervals)
                     evidence.Add(new ClipEditorialEvidenceReference("scene-review-1.4-" + interval.Id,
                         ClipEditorialEvidenceKind.VisualObservation, interval.Description));
+                if (GenerationSceneEditorialEvidence.Create(visualObservation) is { } sceneContext)
+                    evidence.Add(sceneContext);
                 var sourceFile = new FileInfo(selected.AnalyzedSource.PreparedSource.Media.FullPath);
                 if (sourceFile.Exists)
                     evidence.Add(new ClipEditorialEvidenceReference("scene-review-source-binding", ClipEditorialEvidenceKind.SourceIdentity,

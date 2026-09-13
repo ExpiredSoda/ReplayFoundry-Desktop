@@ -153,7 +153,13 @@ internal static class OutputLocationAndLibraryTests
             System.Reflection.BindingFlags.NonPublic |
             System.Reflection.BindingFlags.Static)?.GetValue(null);
 
-    private static Task LibraryRelinkPreservesIdentity()
+    private static async Task LibraryRelinkPreservesIdentity()
+    {
+        await VerifyLibraryRelinkPreservesIdentity(false);
+        await VerifyLibraryRelinkPreservesIdentity(true);
+    }
+
+    private static Task VerifyLibraryRelinkPreservesIdentity(bool supportingFolder)
     {
         using var directory = new TemporaryDirectory();
         LibraryMediaAsset original = CreateAsset(
@@ -169,6 +175,11 @@ internal static class OutputLocationAndLibraryTests
         string thumbnail = Path.ChangeExtension(
             replacement,
             ".thumbnail.jpg");
+        if (supportingFolder)
+        {
+            thumbnail = Path.Combine(Path.GetDirectoryName(replacement)!, "Supporting files", Path.GetFileName(thumbnail));
+            Directory.CreateDirectory(Path.GetDirectoryName(thumbnail)!);
+        }
         File.WriteAllBytes(thumbnail, [4, 5, 6]);
 
         LibraryMediaAsset rebound = catalog.RelinkMissingAsset(
@@ -185,7 +196,7 @@ internal static class OutputLocationAndLibraryTests
         TestAssert.Equal(original.Description, rebound.Description, "Description must be preserved.");
         TestAssert.Equal(original.Duration, rebound.Duration, "Duration must be preserved.");
         TestAssert.Equal(replacement, rebound.OutputFullPath, "Only the media path should change.");
-        TestAssert.Equal(thumbnail, rebound.ThumbnailFullPath, "A moved sibling thumbnail should be rebound.");
+        TestAssert.Equal(thumbnail, rebound.ThumbnailFullPath, "Relinking must find thumbnails in both current and legacy export layouts.");
         TestAssert.Equal(
             replacement,
             store.Current.Single().OutputFullPath,

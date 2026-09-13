@@ -17,6 +17,8 @@ public static class StudioTimelineHandoffWriter
         if (ordered.Any(asset => asset.OutputFullPath is not { } path ||
             !string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), root, StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException("Timeline outputs must belong to the publishing package.", nameof(assets));
+        string supporting = GenerationExportPackagePaths.SupportingDirectory(root);
+        Directory.CreateDirectory(supporting);
         var sourceVideo = new List<object>();
         var sourceAudio = new List<object>();
         foreach (GenerationOutputAsset asset in ordered)
@@ -42,7 +44,7 @@ public static class StudioTimelineHandoffWriter
             GenerationOutputAsset first = group.First();
             TimeSpan duration = TimeSpan.FromTicks(group.Sum(asset => asset.Duration.Ticks));
             object clip = Clip(first.EditorialMetadata?.Title ?? Path.GetFileName(group.Key),
-                Uri.EscapeDataString(Path.GetFileName(group.Key)), TimeSpan.Zero, duration, duration,
+                "../" + Uri.EscapeDataString(Path.GetFileName(group.Key)), TimeSpan.Zero, duration, duration,
                 GenerationClipOutputProfile.FromAsset(first).FramesPerSecond,
                 new Dictionary<string, object?> { ["replayfoundry"] = new { contributingAssetIds = group.Select(asset => asset.Id).ToArray(),
                     note = "Rendered video retains the exported picture and audio. Captions and composition may be baked in; subtitle sidecars remain separately editable." } });
@@ -51,7 +53,7 @@ public static class StudioTimelineHandoffWriter
         }
         await Write("rendered.otio", Timeline("Replay Foundry — rendered outputs", renderedVideo, renderedAudio));
 
-        Task Write(string name, object document) => File.WriteAllTextAsync(Path.Combine(root, name),
+        Task Write(string name, object document) => File.WriteAllTextAsync(Path.Combine(supporting, name),
             JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
     }
 

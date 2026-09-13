@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using ReplayFoundry.Desktop.Features.Generate.Editorial;
+using ReplayFoundry.Desktop.Features.Generate.Intelligence;
 using ReplayFoundry.Desktop.Media.Composition;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Moments;
@@ -16,11 +17,13 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 internal sealed class Qwen3VlEditorialSceneContextReviewer(
     IVisualSemanticEditorialProvider provider,
     VisualSemanticPromptManifest prompt,
-    VisualSemanticModelManifest model) : IClipEditorialSceneContextReviewer
+    VisualSemanticModelManifest model,
+    IGenerationTranscriptAnalysisService? speechContext = null) : IClipEditorialSceneContextReviewer
 {
-    internal Qwen3VlEditorialSceneContextReviewer(Qwen3VlQualifiedEditorialRuntime runtime)
+    internal Qwen3VlEditorialSceneContextReviewer(Qwen3VlQualifiedEditorialRuntime runtime,
+        IGenerationTranscriptAnalysisService? speechContext = null)
         : this(new Qwen3VlSceneReviewProvider(runtime),
-            Qwen3VlSceneReviewProvider.LoadPrompt(runtime.Host.HostScriptPath), runtime.Model) { }
+            Qwen3VlSceneReviewProvider.LoadPrompt(runtime.Host.HostScriptPath), runtime.Model, speechContext) { }
 
     public async Task<IReadOnlyList<ClipEditorialMetadataRequest>> ReviewAsync(
         IReadOnlyList<ClipEditorialMetadataRequest> requests, CancellationToken cancellationToken)
@@ -30,12 +33,21 @@ internal sealed class Qwen3VlEditorialSceneContextReviewer(
         // Longer manually edited cuts retain the full-video legacy writer;
         // a partial scene review must never authorize facts for an entire cut.
         var pending = Enumerable.Range(0, result.Length).Where(i =>
-            !Qwen3VlSceneCopyGenerator.CanUse(result[i]) && result[i].Context.Duration <= policy.MaximumReviewDuration).ToArray();
-        foreach (var group in pending.Chunk(8))
+            (!Qwen3VlSceneCopyGenerator.CanUse(result[i]) || speechContext is not null && !result[i].Context.Evidence.Any(item =>
+                item.Id == GenerationSceneEditorialEvidence.EvidenceId)) && result[i].Context.Duration <= policy.MaximumReviewDuration).ToArray();
+        foreach (var group in pending.Chunk(GenerationSemanticReviewBudgetPolicy.MaximumBatchSize))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var bindings = group.ToDictionary(i => i, i => SourceBinding(result[i].Context));
-            var reviewRequests = group.Select(i => CreateRequest(result[i])).ToArray();
+            var reviewRequests = new List<VisualSemanticRequest>();
+            foreach (int i in group)
+            {
+                var item = result[i];
+                var tracks = speechContext is not null && item.SourceMedia is { } media
+                    ? await speechContext.ReadWindowAsync(media, item.Context.SourceStart, item.Context.SourceEnd, cancellationToken,
+                        item.Context.Transcripts.Select(track => track.AbsoluteAudioStreamIndex).Distinct().ToArray()) : [];
+                reviewRequests.Add(CreateRequest(item, tracks));
+            }
             var review = await provider.ObserveAsync(new(reviewRequests, policy), cancellationToken);
             foreach (int i in group)
             {
@@ -46,11 +58,13 @@ internal sealed class Qwen3VlEditorialSceneContextReviewer(
                     bindings[i] != SourceBinding(request.Context))
                     throw new InvalidDataException("The clip or its picture evidence changed during review. Retry with the current cut.");
                 var context = request.Context;
-                var evidence = context.Evidence.Where(item => !item.Id.StartsWith("scene-review-", StringComparison.Ordinal)).ToList();
+                var evidence = context.Evidence.Where(item => !item.Id.StartsWith("scene-review-", StringComparison.Ordinal) &&
+                    item.Id != GenerationSceneEditorialEvidence.EvidenceId).ToList();
                 evidence.AddRange(observed.Observation.EvidenceIntervals.Select(interval =>
                     new ClipEditorialEvidenceReference(Qwen3VlSceneReviewProvider.Version + "-" + interval.Id,
                         ClipEditorialEvidenceKind.VisualObservation, interval.Description)));
                 evidence.Add(new("scene-review-source-binding", ClipEditorialEvidenceKind.SourceIdentity, bindings[i]));
+                if (GenerationSceneEditorialEvidence.Create(observed.MomentEvidence) is { } audioContext) evidence.Add(audioContext);
                 var refreshed = new ClipEditorialContext(context.CandidateId, context.SourceFullPath, context.SourceLabel,
                     context.SourceStart, context.SourceEnd, context.SourceDuration, context.DeterministicScore,
                     context.DeterministicReason, context.Transcripts, evidence, context.GameContext, context.GameKnowledge,
@@ -64,7 +78,7 @@ internal sealed class Qwen3VlEditorialSceneContextReviewer(
         return result;
     }
 
-    internal VisualSemanticRequest CreateRequest(ClipEditorialMetadataRequest request)
+    internal VisualSemanticRequest CreateRequest(ClipEditorialMetadataRequest request, IReadOnlyList<GenerationSourceTranscript>? freshTracks = null)
     {
         var context = request.Context;
         var mode = CandidateMode(context);
@@ -82,7 +96,25 @@ internal sealed class Qwen3VlEditorialSceneContextReviewer(
             mode, TimeSpan.Zero, context.Duration, TimeSpan.Zero,
             new("Exact cut used for title and description", CompositionCoordinateSpace.EffectiveDisplayNormalizedBeforeCrop),
             transcript, supplied ? VisualSemanticDeterministicSummaryBuilder.Build(new(context.Duration, 0, 0, 0, 0,
-                VisualSemanticIntegrityStatus.Clear, null, null, null, mode, [])) : null, prompt, model);
+                VisualSemanticIntegrityStatus.Clear, null, null, null, mode, [])) : null, prompt, model,
+            CreateAudioContext(request, freshTracks ?? []));
+    }
+
+    private static SceneReviewContext CreateAudioContext(ClipEditorialMetadataRequest request, IReadOnlyList<GenerationSourceTranscript> freshTracks)
+    {
+        var context = request.Context; var file = new FileInfo(context.SourceFullPath);
+        var tracks = (request.SourceMedia?.AudioStreams.Select(stream => stream.Index) ?? context.Transcripts.Select(track => track.AbsoluteAudioStreamIndex))
+            .Distinct().OrderByDescending(index => context.Transcripts.Any(track => track.AbsoluteAudioStreamIndex == index)).Take(4).Select(index =>
+            {
+                var retained = context.Transcripts.SingleOrDefault(track => track.AbsoluteAudioStreamIndex == index);
+                var fresh = freshTracks.SingleOrDefault(track => track.AudioStreamIndex == index);
+                var speech = fresh is not null ? GenerationVisualTranscriptContextBuilder.Build(fresh, context.SourceStart, context.SourceEnd).Spans :
+                    retained?.Spans.Select((span, i) => new VisualSemanticTranscriptSpan($"editorial-{i}", span.Text,
+                        span.SourceStart-context.SourceStart, span.SourceEnd-context.SourceStart, false, TranscriptTimingPrecision.Unknown)).ToArray() ?? [];
+                return new SceneAudioTrack(index, retained?.Role ?? AudioContentRoleAssignment.Unknown, speech);
+            }).ToArray();
+        return new(file.FullName, file.Length, file.LastWriteTimeUtc.Ticks, context.SourceStart, context.SourceEnd,
+            "Any", context.GameContext.Source == ClipEditorialGameContextSource.UserConfirmed ? context.GameContext.GameName : null, tracks, []);
     }
 
     private static string SourceBinding(ClipEditorialContext context)

@@ -2,7 +2,25 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.1](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.1).
+downloadable version is [1.0.0 Beta 5.2](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.2).
+
+## 1.0.0 Beta 5.2 — 2026-09-13
+
+- Matched Pop caption rendering to the preview's word timing. Missing or unresolved word timestamps now require review instead of rendering the whole sentence as one Pop word.
+- Added visible caption timing review with navigation to affected phrases. Video exports now keep subtitles, thumbnails, metadata, publishing guides and editing handoffs together in a supporting-files folder.
+- Updated the matching optional visual runtime/model packages to `0.8.29` and `4.0.25`, including the pinned local audio evidence model. Initial analysis takes longer; completed evidence is cached. This beta does not claim a measured accuracy improvement across games.
+
+- Added separate speech analysis for up to four audio tracks and local acoustic evidence from pinned CLAP weights. Track roles retain their source: unknown or mixed audio never becomes confirmed creator speech automatically.
+- Added independent, timed review of action, humor, commentary, lore, discovery, failure, clutch, tutorial and reaction moments. Timestamps come from cited observations and include setup/payoff; uncertain categories cannot inherit labels from a wider recording window. Smaller provider batches retain the full review and supplemental-candidate budgets.
+- Reserved bounded review capacity for quieter requested categories and added event-focused sampling and timed recording-map nominations. Existing quality gates, manual selections and output budgets still apply.
+- Shared supported moment context and attributed speech with generation and Studio title/description writing, including refreshed context for older cuts. Acoustic similarities are clues, not calibrated probabilities or verified emotions.
+- Added optional feedback reasons below the preview, with one additional choice for a corrected category. Speaker/category/boundary corrections stay separate from taste training and independent evaluation.
+- Added a developer comparison tool for human-reviewed recordings, reporting category precision/recall, missing proposals/reviews, speaker accuracy and complete-cut acceptance at matching budgets. No models are automatically promoted from these results.
+- Preserved verified moment-type preferences through final AI selection and personal ranking without inflating quality scores. Explicit story, humor, and other themes no longer receive a generic action reservation.
+- Retained model-nominated lore passages even when they contain no creator commentary or humor. Invalid speech references and passages outside the reviewed recording section remain excluded from nomination.
+- Added Studio clip search across saved titles, descriptions, recording names, and captions in the current cut, with ranked or recording order. Filtering keeps clip selection and the render queue intact.
+- Added literal caption search and batch replacement within a clip, including whole-word matching, phrase navigation, and a single undo for each batch. Text changes preserve known word boundaries where possible and leave new word boundaries for timing review.
+- Added advisory caption review for overlapping phrases and Pop words timed for two seconds or longer. These checks help locate possible pauses without changing timing automatically.
 
 ## 1.0.0 Beta 5.1 — 2026-09-12
 

@@ -76,7 +76,7 @@ runtime packs remain available.
 
 ## Build runtime packs
 
-This Beta 5 build requires visual runtime `0.8.28` and model pack `4.0.24` as a matching
+Beta 5.2 requires visual runtime `0.8.29` and model pack `4.0.25` as a matching
 set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
 structured-decoding qualification lock for CPython `3.13.15`, PyTorch
 `2.13.0+cu130`, TorchVision `0.28.0+cu130`, TorchCodec `0.16.0`, and Transformers
@@ -103,6 +103,15 @@ The editorial acceleration source requires a freshly built visual runtime pack;
 the published `0.8.25` pack does not contain its resident worker. Qualify the
 desktop and host together before publishing these new runtime pack versions or
 updating the installer catalog. Keep the product version at Beta 5.
+
+Advanced packaging also requires `-AudioEvidenceModelRoot <verified-clap-root>`.
+Run `python eng/Prepare-AudioEvidenceModel.py <workspace-staging-directory>`
+to fetch the pinned LAION CLAP model. The builder verifies its locked file hashes
+and includes its Apache-2.0 license and provenance under `audio-evidence` in the
+model pack. The weights add about 615 MB before compression. Acoustic inference
+runs locally before the visual model loads; no recording audio is uploaded.
+These pack versions are prepared in source and require release qualification
+and publication before the installed application can use them.
 
 ### Personal writer qualification
 

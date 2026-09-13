@@ -1,4 +1,5 @@
 using ReplayFoundry.Desktop.Features.Generate.Intelligence;
+using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Media.Moments;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Moments;
@@ -8,6 +9,10 @@ internal static class GenerationGameplayEventCoveragePolicy
     internal const double MaximumRankingTradeoff = 4;
     internal const double MinimumStrength = 0.55;
     internal const double MinimumBoundaryStrength = 0.40;
+
+    internal static bool MayReserveGameplay(GenerationSetupOptions setup) =>
+        setup.ContentEmphasis != ContentEmphasis.CommentaryFocused &&
+        setup.DiscoveryIntent.MomentType is GenerationMomentIntent.Any or GenerationMomentIntent.Action;
 
     internal static bool IsDeterministicGameplayEvent(
         MomentCandidate candidate)

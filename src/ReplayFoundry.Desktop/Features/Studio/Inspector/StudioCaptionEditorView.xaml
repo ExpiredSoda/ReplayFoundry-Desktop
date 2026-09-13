@@ -26,6 +26,16 @@
             Style="{DynamicResource Control.CanvasInsetCard}" Background="Transparent" BorderThickness="0" Padding="0"
             Visibility="{Binding IsCaptionStyleEditorVisible, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
+                <local:StudioCaptionReviewView DataContext="{Binding Caption.Review.Panel}" Margin="0,0,0,12" />
+                <local:StudioCaptionTextToolsView DataContext="{Binding Caption.TextTools}" Margin="0,0,0,12" />
+                <WrapPanel Visibility="{Binding Caption.Review.IsReviewingTiming, Converter={StaticResource BoolToVisibility}}">
+                    <Button Content="Next issue" Command="{Binding Caption.Review.NextIssueCommand}" Margin="0,0,6,8"
+                        Visibility="{Binding Caption.Review.Panel.HasIssues, Converter={StaticResource BoolToVisibility}}"
+                        Style="{DynamicResource Control.StudioSecondaryButton}" />
+                    <Button Content="Show all captions" Command="{Binding Caption.Review.ShowAllPhrasesCommand}" Margin="0,0,0,8"
+                        Style="{DynamicResource Control.StudioSecondaryButton}" />
+                </WrapPanel>
+                <StackPanel Visibility="{Binding Caption.Review.IsReviewingTiming, Converter={StaticResource InverseBoolToVisibility}}">
                 <TextBlock Margin="0,0,0,8"
                     Style="{DynamicResource Text.Meta}"
                     Text="This clip has no captions yet. Add phrases, import subtitles, or regenerate from its voice track below."
@@ -282,6 +292,7 @@
                     Style="{DynamicResource Control.StudioSecondaryButton}"
                     ToolTip="Copies this caption look to every captioned clip. Each clip keeps its own words and timing." />
 
+                </StackPanel>
                 <Border
                     Margin="0,14,0,0"
                     Padding="0,16,0,0"
@@ -318,13 +329,13 @@
                             <Button Content="Export subtitles" Command="{Binding Caption.ExportCommand}" Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
                         </WrapPanel>
                         <ScrollViewer
-                            MaxHeight="240"
+                            MaxHeight="440"
                             AutomationProperties.Name="Caption script scroll region"
                             HorizontalScrollBarVisibility="Disabled"
                             VerticalScrollBarVisibility="Auto">
                             <ItemsControl
                                 AutomationProperties.Name="Caption text and timing segments"
-                                ItemsSource="{Binding Caption.Segments}">
+                                ItemsSource="{Binding Caption.Review.VisibleSegments}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border
@@ -389,11 +400,26 @@
                                                     Style="{DynamicResource Control.DisclosureExpander}">
                                                     <TextBlock Text="{Binding AlignmentDetails}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
                                                 </Expander>
-                                                <Expander Header="Fine-tune each word" Margin="0,6,0,0" Style="{DynamicResource Control.DisclosureExpander}">
+                                                <WrapPanel Margin="0,6,0,0">
+                                                    <Button Content="Match words to speech"
+                                                        Command="{Binding DataContext.Caption.AlignCorrectedTextCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4" />
+                                                    <Button Content="Edit as separate words"
+                                                        Command="{Binding DataContext.Caption.RebuildWordRowsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{DynamicResource Control.StudioSecondaryButton}" Margin="0,0,4,4"
+                                                        ToolTip="Adds rows for missing words with blank times. Preserves uniquely matched word timing." />
+                                                </WrapPanel>
+                                                <Expander Header="Fine-tune each word" Margin="0,6,0,0" Style="{DynamicResource Control.DisclosureExpander}"
+                                                    IsExpanded="{Binding IsTimingReviewOpen, Mode=TwoWay}">
                                                     <ItemsControl ItemsSource="{Binding Words}" IsEnabled="{Binding DataContext.IsProjectDraft, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
                                                                 <StackPanel Margin="0,5,0,5">
+                                                                    <TextBlock Text="{Binding TimingReviewLabel}" Foreground="{DynamicResource Brush.StatusWarning}"
+                                                                        FontWeight="SemiBold" Margin="0,0,0,3"
+                                                                        Visibility="{Binding NeedsTimingReview, Converter={StaticResource BoolToVisibility}}" />
                                                                     <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Caption word text" />
                                                                     <WrapPanel Margin="0,3,0,0">
                                                                         <TextBox Width="65" Text="{Binding StartTime, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Caption word start time" />
@@ -409,17 +435,6 @@
                                                     </ItemsControl>
                                                 </Expander>
                                                 <WrapPanel Margin="0,6,0,0">
-                                                    <Button Content="Match words to speech"
-                                                        Command="{Binding DataContext.Caption.AlignCorrectedTextCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        CommandParameter="{Binding}"
-                                                        Style="{DynamicResource Control.StudioSecondaryButton}"
-                                                        Margin="0,0,4,4" />
-                                                    <Button Content="Edit as separate words"
-                                                        Command="{Binding DataContext.Caption.RebuildWordRowsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        CommandParameter="{Binding}"
-                                                        Style="{DynamicResource Control.StudioSecondaryButton}"
-                                                        Margin="0,0,4,4"
-                                                        ToolTip="Creates editable word rows from the phrase. New words have blank times for you to align; existing matching times are preserved." />
                                                     <Button Content="Split"
                                                         Command="{Binding DataContext.Caption.SplitCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"

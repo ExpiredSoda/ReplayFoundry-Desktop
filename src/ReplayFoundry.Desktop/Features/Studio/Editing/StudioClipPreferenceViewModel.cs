@@ -7,6 +7,7 @@ using System.Windows.Input;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Research;
 using ReplayFoundry.Desktop.Presentation.Commands;
+using TasteMomentCorrection = ReplayFoundry.Desktop.Media.Intelligence.Learning.TasteMomentCorrection;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editing;
 
@@ -35,12 +36,14 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged, IDis
         _outputEditor = outputEditor;
         _decisionStore = decisionStore;
         _researchFeedback = researchFeedback;
+        Correction = new(SaveCorrection);
         _setCommand = new DelegateCommand<StudioClipPreferenceRating>(
             SetPreference,
             _ => CanSetPreference());
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public StudioMomentCorrectionViewModel Correction { get; }
     private void LearningChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(PreferenceLearningStatus));
     public void Dispose() { if (_service is not null) _service.Changed -= LearningChanged; }
 
@@ -131,6 +134,9 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged, IDis
     {
         _project = project;
         _asset = asset;
+        var retainedCorrection = asset is not null && _decisionStore?.Find(asset.Id) is { } retained &&
+            retained.SourceStart == asset.SourceStart && retained.SourceEnd == asset.SourceEnd ? retained.Correction : null;
+        Correction.Bind(retainedCorrection, !_isHostBusy && asset is not null && project is not null && _decisionStore is not null);
         if (asset is not null && _decisionStore?.Find(asset.Id) is { Rating: { } saved } decision &&
             decision.SourceStart == asset.SourceStart && decision.SourceEnd == asset.SourceEnd)
         {
@@ -147,6 +153,7 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged, IDis
         }
 
         _isHostBusy = value;
+        Correction.Bind(Correction.Current, !value && _asset is not null && _project is not null && _decisionStore is not null);
         NotifyProperties();
     }
 
@@ -296,7 +303,21 @@ public sealed class StudioClipPreferenceViewModel : INotifyPropertyChanged, IDis
             asset.SourceEnd,
             asset.Disposition,
             ResolveRating(asset),
-            DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow, Correction.Current));
+    }
+
+    private void SaveCorrection(TasteMomentCorrection? correction)
+    {
+        if (_asset is not { } asset || _project is null || _isHostBusy) return;
+        try
+        {
+            SaveDecision(_project, asset);
+            _service?.Correct(asset, correction);
+            _error = null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or TimeoutException or InvalidOperationException)
+        { _error = "The feedback could not be saved: " + exception.Message; }
+        NotifyProperties();
     }
 
     private StudioClipPreferenceRating? ResolveRating(GenerationOutputAsset asset) =>

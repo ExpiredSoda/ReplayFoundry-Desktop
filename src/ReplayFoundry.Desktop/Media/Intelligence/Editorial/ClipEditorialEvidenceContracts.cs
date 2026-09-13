@@ -32,6 +32,7 @@ public enum ClipEditorialEvidenceKind
     GameKnowledge,
     UserContext,
     CandidateQualification,
+    ReviewedMomentContext,
 }
 
 public enum ClipEditorialWarningCode

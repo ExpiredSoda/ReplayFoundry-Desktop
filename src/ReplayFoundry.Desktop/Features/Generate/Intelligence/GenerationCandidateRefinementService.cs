@@ -218,9 +218,11 @@ public sealed class GenerationCandidateRefinementService :
             // The new model judges the complete context. Its score is not a sum
             // of hand-authored bonuses for action or penalties for quiet/menu scenes.
             var retained = existing.Components.Where(item => item.Code is not
-                (GenerationCandidateRefinementComponentCode.NeuralSceneValue or GenerationCandidateRefinementComponentCode.SemanticDiscoveryEvidence));
+                (GenerationCandidateRefinementComponentCode.NeuralSceneValue or GenerationCandidateRefinementComponentCode.SemanticDiscoveryEvidence or
+                 GenerationCandidateRefinementComponentCode.CreatorIntentMatch));
             return new(existing.Candidate,
                 [.. retained,
+                    GenerationDiscoveryIntentPolicy.SemanticMatch(setup.DiscoveryIntent, reviewed),
                     new(GenerationCandidateRefinementComponentCode.NeuralSceneValue, neuralValue, 0,
                         "Editorial potential estimated by the pretrained scene model; personal training is tracked separately.", ["scene-review-1.4"]),
                     new(GenerationCandidateRefinementComponentCode.SemanticDiscoveryEvidence, 1, 0,

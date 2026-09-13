@@ -17,6 +17,8 @@ internal static partial class GenerationSpeechActivityTests
 {
     private static IEnumerable<TestCase> GenerationMaturityTests()
     {
+        foreach (var test in MomentDiscernmentTests()) yield return test;
+        foreach (var test in TimedMomentEvidenceTests()) yield return test;
         yield return new("Generation includes the beginning and ending of creator speech", SpeechRepairsBothBoundaries);
         yield return new("Capture screening preserves learned selection preferences", CaptureScreeningPreservesPersonalRanking);
         yield return new("Transcript beginning repair includes sentence context across a VAD pause", TranscriptBeginningBridgesSentencePause);
@@ -404,9 +406,9 @@ internal static partial class GenerationSpeechActivityTests
         using GenerationVisualSemanticAnalysisResult result = await new GenerationVisualSemanticAnalysisService(
             provider, materializer, CreateVisualSettings()).AnalyzeAsync(intelligence, null, CancellationToken.None);
         TestAssert.Equal(12, result.Observations.Count, "The analysis result must retain all reviewed batches.");
-        TestAssert.Equal(2, provider.Requests.Count, "Twelve reviews must execute as two bounded batches.");
-        TestAssert.True(provider.Requests.All(static batch => batch.Requests.Count <= 8),
-            "No expanded review budget may grow one provider batch past eight.");
+        TestAssert.Equal(6, provider.Requests.Count, "Twelve reviews must return progress across six bounded batches.");
+        TestAssert.True(provider.Requests.All(static batch => batch.Requests.Count <= 2),
+            "Expanded review budgets must preserve small batches for the per-cut audio and category checks.");
     }
 
     private static async Task SemanticReviewRepresentsSources()

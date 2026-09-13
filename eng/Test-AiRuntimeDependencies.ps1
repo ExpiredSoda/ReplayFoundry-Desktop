@@ -48,8 +48,12 @@ $results = @(for ($index = 0; $index -lt $packages.Count; $index++) {
     }
     $remediated = @()
     $package = $packages[$index]
+    # OSV's Python advisory is an alias of the same CVE, not a second fix:
+    # https://api.osv.dev/v1/vulns/PYSEC-2026-3804 (CVE-2026-69112).
+    $checkpointAdvisoryIds = @('GHSA-4j2p-28q2-5m79', 'PYSEC-2026-3804')
+    $checkpointAdvisories = @($advisories | Where-Object { $_ -cin $checkpointAdvisoryIds })
     if ($package.Name -ceq 'accelerate' -and $package.Version -ceq '1.14.0+replayfoundry.1' -and
-        $advisories -contains 'GHSA-4j2p-28q2-5m79') {
+        $checkpointAdvisories.Count -gt 0) {
         # This local wheel applies the checkpoint path fix in source. Accept
         # only the reviewed file bytes, keeping the upstream advisory visible.
         $loader = Join-Path $packageRoot 'accelerate\utils\modeling.py'
@@ -57,7 +61,7 @@ $results = @(for ($index = 0; $index -lt $packages.Count; $index++) {
             'D6C9EAB1CE0BA939D660A969F8C788A5659A871642B492393DA09AA7947BCEE1') {
             throw 'The Accelerate security backport does not match its reviewed source.'
         }
-        $remediated = @('GHSA-4j2p-28q2-5m79')
+        $remediated = $checkpointAdvisories
     }
     [pscustomobject]@{ Name = $package.Name; Version = $package.Version; Advisories = $advisories;
         RemediatedAdvisories = $remediated; UnresolvedAdvisories = @($advisories | Where-Object { $_ -notin $remediated }) }

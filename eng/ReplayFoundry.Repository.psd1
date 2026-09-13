@@ -71,10 +71,14 @@
             'tests/ReplayFoundry.Testing'
         )
 
+        StandaloneTools = @('tools/evaluate_moment_discernment.py')
+
         EngineeringFiles = @(
             'eng/Assert-ReplayFoundryRuntimePackCatalogBinding.ps1'
             'eng/Build-ReplayFoundryInstaller.ps1'
             'eng/Build-ReplayFoundryRuntimePacks.ps1'
+            'eng/Copy-VerifiedAudioEvidenceModel.ps1'
+            'eng/Prepare-AudioEvidenceModel.py'
             'eng/Copy-ReplayFoundryProductionVisualHost.ps1'
             'eng/Invoke-ReplayFoundryArtifactSigning.ps1'
             'eng/New-PythonRuntimeNotices.ps1'

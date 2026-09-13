@@ -136,6 +136,12 @@ $reviewedValueAliases = @{
     'StudioCaptionTrackEditorViewModel.cs' = 'using SubtitleSidecarFormat = ReplayFoundry.Desktop.Media.Subtitles.SubtitleSidecarFormat;'
     'StudioEditorialMetadataViewModel.cs' = 'using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialCopyVersion;'
     'StudioWordingLearningViewModel.cs' = 'using EditorialWordingFeedback = ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences.EditorialWordingFeedback;'
+    'StudioClipPreferenceViewModel.cs' = 'using TasteMomentCorrection = ReplayFoundry.Desktop.Media.Intelligence.Learning.TasteMomentCorrection;'
+    'StudioMomentCorrectionViewModel.cs' = @(
+        'using TasteMomentCorrection = ReplayFoundry.Desktop.Media.Intelligence.Learning.TasteMomentCorrection;'
+        'using TasteCorrectionReason = ReplayFoundry.Desktop.Media.Intelligence.Learning.TasteCorrectionReason;'
+        'using SceneMomentCategory = ReplayFoundry.Desktop.Media.Intelligence.VisualSemantic.SceneMomentCategory;'
+    )
 }
 foreach ($feature in $featureRoots) {
     $root = "src/ReplayFoundry.Desktop/Features/$feature"
@@ -144,8 +150,10 @@ foreach ($feature in $featureRoots) {
     foreach ($file in $viewModels) {
         $text = Get-Content -Raw -LiteralPath $file.FullName
         if ($feature -eq 'Studio' -and $reviewedValueAliases.ContainsKey($file.Name)) {
-            $alias = [regex]::Escape($reviewedValueAliases[$file.Name])
-            $text = [regex]::Replace($text, "(?m)^$alias\r?`$", '')
+            foreach ($valueAlias in @($reviewedValueAliases[$file.Name])) {
+                $alias = [regex]::Escape($valueAlias)
+                $text = [regex]::Replace($text, "(?m)^$alias\r?`$", '')
+            }
         }
         if ($text -cmatch 'System\.Windows\.(?!Input\b)|\b(UserControl|Window|MessageBox|Application)\b|ReplayFoundry\.Desktop\.(Media|Platform)|ProcessStartInfo|IProcessRunner|\bpartial\s+class\s+.*ViewModel') {
             Add-Failure "Production feature ViewModel crosses a presentation-only boundary: $($file.FullName)"
@@ -176,7 +184,7 @@ foreach ($name in @('Common', 'Shared', 'Helpers', 'Utils', 'Managers', 'Everyth
     if (Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'src/ReplayFoundry.Desktop') -Directory -Recurse | Where-Object Name -eq $name) { Add-Failure "Generic dumping-ground folder is present: $name" }
 }
 
-Assert-Contains "src/ReplayFoundry.Desktop/Features/Studio/Browser/StudioBrowserView.xaml" 'BrowserPreviewItems' "Studio must keep the project clip browser available beside the inspector."
+Assert-Contains "src/ReplayFoundry.Desktop/Features/Studio/Browser/StudioBrowserView.xaml" 'ItemsSource="\{Binding ClipBrowser\.Items\}"' "Studio must keep the searchable project clip browser available beside the inspector."
 Assert-Contains "src/ReplayFoundry.Desktop/Features/Library/LibraryView.xaml" 'LibraryContentView' "Library content decomposition is missing."
 Assert-Contains "src/ReplayFoundry.Desktop/Features/Publish/PublishView.xaml" 'PublishLibraryBrowserView' "Publish Library browser decomposition is missing."
 Assert-Contains "src/ReplayFoundry.Desktop/Features/Publish/PublishPreparationWindow.xaml" 'PublishMetadataView' "Publish preparation metadata decomposition is missing."

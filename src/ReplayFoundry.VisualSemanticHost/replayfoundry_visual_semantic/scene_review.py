@@ -74,6 +74,8 @@ def run(args):
     from .editorial.qualified_cuda_attention import qualified_cuda_attention_context, CACHE_IMPLEMENTATION, require_policy_source, POLICY_SHA256
     from .scene_value import score, PROMPT_HASH as SCORE_PROMPT_HASH
     from .scene_cache import review_key, read_review, save_review
+    from . import moment_evidence
+    from .audio_evidence import analyze_batch, verify_model, POLICY_HASH as AUDIO_POLICY_HASH
 
     started = time.perf_counter()
     require_policy_source()
@@ -89,6 +91,9 @@ def run(args):
         raise ValueError("Scene review protocol mismatch")
     if not isinstance(request["modelHash"],str) or len(request["modelHash"]) != 64:
         raise ValueError("Scene review requires its verified model identity")
+    if len({case["caseId"] for case in request["cases"]}) != len(request["cases"]) or any(
+            case.get("candidateMode") not in ("StandaloneClip", "MontageSegment") for case in request["cases"]):
+        raise ValueError("Scene review requires unique cases and a known clip purpose")
     pass_diagnostics = []
     rows = []
     def emit():
@@ -98,6 +103,10 @@ def run(args):
             "elapsedSeconds":time.perf_counter()-started,
             "peakAllocatedGpuBytes":max((item["peakAllocatedBytes"] for item in pass_diagnostics), default=0)})
     cache_directory = getattr(args,"cache",None)
+    audio_model = getattr(args,"audio_model",None)
+    request["audioModelIdentity"] = verify_model(audio_model) if audio_model and Path(audio_model).is_dir() else None
+    request["momentEvidencePolicy"] = moment_evidence.POLICY_HASH
+    request["audioEvidencePolicy"] = AUDIO_POLICY_HASH
     keys = {case["caseId"]:review_key(request,case,POLICY_SHA256) for case in request["cases"]}
     cached = {}
     for case in request["cases"]:
@@ -107,7 +116,7 @@ def run(args):
         try:
             if row["caseId"] != case["caseId"] or row["inputHash"] != case["inputHash"] or not row["factReview"]["grounded"]:
                 continue
-            validate(row["assessment"],FRAME_COUNT,bool(case["transcript"]))
+            validate(row["assessment"],FRAME_COUNT,bool(case["transcript"]) or any(track["speech"] for track in case.get("audio",{}).get("tracks",[])))
             if fingerprint(Path(case["path"])).lower() != case["inputHash"].lower(): continue
             row.update(cacheHit=True,cachedInferenceSeconds=row["elapsedSeconds"],
                 elapsedSeconds=time.perf_counter()-cache_started,inferenceDiagnostics=[])
@@ -118,6 +127,8 @@ def run(args):
         rows.extend(cached[case["caseId"]] for case in request["cases"])
         emit()
         return
+    pending = [case for case in request["cases"] if case["caseId"] not in cached]
+    audio_rows = dict(zip((case["caseId"] for case in pending), analyze_batch(pending, audio_model)))
     from PIL import Image
     from .model_runtime import _load_model_and_processor
     from .editorial.structured_decoding import StructuredDecodingSession, model_vocab_size
@@ -140,6 +151,7 @@ def run(args):
     states_grammar, _ = session.compile_json_schema(states_wire, VERSION, hashlib.sha256(states_wire.encode()).hexdigest(), any_whitespace=False)
     def generate(messages, grammar, limit, kind):
         pass_started = time.perf_counter()
+        print(json.dumps({"stage":"scene-pass-start","passKind":kind,"maximumOutputTokens":limit}),flush=True)
         torch.cuda.reset_peak_memory_stats()
         inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
             return_dict=True, return_tensors="pt").to(model.device)
@@ -178,7 +190,9 @@ def run(args):
                 left, right = float(case["start"]), float(case["end"])
                 if not math.isfinite(left) or not math.isfinite(right) or left < 0 or right <= left or right > 1200:
                     raise ValueError("Invalid review range")
-                times = [round(left + (right-left-min(.15, (right-left)/4))*index/(FRAME_COUNT-1), 4) for index in range(FRAME_COUNT)]
+                times = moment_evidence.sample_times(left, right,
+                    [left+anchor for anchor in case.get("eventAnchors", [])], FRAME_COUNT)
+                local_times = [round(timestamp-left,4) for timestamp in times]
                 with tempfile.TemporaryDirectory(prefix="replayfoundry-scene-") as scratch:
                     content = []
                     for index, timestamp in enumerate(times):
@@ -188,15 +202,13 @@ def run(args):
                             check=True, timeout=45, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
                         image = Image.open(path).convert("RGB")
                         images.append(image)
-                        content.extend([{"type":"text","text":f"Frame {index} at {timestamp:.4f} seconds:"}, {"type":"image","image":image}])
-                    words = case["transcript"]
-                    content.append({"type":"text","text":"Speech transcript (may contain recognition errors or game dialogue): " + json.dumps(words, ensure_ascii=False)})
-                    score_started = time.perf_counter()
-                    torch.cuda.reset_peak_memory_stats()
-                    neural_value = score(model, processor, images, words, torch, case["candidateMode"])
-                    score_elapsed = time.perf_counter()-score_started
-                    pass_diagnostics.append({"stage":"scene-pass","passKind":"neural-relevance","elapsedSeconds":score_elapsed,
-                        "peakAllocatedBytes":torch.cuda.max_memory_allocated(),"reservedBytes":torch.cuda.memory_reserved()})
+                        content.extend([{"type":"text","text":f"Frame {index} (frame-{index}) at {local_times[index]:.4f} seconds on this cut:"}, {"type":"image","image":image}])
+                    audio = audio_rows[case["caseId"]]
+                    words = [speech for track in audio["tracks"] for speech in track["speech"]] or case["transcript"]
+                    if not any(track["speech"] for track in audio["tracks"]):
+                        content.append({"type":"text","text":"Speech transcript (may contain recognition errors or game dialogue): " + json.dumps(words, ensure_ascii=False)})
+                    row["audioEvidence"] = audio
+                    content.append({"type":"text", "text":"Timed acoustic and speech evidence, with explicit track provenance: " + json.dumps(audio,ensure_ascii=False)})
                     feedback = []
                     for attempt in range(2):
                         state_content = [{"type":"text", "text":"Opening state:"}, *content[:4],
@@ -207,7 +219,7 @@ def run(args):
                         messages = [{"role":"system","content":[{"type":"text","text":prompt}]},
                                     {"role":"user","content":[*content,*feedback]}]
                         raw = generate(messages, grammars[bool(words)], 320, "scene-judgment")
-                        assessment = combine_assessment(states, json.loads(raw), bool(words), neural_value["value"]*100)
+                        assessment = combine_assessment(states, json.loads(raw), bool(words), 0)
                         claims = json.dumps({key:assessment[key] for key in ("setup", "event", "outcome")}, ensure_ascii=False)
                         check = json.loads(generate([
                             {"role":"system","content":[{"type":"text","text":fact_prompt}]},
@@ -216,18 +228,29 @@ def run(args):
                             raise ValueError("Invalid visual fact check")
                         checks.append(check)
                         if check["grounded"]:
-                            row.update(assessment=assessment, factReview=check, inferencePasses=3*(attempt+1)+2,
-                                neuralValue=neural_value, scoreElapsedSeconds=score_elapsed)
+                            row.update(assessment=assessment, factReview=check)
                             break
                         feedback = [{"type":"text","text":"A separate frame check found an unsupported claim. Correct only what the supplied frames can establish; do not infer an unseen cause or action. Check: " + check["reason"]}]
                     if "assessment" not in row:
                         raise SceneClaimsUnverifiedError("Scene claims remained unsupported after one correction")
+                    row["momentEvidence"] = moment_evidence.review(session,generate,content,local_times,audio,right-left,
+                        {key:assessment[key] for key in ("setup","event","outcome")})
+                    score_started = time.perf_counter()
+                    torch.cuda.reset_peak_memory_stats()
+                    neural_value = score(model,processor,images,words,torch,case["candidateMode"],
+                        {"intent":case.get("intent","Any"),"confirmedGame":case.get("game"),"audio":audio,
+                         "categories":row["momentEvidence"]["categories"]})
+                    score_elapsed = time.perf_counter()-score_started
+                    pass_diagnostics.append({"stage":"scene-pass","passKind":"neural-relevance","elapsedSeconds":score_elapsed,
+                        "peakAllocatedBytes":torch.cuda.max_memory_allocated(),"reservedBytes":torch.cuda.memory_reserved()})
+                    assessment["editorialValue"] = neural_value["value"]*100
+                    row.update(neuralValue=neural_value,scoreElapsedSeconds=score_elapsed,inferencePasses=len(pass_diagnostics)-first_pass+1)
                     row["frameTimes"] = times
                 if fingerprint(source).lower() != case["inputHash"].lower():
                     raise ValueError("Review input changed")
                 row["status"] = "Succeeded"
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
-                row = {"caseId":case["caseId"], "inputHash":case["inputHash"], "status":"Failed", "errorCode":type(error).__name__, "detail":str(error)[:300]}
+                row.update(status="Failed", errorCode=type(error).__name__, detail=str(error)[:300])
                 row["factReviews"] = checks
                 if os.environ.get("REPLAYFOUNDRY_SCENE_DEBUG") == "1":
                     row["raw"] = raw
@@ -251,4 +274,5 @@ if __name__ == "__main__":
     for name in ("input", "output", "model", "ffmpeg"):
         parser.add_argument("--"+name, required=True)
     parser.add_argument("--cache")
+    parser.add_argument("--audio-model")
     run(parser.parse_args())

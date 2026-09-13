@@ -29,7 +29,9 @@ internal static class GenerationSemanticFinalSelectionPreference
             string path = source.AnalyzedSource.PreparedSource.Media.FullPath;
             var transcript = transcripts.Sources.SingleOrDefault(value =>
                 value.SourceFullPath.Equals(path, StringComparison.OrdinalIgnoreCase));
-            if (transcript is null || !source.AnalyzedSource.PreparedSource.Media.AudioStreams.Any(stream => stream.Index == transcript.AudioStreamIndex))
+            var ownedTracks = transcript?.Tracks.Where(track => track.SourceFullPath.Equals(path, StringComparison.OrdinalIgnoreCase) &&
+                source.AnalyzedSource.PreparedSource.Media.AudioStreams.Any(stream => stream.Index == track.AudioStreamIndex)).ToArray() ?? [];
+            if (ownedTracks.Length == 0)
                 continue;
             foreach (MomentCandidate candidate in source.Moments.Proposals)
             {
@@ -52,7 +54,7 @@ internal static class GenerationSemanticFinalSelectionPreference
                     continue;
                 double similarity = retrieval.Matches.Where(match =>
                         string.Equals(match.Window.SourceFullPath, path, StringComparison.OrdinalIgnoreCase) &&
-                        match.Window.AudioStreamIndex == transcript.AudioStreamIndex &&
+                        ownedTracks.Any(track => track.AudioStreamIndex == match.Window.AudioStreamIndex) &&
                         match.Window.Start >= candidate.Window.Start && match.Window.End <= candidate.Window.End &&
                         double.IsFinite(match.Similarity))
                     .Select(static match => Math.Max(0, match.Similarity)).DefaultIfEmpty(0).Max();

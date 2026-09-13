@@ -14,10 +14,16 @@ def digest(value):
 def review_key(request, case, attention_policy):
     # The review video's full hash binds its pixels/audio; the location of an
     # identical private materialization is deliberately not part of identity.
+    clean_case = {key:value for key,value in case.items() if key != "path"}
+    if "audio" in clean_case:
+        clean_case["audio"] = {**clean_case["audio"], "tracks":[{key:value for key,value in track.items() if key != "path"}
+            for track in clean_case["audio"]["tracks"]]}
     return digest({"protocol":{key:request[key] for key in
         ("schemaVersion","modelHash","promptHash","factPromptHash","statesPromptHash","scorePromptHash")},
-        "attentionPolicy":attention_policy,"sampling":"12-frames-512px-v1",
-        "case":{key:value for key,value in case.items() if key != "path"}})
+        "attentionPolicy":attention_policy,"sampling":"event-neighborhood-12-local-v2",
+        "momentEvidencePolicy":request.get("momentEvidencePolicy"), "audioModelIdentity":request.get("audioModelIdentity"),
+        "audioEvidencePolicy":request.get("audioEvidencePolicy"),
+        "case":clean_case})
 
 
 def read_review(directory, key):

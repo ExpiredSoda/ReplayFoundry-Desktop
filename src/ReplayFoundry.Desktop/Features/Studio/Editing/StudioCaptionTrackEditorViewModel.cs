@@ -27,13 +27,16 @@ public sealed class StudioCaptionWordDraft : StudioCaptionDraft
 {
     private string _text; private double _start, _end; private bool _emphasis;
     private double? _acousticScore;
+    public bool NeedsTimingReview => !StudioCaptionTimingReview.HasTiming(Snapshot()) || _acousticScore < .15;
+    public string TimingReviewLabel => !StudioCaptionTimingReview.HasTiming(Snapshot()) ? "Needs timing" :
+        _acousticScore < .15 ? "Listen to check" : "";
     public StudioCaptionWordDraft(StudioCaptionWordEdit edit, double minimumSeconds = 0, double maximumSeconds = double.PositiveInfinity)
     {
         _text = edit.Text; _start = edit.StartSeconds; _end = edit.EndSeconds;
         _emphasis = edit.IsEmphasized; _acousticScore = edit.AcousticScore;
         MinimumSeconds = minimumSeconds; MaximumSeconds = maximumSeconds;
     }
-    public string Text { get => _text; set { if (_text == value) return; _text = value; _acousticScore = null; Changed(nameof(Text)); Changed(nameof(AcousticReview)); } }
+    public string Text { get => _text; set { if (_text == value) return; _text = value; _acousticScore = null; Changed(nameof(Text)); TimingChanged(); } }
     public double StartSeconds
     {
         get => _start;
@@ -94,13 +97,16 @@ public sealed class StudioCaptionWordDraft : StudioCaptionDraft
         double lower = Math.Max(MinimumSeconds, StartSeconds) + .001;
         if (lower <= MaximumSeconds) EndSeconds = Math.Clamp(EndSeconds + seconds, lower, MaximumSeconds);
     }
-    private void TimingChanged() { Changed(nameof(CanAdjustTiming)); Changed(nameof(AcousticReview)); }
+    private void TimingChanged()
+    { Changed(nameof(CanAdjustTiming)); Changed(nameof(AcousticReview)); Changed(nameof(NeedsTimingReview)); Changed(nameof(TimingReviewLabel)); }
     public StudioCaptionWordEdit Snapshot() => new(Text, StartSeconds, EndSeconds, IsEmphasized, _acousticScore);
 }
 public sealed class StudioCaptionSegmentDraft : StudioCaptionDraft
 {
     private string _text; private double _start, _end; private string? _speaker, _secondaryText;
     private readonly double? _cutDurationSeconds;
+    private bool _isTimingReviewOpen;
+    public bool IsTimingReviewOpen { get => _isTimingReviewOpen; set => Set(ref _isTimingReviewOpen, value); }
     public StudioCaptionSegmentDraft(string id, string text, double startSeconds, double endSeconds,
         IReadOnlyList<StudioCaptionWordEdit>? words = null, string? speaker = null, string? secondaryText = null,
         double? cutDurationSeconds = null, string? alignmentProvenance = null)
@@ -197,11 +203,14 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
         _saveVocabularyCommand = new(SaveVocabulary, () => !_isHostBusy);
         _alignCommand = new(AlignCorrectedTextAsync, CanAlign);
         _cancelAlignmentCommand = new(CancelAlignment, () => _alignmentCancellation is not null);
+        Review = new(() => !_isHostBusy && _regeneration is null && !IsAligning);
+        TextTools = new(Snapshot, Mutate, Review.OpenPhrase, CanEdit);
         try { VocabularyText = string.Join(Environment.NewLine, _captionFiles.LoadVocabulary()); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         { _status = "Saved vocabulary could not be loaded: " + e.Message; }
     }
     public event PropertyChangedEventHandler? PropertyChanged;
+    public StudioCaptionDraftReview Review { get; }
     public ObservableCollection<StudioCaptionSegmentDraft> Segments { get; } = [];
     public ICommand SaveCommand => _saveCommand;
     public ICommand AddCommand => _addCommand;
@@ -255,6 +264,7 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
             InvalidateAlignment(); Notify();
         }
     }
+    public StudioCaptionTextTools TextTools { get; }
     public bool HasSegments => Segments.Count > 0;
     public bool HasUnsavedChanges => _asset is not null && !Same(StudioCaptionTrackEditing.CreateDrafts(_asset), Snapshot());
     public string Status
@@ -283,6 +293,8 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
         _regeneration?.Cancel();
         InvalidateAlignment(); _alignmentCancellation = null;
         _project = project; _asset = asset; _status = null;
+        Review.Bind(asset, sameClip);
+        if (!sameClip) TextTools.Reset();
         _undo.Clear(); _redo.Clear();
         AudioStreams = asset?.SourceMedia.AudioStreams.Select(static stream => new StudioCaptionAudioStreamChoice(stream.Index,
             $"Track {stream.Index}" + (string.IsNullOrWhiteSpace(stream.Title) ? "" : $" · {stream.Title}"))).ToArray() ?? [];
@@ -314,7 +326,7 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
             var pending = Snapshot();
             _asset = StudioCaptionTrackEditing.Apply(_outputEditor!, _project!, _asset!, Snapshot());
             LoadSegments(StudioCaptionTrackEditing.CreateDrafts(_asset));
-            _status = "Caption words and timing saved. Corrected phrases without matching word timing use phrase animation.";
+            _status = "Caption words and timing saved. Check Caption review for any words that still need timing.";
             if (RememberCorrections)
             {
                 try
@@ -400,11 +412,7 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
         {
             int index = list.FindIndex(s => s.Id == segment.Id);
             var source = list[index];
-            string[] tokens = source.Text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            var words = tokens.Select((text, i) => source.Words is { } measured && i < measured.Count &&
-                StudioCaptionTrackEditing.Lexical(measured[i].Text) == StudioCaptionTrackEditing.Lexical(text)
-                    ? measured[i] with { Text = text }
-                    : new StudioCaptionWordEdit(text, double.NaN, double.NaN)).ToArray();
+            var words = StudioCaptionTimingReview.CreateWordRows(source);
             list[index] = source with { Words = words };
         });
         _status = "Word rows rebuilt. Existing matching times were preserved. Enter a start and end for every blank word before saving; no timing is guessed.";
@@ -432,6 +440,7 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
             draft.TimingEditStarted += BeginTimingEdit; draft.TimingEditCompleted += CompleteTimingEdit;
         }
         _last = Snapshot(); _loading = false;
+        Review.Refresh(Segments, replaced: true);
     }
     private void SegmentChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -439,7 +448,7 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
         var current = Snapshot(); if (Same(_last, current)) return;
         InvalidateAlignment();
         if (_timingEditBefore is null) { _undo.Push(_last); _redo.Clear(); }
-        _last = current; Notify();
+        _last = current; Review.Refresh(Segments); Notify();
     }
     private void Import()
     {
@@ -549,6 +558,8 @@ public sealed class StudioCaptionTrackEditorViewModel : INotifyPropertyChanged, 
     }
     private void Notify()
     {
+        Review.SetBusy(_isHostBusy || _regeneration is not null || IsAligning);
+        TextTools.Refresh();
         AudioAudition.SetHostBusy(_isHostBusy || _regeneration is not null || _alignmentCancellation is not null);
         // Keep option identities stable during draft/progress changes and publish
         // a changed item source before restoring its selected value in WPF.

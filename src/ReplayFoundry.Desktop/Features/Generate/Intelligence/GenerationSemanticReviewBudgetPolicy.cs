@@ -5,7 +5,10 @@ namespace ReplayFoundry.Desktop.Features.Generate.Intelligence;
 internal static class GenerationSemanticReviewBudgetPolicy
 {
     public const int MaximumCandidates = 32;
-    public const int MaximumBatchSize = 8;
+    public const int MaximumSupplementalCandidates = 8;
+    // Audio and independent category checks add work per cut. Return progress
+    // after small batches instead of exhausting one host timeout on eight cuts.
+    public const int MaximumBatchSize = 2;
 
     public static int Resolve(GenerationMomentFindingResult moments, int limit)
     {

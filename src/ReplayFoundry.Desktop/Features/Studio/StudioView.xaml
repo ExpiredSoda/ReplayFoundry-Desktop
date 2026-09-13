@@ -416,7 +416,9 @@
                         Value="{Binding Percent, Mode=OneWay}"
                         Visibility="{Binding IsProgressVisible, Converter={StaticResource BoolToVisibility}}" />
 
-                    <Grid Grid.Row="3" Margin="0,10,0,0">
+                    <StackPanel Grid.Row="3">
+                    <inspector:StudioCaptionReviewView DataContext="{Binding CaptionReview}" IsCompact="True" Margin="0,10,0,0" />
+                    <Grid Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -454,6 +456,7 @@
                             Style="{DynamicResource Control.GhostButton}"
                             Visibility="{Binding IsRendering, Converter={StaticResource BoolToVisibility}}" />
                     </Grid>
+                    </StackPanel>
                 </Grid>
             </Border>
 

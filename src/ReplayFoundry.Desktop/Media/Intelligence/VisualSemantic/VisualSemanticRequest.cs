@@ -23,7 +23,8 @@ public sealed class VisualSemanticRequest
         VisualSemanticTranscriptContext transcript,
         VisualSemanticDeterministicSummary? deterministicSummary,
         VisualSemanticPromptManifest prompt,
-        VisualSemanticModelManifest model)
+        VisualSemanticModelManifest model,
+        SceneReviewContext? sceneContext = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(composition);
@@ -90,6 +91,7 @@ public sealed class VisualSemanticRequest
         DeterministicSummary = deterministicSummary;
         Prompt = prompt;
         Model = model;
+        SceneContext = sceneContext?.Snapshot(candidateEndRelative-candidateStartRelative);
     }
 
     public string CaseId { get; }
@@ -119,6 +121,7 @@ public sealed class VisualSemanticRequest
     public VisualSemanticPromptManifest Prompt { get; }
 
     public VisualSemanticModelManifest Model { get; }
+    public SceneReviewContext? SceneContext { get; }
 
     private static void EnsureReadable(string path)
     {

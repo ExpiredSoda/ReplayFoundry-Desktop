@@ -36,6 +36,9 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --version=6.7.1 --no-progress --yes
 
+      - name: Install audio test dependency
+        run: 'python -m pip install --only-binary=:all: numpy==2.5.3'
+
       - name: Verify production source
         shell: pwsh
         run: >-

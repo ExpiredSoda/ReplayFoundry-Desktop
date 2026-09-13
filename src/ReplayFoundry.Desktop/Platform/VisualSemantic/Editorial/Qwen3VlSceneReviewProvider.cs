@@ -17,7 +17,7 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
     internal const string PromptHash = "2c4ce23d223f72814bcf6f8c78f8aeeef56ea403995ab0261724922b443d9e25";
     internal const string FactPromptHash = "b7a07e2c31b6c7a1d9983405f99f202a60ea9068bee721abfb6ead56dccdbd22";
     internal const string StatesPromptHash = "13e5ea14912c03940ac42cc79998afefdcf12c2942eeab0bb2a54de22a5d38a1";
-    internal const string ScorePromptHash = "0a32dc19d9980217710c6ac16340800f08ea2833bf893e69ac197aa06193de9b";
+    internal const string ScorePromptHash = "10fb9e01d354828d71c9a7460145a4d50ecd703be1cc07201f2dfb9aa0939661";
     public InferenceProviderIdentity Identity { get; } = new("Qwen3-VL grounded scene review", "1.4", "1.4.0");
 
     internal static VisualSemanticPromptManifest LoadPrompt(string hostPath)
@@ -53,6 +53,10 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
             foreach (var item in request.Requests) await item.Input.VerifyIntegrityAsync(cancellationToken);
             await Task.Run(() => runtime.ModelIntegrity.Verify(cancellationToken), cancellationToken);
             string input = Path.Combine(directory, "input.json"), output = Path.Combine(directory, "output.json");
+            string ffmpeg = new FfmpegToolLocator().LocateFfmpeg();
+            var audio = new Dictionary<string, object>(StringComparer.Ordinal);
+            foreach (var item in request.Requests)
+                audio.Add(item.CaseId, await QwenSceneAudioPreparation.PrepareAsync(item, directory, ffmpeg, cancellationToken));
             await File.WriteAllTextAsync(input, JsonSerializer.Serialize(new
             {
                 schemaVersion = Version, modelHash = runtime.Model.ManifestSha256,
@@ -62,6 +66,9 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
                     caseId = item.CaseId, path = item.Input.ReviewVideoPath, inputHash = item.Input.ReviewVideoSha256,
                     candidateMode = item.CandidateMode.ToString(),
                     start = item.CandidateStartRelative.TotalSeconds, end = item.CandidateEndRelative.TotalSeconds,
+                    intent = item.SceneContext?.Intent ?? "Any", game = item.SceneContext?.ConfirmedGame,
+                    eventAnchors = item.SceneContext?.EventAnchors.Select(time => time.TotalSeconds).ToArray() ?? [],
+                    audio = audio[item.CaseId],
                     transcript = item.Transcript.Spans.Where(span => !span.IsNonSpeech).Select(span => new
                     { id = span.Id, start = span.ReviewRelativeStart.TotalSeconds, end = span.ReviewRelativeEnd.TotalSeconds, text = span.Text })
                 })
@@ -69,7 +76,8 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
             var host = runtime.Host;
             var process = await MediaWorkBudget.RunAsync(new WindowsProcessRunner(), new ProcessRunRequest(
                 host.PythonExecutablePath, ["-B", "-m", "replayfoundry_visual_semantic.scene_review", "--input", input,
-                    "--output", output, "--model", host.ModelDirectoryPath, "--ffmpeg", new FfmpegToolLocator().LocateFfmpeg(),
+                    "--output", output, "--model", host.ModelDirectoryPath, "--ffmpeg", ffmpeg,
+                    "--audio-model", Path.Combine(Path.GetDirectoryName(host.ModelDirectoryPath)!, "audio-evidence"),
                     "--cache", ReplayFoundryLocalDataPaths.Resolve(null, "Cache/SceneReview")],
                 host.ProcessTimeout, Path.GetDirectoryName(host.HostScriptPath), 524288, 524288,
                 host.EnvironmentVariables, inheritParentEnvironment: false),
@@ -113,13 +121,18 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
                     if (!row.GetProperty("factReview").GetProperty("grounded").GetBoolean())
                         throw new InvalidDataException("Scene claims did not pass the separate frame check.");
                     ValidateNeuralValue(row.GetProperty("neuralValue"), row.GetProperty("assessment").GetProperty("editorialValue").GetDouble());
-                    results.Add(ParseAssessment(item, row.GetProperty("assessment"), row.GetProperty("frameTimes"), elapsed));
+                    var assessment = ParseAssessment(item, row.GetProperty("assessment"), row.GetProperty("frameTimes"), elapsed);
+                    results.Add(new(item, assessment.Observation, assessment.CanonicalizationAudit, elapsed,
+                        assessment.NeuralEditorialValue, QwenSceneMomentEvidenceParser.Parse(row, item,
+                            JsonSerializer.SerializeToElement(audio[item.CaseId]))));
                 }
                 catch (Exception exception) when (exception is ArgumentException or InvalidDataException or InvalidOperationException or KeyNotFoundException)
                 { failures.Add(new(item, "SceneValidation", exception.GetType().Name, elapsed)); }
             }
             if (failures.Count > 0)
                 new SystemQwen3VlGroundedFailureArchive().Archive(output, 2_097_152);
+            foreach (var item in request.Requests)
+                if (item.SceneContext is { } context) QwenSceneAudioPreparation.VerifySource(context);
             return new(request, results, process.Duration, root.GetProperty("peakAllocatedGpuBytes").GetInt64(), failures);
         }
         finally
@@ -143,7 +156,9 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
         var distinct = EnumValue<VisualSemanticTernary>("hasDistinctEvent");
         var payoff = EnumValue<VisualSemanticTernary>("hasPayoff");
         var support = EnumValue<VisualSemanticTranscriptContextSupport>("transcriptSupport");
-        if (!request.Transcript.Spans.Any(span => !span.IsNonSpeech) && support != VisualSemanticTranscriptContextSupport.NotSupplied)
+        if (!request.Transcript.Spans.Any(span => !span.IsNonSpeech) &&
+            request.SceneContext?.AudioTracks.Any(track => track.Speech.Count > 0) != true &&
+            support != VisualSemanticTranscriptContextSupport.NotSupplied)
             throw new InvalidDataException("Scene review invented speech support.");
         string setup = value.GetProperty("setup").GetString()!.Trim(), outcome = value.GetProperty("outcome").GetString()!.Trim();
         string centralEvent = value.GetProperty("event").GetString()!.Trim();
@@ -171,7 +186,7 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
             value.GetProperty("editorialValue").GetDouble() / 100d);
     }
 
-    internal static void ValidateNeuralValue(JsonElement value, double editorialValue, string expectedVersion = "scene-value-1")
+    internal static void ValidateNeuralValue(JsonElement value, double editorialValue, string expectedVersion = "scene-value-2")
     {
         var margins = value.GetProperty("margins").EnumerateArray().Select(item => item.GetDouble()).ToArray();
         if (value.GetProperty("version").GetString() != expectedVersion || value.GetProperty("calibrated").GetBoolean() ||

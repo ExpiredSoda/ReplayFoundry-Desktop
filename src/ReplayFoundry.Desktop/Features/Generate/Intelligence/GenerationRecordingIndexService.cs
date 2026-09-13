@@ -34,17 +34,26 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
                 string input = Path.Combine(directory, "input.json"), output = Path.Combine(directory, "output.json");
                 var transcript = intelligence.Transcripts?.Sources.SingleOrDefault(item =>
                     item.SourceFullPath.Equals(media.FullPath, StringComparison.OrdinalIgnoreCase));
+                var selection = intelligence.BaseMoments.Request.Setup.CaptionSettings.FindForSource(media.FullPath);
+                var speechRows = (transcript?.Tracks ?? []).SelectMany(track => track.Segments.Select(segment => new
+                {
+                    start = segment.AbsoluteSourceStart.TotalSeconds, end = segment.AbsoluteSourceEnd.TotalSeconds, text = segment.Text,
+                    streamIndex = track.AudioStreamIndex,
+                    role = GenerationSceneReviewContextBuilder.Role(selection?.AbsoluteAudioStreamIndex == track.AudioStreamIndex ? selection : null).Role.ToString(),
+                    roleSource = GenerationSceneReviewContextBuilder.Role(selection?.AbsoluteAudioStreamIndex == track.AudioStreamIndex ? selection : null).Source.ToString(),
+                })).OrderBy(row => row.start).ThenBy(row => row.end).ToArray();
+                if (transcript is not null)
+                    transcript = transcript with { Segments = transcript.AllSegments.ToArray(), AdditionalTracks = null };
                 await File.WriteAllTextAsync(input, JsonSerializer.Serialize(new
                 {
-                    schemaVersion = "recording-index-5", sourcePath = media.FullPath,
+                    schemaVersion = "recording-index-6", sourcePath = media.FullPath,
                     durationSeconds = media.Duration.TotalSeconds, modelHash = runtime.Model.ManifestSha256,
                     region = new[] { region.X, region.Y, region.Width, region.Height },
                     contextRegion = presenter is null ? null : new[] { presenter.X, presenter.Y, presenter.Width, presenter.Height },
                     preferences = new { mode = intelligence.BaseMoments.Request.Setup.Mode.ToString(),
                         emphasis = intelligence.BaseMoments.Request.Setup.ContentEmphasis.ToString(),
                         intent = intelligence.BaseMoments.Request.Setup.DiscoveryIntent.MomentType.ToString() },
-                    transcript = (transcript?.Segments ?? []).Select(item => new
-                    { start = item.AbsoluteSourceStart.TotalSeconds, end = item.AbsoluteSourceEnd.TotalSeconds, text = item.Text }),
+                    transcript = speechRows,
                 }), cancellationToken);
                 await Task.Run(() => runtime.ModelIntegrity.Verify(cancellationToken), cancellationToken);
                 var host = runtime.Host;
@@ -65,7 +74,7 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
                 await Task.Run(() => runtime.ModelIntegrity.Verify(cancellationToken), cancellationToken);
                 using var document = JsonDocument.Parse(await File.ReadAllTextAsync(output, cancellationToken));
                 var root = document.RootElement;
-                if (root.GetProperty("schemaVersion").GetString() != "recording-index-5")
+                if (root.GetProperty("schemaVersion").GetString() != "recording-index-6")
                     throw new InvalidDataException("Recording index version changed.");
                 TimeSpan indexElapsed = timer.Elapsed;
                 var windows = root.GetProperty("windows").EnumerateArray().ToArray();
@@ -82,17 +91,12 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
                 bool identityConflict = selectedGame is not null && visibleGame is not null &&
                     NormalizeTitle(selectedGame) != NormalizeTitle(visibleGame);
                 var expanded = source.Moments;
+                var visualSeeds = GenerationIndexedEventNominations.Create(windows);
+                if (visualSeeds.Count > 0)
+                    expanded = GenerationSemanticExplorationPlanner.Expand(expanded, visualSeeds.Count, cancellationToken, semanticSeeds: visualSeeds);
                 if (transcript is not null)
                 {
-                    var seeds = windows.Where(row => row.GetProperty("prediction").GetProperty("funny").GetBoolean() ||
-                            row.GetProperty("prediction").GetProperty("commentary").GetBoolean())
-                        .Select(row => row.GetProperty("prediction").GetProperty("speechMomentIds").EnumerateArray()
-                            .Select(value => value.GetInt32()).Distinct().Where(id => id >= 0 && id < transcript.Segments.Count)
-                            .Select(id => transcript.Segments[id]).OrderBy(segment => segment.AbsoluteSourceStart).ToArray())
-                        .Where(segments => segments.Length > 0)
-                        .Select(segments => new GenerationTimedExplorationSeed(segments[0].AbsoluteSourceStart,
-                            segments[^1].AbsoluteSourceEnd, "A local neural review nominated this complete spoken passage; close review is still required."))
-                        .DistinctBy(seed => (seed.Start, seed.End)).ToArray();
+                    var seeds = SpeechSeeds(windows, transcript);
                     foreach (var chunk in seeds.Chunk(GenerationSemanticReviewBudgetPolicy.MaximumCandidates))
                         expanded = GenerationSemanticExplorationPlanner.Expand(expanded, chunk.Length, cancellationToken, semanticSeeds: chunk);
                 }
@@ -181,6 +185,27 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
 
     internal static string NormalizeTitle(string title) => new string(title.ToUpperInvariant()
         .Where(char.IsLetterOrDigit).ToArray());
+
+    internal static IReadOnlyList<GenerationTimedExplorationSeed> SpeechSeeds(
+        IReadOnlyList<JsonElement> windows, GenerationSourceTranscript transcript)
+    {
+        var seeds = new List<GenerationTimedExplorationSeed>();
+        foreach (var row in windows)
+        {
+            var prediction = row.GetProperty("prediction");
+            if (!prediction.GetProperty("funny").GetBoolean() && !prediction.GetProperty("commentary").GetBoolean() &&
+                !prediction.GetProperty("lore").GetBoolean()) continue;
+            int[] ids = prediction.GetProperty("speechMomentIds").EnumerateArray().Select(value => value.GetInt32()).Distinct().ToArray();
+            if (ids.Length == 0 || ids.Any(id => id < 0 || id >= transcript.Segments.Count)) continue;
+            var segments = ids.Select(id => transcript.Segments[id]).OrderBy(segment => segment.AbsoluteSourceStart).ToArray();
+            double start = row.GetProperty("start").GetDouble(), end = row.GetProperty("end").GetDouble();
+            if (!double.IsFinite(start) || !double.IsFinite(end) || start < 0 || end <= start ||
+                segments.Any(segment => segment.AbsoluteSourceStart.TotalSeconds < start || segment.AbsoluteSourceEnd.TotalSeconds > end)) continue;
+            seeds.Add(new(segments[0].AbsoluteSourceStart, segments.Max(segment => segment.AbsoluteSourceEnd),
+                "A local neural review nominated this spoken passage; close review is still required."));
+        }
+        return seeds.DistinctBy(seed => (seed.Start, seed.End)).ToArray();
+    }
 
     internal static string? DescribeProgress(string line)
     {

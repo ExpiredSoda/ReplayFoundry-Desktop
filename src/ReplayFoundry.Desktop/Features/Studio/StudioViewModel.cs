@@ -42,6 +42,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     private WorkspaceSurfaceState _surfaceState;
     private bool _isStopping;
     private bool _isDisposed;
+    private readonly StudioCaptionReviewNavigation _captionReviewNavigation;
 
     public StudioViewModel()
         : this(
@@ -256,9 +257,11 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
             commitPendingMetadata: TryCommitPendingMetadataEdit,
             hasActiveProjectMutation: () =>
                 Inspector.Editorial.IsGenerating ||
+                Inspector.Caption.IsAligning ||
                 HiddenMoments.HasUnfinishedQueueItems,
             selectedAsset: () => Inspector.SelectedAsset,
-            libraryCatalog: libraryCatalog);
+            libraryCatalog: libraryCatalog,
+            hasUnsavedCaptions: () => Inspector.Caption.HasUnsavedChanges);
         ManualClips = new StudioManualClipViewModel(outputEditor as IGenerationManualClipEditor,
             previewMediaService, () => !FinalRender.IsRendering && !Inspector.Editorial.IsGenerating &&
                 !Inspector.Editorial.HasUnsavedChanges && !Inspector.Clip.HasPendingEdit &&
@@ -268,6 +271,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         Inspector.Editorial.PropertyChanged += Editorial_PropertyChanged;
         HiddenMoments.PropertyChanged += HiddenMoments_PropertyChanged;
         FinalRender.PropertyChanged += FinalRender_PropertyChanged;
+        _captionReviewNavigation = new(Inspector, Preview, FinalRender, SelectBrowserAsset);
         Preview.PropertyChanged += Preview_PropertyChanged;
 
         _selectBrowserAssetCommand = new DelegateCommand<string>(
@@ -297,6 +301,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         FinalRender.Bind(CurrentProject);
         HiddenMoments.Bind(CurrentProject);
         ManualClips.Bind(CurrentProject);
+        ClipBrowser = new(this, () => CurrentProject, () => BrowserPreviewItems);
         WarmFirstAlternateWhenPreviewSettles();
         RestartPreviewPrewarming();
     }
@@ -312,6 +317,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
     public StudioFinalRenderViewModel FinalRender { get; }
     public StudioHiddenMomentsViewModel HiddenMoments { get; }
     public StudioManualClipViewModel ManualClips { get; }
+    public Browser.StudioClipBrowserViewModel ClipBrowser { get; }
 
     public Task<StudioProjectSwitchResult> TrySwitchProjectAsync(
         GenerationOutputProject project,
@@ -380,6 +386,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         }
 
         _isDisposed = true;
+        _captionReviewNavigation.Dispose();
         _previewPrewarming.Dispose();
         _draftSaveCancellation?.Cancel();
         _draftSaveCancellation?.Dispose();
@@ -393,6 +400,7 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
         FinalRender.PropertyChanged -= FinalRender_PropertyChanged;
         Preview.PropertyChanged -= Preview_PropertyChanged;
         FinalRender.Dispose();
+        ClipBrowser.Dispose();
         HiddenMoments.MomentAccepted -= HiddenMoments_MomentAccepted;
         HiddenMoments.Dispose();
         ManualClips.ClipAdded -= ManualClips_ClipAdded;
@@ -645,6 +653,11 @@ public sealed class StudioViewModel : ObservableObject, IWorkspaceChromeSource,
 
     private void ReviewRenderRequirements()
     {
+        if (FinalRender.NeedsCaptionSave)
+        {
+            Inspector.SelectedInspector = StudioInspectorSection.Captions;
+            return;
+        }
         if (FinalRender.NeedsIncludedCandidate)
         {
             Inspector.SelectedInspector = StudioInspectorSection.Clip;

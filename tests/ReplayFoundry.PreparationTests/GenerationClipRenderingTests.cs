@@ -23,6 +23,13 @@ internal static partial class GenerationClipRenderingTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
+        new("Clip search uses saved caption ranges without changing selection", ClipSearchUsesSavedCaptionsAndKeepsSelection),
+        new("Caption find and replace is literal and undoable as one correction", CaptionFindReplaceIsLiteralAndUndoable),
+        new("Caption replacement preserves observed clocks without inventing new ones", CaptionReplacementDoesNotInventNewWordTiming),
+        new("Caption pacing review is advisory and aware of the current cut", CaptionPacingReviewIsAdvisoryAndCutAware),
+        new("Caption review identifies missing timing separately from weak acoustic fit", CaptionReviewDistinguishesMissingAndWeakTiming),
+        new("Caption review focuses exact phrases and preserves edits and caret bindings", CaptionReviewOpensThePhraseWithoutLosingDraftEdits),
+        new("Caption review keeps a stopped render queue actionable", CaptionReviewKeepsFailedRendersActionable),
         new("Caption editor uses current cut and preserves measured words", CaptionEditingUsesCurrentCutAndPreservesMeasuredWords),
         new("Caption trim and extension round trips retain measured source clocks", CaptionCutRoundTripsKeepAbsoluteWordClocks),
         new("Clearing recent projects with captions and a deleted source releases Studio safely", ClearCaptionedRecentProjectWithMissingSource),
@@ -88,6 +95,9 @@ internal static partial class GenerationClipRenderingTests
         new("Editorial transcript cuts stay identical across caption routes", EditorialTranscriptCutsStayIdenticalAcrossRoutes),
         new("Editorial transcripts support Studio cuts beyond the caption window", EditorialTranscriptsSupportExtendedStudioCuts),
         new("Invalid Whisper word timing falls back to truthful phrase timing", InvalidWhisperWordsFallBackToPhraseTiming),
+        new("Pop repairs missing word timing before encoding and clears measured pauses", PopRepairsTimingBeforeEncoding),
+        new("Unresolved Pop timing cannot create an output or silently animate a sentence", PopRejectsUnresolvedTiming),
+        new("Pop timing preparation leaves clean exports and valid word clocks untouched", PopLeavesCleanAndTimedExportsUntouched),
         new("One invalid Whisper word stays inside its measured speech run", PartiallyInvalidWhisperTimingStaysInsideSpeechRun),
         new("Caption source language is explicit and options remain immutable", CaptionLanguagePolicyIsExplicit),
         new("Reopened caption preparation uses the exact retained source window", RetainedCaptionPreparationUsesExactWindow),

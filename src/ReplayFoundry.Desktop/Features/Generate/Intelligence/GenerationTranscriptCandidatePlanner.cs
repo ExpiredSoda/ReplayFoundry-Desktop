@@ -16,7 +16,7 @@ internal static class GenerationTranscriptCandidatePlanner
             GenerationSourceTranscript? transcript = transcripts.SingleOrDefault(value =>
                 value.SourceFullPath.Equals(source.AnalyzedSource.PreparedSource.Media.FullPath,
                     StringComparison.OrdinalIgnoreCase));
-            AudioTranscriptionSegment[] eligible = transcript?.Segments
+            AudioTranscriptionSegment[] eligible = transcript?.AllSegments
                 .Where(segment => moments.Request.Setup.DiscoveryIntent.CountMatches(segment.Text) > 0 ||
                     segment.Text.Count(char.IsLetter) >= 20)
                 .ToArray() ?? [];

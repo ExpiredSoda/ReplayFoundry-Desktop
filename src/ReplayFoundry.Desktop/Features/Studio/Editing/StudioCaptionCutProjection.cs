@@ -30,7 +30,8 @@ internal static class StudioCaptionCutProjection
                 continue;
             }
             bool aligned = StudioCaptionPresentationPolicy.HasCompleteTimedWordCoverage(segment);
-            var words = aligned ? segment.Words.Where(word => word.AbsoluteSourceStart >= start &&
+            var spokenWords = StudioCaptionPresentationPolicy.GetSpokenWords(segment);
+            var words = aligned ? spokenWords.Where(word => word.AbsoluteSourceStart >= start &&
                 word.AbsoluteSourceEnd <= end).ToArray() : [];
             if (aligned && words.Length == 0) continue;
             TimeSpan projectedStart = aligned ? words[0].AbsoluteSourceStart : Max(start, segment.AbsoluteSourceStart);
@@ -43,8 +44,8 @@ internal static class StudioCaptionCutProjection
             {
                 var cue = new StudioCaptionCue(segment.Text, segment.RelativeStart, segment.RelativeEnd,
                     segment.AbsoluteSourceStart, segment.AbsoluteSourceEnd,
-                    StudioCaptionPresentationPolicy.CreateRequiredWordSpans(segment.Text, segment.Words));
-                int firstWord = segment.Words.TakeWhile(word => !ReferenceEquals(word, words[0])).Count();
+                    StudioCaptionPresentationPolicy.CreateRequiredWordSpans(segment.Text, spokenWords));
+                int firstWord = spokenWords.TakeWhile(word => !ReferenceEquals(word, words[0])).Count();
                 text = StudioCaptionDisplayText.SliceWordRangeText(cue, firstWord, words.Length);
             }
             segments.Add(new AudioTranscriptionSegment(segment.Id, segment.NeighborhoodId,

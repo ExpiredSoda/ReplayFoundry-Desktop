@@ -1,5 +1,6 @@
 using System.IO;
 using ReplayFoundry.Desktop.Features.Generate.Editorial;
+using ReplayFoundry.Desktop.Features.Generate.Intelligence;
 using ReplayFoundry.Desktop.Platform.Diagnostics;
 using ReplayFoundry.Desktop.Platform.VisualSemantic;
 using ReplayFoundry.Desktop.Platform.Storage;
@@ -9,7 +10,8 @@ namespace ReplayFoundry.Desktop.Composition;
 internal sealed record EditorialCompositionDependencies(
     LocalVisualReviewServices VisualReview,
     GenerationExperienceServices Experience,
-    GenerationWorkspaceServices Workspace);
+    GenerationWorkspaceServices Workspace,
+    IGenerationTranscriptAnalysisService? SpeechContext = null);
 
 internal sealed record EditorialServices(
     ClipEditorialProfileSession ProfileSession,
@@ -35,7 +37,7 @@ internal static class EditorialComposition
             aiProvider,
             dependencies.VisualReview.Materializer,
             dependencies.VisualReview.RuntimeCapabilities.EditorialAiUnavailableReason,
-            dependencies.VisualReview.Runtime is { } runtime ? new Qwen3VlEditorialSceneContextReviewer(runtime) : null);
+            dependencies.VisualReview.Runtime is { } runtime ? new Qwen3VlEditorialSceneContextReviewer(runtime, dependencies.SpeechContext) : null);
         var generationMetadata = new GenerationEditorialMetadataService(
             metadataGenerator,
             profileSession,

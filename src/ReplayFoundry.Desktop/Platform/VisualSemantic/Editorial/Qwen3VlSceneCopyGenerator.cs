@@ -12,9 +12,9 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime runtime, IEditorialWriterLearningStore? learning)
 {
-    internal const string Version = "scene-copy-1.6";
-    internal const string PromptHash = "6c53b17a5ba00ed5d3585133de00649fb8faba2b0f167e50f8332821640de934";
-    internal const string ReviewPromptHash = "9bd2bac0f667bfcdb7a1f9113aa9fe6e8770179f108fc6ae191e0958d5e6d9e3";
+    internal const string Version = "scene-copy-1.7";
+    internal const string PromptHash = "5ef7088425071c68f419b8adb22e800096e74d9578fe45973bdf3a5ff51beb14";
+    internal const string ReviewPromptHash = "e15c23b0f73b174f52633b689cc715347962b8537156a7029c3dfe41587ab9a0";
     internal static bool CanUse(ClipEditorialMetadataRequest request)
     {
         if (!request.Context.Evidence.Any(item => item.Kind == ClipEditorialEvidenceKind.VisualObservation && item.Id == "scene-review-1.4-setup") ||
@@ -56,6 +56,7 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     {
                         candidateMode = CandidateMode(request),
                         centralEvent = request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-event").Description,
+                        reviewedContext = ReviewedContext(request),
                         tags = new[] { request.Context.GameContext.AudienceGameHashtag.TrimStart('#') }
                             .Concat(request.Profile.DefaultTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(8),
                         game = request.Context.GameContext.AudienceGameName,
@@ -126,7 +127,7 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                 var tags = new[] { request.Context.GameContext.AudienceGameHashtag.TrimStart('#') }
                     .Concat(request.Profile.DefaultTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(8).ToArray();
                 var model = runtime.Model;
-                var provenance = new ClipEditorialAiProvenance("Qwen3-VL scene writer", Version, "1.6", model.RepositoryId,
+                var provenance = new ClipEditorialAiProvenance("Qwen3-VL scene writer", Version, "1.7", model.RepositoryId,
                     model.Revision, model.ManifestSha256, "ReplayFoundry reviewed scene copy", Version, PromptHash, process.Duration, null)
                 {
                     WritingAttempts = row.TryGetProperty("writerIdentity", out var writer) && writer.ValueKind == JsonValueKind.Object
@@ -175,6 +176,17 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
         if (!binding.RootElement.TryGetProperty("candidateMode", out var value)) return "StandaloneClip";
         string? mode = value.GetString();
         return mode is "StandaloneClip" or "MontageSegment" ? mode : throw new InvalidDataException("Unknown scene wording purpose.");
+    }
+
+    internal static JsonElement? ReviewedContext(ClipEditorialMetadataRequest request)
+    {
+        var context = request.Context.Evidence.SingleOrDefault(item => item.Id == GenerationSceneEditorialEvidence.EvidenceId &&
+            item.Kind == ClipEditorialEvidenceKind.ReviewedMomentContext);
+        if (context is null) return null;
+        using var document = JsonDocument.Parse(context.Description);
+        if (document.RootElement.GetProperty("schema").GetString() != "moment-evidence-1")
+            throw new InvalidDataException("Unknown reviewed audio context.");
+        return document.RootElement.Clone();
     }
 
     private static string StripHashtag(string title, string hashtag) => title.EndsWith(" " + hashtag, StringComparison.OrdinalIgnoreCase)

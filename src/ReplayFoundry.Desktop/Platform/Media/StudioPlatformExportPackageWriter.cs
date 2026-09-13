@@ -4,11 +4,12 @@ using System.Text;
 using System.Text.Json;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Features.Generate.ModeSelection;
+using ReplayFoundry.Desktop.Features.Generate.Rendering;
 using ReplayFoundry.Desktop.Features.Studio.Editing;
 
 namespace ReplayFoundry.Desktop.Platform.Media;
 
-/// <summary>Writes portable local publishing material beside the rendered media.</summary>
+/// <summary>Writes portable publishing material in the export's Supporting files folder.</summary>
 public static class StudioPlatformExportPackageWriter
 {
     public static async Task WriteAsync(GenerationOutputProject project, IReadOnlyList<GenerationOutputAsset> assets,
@@ -18,8 +19,10 @@ public static class StudioPlatformExportPackageWriter
         ArgumentNullException.ThrowIfNull(assets);
         string root = Path.GetFullPath(outputDirectory);
         await StudioTimelineHandoffWriter.WriteAsync(assets, root, cancellationToken);
+        string supporting = GenerationExportPackagePaths.SupportingDirectory(root);
+        Directory.CreateDirectory(supporting);
         var index = new StringBuilder("# Replay Foundry publishing package\n\n")
-            .AppendLine("Open each video's `.publish.md` to review and copy its title, description, and tags. Its `.publish.json` contains the same retained metadata and relative file names.")
+            .AppendLine("Your finished videos are one folder up. This Supporting files folder contains optional captions, thumbnails, publishing notes, and editor handoffs. Open each video's `.publish.md` to review and copy its title, description, and tags. Its `.publish.json` contains the same retained metadata. File paths are relative to these publishing documents.")
             .AppendLine().AppendLine("Review the rendered video, caption spelling and timing, crop, game HUD, and target platform preview before uploading. Platform interfaces can cover different parts of the frame. Subtitle files are supplied when captions are available. Each clip's caption-delivery setting below identifies whether its captions are burned into the MP4 or supplied only as separate files.")
             .AppendLine().AppendLine("These are local export files. Upload the video and any subtitle file through your chosen platform; nothing has been published automatically.")
             .AppendLine().AppendLine("## Editor handoff")
@@ -34,15 +37,13 @@ public static class StudioPlatformExportPackageWriter
             GenerationOutputAsset[] clips = group.OrderBy(static asset => asset.Rank).ToArray();
             string fileName = Path.GetFileName(path);
             string stem = Path.GetFileNameWithoutExtension(path);
-            string? ExistingSibling(string extension) => File.Exists(Path.Combine(root, stem + extension)) ? stem + extension : null;
-            bool burnedCaptions = clips.Any(asset => asset.RenderSettings.BurnCaptions && asset.Captions is not null);
-            string? ExistingCaption(string extension)
+            string? ExistingSupport(string extension)
             {
-                string caption = StudioCaptionSidecarPaths.Resolve(path, extension, burnedCaptions);
-                return File.Exists(caption) ? Path.GetRelativePath(root, caption).Replace('\\', '/') : null;
+                string file = GenerationExportPackagePaths.ForVideo(path, extension);
+                return File.Exists(file) ? Path.GetRelativePath(supporting, file).Replace('\\', '/') : null;
             }
             string[] platforms = clips.Select(static asset => StudioPlatformExportPresets.DisplayName(asset.RenderSettings.PlatformPreset)).Distinct().ToArray();
-            var files = new { video = fileName, subtitlesSrt = ExistingCaption(".srt"), subtitlesVtt = ExistingCaption(".vtt"), thumbnail = ExistingSibling(".thumbnail.jpg"),
+            var files = new { video = Path.GetRelativePath(supporting, path).Replace('\\', '/'), subtitlesSrt = ExistingSupport(".srt"), subtitlesVtt = ExistingSupport(".vtt"), thumbnail = ExistingSupport(".thumbnail.jpg"),
                 originalTimeline = "source-cuts.otio", renderedTimeline = "rendered.otio" };
             bool montage = project.Mode == GenerationMode.Montage;
             var document = new
@@ -65,11 +66,11 @@ public static class StudioPlatformExportPackageWriter
                     burnCaptions = asset.RenderSettings.BurnCaptions,
                 }).ToArray(),
             };
-            await File.WriteAllTextAsync(Path.Combine(root, stem + ".publish.json"),
+            await File.WriteAllTextAsync(Path.Combine(supporting, stem + ".publish.json"),
                 JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false), cancellationToken);
             var readable = new StringBuilder("# ").AppendLine(fileName).AppendLine()
                 .Append("Target: ").AppendLine(string.Join(", ", platforms)).AppendLine()
-                .Append("Video: ").AppendLine(fileName)
+                .Append("Video: ").AppendLine(files.video)
                 .Append("Duration: ").Append(clips.Sum(static asset => asset.Duration.TotalSeconds).ToString("0.###", CultureInfo.InvariantCulture)).AppendLine(" seconds");
             if (files.subtitlesSrt is not null) readable.Append("Subtitles (SRT): ").AppendLine(files.subtitlesSrt);
             if (files.subtitlesVtt is not null) readable.Append("Subtitles (WebVTT): ").AppendLine(files.subtitlesVtt);
@@ -79,16 +80,16 @@ public static class StudioPlatformExportPackageWriter
             {
                 if (montage) readable.AppendLine().Append("## Clip ").AppendLine(asset.Rank.ToString(CultureInfo.InvariantCulture));
                 readable.AppendLine().AppendLine(asset.RenderSettings.BurnCaptions
-                    ? "Caption delivery: enabled captions are burned into this clip. Optional subtitle files are in caption-files for separate upload or editing; opening them during playback adds a second caption layer."
-                    : "Clean video: available captions are supplied in the adjacent SRT/VTT files and are not burned into the MP4.");
+                    ? "Caption delivery: enabled captions are burned into this clip. Optional SRT/VTT files are here in Supporting files for separate upload or editing; opening them during playback adds a second caption layer."
+                    : "Clean video: captions are supplied here in Supporting files as SRT/VTT and are not burned into the MP4. Load one manually in your player to view captions, or upload it separately.");
                 readable.AppendLine().AppendLine("### Title").AppendLine().AppendLine(asset.EditorialMetadata?.Title ?? "Add a title before uploading.")
                     .AppendLine().AppendLine("### Description").AppendLine().AppendLine(asset.EditorialMetadata?.Description ?? "Add a description before uploading.")
                     .AppendLine().AppendLine("### Tags").AppendLine().AppendLine(string.Join(", ", asset.EditorialMetadata?.Tags ?? []));
                 if (!asset.IsEditorialMetadataCurrentForCut) readable.AppendLine().AppendLine("Review or regenerate this clip's metadata: it has not been verified for the current cut.");
             }
-            await File.WriteAllTextAsync(Path.Combine(root, stem + ".publish.md"), readable.ToString(), new UTF8Encoding(false), cancellationToken);
+            await File.WriteAllTextAsync(Path.Combine(supporting, stem + ".publish.md"), readable.ToString(), new UTF8Encoding(false), cancellationToken);
             index.AppendLine().Append("- ").Append(stem).Append(".publish.md — ").AppendLine(string.Join(", ", platforms));
         }
-        await File.WriteAllTextAsync(Path.Combine(root, "Publishing Guide.md"), index.ToString(), new UTF8Encoding(false), cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(supporting, "Publishing Guide.md"), index.ToString(), new UTF8Encoding(false), cancellationToken);
     }
 }

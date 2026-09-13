@@ -25,6 +25,10 @@ public static class GenerationMomentContentClassifier
             return new(Gameplay: gameplay, Commentary: commentary, Funny: funny, RecordingIndexCompleted: indexed, Lore: lore);
 
         VisualSemanticObservableContentType type = review.Observation.ObservableContentType;
+        if (review.MomentEvidence is { } timed)
+            return new(Gameplay: timed.Supports(SceneMomentCategory.Action), Commentary: timed.Supports(SceneMomentCategory.Commentary),
+                Funny: timed.Supports(SceneMomentCategory.Humor), Lore: timed.Supports(SceneMomentCategory.Lore),
+                VisualReviewCompleted: true, RecordingIndexCompleted: indexed);
         // The recording classifier asks about gameplay specifically. A scene's
         // broader Action label can also describe scripted character movements.
         return new(Gameplay: indexed ? gameplay : type == VisualSemanticObservableContentType.Action, Commentary: commentary,

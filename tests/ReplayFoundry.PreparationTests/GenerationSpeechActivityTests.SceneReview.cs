@@ -98,7 +98,7 @@ internal static partial class GenerationSpeechActivityTests
 
     private static async Task GroundedSceneEvidence()
     {
-        var neutralScore = JsonSerializer.SerializeToElement(new { version = "scene-value-1", calibrated = false,
+        var neutralScore = JsonSerializer.SerializeToElement(new { version = "scene-value-2", calibrated = false,
             margins = new[] { 0d, 0d }, probabilities = new[] { .5, .5 }, value = .5 });
         Qwen3VlSceneReviewProvider.ValidateNeuralValue(neutralScore, 50);
         TestAssert.Throws<InvalidDataException>(() => Qwen3VlSceneReviewProvider.ValidateNeuralValue(neutralScore, 75),
