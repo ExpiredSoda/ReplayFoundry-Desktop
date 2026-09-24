@@ -15,9 +15,10 @@ internal static partial class GenerationSpeechActivityTests
         foreach (var scenario in new[]
         {
             (Human: false, Kind: ClipEditorialAiFailureKind.CaseRejected, Failures: 1, ExpectedCalls: 2),
+            (Human: false, Kind: ClipEditorialAiFailureKind.CaseRejected, Failures: 3, ExpectedCalls: 4),
             (Human: true, Kind: ClipEditorialAiFailureKind.CaseRejected, Failures: 1, ExpectedCalls: 1),
             (Human: false, Kind: ClipEditorialAiFailureKind.ProviderFailed, Failures: 1, ExpectedCalls: 1),
-            (Human: false, Kind: ClipEditorialAiFailureKind.CaseRejected, Failures: 10, ExpectedCalls: 3),
+            (Human: false, Kind: ClipEditorialAiFailureKind.CaseRejected, Failures: 10, ExpectedCalls: 4),
         })
         {
             string path = TestMediaFactory.CreateSourcePath("editorial-replacement.mkv");
@@ -33,7 +34,7 @@ internal static partial class GenerationSpeechActivityTests
                 new ReviewTestOutputPath(), writer, speechActivity: new ReviewTestSpeech(),
                 candidateRefinement: new GenerationCandidateRefinementService(),
                 visualSemantic: new GenerationVisualSemanticAnalysisService(provider, materializer, CreateVisualSettings()));
-            if (!scenario.Human && scenario.Kind == ClipEditorialAiFailureKind.CaseRejected && scenario.Failures == 1)
+            if (!scenario.Human && scenario.Kind == ClipEditorialAiFailureKind.CaseRejected && scenario.Failures < 4)
             {
                 var result = await pipeline.RunAsync(request, new RecordingProgress<GenerationProgressUpdate>(), CancellationToken.None);
                 TestAssert.False(writer.RejectedIds.Contains(result.Candidates.Single().Id),

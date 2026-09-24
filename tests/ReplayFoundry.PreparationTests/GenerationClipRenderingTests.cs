@@ -96,6 +96,7 @@ internal static partial class GenerationClipRenderingTests
         new("Editorial transcripts support Studio cuts beyond the caption window", EditorialTranscriptsSupportExtendedStudioCuts),
         new("Invalid Whisper word timing falls back to truthful phrase timing", InvalidWhisperWordsFallBackToPhraseTiming),
         new("Pop repairs missing word timing before encoding and clears measured pauses", PopRepairsTimingBeforeEncoding),
+        new("Pop fills missing words without discarding usable provider clocks", PopPreservesUsableProviderWords),
         new("Unresolved Pop timing cannot create an output or silently animate a sentence", PopRejectsUnresolvedTiming),
         new("Pop timing preparation leaves clean exports and valid word clocks untouched", PopLeavesCleanAndTimedExportsUntouched),
         new("One invalid Whisper word stays inside its measured speech run", PartiallyInvalidWhisperTimingStaysInsideSpeechRun),

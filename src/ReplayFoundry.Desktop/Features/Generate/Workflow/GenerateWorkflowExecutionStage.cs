@@ -1,4 +1,5 @@
 using ReplayFoundry.Desktop.Features.Generate.Progress;
+using ReplayFoundry.Desktop.Features.Generate.Editorial;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Workflow;
 
@@ -78,6 +79,14 @@ internal sealed class GenerateWorkflowExecutionStage
                 exception);
         }
         catch (GenerationSourceException exception)
+        {
+            _failureHandler.Show(
+                GenerationFailurePresentation.Generation,
+                exception.Message,
+                exception);
+        }
+        catch (ClipEditorialAiGenerationException exception) when (
+            exception.FailureKind == ClipEditorialAiFailureKind.CaseRejected)
         {
             _failureHandler.Show(
                 GenerationFailurePresentation.Generation,

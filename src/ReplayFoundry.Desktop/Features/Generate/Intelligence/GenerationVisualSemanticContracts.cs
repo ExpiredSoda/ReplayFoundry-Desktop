@@ -172,19 +172,25 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
         GenerationVisualSemanticOutcome outcome =
             GenerationVisualSemanticOutcome.Completed,
         string? fallbackReason = null,
-        string? diagnosticDetails = null)
+        string? diagnosticDetails = null,
+        IEnumerable<MomentCandidate>? attemptedCandidates = null)
     {
         ArgumentNullException.ThrowIfNull(candidateIntelligence);
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(observations);
         GenerationVisualSemanticCandidateObservation[] snapshot =
             observations.ToArray();
+        MomentCandidate[] attempted = (attemptedCandidates ?? snapshot.Select(item => item.Candidate)).ToArray();
         MaterializedVisualSemanticReviewVideo[] reviewSnapshot =
             (reviewVideos ?? []).ToArray();
         MomentCandidate[] proposals = candidateIntelligence.BaseMoments.Sources
             .SelectMany(static source => source.Moments.Proposals)
             .ToArray();
         if (!Enum.IsDefined(outcome) ||
+            attempted.Length > GenerationSemanticReviewBudgetPolicy.MaximumCandidates ||
+            attempted.Distinct(ReferenceEqualityComparer.Instance).Count() != attempted.Length ||
+            attempted.Any(candidate => !proposals.Any(proposal => ReferenceEquals(proposal, candidate))) ||
+            snapshot.Any(observation => !attempted.Contains(observation.Candidate)) ||
             snapshot.Length > GenerationSemanticReviewBudgetPolicy.MaximumCandidates ||
             outcome == GenerationVisualSemanticOutcome.Completed &&
                 snapshot.Length == 0 ||
@@ -219,6 +225,7 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
         CandidateIntelligence = candidateIntelligence;
         Provider = provider;
         _observations = Array.AsReadOnly(snapshot);
+        AttemptedCandidates = Array.AsReadOnly(attempted);
         _reviewVideos = reviewSnapshot.ToDictionary(
             static value => value.Request.CandidateId,
             StringComparer.Ordinal);
@@ -245,14 +252,17 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
     public string? FallbackReason { get; }
     public string? DiagnosticDetails { get; }
     internal bool SupplementalReviewAttempted { get; private set; }
+    internal IReadOnlyList<MomentCandidate> AttemptedCandidates { get; }
 
     internal static GenerationVisualSemanticAnalysisResult Combine(
-        GenerationVisualSemanticAnalysisResult previous, GenerationVisualSemanticAnalysisResult supplemental)
+        GenerationVisualSemanticAnalysisResult previous, GenerationVisualSemanticAnalysisResult supplemental,
+        bool additionalAlternatives = false)
     {
         if (previous._disposed || supplemental._disposed ||
             !ReferenceEquals(previous.CandidateIntelligence, supplemental.CandidateIntelligence) ||
             previous.Outcome != GenerationVisualSemanticOutcome.Completed ||
-            previous.SupplementalReviewAttempted || supplemental.Observations.Count > GenerationSemanticReviewBudgetPolicy.MaximumSupplementalCandidates)
+            previous.SupplementalReviewAttempted && !additionalAlternatives ||
+            supplemental.AttemptedCandidates.Count > GenerationSemanticReviewBudgetPolicy.MaximumSupplementalCandidates)
             throw new ArgumentException("Supplemental review must extend one live initial review from the same intelligence.");
         var combined = new GenerationVisualSemanticAnalysisResult(previous.CandidateIntelligence, previous.Provider,
             previous.Observations.Concat(supplemental.Observations), previous.Elapsed + supplemental.Elapsed,
@@ -262,7 +272,8 @@ public sealed class GenerationVisualSemanticAnalysisResult : IDisposable
                 ? "Some picture checks could not finish. Automatic selection uses the successfully reviewed candidates only."
                 : null,
             diagnosticDetails: string.Join(Environment.NewLine, new[] { previous.DiagnosticDetails, supplemental.DiagnosticDetails }
-                .Where(value => !string.IsNullOrWhiteSpace(value))));
+                .Where(value => !string.IsNullOrWhiteSpace(value))),
+            attemptedCandidates: previous.AttemptedCandidates.Concat(supplemental.AttemptedCandidates));
         combined._ownedReviews = [previous, supplemental];
         combined.SupplementalReviewAttempted = true;
         return combined;
@@ -307,6 +318,12 @@ public interface IGenerationVisualSemanticAnalysisService
     Task<GenerationVisualSemanticAnalysisResult> ReviewPromotedAsync(
         GenerationCandidateIntelligenceResult baseline,
         IReadOnlyList<GenerationMomentCandidate> selected,
+        GenerationVisualSemanticAnalysisResult previous,
+        IProgress<GenerationVisualSemanticProgress>? progress,
+        CancellationToken cancellationToken) => Task.FromResult(previous);
+
+    Task<GenerationVisualSemanticAnalysisResult> ReviewAlternativesAsync(
+        GenerationCandidateIntelligenceResult baseline,
         GenerationVisualSemanticAnalysisResult previous,
         IProgress<GenerationVisualSemanticProgress>? progress,
         CancellationToken cancellationToken) => Task.FromResult(previous);

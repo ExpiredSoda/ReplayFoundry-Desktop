@@ -494,6 +494,7 @@ internal static partial class GenerateViewModelWorkflowTests
         IGenerationRunner
     {
         public List<GenerationRequest> Requests { get; } = [];
+        public Exception? Failure { get; set; }
 
         public Task<GenerationResult> RunAsync(
             GenerationRequest request,
@@ -503,7 +504,7 @@ internal static partial class GenerateViewModelWorkflowTests
             Requests.Add(request);
 
             return Task.FromException<GenerationResult>(
-                new GenerationEngineUnavailableException(
+                Failure ?? new GenerationEngineUnavailableException(
                     "Synthetic intentional preflight stop."));
         }
     }

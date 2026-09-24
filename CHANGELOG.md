@@ -2,7 +2,18 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.2](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.2).
+downloadable version is [1.0.0 Beta 5.3](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.3).
+
+## 1.0.0 Beta 5.3 — 2026-09-24
+
+- Preserve completed recording-map sections when a long scan reaches its time budget. Recovery verifies the source, model, speech and framing before reusing saved results; unfinished sections remain unclassified.
+- Require picture review to cover an entire automatic cut. Close-review slots are reserved for cuts within the review duration, while explicitly marked moments remain available as user choices.
+- Continue replacing rejected automatic title/description cases while reviewed alternatives remain, instead of stopping after two replacements. Unsupported wording and failed provider runs still stop rather than silently switching to simple titles.
+- Review additional candidates when rejected cuts leave fewer clips than requested, within the existing 32-candidate limit. Follow-up checks prioritize unseen parts of the recording before overlapping trims. Failed checks consume the limit and rejected cuts cannot re-enter the selection.
+- Repair missing Pop caption words while preserving usable existing timestamps. Newly aligned words still require a sufficient acoustic match and cannot overlap retained timing.
+- Avoid repeating deterministic scene-validation failures against the same cached result. Show the specific writing-rejection explanation when no reviewed alternative can replace a failed cut.
+- Preserve the game explicitly confirmed for the current recording when coarse visual analysis mistakes tutorial headings or other text for another game's title. Remembered and inferred names still require confirmation when conflicting evidence appears.
+- Update the matching optional visual runtime/model packages to `0.8.30` and `4.0.26`. Pretrained model weights are unchanged; this release does not activate or train a personal model.
 
 ## 1.0.0 Beta 5.2 — 2026-09-13
 

@@ -128,6 +128,7 @@ internal static partial class GenerateViewModelWorkflowTests
         new(
             "Successful evidence is passed into GenerationRequest",
             SuccessfulEvidenceReachesGeneration),
+        new("Generation explains a rejected AI title without requiring stack-trace inspection", EditorialRejectionExplainsFailure),
         new(
             "Analyzing evidence disables editing and exposes truthful progress",
             AnalyzingEvidenceDisablesEditing),

@@ -278,7 +278,7 @@ internal static class QwenRuntimeResolutionTests
         await fixture.InstallValidStaleRuntimeAsync();
         AssertIncompatiblePackSetFailsClosed(
             fixture,
-            "Installed version 0.8.21; required version 0.8.29 or newer.");
+            "Installed version 0.8.29; required version 0.8.30 or newer.");
     }
 
     private static async Task ValidStaleModelFailsClosed()
@@ -287,7 +287,7 @@ internal static class QwenRuntimeResolutionTests
         await fixture.InstallValidStaleModelAsync();
         AssertIncompatiblePackSetFailsClosed(
             fixture,
-            "Installed version 4.0.17; required version 4.0.25 or newer.");
+            "Installed version 4.0.25; required version 4.0.26 or newer.");
     }
 
     private static async Task ModelRuntimeManifestMismatchFailsClosed()
@@ -761,11 +761,11 @@ internal static class QwenRuntimeResolutionTests
                 await InstallVisualRuntimeAsync(
                     store,
                     media.Manifest,
-                    version: "0.8.21");
+                    version: "0.8.29");
             _ = await InstallVisualModelAsync(
                 store,
                 runtime.Manifest,
-                runtimeMinimumVersion: "0.8.21");
+                runtimeMinimumVersion: "0.8.29");
         }
 
         public async Task InstallValidStaleModelAsync()
@@ -783,7 +783,7 @@ internal static class QwenRuntimeResolutionTests
             _ = await InstallVisualModelAsync(
                 store,
                 runtime.Manifest,
-                version: "4.0.17");
+                version: "4.0.25");
         }
 
         public async Task InstallModelRuntimeMismatchAsync()
@@ -799,7 +799,7 @@ internal static class QwenRuntimeResolutionTests
                     store,
                     media.Manifest,
                     sourceName: "visual-runtime-first",
-                    version: "0.8.29");
+                    version: "0.8.30");
             _ = await InstallVisualModelAsync(
                 store,
                 firstRuntime.Manifest);
@@ -807,7 +807,7 @@ internal static class QwenRuntimeResolutionTests
                 store,
                 media.Manifest,
                 sourceName: "visual-runtime-second",
-                version: "0.8.29");
+                version: "0.8.30");
         }
 
         public async Task InstallRuntimeMediaMismatchAsync()
@@ -945,7 +945,7 @@ internal static class QwenRuntimeResolutionTests
                 ReplayFoundryRuntimePackStore store,
                 ReplayFoundryRuntimePackManifest media,
                 string sourceName = "visual-runtime",
-                string version = "0.8.29")
+                string version = "0.8.30")
         {
             string source =
                 Source(
@@ -994,8 +994,8 @@ internal static class QwenRuntimeResolutionTests
             InstallVisualModelAsync(
                 ReplayFoundryRuntimePackStore store,
                 ReplayFoundryRuntimePackManifest runtime,
-                string version = "4.0.25",
-                string runtimeMinimumVersion = "0.8.29")
+                string version = "4.0.26",
+                string runtimeMinimumVersion = "0.8.30")
         {
             string source =
                 Source(

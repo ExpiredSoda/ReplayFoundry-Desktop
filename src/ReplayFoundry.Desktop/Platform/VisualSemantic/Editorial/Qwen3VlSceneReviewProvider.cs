@@ -127,7 +127,11 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
                             JsonSerializer.SerializeToElement(audio[item.CaseId]))));
                 }
                 catch (Exception exception) when (exception is ArgumentException or InvalidDataException or InvalidOperationException or KeyNotFoundException)
-                { failures.Add(new(item, "SceneValidation", exception.GetType().Name, elapsed)); }
+                {
+                    // The same completed, cached row will fail the same contract
+                    // again. Only transient inference failures warrant a retry.
+                    failures.Add(new(item, "SceneValidation", exception.GetType().Name, elapsed, CanRetry: false));
+                }
             }
             if (failures.Count > 0)
                 new SystemQwen3VlGroundedFailureArchive().Archive(output, 2_097_152);

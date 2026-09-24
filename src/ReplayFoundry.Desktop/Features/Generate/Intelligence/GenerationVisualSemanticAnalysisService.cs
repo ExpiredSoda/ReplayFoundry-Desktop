@@ -15,7 +15,7 @@ using ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Intelligence;
 
-public sealed class GenerationVisualSemanticAnalysisService :
+public sealed partial class GenerationVisualSemanticAnalysisService :
     IGenerationVisualSemanticAnalysisService
 {
     private readonly IVisualSemanticEditorialProvider _provider;
@@ -46,7 +46,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
         ArgumentNullException.ThrowIfNull(candidateIntelligence);
         cancellationToken.ThrowIfCancellationRequested();
         int budget = ReviewBudget(candidateIntelligence);
-        IReadOnlyList<CandidateSource> shortlist = CreateShortlist(candidateIntelligence, budget);
+        IReadOnlyList<CandidateSource> shortlist = CreateShortlist(candidateIntelligence, budget, _settings.VideoPolicy.MaximumReviewDuration);
         return AnalyzeShortlistAsync(candidateIntelligence, shortlist, progress, false, cancellationToken);
     }
 
@@ -70,9 +70,9 @@ public sealed class GenerationVisualSemanticAnalysisService :
         if (selected.Any(item => item is null || !owners.TryGetValue(item.Candidate, out var owner) ||
                 !ReferenceEquals(owner, item.AnalyzedSource)))
             throw new ArgumentException("Promoted candidates must preserve the retained candidate and source identity.", nameof(selected));
-        int remaining = Math.Max(0, _settings.MaximumCandidateCount - previous.Observations.Count);
-        CandidateSource[] promoted = selected.Where(item => !previous.Observations.Any(observation =>
-                ReferenceEquals(observation.Candidate, item.Candidate)))
+        int remaining = Math.Max(0, _settings.MaximumCandidateCount - previous.AttemptedCandidates.Count);
+        CandidateSource[] promoted = selected.Where(item => (item.IsHumanPriority ||
+                item.Candidate.Window.Duration <= _settings.VideoPolicy.MaximumReviewDuration) && !previous.AttemptedCandidates.Contains(item.Candidate))
             .DistinctBy(item => item.Candidate, ReferenceEqualityComparer.Instance)
             .Take(Math.Min(GenerationSemanticReviewBudgetPolicy.MaximumSupplementalCandidates, remaining))
             .Select(item => new CandidateSource(item.Candidate, owners[item.Candidate],
@@ -223,13 +223,15 @@ public sealed class GenerationVisualSemanticAnalysisService :
                 isIndeterminate: false, overallPercentage: 100));
             if (observed.Count == 0)
                 return CreateFallbackResult(candidateIntelligence, elapsed.Elapsed,
-                    reason ?? "No picture checks completed. Review the suggested moments before using them.", details);
+                    reason ?? "No picture checks completed. Review the suggested moments before using them.", details,
+                    shortlist.Select(item => item.Candidate));
 
             var acceptedMedia = materialized.Where(video => observed.Any(item =>
                 item.Candidate.Id == video.Request.CandidateId)).ToArray();
             foreach (var unused in materialized.Except(acceptedMedia)) unused.Dispose();
             var output = new GenerationVisualSemanticAnalysisResult(candidateIntelligence, _provider.Identity,
-                observed, elapsed.Elapsed, peakGpuBytes, acceptedMedia, fallbackReason: reason, diagnosticDetails: details);
+                observed, elapsed.Elapsed, peakGpuBytes, acceptedMedia, fallbackReason: reason, diagnosticDetails: details,
+                attemptedCandidates: shortlist.Select(item => item.Candidate));
             ownershipTransferred = true;
             return output;
         }
@@ -243,7 +245,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
         GenerationCandidateIntelligenceResult candidateIntelligence,
         TimeSpan elapsed,
         string reason,
-        string? diagnosticDetails) =>
+        string? diagnosticDetails,
+        IEnumerable<MomentCandidate>? attemptedCandidates = null) =>
         new(
             candidateIntelligence,
             _provider.Identity,
@@ -253,7 +256,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
             reviewVideos: [],
             GenerationVisualSemanticOutcome.RetainedDeterministicCandidates,
             reason,
-            diagnosticDetails);
+            diagnosticDetails,
+            attemptedCandidates);
 
     private static string SafeDiagnostics(Exception exception)
     {
@@ -274,12 +278,19 @@ public sealed class GenerationVisualSemanticAnalysisService :
 
     internal static IReadOnlyList<CandidateSource> CreateShortlist(
         GenerationCandidateIntelligenceResult candidateIntelligence,
-        int maximumCandidateCount)
+        int maximumCandidateCount,
+        TimeSpan? maximumReviewDuration = null,
+        IReadOnlyCollection<MomentCandidate>? previouslyReviewed = null)
     {
         if (maximumCandidateCount is < 1 or > GenerationSemanticReviewBudgetPolicy.MaximumCandidates)
         {
             throw new ArgumentOutOfRangeException(nameof(maximumCandidateCount));
         }
+        TimeSpan reviewLimit = maximumReviewDuration ?? VisualSemanticVideoInputPolicy.CreateV05A1().MaximumReviewDuration;
+        if (reviewLimit <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(maximumReviewDuration));
+        var attempted = (previouslyReviewed ?? []).ToHashSet(ReferenceEqualityComparer.Instance);
+        var reviewedBySource = candidateIntelligence.BaseMoments.Sources.ToDictionary(source => source.AnalyzedSource,
+            source => source.Moments.Proposals.Where(candidate => attempted.Contains(candidate)).ToArray());
         var refinementByCandidate = candidateIntelligence.Refinements.ToDictionary(value => value.Candidate);
         var neuralCandidates = candidateIntelligence.Refinements
             .Where(value => value.Components.Any(component => component.Code is
@@ -290,6 +301,7 @@ public sealed class GenerationVisualSemanticAnalysisService :
         foreach (GenerationMomentCandidate selected in
                  candidateIntelligence.RefinedMoments.SelectedCandidates)
         {
+            if (attempted.Contains(selected.Candidate) || !selected.IsHumanPriority && selected.Candidate.Window.Duration > reviewLimit) continue;
             candidates.Add(new CandidateSource(
                 selected.Candidate,
                 selected.AnalyzedSource,
@@ -305,7 +317,8 @@ public sealed class GenerationVisualSemanticAnalysisService :
                      .ThenBy(static value => value.Candidate.Window.Start)
                      .ThenBy(static value => value.Candidate.Id, StringComparer.Ordinal))
         {
-            if ((!neuralCandidates.Contains(refinement.Candidate) &&
+            if (attempted.Contains(refinement.Candidate) || refinement.Candidate.Window.Duration > reviewLimit ||
+                (!neuralCandidates.Contains(refinement.Candidate) &&
                 refinement.Candidate.Disposition is MomentCandidateDisposition.RejectedBlack or
                     MomentCandidateDisposition.RejectedFreeze) ||
                 candidates.Any(value =>
@@ -338,7 +351,9 @@ public sealed class GenerationVisualSemanticAnalysisService :
             .ThenBy(static value => value.Candidate.Id, StringComparer.Ordinal)
             .ToArray();
         IReadOnlyList<CandidateSource> ReviewCoverage(IEnumerable<CandidateSource> values) =>
-            GenerationCategoryReviewAdmission.Select(values, maximumCandidateCount,
+            GenerationCategoryReviewAdmission.Select(values.OrderByDescending(value => value.IsHumanPriority)
+                    .ThenBy(value => reviewedBySource[value.Source].Any(previous =>
+                        MomentIntervalMath.PairOverlapRatio(previous.Window, value.Candidate.Window) >= .5)), maximumCandidateCount,
                 candidateIntelligence.BaseMoments.Request.Setup.DiscoveryIntent.MomentType,
                 value => value.IsHumanPriority, value => refinementByCandidate.GetValueOrDefault(value.Candidate)?.Components ?? []);
         if (!candidateIntelligence.Refinements.Any(value => value.Components.Any(component =>

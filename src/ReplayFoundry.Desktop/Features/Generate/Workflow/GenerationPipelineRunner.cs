@@ -68,6 +68,8 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
         _preflight.Validate(request, progress, cancellationToken);
 
         GenerationVisualSemanticAnalysisResult? retainedReviewMedia = null;
+        GenerationCandidateIntelligenceResult? preVisualIntelligence = null;
+        IProgress<GenerationVisualSemanticProgress>? visualProgress = null;
         try
         {
 
@@ -164,7 +166,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                             "AI moment selection needs the visual tool from Advanced AI. Install or repair Advanced AI, or choose Fast or simple writing.");
                     }
 
-                    var visualProgress =
+                    visualProgress =
                         new SynchronousProgress<GenerationVisualSemanticProgress>(
                             update => progress.Report(new GenerationProgressUpdate(
                                 update.Title,
@@ -173,7 +175,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                                 update.OverallPercentage is null
                                     ? null
                                     : 45 + update.OverallPercentage.Value * 0.05)));
-                    GenerationCandidateIntelligenceResult preVisualIntelligence = candidateIntelligence;
+                    preVisualIntelligence = candidateIntelligence;
                     GenerationVisualSemanticAnalysisResult visual =
                         await _visualSemantic.AnalyzeAsync(
                             candidateIntelligence,
@@ -204,6 +206,9 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         candidateIntelligence = await Task.Run(() => _candidateRefinement.ApplyVisualSemantic(
                             preVisualIntelligence, visual, cancellationToken), cancellationToken);
                         candidateIntelligence = GenerationReviewedSelectionPolicy.Apply(candidateIntelligence, cancellationToken);
+                        candidateIntelligence = await GenerationReviewedPoolRecovery.FillAsync(preVisualIntelligence,
+                            candidateIntelligence, _visualSemantic, _candidateRefinement, visualProgress,
+                            review => retainedReviewMedia = review, cancellationToken);
                     }
                     moments = candidateIntelligence.RefinedMoments;
                 }
@@ -241,7 +246,10 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
             GenerationCaptionPreparationResult? captions;
             GenerationHiddenMomentDeck hiddenMoments;
             GenerationEditorialMetadataResult editorialMetadata;
-            for (int editorialReplacements = 0; ; editorialReplacements++)
+            // Every successful rejection removes one reviewed candidate from the
+            // retained pool. Exhaust that finite pool rather than failing a batch
+            // merely because a third independent clip needs replacement.
+            for (;;)
             {
                 progress.Report(
                     new GenerationProgressUpdate(
@@ -294,11 +302,16 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                     break;
                 }
                 catch (ClipEditorialAiGenerationException exception) when (
-                    exception.FailureKind == ClipEditorialAiFailureKind.CaseRejected && editorialReplacements < 2)
+                    exception.FailureKind == ClipEditorialAiFailureKind.CaseRejected)
                 {
                     var replacement = GenerationEditorialReplacementPolicy.RejectAutomaticCut(
-                        candidateIntelligence, exception.CandidateId, cancellationToken);
+                        candidateIntelligence, exception.CandidateId, cancellationToken, allowEmptyPool: true);
                     if (replacement is null) throw;
+                    if (preVisualIntelligence is not null && _visualSemantic is not null && _candidateRefinement is not null)
+                        replacement = await GenerationReviewedPoolRecovery.FillAsync(preVisualIntelligence,
+                            replacement, _visualSemantic, _candidateRefinement, visualProgress,
+                            review => retainedReviewMedia = review, cancellationToken);
+                    if (replacement.RefinedMoments.SelectedCount == 0) throw;
                     candidateIntelligence = replacement;
                     moments = replacement.RefinedMoments;
                     progress.Report(new GenerationProgressUpdate("Choosing another reviewed moment",

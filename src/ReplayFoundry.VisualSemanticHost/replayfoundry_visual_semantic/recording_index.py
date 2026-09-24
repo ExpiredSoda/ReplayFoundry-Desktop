@@ -103,6 +103,11 @@ def run(args):
     for name in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE", "HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK"):
         os.environ[name] = "1"
     started = time.perf_counter()
+    # Leave time for a final source-identity check and an orderly handoff before
+    # the desktop's hard process timeout. Zero reads only validated saved work.
+    budget = float(getattr(args, "time_budget_seconds", 5400))
+    if not math.isfinite(budget) or not 0 <= budget <= 6600:
+        raise ValueError("Recording index time budget is out of bounds")
     request = json.loads(Path(args.input).read_text(encoding="utf-8-sig"))
     if request["schemaVersion"] != VERSION:
         raise ValueError("Unsupported recording index request")
@@ -157,7 +162,8 @@ def run(args):
         print(json.dumps({"stage":"recording-index-progress", "checked":checked, "total":expected,
                           "mapped":len(retained), "reused":hits}), flush=True)
     report_progress(hits)
-    if hits < expected:
+    budget_exhausted = hits < expected and time.perf_counter() - started >= budget
+    if hits < expected and not budget_exhausted:
         with tempfile.TemporaryDirectory(prefix="replayfoundry-index-") as scratch:
             # Keyframe decoding keeps the full-recording pass bounded. This coarse
             # index never supplies frame-accurate cuts or replaces close visual review.
@@ -206,6 +212,9 @@ def run(args):
                     if ordinal in retained:
                         report_progress(max(hits, ordinal + 1))
                         continue
+                    if time.perf_counter() - started >= budget:
+                        budget_exhausted = True
+                        break
                     left = ordinal * WINDOW_SECONDS
                     right = min(duration, left + WINDOW_SECONDS)
                     chosen = frames[int(left / FRAME_SECONDS):max(int(left / FRAME_SECONDS)+1, math.ceil(right / FRAME_SECONDS))]
@@ -256,11 +265,13 @@ def run(args):
         raise ValueError("Recording changed during analysis")
     write_atomic(Path(args.output), {"schemaVersion":VERSION, "sourceHash":identity["source"],
         "windows":sorted(retained.values(), key=lambda row:row["ordinal"]), "requested":expected,
-        "cacheHits":hits, "elapsedSeconds":time.perf_counter()-started})
+        "cacheHits":hits, "budgetExhausted":budget_exhausted,
+        "elapsedSeconds":time.perf_counter()-started})
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     for name in ("input", "output", "cache", "model", "ffmpeg"):
         parser.add_argument("--"+name, required=True)
+    parser.add_argument("--time-budget-seconds", type=float, default=5400)
     run(parser.parse_args())

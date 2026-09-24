@@ -72,6 +72,38 @@ internal static partial class GenerationClipRenderingTests
         }
     }
 
+    private static async Task PopPreservesUsableProviderWords()
+    {
+        using var fixture = CreateFixture(GenerationMode.IndividualClips, hasAudio: true, createPhysicalSource: true);
+        var missing = PopWithMissingWord(fixture.CreateDraft().PrimaryAsset);
+        var original = missing.Captions!.Segments[0];
+        var repaired = await StudioPopCaptionPreparation.PrepareAsync(missing, new PartialPopTestAligner(), null, CancellationToken.None);
+        var words = repaired.Captions!.Segments[0].Words;
+        TestAssert.Equal(3, words.Count, "The omitted opening word must acquire measured timing.");
+        TestAssert.Equal(missing.SourceStart + TimeSpan.FromSeconds(4.05), words[1].AbsoluteSourceStart,
+            "A strong acoustic match can replace a provider word that collides with the repaired opening word.");
+        TestAssert.True(ReferenceEquals(original.Words[1], words[2]),
+            "The usable final provider word must survive even when its proposed replacement has weak acoustic fit.");
+        var provenance = StudioCaptionAlignmentProvenance.Read(repaired.Captions.Segments[0].Warnings
+            .Single(warning => warning.Code == AudioTranscriptionWarningCode.CorrectedTextAlignment).Message)!;
+        TestAssert.Equal(2, provenance.Words.Count, "Provenance must describe only adopted acoustic clocks.");
+        TestAssert.True(provenance.Words.All(word => word.AcousticScore >= .15), "No weak proposed clock may be adopted automatically.");
+        bool rejected = false;
+        try { await StudioPopCaptionPreparation.PrepareAsync(missing, new PartialPopTestAligner(conflict: true), null, CancellationToken.None); }
+        catch (StudioCaptionTimingException) { rejected = true; }
+        TestAssert.True(rejected, "A weak replacement cannot resolve a collision with an unusable original clock.");
+    }
+
+    private sealed class PartialPopTestAligner(bool conflict = false) : ICorrectedCaptionAlignmentService
+    {
+        public Task<CorrectedCaptionAlignmentResult> AlignAsync(CorrectedCaptionAlignmentRequest request,
+            IProgress<string>? progress, CancellationToken cancellationToken) => Task.FromResult(new CorrectedCaptionAlignmentResult(
+                [new("I", TimeSpan.FromSeconds(3.9), TimeSpan.FromSeconds(4.04), .9),
+                 new("know", TimeSpan.FromSeconds(4.05), TimeSpan.FromSeconds(conflict ? 4.3 : 4.2), .9),
+                 new("now.", TimeSpan.FromSeconds(4.35), TimeSpan.FromSeconds(4.6), .02)],
+                "test acoustic observations", new string('A', 64), TimeSpan.Zero, "review", new string('B', 64)));
+    }
+
     private static async Task PopLeavesCleanAndTimedExportsUntouched()
     {
         using var fixture = CreateFixture(GenerationMode.IndividualClips, hasAudio: true, createPhysicalSource: true);

@@ -12,7 +12,13 @@ internal static class GenerationReviewedSelectionPolicy
     {
         if (intelligence.VisualSemantic is not { Outcome: GenerationVisualSemanticOutcome.Completed } visual)
             return intelligence;
-        var eligible = new HashSet<MomentCandidate>(visual.Observations.Select(item => item.Candidate), ReferenceEqualityComparer.Instance);
+        // A bounded review of the middle of a long cut does not qualify its
+        // unreviewed opening and ending. Keep it available as a manual choice.
+        var eligible = new HashSet<MomentCandidate>(visual.Observations.Where(review =>
+                review.ReviewedSourceStart <= review.Candidate.Window.Start &&
+                review.ReviewedSourceEnd >= review.Candidate.Window.End ||
+                IsExplicitChoice(review, intelligence))
+            .Select(item => item.Candidate), ReferenceEqualityComparer.Instance);
         var refinements = intelligence.Refinements.ToDictionary(item => item.Candidate);
         foreach (var review in visual.Observations)
         {
@@ -28,11 +34,7 @@ internal static class GenerationReviewedSelectionPolicy
                 !refinements.TryGetValue(review.Candidate, out var refinement)) continue;
             // A deliberately requested range remains a human choice. Automatic count fill
             // and personal preference scores must not undo a completed editorial rejection.
-            string path = review.Source.PreparedSource.Media.FullPath;
-            if (intelligence.BaseMoments.Request.Setup.MomentGuidance.ForSource(path).Any(guidance =>
-                    guidance.Kind == UserMomentGuidanceKind.PriorityPoint
-                        ? review.Candidate.Window.Contains(guidance.Timestamp)
-                        : review.Candidate.Window.Start < guidance.End && review.Candidate.Window.End > guidance.Start)) continue;
+            if (IsExplicitChoice(review, intelligence)) continue;
             refinements[review.Candidate] = new GenerationCandidateRefinement(review.Candidate,
                 [.. refinement.Components.Where(item => item.Code != GenerationCandidateRefinementComponentCode.GroundedVisualRejection),
                     new(GenerationCandidateRefinementComponentCode.GroundedVisualRejection, 1, 0,
@@ -47,4 +49,11 @@ internal static class GenerationReviewedSelectionPolicy
         var moments = new GenerationMomentFindingResult(source.Request, source.Sources, selected, refinements, eligible, note, preferences);
         return new(intelligence.BaseMoments, intelligence.SpeechActivity, refinements.Values, moments, visual, intelligence.Transcripts);
     }
+
+    private static bool IsExplicitChoice(GenerationVisualSemanticCandidateObservation review,
+        GenerationCandidateIntelligenceResult intelligence) =>
+        intelligence.BaseMoments.Request.Setup.MomentGuidance.ForSource(review.Source.PreparedSource.Media.FullPath).Any(guidance =>
+            guidance.Kind == UserMomentGuidanceKind.PriorityPoint
+                ? review.Candidate.Window.Contains(guidance.Timestamp)
+                : review.Candidate.Window.Start < guidance.End && review.Candidate.Window.End > guidance.Start);
 }

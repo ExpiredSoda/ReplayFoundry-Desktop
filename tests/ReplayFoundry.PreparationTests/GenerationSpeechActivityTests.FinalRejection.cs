@@ -9,6 +9,31 @@ namespace ReplayFoundry.PreparationTests;
 
 internal static partial class GenerationSpeechActivityTests
 {
+    private static async Task PartialReviewCannotQualifyAnAutomaticCut()
+    {
+        foreach (bool explicitlyRequested in new[] { false, true })
+        {
+            var guidance = explicitlyRequested ? new GenerationMomentGuidance([
+                UserMomentGuidance.CreateRange(TestMediaFactory.CreateSourcePath("final-query.mkv"), TimeSpan.FromMinutes(5),
+                    TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(40))]) : null;
+            var fixture = FinalQueryFixture(scores: [99, 80], desired: 2, guidance: guidance,
+                reviewFactory: (baseline, candidate, index) => Reviewed(baseline, candidate, QueryKeep(),
+                    partial: index == 0, neuralValue: .9));
+            using var visual = fixture.Visual;
+            var bounded = GenerationVisualSemanticAnalysisService.CreateShortlist(fixture.Intelligence, 8, TimeSpan.FromSeconds(1));
+            TestAssert.Equal(explicitlyRequested ? 1 : 0, bounded.Count,
+                "Close-review work must not be spent on automatic cuts that cannot fit the review limit; explicit user choices remain inspectable.");
+            var result = GenerationReviewedSelectionPolicy.Apply(fixture.Intelligence, CancellationToken.None);
+            var partial = fixture.Intelligence.Refinements[0].Candidate;
+            TestAssert.Equal(explicitlyRequested, result.RefinedMoments.SelectedCandidates.Any(item => ReferenceEquals(item.Candidate, partial)),
+                "A high neural score on part of a cut cannot qualify an unreviewed opening or ending.");
+            var personalized = await new GenerationTasteRanking(new FavorEveryCandidate())
+                .ApplyAsync(result.RefinedMoments, result, CancellationToken.None);
+            TestAssert.Equal(explicitlyRequested, personalized.SelectedCandidates.Any(item => ReferenceEquals(item.Candidate, partial)),
+                "Taste ranking and count fill must retain the complete-review boundary, while preserving deliberate user choices.");
+        }
+    }
+
     private static async Task FinalRejectionBlocksSelection()
     {
         foreach (bool explicitlyRequested in new[] { false, true })
