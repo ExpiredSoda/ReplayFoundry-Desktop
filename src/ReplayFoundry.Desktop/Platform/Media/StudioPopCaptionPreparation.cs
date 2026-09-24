@@ -50,15 +50,12 @@ internal static class StudioPopCaptionPreparation
             source.Refresh();
             if (!source.Exists || source.Length != length || source.LastWriteTimeUtc != modified)
                 throw new IOException("The source recording changed while Pop captions were being aligned.");
-            try { Validate(result, request); }
+            IReadOnlyList<AudioTranscriptionWord> words;
+            CorrectedCaptionAlignmentResult usedAlignment;
+            try { (words, usedAlignment) = ResolveWords(segment, result, request); }
             catch (InvalidDataException exception)
             { throw new StudioCaptionTimingException(asset.Id, segment.Id, location + ": " + exception.Message, exception); }
-            var words = result.Words.Select(word => new AudioTranscriptionWord(word.Text,
-                segment.RelativeStart + word.RelativeStart, segment.RelativeStart + word.RelativeEnd,
-                segment.AbsoluteSourceStart + word.RelativeStart, segment.AbsoluteSourceStart + word.RelativeEnd,
-                isEmphasized: segment.Words.Any(previous => previous.IsEmphasized &&
-                    StudioCaptionTrackEditing.Lexical(previous.Text) == StudioCaptionTrackEditing.Lexical(word.Text)))).ToArray();
-            string provenance = StudioCaptionAlignmentProvenance.Create(request, result, length, modified);
+            string provenance = StudioCaptionAlignmentProvenance.Create(request, usedAlignment, length, modified);
             var warnings = segment.Warnings.Where(warning => warning.Code != AudioTranscriptionWarningCode.CorrectedTextAlignment)
                 .Append(new AudioTranscriptionWarning(AudioTranscriptionWarningCode.CorrectedTextAlignment, provenance, segment.Id));
             segments[index] = new AudioTranscriptionSegment(segment.Id, segment.NeighborhoodId, segment.Text,
@@ -74,7 +71,8 @@ internal static class StudioPopCaptionPreparation
             segments, track.IsUserEdited, track.SuppressionReason));
     }
 
-    private static void Validate(CorrectedCaptionAlignmentResult result, CorrectedCaptionAlignmentRequest request)
+    private static (IReadOnlyList<AudioTranscriptionWord>, CorrectedCaptionAlignmentResult) ResolveWords(
+        AudioTranscriptionSegment segment, CorrectedCaptionAlignmentResult result, CorrectedCaptionAlignmentRequest request)
     {
         string[] tokens = Regex.Matches(request.CorrectedText, @"\S+").Select(match => match.Value).ToArray();
         if (result.Words is null || result.Words.Count != tokens.Length || tokens.Length is < 1 or > 120)
@@ -84,11 +82,42 @@ internal static class StudioPopCaptionPreparation
         {
             if (word is null || word.Text != tokens[index] || word.RelativeStart < previousEnd ||
                 word.RelativeEnd <= word.RelativeStart || word.RelativeEnd > request.SourceEnd - request.SourceStart ||
-                // The alignment editor labels scores below .15 as weak and
-                // asks for review. Export must not accept those automatically.
-                !double.IsFinite(word.AcousticScore) || word.AcousticScore is < .15 or > 1)
+                !double.IsFinite(word.AcousticScore) || word.AcousticScore is < 0 or > 1)
                 throw new InvalidDataException("Pop alignment returned weak or invalid word timing; review this phrase in Captions.");
             previousEnd = word.RelativeEnd;
         }
+        // The provider can omit opening words while retaining a uniquely
+        // matched suffix. Preserve those measured clocks where they still fit;
+        // a weak replacement is not a reason to discard an existing timestamp.
+        // RestoreAnchors supplies zero-duration placeholders, never guessed times.
+        var anchors = StudioCaptionPartialWordMapping.RestoreAnchors(segment);
+        var words = new List<AudioTranscriptionWord>();
+        var adopted = new List<CorrectedCaptionAlignedWord>();
+        previousEnd = segment.AbsoluteSourceStart;
+        foreach (var (aligned, index) in result.Words.Select((word, index) => (word, index)))
+        {
+            AudioTranscriptionWord? known = anchors.Count == tokens.Length ? anchors[index] : null;
+            if (known is not null && known.AbsoluteSourceStart >= previousEnd &&
+                known.AbsoluteSourceEnd > known.AbsoluteSourceStart && known.AbsoluteSourceEnd <= segment.AbsoluteSourceEnd &&
+                !known.Text.Trim().Any(char.IsWhiteSpace))
+            {
+                words.Add(known);
+                previousEnd = known.AbsoluteSourceEnd;
+                continue;
+            }
+            // Every newly adopted clock must pass the same acoustic threshold
+            // as full-phrase repair and must not collide with retained words.
+            if (aligned.AcousticScore < .15 || segment.AbsoluteSourceStart + aligned.RelativeStart < previousEnd)
+                throw new InvalidDataException("Pop alignment returned weak or conflicting word timing; review this phrase in Captions.");
+            var replacement = new AudioTranscriptionWord(aligned.Text,
+                segment.RelativeStart + aligned.RelativeStart, segment.RelativeStart + aligned.RelativeEnd,
+                segment.AbsoluteSourceStart + aligned.RelativeStart, segment.AbsoluteSourceStart + aligned.RelativeEnd,
+                isEmphasized: segment.Words.Any(previous => previous.IsEmphasized &&
+                    StudioCaptionTrackEditing.Lexical(previous.Text) == StudioCaptionTrackEditing.Lexical(aligned.Text)));
+            words.Add(replacement);
+            adopted.Add(aligned);
+            previousEnd = replacement.AbsoluteSourceEnd;
+        }
+        return (words, result with { Words = adopted.ToArray() });
     }
 }

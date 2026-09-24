@@ -2,6 +2,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Text.Json;
 using ReplayFoundry.Desktop.Features.Generate.Moments;
+using ReplayFoundry.Desktop.Features.Generate.GenerationSetup;
 using ReplayFoundry.Desktop.Media.Composition;
 using ReplayFoundry.Desktop.Media.Moments;
 using ReplayFoundry.Desktop.Platform.Media;
@@ -57,18 +58,30 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
                 }), cancellationToken);
                 await Task.Run(() => runtime.ModelIntegrity.Verify(cancellationToken), cancellationToken);
                 var host = runtime.Host;
-                var process = await MediaWorkBudget.RunAsync(new WindowsProcessRunner(), new ProcessRunRequest(
+                Task<ProcessRunResult> RunIndexAsync(string budgetSeconds, TimeSpan timeout) =>
+                    MediaWorkBudget.RunAsync(new WindowsProcessRunner(), new ProcessRunRequest(
                     host.PythonExecutablePath, ["-B", "-m", "replayfoundry_visual_semantic.recording_index",
                         "--input", input, "--output", output, "--model", host.ModelDirectoryPath,
                         "--ffmpeg", new FfmpegToolLocator().LocateFfmpeg(), "--cache",
-                        ReplayFoundryLocalDataPaths.Resolve(null, "Cache/RecordingIndex")],
-                    TimeSpan.FromHours(2), Path.GetDirectoryName(host.HostScriptPath),
+                        ReplayFoundryLocalDataPaths.Resolve(null, "Cache/RecordingIndex"),
+                        "--time-budget-seconds", budgetSeconds],
+                    timeout, Path.GetDirectoryName(host.HostScriptPath),
                     524288, 524288, host.EnvironmentVariables, inheritParentEnvironment: false,
                     standardOutputLine: line =>
                     {
                         if (DescribeProgress(line) is string detail) progress?.Report(detail);
                     }),
                     MediaWorkPriority.FinalOutput, MediaWorkKind.HeavyAi, cancellationToken);
+                ProcessRunResult process;
+                try { process = await RunIndexAsync("5400", TimeSpan.FromHours(2)); }
+                catch (ProcessTimeoutException)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    progress?.Report("The scan reached its time limit. Recovering completed sections for picture review.");
+                    // The host rechecks source, model, prompt, speech and geometry
+                    // ownership before returning cached rows. No new inference runs.
+                    process = await RunIndexAsync("0", TimeSpan.FromMinutes(3));
+                }
                 if (!process.Succeeded) throw new InvalidOperationException("Neural recording index did not complete.");
                 QwenModelLoadDiagnostics.Report(process.StandardError);
                 await Task.Run(() => runtime.ModelIntegrity.Verify(cancellationToken), cancellationToken);
@@ -78,18 +91,20 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
                     throw new InvalidDataException("Recording index version changed.");
                 TimeSpan indexElapsed = timer.Elapsed;
                 var windows = root.GetProperty("windows").EnumerateArray().ToArray();
+                if (windows.Length == 0)
+                    throw new InvalidDataException("The recording map contains no completed sections.");
                 var setup = intelligence.BaseMoments.Request.Setup;
                 var reviewRegions = await new GenerationRecordingComparisonService(runtime).CompareAsync(windows,
                     root.GetProperty("sourceHash").GetString()!,
                     new { mode = setup.Mode.ToString(), emphasis = setup.ContentEmphasis.ToString(),
                         intent = setup.DiscoveryIntent.MomentType.ToString(), desiredClips = setup.DesiredResultCount },
                     Math.Clamp(setup.DesiredResultCount + 3, 8, 20), progress, cancellationToken);
-                string? selectedGame = intelligence.BaseMoments.Request.Setup.GameContextSettings.Find(media.FullPath)?.GameName;
+                var selectedContext = intelligence.BaseMoments.Request.Setup.GameContextSettings.Find(media.FullPath);
+                string? selectedGame = selectedContext?.GameName;
                 string? visibleGame = windows.Select(row => row.GetProperty("prediction").GetProperty("visibleGameTitle").GetString())
                     .Where(title => !string.IsNullOrWhiteSpace(title)).GroupBy(title => NormalizeTitle(title!))
                     .Where(group => group.Count() >= 2).OrderByDescending(group => group.Count()).Select(group => group.First()).FirstOrDefault();
-                bool identityConflict = selectedGame is not null && visibleGame is not null &&
-                    NormalizeTitle(selectedGame) != NormalizeTitle(visibleGame);
+                bool identityConflict = HasIdentityConflict(selectedContext, visibleGame);
                 var expanded = source.Moments;
                 var visualSeeds = GenerationIndexedEventNominations.Create(windows);
                 if (visualSeeds.Count > 0)
@@ -185,6 +200,12 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
 
     internal static string NormalizeTitle(string title) => new string(title.ToUpperInvariant()
         .Where(char.IsLetterOrDigit).ToArray());
+
+    internal static bool HasIdentityConflict(GenerationSourceGameContext? selected, string? visibleTitle) =>
+        // A coarse scan can mistake a tutorial heading for a game title. It may
+        // question inherited hints, but cannot undo confirmation for this source.
+        selected is not null && selected.Origin != GenerationGameContextOrigin.UserConfirmed &&
+        !string.IsNullOrWhiteSpace(visibleTitle) && NormalizeTitle(selected.GameName) != NormalizeTitle(visibleTitle);
 
     internal static IReadOnlyList<GenerationTimedExplorationSeed> SpeechSeeds(
         IReadOnlyList<JsonElement> windows, GenerationSourceTranscript transcript)

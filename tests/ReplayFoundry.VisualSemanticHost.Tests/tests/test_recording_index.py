@@ -35,6 +35,39 @@ class RecordingIndexTests(unittest.TestCase):
         return dict(gameplay=True, funny=True, commentary=True, menu=False,
                     summary="A vehicle chase with a spoken reaction.", visibleGameTitle="", speechMomentIds=[3, 4], editorialValue=85, lore=False, speechSource="creator")
 
+    def test_time_limited_map_retains_only_owned_rows_without_loading_ai(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.mkv"
+            source.write_bytes(b"recording whose scan was interrupted")
+            request = dict(schemaVersion=VERSION, sourcePath=str(source), durationSeconds=135,
+                           modelHash="model", region=[0, 0, 1, 1], transcript=[], preferences={})
+            identity = dict(version=VERSION, prompt=hashlib.sha256(PROMPT.encode()).hexdigest(), model="model",
+                            source=fingerprint(source), duration=135.0, region=[0, 0, 1, 1], contextRegion=None,
+                            transcript=[], preferences={})
+            key = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            prediction = {**self.prediction(), "speechMomentIds": [], "commentary": False, "speechSource": "unknown"}
+            good = dict(ordinal=1, start=45, end=90, prediction=prediction, elapsedSeconds=12)
+            bad = dict(ordinal=0, start=0, end=45,
+                       prediction={**prediction, "speechMomentIds": [99]}, elapsedSeconds=12)
+            cache = root / "cache"
+            cache.mkdir()
+            (cache / (key + ".json")).write_text(json.dumps(dict(key=key, windows=[good, bad])))
+            (root / "input.json").write_text(json.dumps(request))
+            args = SimpleNamespace(input=root / "input.json", output=root / "output.json", cache=cache,
+                                   model=root / "missing-model", ffmpeg=root / "missing-decoder", time_budget_seconds=0)
+            run(args)
+            result = json.loads(args.output.read_text())
+            self.assertEqual([good], result["windows"])
+            self.assertEqual(3, result["requested"])
+            self.assertEqual(1, result["cacheHits"])
+            self.assertTrue(result["budgetExhausted"])
+            self.assertEqual(fingerprint(source), result["sourceHash"])
+            # Different footage cannot inherit even a syntactically valid saved row.
+            source.write_bytes(b"different recording")
+            run(args)
+            self.assertEqual([], json.loads(args.output.read_text())["windows"])
+
     def test_overlapping_labels_are_preserved(self):
         value = validate_prediction(self.prediction())
         self.assertTrue(value["gameplay"] and value["funny"] and value["commentary"])

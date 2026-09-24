@@ -76,11 +76,12 @@ runtime packs remain available.
 
 ## Build runtime packs
 
-Beta 5.2 requires visual runtime `0.8.29` and model pack `4.0.25` as a matching
+Beta 5.3 requires visual runtime `0.8.30` and model pack `4.0.26` as a matching
 set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
 structured-decoding qualification lock for CPython `3.13.15`, PyTorch
 `2.13.0+cu130`, TorchVision `0.28.0+cu130`, TorchCodec `0.16.0`, and Transformers
-`5.16.1`. The release also updates Pillow, pip, and setuptools. Exact installed
+`5.16.1`. This retains the Beta 5.2 dependency stack, including its Pillow, pip,
+and setuptools updates. Exact installed
 distribution versions, retained licenses, and dependency-audit results belong
 in the external release evidence. Do not reuse the Beta 4 qualification lock.
 

@@ -10,6 +10,28 @@ namespace ReplayFoundry.PreparationTests;
 
 internal static partial class GenerationSpeechActivityTests
 {
+    private static Task ConfirmedGameSurvivesCoarseTitleGuesses()
+    {
+        string source = TestMediaFactory.CreateSourcePath("confirmed-game.mkv");
+        var confirmed = new GenerationSourceGameContext(source, "Silent Hill: Townfall", null,
+            GenerationGameContextOrigin.UserConfirmed);
+        foreach (string heading in new[] { "CITY - Detecting Threats", "SILENT HILL", "SILENT HILL 2" })
+            TestAssert.False(GenerationRecordingIndexService.HasIdentityConflict(confirmed, heading),
+                "A sampled tutorial heading or uncertain title cannot strip the game explicitly confirmed for this recording.");
+        foreach (var origin in new[] { GenerationGameContextOrigin.SourcePathHint,
+                     GenerationGameContextOrigin.RememberedSuggestion, GenerationGameContextOrigin.ReusedUserMemory })
+        {
+            var inherited = new GenerationSourceGameContext(source, "Silent Hill: Townfall", null, origin);
+            TestAssert.True(GenerationRecordingIndexService.HasIdentityConflict(inherited, "SILENT HILL 2"),
+                "A remembered or inferred game still needs confirmation when the recording suggests a different title.");
+            TestAssert.False(GenerationRecordingIndexService.HasIdentityConflict(inherited, "Silent Hill Townfall"),
+                "Equivalent punctuation and case do not create a conflict.");
+            TestAssert.False(GenerationRecordingIndexService.HasIdentityConflict(inherited, null),
+                "Missing visual identity is not contradictory evidence.");
+        }
+        return Task.CompletedTask;
+    }
+
     private static Task ComparativeReviewCoversRegions()
     {
         var request = CreateRequest(GenerationAnalysisDepth.Thorough, [("comparative-review.mkv", 1)],

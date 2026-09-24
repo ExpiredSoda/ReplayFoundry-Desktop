@@ -30,7 +30,11 @@ internal static partial class GenerationSpeechActivityTests
 {
     public static IEnumerable<TestCase> GetTests()
     {
+        yield return new("Confirmed game context survives coarse title guesses", ConfirmedGameSurvivesCoarseTitleGuesses);
+        yield return new("Review shortfalls use remaining capacity without repeating failed or rejected cuts", ReviewShortfallUsesRemainingCapacity);
+        yield return new("Follow-up reviews prioritize unseen footage before overlapping trims", FollowupReviewPrefersUnseenFootage);
         yield return new("Balanced AI reviews selected pictures before title writing", BalancedAiReviewsBeforeWriting);
+        yield return new("Partial picture review cannot qualify an entire automatic cut", PartialReviewCannotQualifyAnAutomaticCut);
         yield return new("Later capture screening cannot reopen unreviewed candidates", LaterScreeningCannotReopenUnreviewedCandidates);
         yield return new("Rejected automatic wording uses a bounded reviewed replacement", EditorialRejectionUsesReviewedReplacement);
         yield return new("Existing editorial cuts refresh stale picture facts without borrowing evidence", ExistingCutsRefreshSceneFacts);
