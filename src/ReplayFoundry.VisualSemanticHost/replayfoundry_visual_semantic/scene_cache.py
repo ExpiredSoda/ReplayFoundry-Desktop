@@ -23,6 +23,7 @@ def review_key(request, case, attention_policy):
         "attentionPolicy":attention_policy,"sampling":"event-neighborhood-12-local-v2",
         "momentEvidencePolicy":request.get("momentEvidencePolicy"), "audioModelIdentity":request.get("audioModelIdentity"),
         "audioEvidencePolicy":request.get("audioEvidencePolicy"),
+        "sceneFactsPolicy":request.get("sceneFactsPolicy"),
         "case":clean_case})
 
 

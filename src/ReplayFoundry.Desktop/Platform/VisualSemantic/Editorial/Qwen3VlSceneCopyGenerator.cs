@@ -13,7 +13,7 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime runtime, IEditorialWriterLearningStore? learning)
 {
     internal const string Version = "scene-copy-1.7";
-    internal const string PromptHash = "5ef7088425071c68f419b8adb22e800096e74d9578fe45973bdf3a5ff51beb14";
+    internal const string PromptHash = "6c1de53b0d5b729026b4e217eac33d7eabcc798d9685f636eca1472061ab2c86";
     internal const string ReviewPromptHash = "e15c23b0f73b174f52633b689cc715347962b8537156a7029c3dfe41587ab9a0";
     internal static bool CanUse(ClipEditorialMetadataRequest request)
     {

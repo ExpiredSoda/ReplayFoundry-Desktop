@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 import time
 
-VERSION = "recording-index-6"
+VERSION = "recording-index-7"
 WINDOW_SECONDS = 45
 FRAME_SECONDS = 5
 CONTEXT_SECONDS = 15
@@ -39,7 +39,7 @@ The transcript may include game dialogue and speech-recognition errors. Use empt
 speechMomentIds lists up to three supplied speech IDs forming the strongest standalone joke, reaction
 or explanation. Select only its necessary setup and payoff, not surrounding document reading or filler.
 Use an empty list if there is no meaningful speech moment. Never invent an ID.
-Only after reviewing the scene, estimate editorialValue from 0 to 100 for the supplied output mode. For individual clips, judge the event's interest, clarity, progression and payoff together. For Montage, judge whether the section contains a usable beat for the requested theme: a clear action, a complete joke or reaction, or a coherent story reveal. Preserve a joke's setup and payoff and enough dialogue to understand a lore reveal. A short action beat need not tell a complete standalone story. Neither motion alone nor a category makes a good montage segment.
+Only after reviewing the scene, estimate editorialValue from 0 to 100 for its evidenced interest, clarity, progression and payoff. This reusable recording map describes the footage independently of output mode or writing preferences. Later comparisons choose the best events for the requested purpose. Preserve a joke's setup and payoff and enough dialogue to understand a lore reveal. A short action beat need not tell a complete standalone story. Neither motion alone nor a category makes a good moment.
 Evaluate the whole context across different game genres. Action is not automatically interesting, and quiet discoveries, dialogue, strategy, puzzles or reactions over a menu may be excellent. Labels describe content; they do not determine its worth. Do not assign a fixed score because of a category."""
 
 
@@ -130,7 +130,7 @@ def run(args):
     transcript = request["transcript"]
     identity = {"version": VERSION, "prompt": hashlib.sha256(PROMPT.encode()).hexdigest(),
                 "model": request["modelHash"], "source": fingerprint(source), "duration": duration,
-                "region": roi, "contextRegion": context_roi, "transcript": transcript, "preferences":request.get("preferences",{})}
+                "region": roi, "contextRegion": context_roi, "transcript": transcript}
     key = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     cache = Path(args.cache).resolve()
     cache.mkdir(parents=True, exist_ok=True)
@@ -158,32 +158,25 @@ def run(args):
         except (ValueError, KeyError, TypeError):
             pass
     hits = len(retained)
+    newly_mapped_times = []
     def report_progress(checked):
+        estimate = {}
+        if len(newly_mapped_times) >= 2 and checked < expected:
+            remaining = sum(newly_mapped_times[-8:])/len(newly_mapped_times[-8:]) * (expected-checked)
+            estimate["estimatedSecondsRemaining"] = min(remaining, max(0, budget-(time.perf_counter()-started)))
         print(json.dumps({"stage":"recording-index-progress", "checked":checked, "total":expected,
-                          "mapped":len(retained), "reused":hits}), flush=True)
+                          "mapped":len(retained), "reused":hits, **estimate}), flush=True)
     report_progress(hits)
     budget_exhausted = hits < expected and time.perf_counter() - started >= budget
+    decoded_seconds = 0.0
     if hits < expected and not budget_exhausted:
         with tempfile.TemporaryDirectory(prefix="replayfoundry-index-") as scratch:
             # Keyframe decoding keeps the full-recording pass bounded. This coarse
             # index never supplies frame-accurate cuts or replaces close visual review.
-            x,y,w,h = roi
-            context_crop = ""
-            if context_roi is not None:
-                cx,cy,cw,ch = context_roi
-                context_crop = f"crop=iw*{cw}:ih*{ch}:iw*{cx}:ih*{cy},"
-            # One decode supplies both views. Three small context frames per
-            # window preserve presenter evidence without doubling video decoding.
-            filters = (f"fps=1/{FRAME_SECONDS},split=2[primary][context];"
-                f"[primary]crop=iw*{w}:ih*{h}:iw*{x}:ih*{y},scale=384:-2[game];"
-                f"[context]fps=1/{CONTEXT_SECONDS},{context_crop}scale=288:-2[person]")
-            subprocess.run([args.ffmpeg, "-nostdin", "-v", "error", "-skip_frame", "nokey", "-i", str(source),
-                "-filter_complex", filters, "-map", "[game]", "-an", "-q:v", "5", str(Path(scratch) / "game-%06d.jpg"),
-                "-map", "[person]", "-an", "-q:v", "5", str(Path(scratch) / "context-%06d.jpg")], check=True, timeout=1800,
-                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-            frames = sorted(Path(scratch).glob("game-*.jpg"))
-            context_frames = sorted(Path(scratch).glob("context-*.jpg"))
-            if not frames:
+            from .frame_extraction import extract_index_frames
+            frames, context_frames, decoded_seconds = extract_index_frames(args.ffmpeg, source, scratch,
+                expected, retained, duration, roi, context_roi)
+            if not any(frames.values()):
                 raise ValueError("No recording frames could be decoded")
             from PIL import Image
             from .model_runtime import _load_model_and_processor
@@ -217,14 +210,13 @@ def run(args):
                         break
                     left = ordinal * WINDOW_SECONDS
                     right = min(duration, left + WINDOW_SECONDS)
-                    chosen = frames[int(left / FRAME_SECONDS):max(int(left / FRAME_SECONDS)+1, math.ceil(right / FRAME_SECONDS))]
+                    chosen = frames.get(ordinal, [])
                     if not chosen:
                         continue
                     words = window_speech(transcript, left, right)
                     evidence = json.dumps(words, ensure_ascii=False)
                     images = [Image.open(path).convert("RGB") for path in chosen]
-                    contextual = [Image.open(path).convert("RGB") for path in context_frames[
-                        int(left / CONTEXT_SECONDS):max(int(left / CONTEXT_SECONDS)+1, math.ceil(right / CONTEXT_SECONDS))]]
+                    contextual = [Image.open(path).convert("RGB") for path in context_frames.get(ordinal, [])]
                     speech_note = "" if words else " No speech evidence was supplied. Keep speechSource unknown."
                     messages = [{"role":"system", "content":[{"type":"text", "text":PROMPT}]},
                                 {"role":"user", "content":[{"type":"text", "text":"Chronological primary gameplay samples:"},
@@ -233,7 +225,7 @@ def run(args):
                                      {"type":"image", "image":image})),
                                  {"type":"text", "text":"Chronological presenter / whole-recording context samples:"},
                                  *({"type":"image", "image":image} for image in contextual),
-                                 {"type":"text", "text":f"Samples from {left:.1f} to {right:.1f} seconds. Speech: {evidence}.{speech_note} User preferences: {json.dumps(request.get('preferences',{}))}"}]}]
+                                 {"type":"text", "text":f"Samples from {left:.1f} to {right:.1f} seconds. Speech: {evidence}.{speech_note}"}]}]
                     row_started = time.perf_counter()
                     try:
                         inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
@@ -250,6 +242,7 @@ def run(args):
                         validate_event_ownership(prediction, len(chosen))
                         retained[ordinal] = {"ordinal":ordinal, "start":left, "end":right,
                             "prediction":prediction, "elapsedSeconds":time.perf_counter()-row_started}
+                        newly_mapped_times.append(retained[ordinal]["elapsedSeconds"])
                         write_atomic(cache_file, {"key":key, "windows":list(retained.values())})
                     except (ValueError, RuntimeError) as error:
                         print(json.dumps({"stage":"recording-index", "ordinal":ordinal, "failure":type(error).__name__}), flush=True)
@@ -265,7 +258,7 @@ def run(args):
         raise ValueError("Recording changed during analysis")
     write_atomic(Path(args.output), {"schemaVersion":VERSION, "sourceHash":identity["source"],
         "windows":sorted(retained.values(), key=lambda row:row["ordinal"]), "requested":expected,
-        "cacheHits":hits, "budgetExhausted":budget_exhausted,
+        "cacheHits":hits, "budgetExhausted":budget_exhausted, "decodedSeconds":decoded_seconds,
         "elapsedSeconds":time.perf_counter()-started})
 
 

@@ -9,12 +9,23 @@ internal static class GenerationReviewedPoolRecovery
         IGenerationCandidateRefinementService refinement,
         IProgress<GenerationVisualSemanticProgress>? progress,
         Action<GenerationVisualSemanticAnalysisResult> retain,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<bool>? finishWithReadyClips = null,
+        Action<int>? reportReadyClips = null)
     {
         while (current.RefinedMoments.SelectedCount < current.BaseMoments.Request.Setup.DesiredResultCount &&
                current.VisualSemantic is { Outcome: GenerationVisualSemanticOutcome.Completed } previous)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (current.RefinedMoments.SelectedCount > 0)
+            {
+                reportReadyClips?.Invoke(current.RefinedMoments.SelectedCount);
+                if (finishWithReadyClips?.Invoke() == true) break;
+            }
+            progress?.Report(new(GenerationVisualSemanticPhase.ReviewingCandidates, "Finding the remaining clips",
+                $"{current.RefinedMoments.SelectedCount} of {current.BaseMoments.Request.Setup.DesiredResultCount} clips passed selection. " +
+                "Checking up to two more distinct moments before choosing again; completed checks are saved for reuse.",
+                previous.AttemptedCandidates.Count, GenerationSemanticReviewBudgetPolicy.MaximumCandidates, isIndeterminate: true));
             var expanded = await visualService.ReviewAlternativesAsync(baseline, previous, progress, cancellationToken);
             if (ReferenceEquals(expanded, previous)) break;
             retain(expanded);

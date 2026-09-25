@@ -30,6 +30,7 @@ internal static partial class GenerationSpeechActivityTests
 {
     public static IEnumerable<TestCase> GetTests()
     {
+        yield return new("Review admission preserves quiet stories and defers duplicate cuts", ReviewAdmissionProtectsStoryAndDiversity);
         yield return new("Confirmed game context survives coarse title guesses", ConfirmedGameSurvivesCoarseTitleGuesses);
         yield return new("Review shortfalls use remaining capacity without repeating failed or rejected cuts", ReviewShortfallUsesRemainingCapacity);
         yield return new("Follow-up reviews prioritize unseen footage before overlapping trims", FollowupReviewPrefersUnseenFootage);

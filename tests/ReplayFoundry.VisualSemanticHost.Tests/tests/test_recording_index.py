@@ -14,9 +14,9 @@ class RecordingIndexTests(unittest.TestCase):
             source = root / "source.mkv"
             source.write_bytes(b"unchanged recording identity")
             request = dict(schemaVersion=VERSION, sourcePath=str(source), durationSeconds=30,
-                           modelHash="model", region=[0, 0, 1, 1], transcript=[], preferences={})
+                           modelHash="model", region=[0, 0, 1, 1], transcript=[])
             identity = dict(version=VERSION, prompt=hashlib.sha256(PROMPT.encode()).hexdigest(), model="model",
-                            source=fingerprint(source), duration=30.0, region=[0, 0, 1, 1], contextRegion=None, transcript=[], preferences={})
+                            source=fingerprint(source), duration=30.0, region=[0, 0, 1, 1], contextRegion=None, transcript=[])
             key = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             prediction = dict(gameplay=True, funny=False, commentary=False, menu=False, summary="A vehicle chase.",
                               visibleGameTitle="", speechMomentIds=[], editorialValue=85, lore=False, speechSource="unknown")
@@ -30,6 +30,11 @@ class RecordingIndexTests(unittest.TestCase):
             result = json.loads((root / "output.json").read_text())
             self.assertEqual(1, result["cacheHits"])
             self.assertEqual([row], result["windows"])
+            request["preferences"] = dict(mode="Montage", intent="Lore", emphasis="story")
+            (root / "input.json").write_text(json.dumps(request))
+            run(SimpleNamespace(input=root / "input.json", output=root / "output.json", cache=cache,
+                                model=root / "missing-model", ffmpeg=root / "missing-ffmpeg"))
+            self.assertEqual([row], json.loads((root / "output.json").read_text())["windows"])
 
     def prediction(self):
         return dict(gameplay=True, funny=True, commentary=True, menu=False,
@@ -41,10 +46,10 @@ class RecordingIndexTests(unittest.TestCase):
             source = root / "source.mkv"
             source.write_bytes(b"recording whose scan was interrupted")
             request = dict(schemaVersion=VERSION, sourcePath=str(source), durationSeconds=135,
-                           modelHash="model", region=[0, 0, 1, 1], transcript=[], preferences={})
+                           modelHash="model", region=[0, 0, 1, 1], transcript=[])
             identity = dict(version=VERSION, prompt=hashlib.sha256(PROMPT.encode()).hexdigest(), model="model",
                             source=fingerprint(source), duration=135.0, region=[0, 0, 1, 1], contextRegion=None,
-                            transcript=[], preferences={})
+                            transcript=[])
             key = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             prediction = {**self.prediction(), "speechMomentIds": [], "commentary": False, "speechSource": "unknown"}
             good = dict(ordinal=1, start=45, end=90, prediction=prediction, elapsedSeconds=12)

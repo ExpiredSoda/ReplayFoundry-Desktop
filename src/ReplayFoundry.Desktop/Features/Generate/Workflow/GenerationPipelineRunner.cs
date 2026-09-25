@@ -70,6 +70,10 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
         GenerationVisualSemanticAnalysisResult? retainedReviewMedia = null;
         GenerationCandidateIntelligenceResult? preVisualIntelligence = null;
         IProgress<GenerationVisualSemanticProgress>? visualProgress = null;
+        int finishRequested = 0;
+        void ReportReadyClips(int count) => progress.Report(new GenerationProgressUpdate(
+            "Some clips are ready", $"{count} clips passed selection. Keep finding the requested set, or finish these clips now.",
+            isIndeterminate: true, useReadyClips: () => Interlocked.Exchange(ref finishRequested, 1), readyClipCount: count));
         try
         {
 
@@ -208,7 +212,8 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         candidateIntelligence = GenerationReviewedSelectionPolicy.Apply(candidateIntelligence, cancellationToken);
                         candidateIntelligence = await GenerationReviewedPoolRecovery.FillAsync(preVisualIntelligence,
                             candidateIntelligence, _visualSemantic, _candidateRefinement, visualProgress,
-                            review => retainedReviewMedia = review, cancellationToken);
+                            review => retainedReviewMedia = review, cancellationToken,
+                            () => Volatile.Read(ref finishRequested) != 0, ReportReadyClips);
                     }
                     moments = candidateIntelligence.RefinedMoments;
                 }
@@ -256,7 +261,7 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                         "Moments selected",
                         moments.FulfillmentMessage,
                         isIndeterminate: false,
-                        progressPercent: 50));
+                        progressPercent: 50, clearReadyClips: true));
                 captions = null;
                 if (request.SetupOptions.CaptionSettings.IsEnabled)
                 {
@@ -310,7 +315,8 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                     if (preVisualIntelligence is not null && _visualSemantic is not null && _candidateRefinement is not null)
                         replacement = await GenerationReviewedPoolRecovery.FillAsync(preVisualIntelligence,
                             replacement, _visualSemantic, _candidateRefinement, visualProgress,
-                            review => retainedReviewMedia = review, cancellationToken);
+                            review => retainedReviewMedia = review, cancellationToken,
+                            () => Volatile.Read(ref finishRequested) != 0, ReportReadyClips);
                     if (replacement.RefinedMoments.SelectedCount == 0) throw;
                     candidateIntelligence = replacement;
                     moments = replacement.RefinedMoments;
