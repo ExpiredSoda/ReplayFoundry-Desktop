@@ -351,9 +351,13 @@ public sealed partial class GenerationVisualSemanticAnalysisService :
             .ThenBy(static value => value.Candidate.Id, StringComparer.Ordinal)
             .ToArray();
         IReadOnlyList<CandidateSource> ReviewCoverage(IEnumerable<CandidateSource> values) =>
-            GenerationCategoryReviewAdmission.Select(values.OrderByDescending(value => value.IsHumanPriority)
+            GenerationCategoryReviewAdmission.Select(GenerationReviewAdmissionOrder.Diversify(values.OrderByDescending(value => value.IsHumanPriority)
                     .ThenBy(value => reviewedBySource[value.Source].Any(previous =>
-                        MomentIntervalMath.PairOverlapRatio(previous.Window, value.Candidate.Window) >= .5)), maximumCandidateCount,
+                        MomentIntervalMath.PairOverlapRatio(previous.Window, value.Candidate.Window) >= .5))
+                    .ThenBy(value => GenerationReviewAdmissionOrder.IsRoutineInterface(
+                        refinementByCandidate.GetValueOrDefault(value.Candidate)?.Components ?? [])),
+                    value => value.IsHumanPriority, (left, right) => ReferenceEquals(left.Source, right.Source) &&
+                        MomentIntervalMath.PairOverlapRatio(left.Candidate.Window, right.Candidate.Window) >= .5), maximumCandidateCount,
                 candidateIntelligence.BaseMoments.Request.Setup.DiscoveryIntent.MomentType,
                 value => value.IsHumanPriority, value => refinementByCandidate.GetValueOrDefault(value.Candidate)?.Components ?? []);
         if (!candidateIntelligence.Refinements.Any(value => value.Components.Any(component =>

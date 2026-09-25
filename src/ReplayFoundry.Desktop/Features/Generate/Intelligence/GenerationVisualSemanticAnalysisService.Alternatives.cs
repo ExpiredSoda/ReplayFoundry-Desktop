@@ -18,7 +18,7 @@ public sealed partial class GenerationVisualSemanticAnalysisService
         if (remaining <= 0) return previous;
         var candidates = CreateShortlist(baseline, _settings.MaximumCandidateCount, _settings.VideoPolicy.MaximumReviewDuration,
                 previous.AttemptedCandidates)
-            .Take(Math.Min(remaining, GenerationSemanticReviewBudgetPolicy.MaximumSupplementalCandidates)).ToArray();
+            .Take(Math.Min(remaining, GenerationSemanticReviewBudgetPolicy.MaximumBatchSize)).ToArray();
         if (candidates.Length == 0) return previous;
         var supplemental = await AnalyzeShortlistAsync(baseline, candidates, progress, true, cancellationToken);
         try

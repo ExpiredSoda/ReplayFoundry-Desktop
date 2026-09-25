@@ -47,7 +47,7 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
                     transcript = transcript with { Segments = transcript.AllSegments.ToArray(), AdditionalTracks = null };
                 await File.WriteAllTextAsync(input, JsonSerializer.Serialize(new
                 {
-                    schemaVersion = "recording-index-6", sourcePath = media.FullPath,
+                    schemaVersion = "recording-index-7", sourcePath = media.FullPath,
                     durationSeconds = media.Duration.TotalSeconds, modelHash = runtime.Model.ManifestSha256,
                     region = new[] { region.X, region.Y, region.Width, region.Height },
                     contextRegion = presenter is null ? null : new[] { presenter.X, presenter.Y, presenter.Width, presenter.Height },
@@ -87,7 +87,7 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
                 await Task.Run(() => runtime.ModelIntegrity.Verify(cancellationToken), cancellationToken);
                 using var document = JsonDocument.Parse(await File.ReadAllTextAsync(output, cancellationToken));
                 var root = document.RootElement;
-                if (root.GetProperty("schemaVersion").GetString() != "recording-index-6")
+                if (root.GetProperty("schemaVersion").GetString() != "recording-index-7")
                     throw new InvalidDataException("Recording index version changed.");
                 TimeSpan indexElapsed = timer.Elapsed;
                 var windows = root.GetProperty("windows").EnumerateArray().ToArray();
@@ -239,7 +239,11 @@ internal sealed class GenerationRecordingIndexService(Qwen3VlQualifiedEditorialR
             int checkedCount = row.GetProperty("checked").GetInt32(), total = row.GetProperty("total").GetInt32();
             int mapped = row.GetProperty("mapped").GetInt32(), reused = row.GetProperty("reused").GetInt32();
             if (total < 1 || checkedCount < 0 || checkedCount > total || mapped < 0 || mapped > total || reused < 0 || reused > mapped) return null;
-            return $"Checked {checkedCount} of {total} recording sections · {mapped} mapped · {reused} reused from saved analysis.";
+            string estimate = row.TryGetProperty("estimatedSecondsRemaining", out var remaining) &&
+                remaining.TryGetDouble(out double seconds) && double.IsFinite(seconds) && seconds is > 0 and <= 86400
+                ? $" About {Math.Max(1, Math.Ceiling(seconds / 60)):0} min left in this scan pass; picture checks follow."
+                : string.Empty;
+            return $"Checked {checkedCount} of {total} recording sections · {mapped} mapped · {reused} reused from saved analysis." + estimate;
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or KeyNotFoundException or FormatException)
         { return null; }

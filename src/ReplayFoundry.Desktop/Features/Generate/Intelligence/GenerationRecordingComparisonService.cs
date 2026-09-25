@@ -13,7 +13,7 @@ internal sealed record RecordingReviewRegion(string Id, double Start, double End
 internal sealed class GenerationRecordingComparisonService(Qwen3VlQualifiedEditorialRuntime runtime)
 {
     internal const string Version = "recording-comparison-1";
-    internal const string PromptHash = "c37771e3714b4dadc5967ff1d7fe0e8aa04edc2a465b6d4800e2c59182cfd8a9";
+    internal const string PromptHash = "ad1b0b50b92adee440f4dd602fb4afaa611ef97cfd162c141d9d5e62c867990e";
 
     public async Task<IReadOnlyList<RecordingReviewRegion>> CompareAsync(JsonElement[] windows, string sourceHash,
         object preferences, int maximumRegions, IProgress<string>? progress, CancellationToken cancellationToken)
@@ -32,7 +32,10 @@ internal sealed class GenerationRecordingComparisonService(Qwen3VlQualifiedEdito
                 maximumRegions, preferences,
                 windows = windows.Select(row => new { ordinal = row.GetProperty("ordinal").GetInt32(),
                     start = row.GetProperty("start").GetDouble(), end = row.GetProperty("end").GetDouble(),
-                    summary = row.GetProperty("prediction").GetProperty("summary").GetString() })
+                    summary = row.GetProperty("prediction").GetProperty("summary").GetString(),
+                    labels = new[] { "gameplay", "funny", "commentary", "lore", "menu" }
+                        .Where(label => row.GetProperty("prediction").GetProperty(label).GetBoolean()).ToArray(),
+                    speechSource = row.GetProperty("prediction").GetProperty("speechSource").GetString() })
             }), cancellationToken);
             var host = runtime.Host;
             var process = await MediaWorkBudget.RunAsync(new WindowsProcessRunner(), new ProcessRunRequest(

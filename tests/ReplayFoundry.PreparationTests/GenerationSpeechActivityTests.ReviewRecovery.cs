@@ -8,6 +8,25 @@ namespace ReplayFoundry.PreparationTests;
 
 internal static partial class GenerationSpeechActivityTests
 {
+    private static Task ReviewAdmissionProtectsStoryAndDiversity()
+    {
+        GenerationCandidateRefinementComponent[] menu = [
+            new(GenerationCandidateRefinementComponentCode.NeuralIndexCoverage, 1, 0, "Mapped"),
+            new(GenerationCandidateRefinementComponentCode.NeuralMenu, 1, 0, "Static interface")];
+        TestAssert.True(GenerationReviewAdmissionOrder.IsRoutineInterface(menu), "Routine interfaces can wait for other candidates.");
+        foreach (var code in new[] { GenerationCandidateRefinementComponentCode.NeuralLore,
+            GenerationCandidateRefinementComponentCode.NeuralHumor, GenerationCandidateRefinementComponentCode.NeuralCommentary })
+            TestAssert.False(GenerationReviewAdmissionOrder.IsRoutineInterface([..menu, new(code, .8, 0, "Meaningful moment")]),
+                "A joke, story reveal or insight over an interface must remain eligible for early review.");
+        TestAssert.False(GenerationReviewAdmissionOrder.IsRoutineInterface(menu.Skip(1).ToArray()),
+            "Incomplete mapping cannot establish a routine interface.");
+        string[] candidates = ["a", "a-trim", "b", "manual"];
+        var order = GenerationReviewAdmissionOrder.Diversify(candidates, value => value == "manual",
+            (left, right) => left[0] == right[0] || right == "manual");
+        TestAssert.True(order.SequenceEqual(new[] { "a", "b", "manual", "a-trim" }),
+            "Review new events first, preserve explicit user choices and retain alternate trims.");
+        return Task.CompletedTask;
+    }
     private static Task FollowupReviewPrefersUnseenFootage()
     {
         var request = CreateRequest(GenerationAnalysisDepth.Thorough, [("review-regions.mkv", 1)],
@@ -66,11 +85,23 @@ internal static partial class GenerationSpeechActivityTests
             GenerationVisualSemanticAnalysisResult retained = initial;
             try
             {
+                if (!failedMiddle)
+                {
+                    bool finishRequested = false;
+                    current = await GenerationReviewedPoolRecovery.FillAsync(baseline, current, service, refinement,
+                        null, review => retained = review, CancellationToken.None,
+                        finishWithReadyClips: () => finishRequested,
+                        reportReadyClips: count => finishRequested = count > 0);
+                    TestAssert.Equal(2, current.RefinedMoments.SelectedCount,
+                        "Finishing with ready clips keeps the two accepted cuts from the first replacement group.");
+                    TestAssert.Equal(10, retained.AttemptedCandidates.Count,
+                        "An early finish does not launch another review group.");
+                }
                 current = await GenerationReviewedPoolRecovery.FillAsync(baseline, current, service, refinement,
                     null, review => retained = review, CancellationToken.None);
                 TestAssert.Equal(5, current.RefinedMoments.SelectedCount,
                     "A shortfall must examine remaining candidates until five independently reviewed cuts qualify.");
-                TestAssert.Equal(failedMiddle ? 32 : 16, retained.AttemptedCandidates.Count,
+                TestAssert.Equal(failedMiddle ? 30 : 14, retained.AttemptedCandidates.Count,
                     "Failed checks consume the total budget, while successful recovery stops without examining every candidate.");
                 TestAssert.True(current.RefinedMoments.SelectedCandidates.All(item =>
                     !rejected.Contains(item.Candidate.Id) && !failed.Contains(item.Candidate.Id)),

@@ -120,7 +120,10 @@ public sealed class GenerationProgressUpdate
         double? progressPercent = null,
         string? sourceName = null,
         int? sourceNumber = null,
-        int? sourceCount = null)
+        int? sourceCount = null,
+        Action? useReadyClips = null,
+        int readyClipCount = 0,
+        bool clearReadyClips = false)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -197,6 +200,11 @@ public sealed class GenerationProgressUpdate
         SourceName = sourceName;
         SourceNumber = sourceNumber;
         SourceCount = sourceCount;
+        if (readyClipCount < 0 || (useReadyClips is null) != (readyClipCount == 0))
+            throw new ArgumentException("Ready clips require an explicit completion action and a positive count.");
+        UseReadyClips = useReadyClips;
+        ReadyClipCount = readyClipCount;
+        ClearReadyClips = clearReadyClips;
     }
 
     public string Title { get; }
@@ -212,6 +220,9 @@ public sealed class GenerationProgressUpdate
     public int? SourceNumber { get; }
 
     public int? SourceCount { get; }
+    public Action? UseReadyClips { get; }
+    public int ReadyClipCount { get; }
+    public bool ClearReadyClips { get; }
 }
 
 public sealed class GeneratedClipCandidate

@@ -36,7 +36,7 @@ public sealed class GenerationProgressViewModel :
     private readonly DelegateCommand _cancelCommand;
     private readonly DelegateCommand _returnToSourceSelectionCommand;
     private readonly DelegateCommand _openStudioCommand;
-
+    private readonly GenerationReadyClipsControl _readyClips;
     private GenerationProgressState _state;
     private string _title = "Getting ready";
     private string _detail = "Preparing your workspace.";
@@ -76,9 +76,19 @@ public sealed class GenerationProgressViewModel :
         _openStudioCommand = new DelegateCommand(
             OpenStudio,
             () => CanOpenStudio);
+        _readyClips = new GenerationReadyClipsControl(() => IsRunning && !_isCancellationRequested,
+            detail => Detail = detail, () =>
+            {
+                OnPropertyChanged(nameof(CanUseReadyClips));
+                OnPropertyChanged(nameof(ReadyClipsLabel));
+            });
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public bool CanUseReadyClips => _readyClips.CanFinish;
+    public string ReadyClipsLabel => _readyClips.Label;
+    public ICommand UseReadyClipsCommand => _readyClips.Command;
 
     public GenerationProgressState State
     {
@@ -214,6 +224,7 @@ public sealed class GenerationProgressViewModel :
 
     public bool CanOpenStudio =>
         IsCompleted && _openStudio is not null;
+
 
     public string CancelButtonLabel
     {
@@ -359,6 +370,7 @@ public sealed class GenerationProgressViewModel :
         Detail = update.Detail;
         IsIndeterminate = update.IsIndeterminate;
         ProgressPercent = update.ProgressPercent ?? 0;
+        _readyClips.Report(update);
 
         SourceProgressText = GenerationProgressPresentationFactory.FormatSourceProgress(
             update.SourceNumber,
@@ -374,6 +386,7 @@ public sealed class GenerationProgressViewModel :
         }
 
         _isCancellationRequested = true;
+        _readyClips.Refresh();
 
         Title = "Stopping safely";
         Detail = "Finishing the current check before stopping.";
@@ -429,6 +442,7 @@ public sealed class GenerationProgressViewModel :
         GenerationProgressPresentation presentation)
     {
         ArgumentNullException.ThrowIfNull(presentation);
+        _readyClips.Reset();
         _isCancellationRequested = presentation.IsCancellationRequested;
         Title = presentation.Title;
         Detail = presentation.Detail;
@@ -442,6 +456,7 @@ public sealed class GenerationProgressViewModel :
         IsIndeterminate = presentation.IsIndeterminate;
         CancelButtonLabel = presentation.CancelButtonLabel;
         State = presentation.State;
+        _readyClips.Refresh();
 
         OnPropertyChanged(nameof(CanCancel));
         OnPropertyChanged(nameof(CanReturnToSourceSelection));

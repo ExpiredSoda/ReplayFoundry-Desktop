@@ -107,6 +107,8 @@ def run(args):
     request["audioModelIdentity"] = verify_model(audio_model) if audio_model and Path(audio_model).is_dir() else None
     request["momentEvidencePolicy"] = moment_evidence.POLICY_HASH
     request["audioEvidencePolicy"] = AUDIO_POLICY_HASH
+    from .scene_facts import POLICY_HASH as FACT_POLICY_HASH
+    request["sceneFactsPolicy"] = FACT_POLICY_HASH
     keys = {case["caseId"]:review_key(request,case,POLICY_SHA256) for case in request["cases"]}
     cached = {}
     for case in request["cases"]:
@@ -136,15 +138,13 @@ def run(args):
     import torch
     import transformers
     model, processor = _load_model_and_processor(Path(args.model), torch, transformers)
+    from .vision_reuse import VisionFeatureReuse
+    vision_reuse = VisionFeatureReuse(model, torch)
     session = StructuredDecodingSession(processor.tokenizer, model_vocab_size(model))
     grammars = {}
     for supplied in (False, True):
         wire = schema(supplied)
         grammars[supplied], _ = session.compile_json_schema(wire, VERSION, hashlib.sha256(wire.encode()).hexdigest(), any_whitespace=False)
-    fact_wire = json.dumps({"type":"object", "additionalProperties":False,
-        "properties":{"reason":{"type":"string", "maxLength":300}, "grounded":{"type":"boolean"}},
-        "required":["reason", "grounded"]})
-    fact_grammar, _ = session.compile_json_schema(fact_wire, VERSION, hashlib.sha256(fact_wire.encode()).hexdigest(), any_whitespace=False)
     states_wire = json.dumps({"type":"object", "additionalProperties":False,
         "properties":{key:{"type":"string", "minLength":1, "maxLength":180} for key in ("setup","outcome")},
         "required":["setup","outcome"]})
@@ -181,6 +181,7 @@ def run(args):
             first_pass = len(pass_diagnostics)
             row = {"caseId":case["caseId"], "inputHash":case["inputHash"]}
             images = []
+            vision_reuse.clear()
             checks = []
             raw = None
             try:
@@ -195,11 +196,9 @@ def run(args):
                 local_times = [round(timestamp-left,4) for timestamp in times]
                 with tempfile.TemporaryDirectory(prefix="replayfoundry-scene-") as scratch:
                     content = []
-                    for index, timestamp in enumerate(times):
-                        path = Path(scratch) / f"{index}.jpg"
-                        subprocess.run([args.ffmpeg,"-nostdin","-v","error","-ss",str(timestamp),"-i",str(source),
-                            "-frames:v","1","-an","-vf","scale=512:-2","-q:v","4",str(path)],
-                            check=True, timeout=45, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                    from .frame_extraction import extract_review_frames
+                    paths = extract_review_frames(args.ffmpeg, source, scratch, times)
+                    for index, path in enumerate(paths):
                         image = Image.open(path).convert("RGB")
                         images.append(image)
                         content.extend([{"type":"text","text":f"Frame {index} (frame-{index}) at {local_times[index]:.4f} seconds on this cut:"}, {"type":"image","image":image}])
@@ -208,6 +207,17 @@ def run(args):
                     if not any(track["speech"] for track in audio["tracks"]):
                         content.append({"type":"text","text":"Speech transcript (may contain recognition errors or game dialogue): " + json.dumps(words, ensure_ascii=False)})
                     row["audioEvidence"] = audio
+                    from .scene_facts import fact_properties, validate_fact_check
+                    facts = fact_properties(FRAME_COUNT, words)
+                    fact_wire = json.dumps({"type":"object", "additionalProperties":False,
+                        "properties":facts, "required":list(facts)})
+                    fact_grammar, _ = session.compile_json_schema(fact_wire, VERSION, hashlib.sha256(fact_wire.encode()).hexdigest(), any_whitespace=False)
+                    # Acoustic similarity helps categorize a moment, but cannot
+                    # establish dialogue, identity or a physical event. Keep the
+                    # factual passes focused on pictures and attributed words.
+                    factual_content = [*content, {"type":"text", "text":"Speech evidence, with explicit track provenance: " + json.dumps([
+                        {key:track[key] for key in ("streamIndex", "role", "roleSource", "speech")}
+                        for track in audio["tracks"]], ensure_ascii=False)}]
                     content.append({"type":"text", "text":"Timed acoustic and speech evidence, with explicit track provenance: " + json.dumps(audio,ensure_ascii=False)})
                     feedback = []
                     for attempt in range(2):
@@ -217,15 +227,16 @@ def run(args):
                             {"role":"system", "content":[{"type":"text", "text":states_prompt}]},
                             {"role":"user", "content":[*state_content, *feedback]}], states_grammar, 190, "frame-states"))
                         messages = [{"role":"system","content":[{"type":"text","text":prompt}]},
-                                    {"role":"user","content":[*content,*feedback]}]
+                                    {"role":"user","content":[*factual_content,*feedback]}]
                         raw = generate(messages, grammars[bool(words)], 320, "scene-judgment")
                         assessment = combine_assessment(states, json.loads(raw), bool(words), 0)
-                        claims = json.dumps({key:assessment[key] for key in ("setup", "event", "outcome")}, ensure_ascii=False)
+                        claim_values = {key:assessment[key] for key in ("setup", "event", "outcome")}
+                        claims = json.dumps(claim_values, ensure_ascii=False)
                         check = json.loads(generate([
                             {"role":"system","content":[{"type":"text","text":fact_prompt}]},
-                            {"role":"user","content":[*content, {"type":"text","text":"Proposed claims: " + claims}]}], fact_grammar, 160, "fact-check"))
-                        if type(check.get("grounded")) is not bool or not isinstance(check.get("reason"), str):
-                            raise ValueError("Invalid visual fact check")
+                            {"role":"user","content":[*factual_content, {"type":"text","text":"Unverified proposed claims: " + claims +
+                                "\nCheck each sentence against the original evidence. verbatimSourceText is a short quote read from that evidence, never a copy of the proposed sentence. For purely physical observations, use an empty string. Check who addresses whom before accepting any named speaker."}]}], fact_grammar, 300, "fact-check"))
+                        check = validate_fact_check(check, claim_values, FRAME_COUNT, words)
                         checks.append(check)
                         if check["grounded"]:
                             row.update(assessment=assessment, factReview=check)
@@ -255,6 +266,8 @@ def run(args):
                 if os.environ.get("REPLAYFOUNDRY_SCENE_DEBUG") == "1":
                     row["raw"] = raw
             finally:
+                row["visionReuse"] = vision_reuse.diagnostics()
+                vision_reuse.clear()
                 for image in images:
                     image.close()
             row["elapsedSeconds"] = time.perf_counter()-row_started
@@ -265,6 +278,7 @@ def run(args):
             emit()
             print(json.dumps({"stage":VERSION,"caseId":case["caseId"],"status":row["status"],"elapsedSeconds":row["elapsedSeconds"]}), flush=True)
     finally:
+        vision_reuse.close()
         del model, processor
         torch.cuda.empty_cache()
 

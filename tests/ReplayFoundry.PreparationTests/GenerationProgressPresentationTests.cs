@@ -7,6 +7,7 @@ internal static class GenerationProgressPresentationTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
+        new("Ready clips can finish early once without cancelling and reset between runs", ReadyClipsFinishOnce),
         new(
             "Progress presentations describe preparation without losing run identity",
             PreparationPresentationDescribesRun),
@@ -23,6 +24,24 @@ internal static class GenerationProgressPresentationTests
             "Progress presentations reject invalid run inputs",
             RunningPresentationRejectsInvalidInputs),
     ];
+
+    private static Task ReadyClipsFinishOnce()
+    {
+        int finishes = 0, cancellations = 0;
+        var model = new GenerationProgressViewModel(() => cancellations++, () => { });
+        model.BeginEvidenceAnalysis(GenerationMode.IndividualClips, 1);
+        model.Report(new ReplayFoundry.Desktop.Features.Generate.Workflow.GenerationProgressUpdate(
+            "Ready", "Two clips passed selection", true, useReadyClips: () => finishes++, readyClipCount: 2));
+        TestAssert.True(model.CanUseReadyClips, "Reviewed results expose early completion.");
+        model.UseReadyClipsCommand.Execute(null);
+        TestAssert.False(model.UseReadyClipsCommand.CanExecute(null), "A repeated click is disabled after requesting early completion.");
+        TestAssert.Equal(1, finishes, "Early completion must be idempotent.");
+        TestAssert.Equal(0, cancellations, "Early completion preserves the current work.");
+        model.Reset();
+        model.BeginEvidenceAnalysis(GenerationMode.IndividualClips, 1);
+        TestAssert.False(model.CanUseReadyClips, "The next run cannot use a stale completion callback.");
+        return Task.CompletedTask;
+    }
 
     private static Task PreparationPresentationDescribesRun()
     {

@@ -2,7 +2,17 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.3](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.3).
+downloadable version is [1.0.0 Beta 5.4](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.4).
+
+## 1.0.0 Beta 5.4 — 2026-09-25
+
+- Reuse neutral recording analysis when clip count, emphasis or writing preferences change. Source, model, framing, transcript and prompt changes still invalidate affected evidence.
+- Decode only unfinished recording-map sections when resuming. Extract close-review samples in one pass and reuse identical vision features between checks of the same cut, with a bounded memory cache and unchanged qualified decoding policy.
+- Prioritize distinct moments before overlapping alternatives and defer routine interface work when it lacks a supported joke, insight or reveal. Category and speaker evidence remain available when comparing long recordings.
+- Review replacements in groups of two and stop when enough accepted clips are available. The existing review budget and factual quality checks remain in place.
+- Show an estimate for the current recording scan and offer **Finish with ready clips** during additional review. This finishes the current check, then completes captions, titles, descriptions and saving for the available clips.
+- Require per-claim evidence during scene checks and verify numeric details against cited text. Writing instructions distinguish object location from identity and dialogue recipients from speakers, but model interpretation can still be wrong and generated wording needs creator review. A separate experimental dialogue check did not generalize to the full clip context and is excluded.
+- Update the matching optional visual runtime/model packages to `0.8.31` and `4.0.27`. Pretrained weights are unchanged; no personal model is trained or activated by this release. Local component timings are not an end-to-end performance guarantee.
 
 ## 1.0.0 Beta 5.3 — 2026-09-24
 
