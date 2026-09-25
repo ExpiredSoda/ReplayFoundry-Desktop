@@ -15,7 +15,7 @@ internal sealed class Qwen3VlSceneReviewProvider(Qwen3VlQualifiedEditorialRuntim
     internal const string Version = "scene-review-1.4";
     internal const int FrameCount = 12;
     internal const string PromptHash = "ecb683d91b892895dff96d6fe7261d0113e9147cfdd93cead1ec5ba8536435af";
-    internal const string FactPromptHash = "5f8f59a95d3d81cbfbc3e85c1d64f062b813e5c721099f958af8a27aa098f603";
+    internal const string FactPromptHash = "0066a9fea0dddc9d8362871a129012d209332a2d9b5c66e7070be629cd5cb8a4";
     internal const string StatesPromptHash = "13e5ea14912c03940ac42cc79998afefdcf12c2942eeab0bb2a54de22a5d38a1";
     internal const string ScorePromptHash = "10fb9e01d354828d71c9a7460145a4d50ecd703be1cc07201f2dfb9aa0939661";
     public InferenceProviderIdentity Identity { get; } = new("Qwen3-VL grounded scene review", "1.4", "1.4.0");

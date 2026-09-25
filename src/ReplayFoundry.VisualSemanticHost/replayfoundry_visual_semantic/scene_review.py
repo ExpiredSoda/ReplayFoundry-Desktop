@@ -149,10 +149,6 @@ def run(args):
         "properties":{key:{"type":"string", "minLength":1, "maxLength":180} for key in ("setup","outcome")},
         "required":["setup","outcome"]})
     states_grammar, _ = session.compile_json_schema(states_wire, VERSION, hashlib.sha256(states_wire.encode()).hexdigest(), any_whitespace=False)
-    detail_wire = json.dumps({"type":"object", "additionalProperties":False,
-        "properties":{"reason":{"type":"string","maxLength":200}, "supported":{"type":"boolean"}},
-        "required":["reason","supported"]})
-    detail_grammar, _ = session.compile_json_schema(detail_wire, VERSION, hashlib.sha256(detail_wire.encode()).hexdigest(), any_whitespace=False)
     def generate(messages, grammar, limit, kind):
         pass_started = time.perf_counter()
         print(json.dumps({"stage":"scene-pass-start","passKind":kind,"maximumOutputTokens":limit}),flush=True)
@@ -211,7 +207,7 @@ def run(args):
                     if not any(track["speech"] for track in audio["tracks"]):
                         content.append({"type":"text","text":"Speech transcript (may contain recognition errors or game dialogue): " + json.dumps(words, ensure_ascii=False)})
                     row["audioEvidence"] = audio
-                    from .scene_facts import fact_properties, validate_fact_check, text_detail_evidence, TEXT_DETAIL_PROMPT
+                    from .scene_facts import fact_properties, validate_fact_check
                     facts = fact_properties(FRAME_COUNT, words)
                     fact_wire = json.dumps({"type":"object", "additionalProperties":False,
                         "properties":facts, "required":list(facts)})
@@ -241,19 +237,6 @@ def run(args):
                             {"role":"user","content":[*factual_content, {"type":"text","text":"Unverified proposed claims: " + claims +
                                 "\nCheck each sentence against the original evidence. verbatimSourceText is a short quote read from that evidence, never a copy of the proposed sentence. For purely physical observations, use an empty string. Check who addresses whom before accepting any named speaker."}]}], fact_grammar, 300, "fact-check"))
                         check = validate_fact_check(check, claim_values, FRAME_COUNT, words)
-                        attributed_words = [{**speech, "role":track["role"], "roleSource":track["roleSource"]}
-                            for track in audio["tracks"] for speech in track["speech"]] or words
-                        detail_evidence = text_detail_evidence(claim_values, check, attributed_words)
-                        if check["grounded"] and detail_evidence is not None:
-                            detail = json.loads(generate([
-                                {"role":"system", "content":TEXT_DETAIL_PROMPT},
-                                {"role":"user", "content":json.dumps(detail_evidence, ensure_ascii=False)}],
-                                detail_grammar, 100, "text-detail-check"))
-                            if type(detail.get("supported")) is not bool or not isinstance(detail.get("reason"),str):
-                                raise ValueError("Invalid text detail check")
-                            check["textDetails"] = detail
-                            if not detail["supported"]:
-                                check.update(grounded=False, reason=detail["reason"])
                         checks.append(check)
                         if check["grounded"]:
                             row.update(assessment=assessment, factReview=check)

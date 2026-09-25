@@ -11,16 +11,6 @@ from replayfoundry_visual_semantic.vision_reuse import VisionFeatureReuse
 
 
 class ProcessingReuseTests(unittest.TestCase):
-    def test_dialogue_check_keeps_source_excerpts_separate_from_unverified_claims(self):
-        from replayfoundry_visual_semantic.scene_facts import text_detail_evidence
-        claims = {"event":"A voice message from Casey played."}
-        check = {"claims":{"event":{"verbatimSourceText":"Hey Casey, thanks for calling."}}}
-        evidence = text_detail_evidence(claims, check, [])
-        self.assertEqual(claims["event"], evidence["visuallyReviewedEvent"])
-        self.assertEqual("Hey Casey, thanks for calling.", evidence["sourceExcerpts"][0]["sourceText"])
-        self.assertIsNone(text_detail_evidence({}, {"claims":{}}, []))
-        self.assertIsNotNone(text_detail_evidence({"event":"A message."}, {"claims":{}}, [{"text":"A message."}]))
-
     def test_closing_vision_reuse_releases_the_model_without_a_bound_method_cycle(self):
         import weakref
         class Owner:
