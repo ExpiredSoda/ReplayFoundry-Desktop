@@ -2,7 +2,12 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.4](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.4).
+downloadable version is [1.0.0 Beta 5.5](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.5).
+
+## 1.0.0 Beta 5.5 — 2026-09-25
+
+- Keep a long recording's speech analysis running when Whisper VAD appends a 100-millisecond segment exactly after a fully covered audio chunk. Exclude that impossible tail with a provenance warning while preserving all retained speech and timestamps. Entirely invalid transcripts, larger overruns, missing VAD evidence and malformed timing still fail validation.
+- Reuse the verified Beta 5.4 optional runtime and AI packages; this correction updates the desktop transcript adapter without changing model weights or personal learning data.
 
 ## 1.0.0 Beta 5.4 — 2026-09-25
 
