@@ -34,15 +34,24 @@ internal static class WhisperCppOutputParser
             JsonElement root = document.RootElement;
             JsonElement items = WhisperCppJsonReader.FindSegments(root);
             var warnings = new List<AudioTranscriptionWarning>();
-            AudioTranscriptionSegment[] segments = items
-                .EnumerateArray()
-                .Select((item, index) => WhisperCppSegmentParser.Parse(
-                    item,
-                    index,
-                    request,
-                    vadTimeMap,
-                    warnings))
-                .ToArray();
+            var retained = new List<AudioTranscriptionSegment>();
+            int index = 0;
+            foreach (JsonElement item in items.EnumerateArray())
+            {
+                if (IsTrailingVadPadding(item, index, items.GetArrayLength(), request, vadTimeMap, retained))
+                {
+                    warnings.Add(new AudioTranscriptionWarning(
+                        AudioTranscriptionWarningCode.ProviderReportedWarning,
+                        $"The provider returned an extra segment immediately after the audio ended at {request.InputDuration:c}. " +
+                        "That out-of-range segment was excluded; retained speech and word timestamps were not shifted."));
+                }
+                else
+                {
+                    retained.Add(WhisperCppSegmentParser.Parse(item, index, request, vadTimeMap, warnings));
+                }
+                index++;
+            }
+            AudioTranscriptionSegment[] segments = retained.ToArray();
             segments = WhisperCppSegmentSequenceNormalizer.Normalize(segments, warnings);
             AudioTranscriptionLanguage? detectedLanguage =
                 WhisperCppJsonReader.ReadDetectedLanguage(root);
@@ -68,6 +77,23 @@ internal static class WhisperCppOutputParser
                 "whisper.cpp structured output is malformed or incomplete.",
                 innerException: exception);
         }
+    }
+
+    private static bool IsTrailingVadPadding(JsonElement item, int index, int count,
+        AudioTranscriptionRequest request, WhisperCppVadTimeMap? vadTimeMap,
+        IReadOnlyList<AudioTranscriptionSegment> retained)
+    {
+        // whisper.cpp can append a 100 ms VAD tail after a phrase that already
+        // reaches the physical input boundary. It has no audio to caption.
+        // Keep rejecting other out-of-bounds output and never pull this text
+        // back into the final frame or invent a word interval for it.
+        if (vadTimeMap is null || !request.Options.RequestWordTimestamps || index != count - 1 ||
+            retained.Count == 0 || retained[^1].RelativeEnd != request.InputDuration)
+            return false;
+        (TimeSpan start, TimeSpan end) = WhisperCppJsonReader.ReadTimes(item);
+        return start == request.InputDuration && end > start &&
+            end - start <= TimeSpan.FromMilliseconds(100) &&
+            !string.IsNullOrWhiteSpace(WhisperCppJsonReader.RequiredString(item, "text"));
     }
 
     private static void AddRootWarnings(

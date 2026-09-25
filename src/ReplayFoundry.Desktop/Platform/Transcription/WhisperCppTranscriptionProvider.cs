@@ -10,7 +10,7 @@ namespace ReplayFoundry.Desktop.Platform.Transcription;
 public sealed class WhisperCppTranscriptionProvider :
     IAudioTranscriptionProvider
 {
-    private const string AdapterVersion = "0.1.0";
+    private const string AdapterVersion = "0.1.1";
     private readonly WhisperCppProviderSettings _settings;
     private readonly IProcessRunner _processRunner;
     private readonly IWhisperCppWorkspaceFactory
