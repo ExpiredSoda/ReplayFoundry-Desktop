@@ -1,0 +1,20 @@
+ReplayFoundry Grounded Editorial JSON Whitespace Policy 1.0
+
+Identity:
+grounded-editorial-json-whitespace-1.0
+
+Every schema-constrained grounded-editorial generation compiles its frozen JSON
+Schema with XGrammar `strict_mode=true` and `any_whitespace=false`. This applies
+to visual drafts, visual-event selection, game-knowledge selection, and final
+metadata synthesis.
+
+Canonical grammar whitespace prevents an otherwise valid JSON whitespace loop
+from consuming the bounded generation budget without advancing the object. It
+does not change video evidence, schema fields, semantic validation, title
+diversity, grounding authority, or actor authority.
+
+The model still generates every JSON value. ReplayFoundry does not append,
+repair, truncate, or otherwise synthesize missing JSON. The same strict parser
+and semantic validators remain authoritative. Unconstrained fallback and
+semantic repair remain forbidden, and all existing token, wall-clock, CUDA
+memory, and process-tree bounds remain unchanged.

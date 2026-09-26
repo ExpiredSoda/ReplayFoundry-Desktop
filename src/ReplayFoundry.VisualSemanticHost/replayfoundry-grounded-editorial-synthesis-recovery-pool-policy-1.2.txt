@@ -1,0 +1,89 @@
+Replay Foundry Grounded Editorial Synthesis Recovery Pool Policy 1.2
+
+Purpose
+
+This policy permits one deterministic, bounded recovery pool only after ordinary
+grounded editorial synthesis pass 2 and pass 3 produced the same canonical
+schema-valid rejected JSON object by both UTF-8 bytes and SHA-256. It changes no
+model, grounding packet, perception pass, visual sampling, evidence authority,
+metadata prompt, metadata schema, or validator.
+
+Conditional immutable recovery source
+
+- When ordinary pass 1 failed CrossDraftTitleContamination and that failure
+  activated primary-only synthesis evidence, the correction target for every
+  pool candidate is the exact bounded canonical schema-valid JSON rejected on
+  ordinary pass 3. Pass 3 must be byte-for-byte and SHA-256 identical to pass 2.
+- For every other duplicate-authorized recovery, the correction target remains
+  the exact bounded canonical schema-valid JSON rejected on ordinary pass 1.
+- Source selection is frozen once before the pool. The selected target, source
+  pass ordinal, source canonical-JSON hash, and selection reason are identical
+  for every candidate.
+- The selected target is non-evidence and non-authority. It authorizes no fact,
+  identity, wording, grounding, or grammatical repair.
+- Every pool candidate receives byte-identical messages: the selected target,
+  cumulative typed rejected rules, the earliest available compact grammar
+  diagnostic, and one sanitized typed-authority anchor derived from unchanged
+  authorized evidence.
+- Messages, evidence scope, correction state, rejected-rule state, grammar
+  anchor state, authority state, and source-selection state never mutate between
+  pool candidates.
+- No rejected pool candidate is added to any later candidate's messages or
+  correction state.
+
+Authorized recovery configuration
+
+- Trigger: DuplicateGreedyRecoveryActivated.
+- Logical pass ordinal: 4.
+- Pool size: 4 serial batch-one candidates.
+- Candidate seeds in ordinal order: 3407, 3408, 3409, 3410.
+- Decoding: do_sample=true and num_beams=1.
+- Cache: enabled.
+- Temperature: 0.7.
+- Top-p: 0.8.
+- Top-k: 20.
+- Maximum new tokens per candidate: the existing grounded editorial 768-token
+  ceiling.
+- Structured decoding: a fresh batch-one XGrammar matcher for every candidate
+  using the existing compiled strict JSON schema.
+
+Typed semantic continuation
+
+- A pool candidate may advance to the next frozen seed only after constrained
+  generation reached bounded EOS, produced one complete canonical schema-valid
+  JSON object, retained that object within the existing byte bound, produced a
+  complete attestation matching the immutable messages and selected source, and
+  failed with one explicitly frozen deterministic semantic validator code.
+- The frozen retryable set includes every currently known deterministic semantic
+  audience, factual, grounding, authority, readable-text, cross-draft, knowledge,
+  tag, title-period, and reroll-diversity rejection.
+- Continuing after a typed semantic rejection does not weaken or skip that
+  validator. The rejected candidate is discarded and the next independent
+  candidate reruns the complete validator stack.
+- Technical errors, UsageOrInputError, incomplete EOS, XGrammar failure,
+  malformed or non-schema output, missing or oversized canonical JSON, parser-
+  contract failure, unknown rejection, StrictOutputValidation, attestation
+  mismatch, or any other untyped failure terminates immediately and fails closed.
+- The first fully valid candidate in frozen seed order wins. No scoring or later
+  candidate is permitted after acceptance. Four typed semantic rejections fail
+  closed.
+- No unconstrained fallback, semantic repair, text repair, conjugation, validator
+  weakening, dynamic seed, beam search, perception rerun, grounding rerun, or
+  additional synthesis pass is permitted.
+
+Attestation and failure ledger
+
+- Success output binds the executed Python module identities and hashes, the
+  frozen continuation policy and retryable-code set, the exact source-selection
+  reason, pass ordinal, and canonical-JSON hash, and every attempted greedy and
+  recovery candidate.
+- Each candidate records its logical pass and candidate ordinal, seed, correction-
+  source selection reason, pass, and canonical JSON hash, canonical-message hash,
+  rendered-prompt hash and byte count, input-token hash and count, raw output
+  hash, canonical completed-JSON hash, typed rejection or acceptance, and retry-
+  anchor state.
+- Failure envelope 1.3 reserves a structured recovery-pool ledger outside the
+  general diagnostic list. Each bounded ledger entry records only ordinal, seed,
+  selected-source reason/pass/hash, message, prompt, input, raw-output, canonical-
+  JSON hashes/counts, rejection code, and acceptance. It contains no raw generated
+  text, evidence content, or path.

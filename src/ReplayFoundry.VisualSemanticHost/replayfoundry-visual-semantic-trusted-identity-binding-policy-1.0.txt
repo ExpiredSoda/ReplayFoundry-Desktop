@@ -1,0 +1,47 @@
+ReplayFoundry Visual Semantic Trusted Identity Binding Policy 1.0
+
+Purpose
+
+Provider-generated case and candidate identifiers are untrusted transport
+echoes. ReplayFoundry already knows the authoritative case and candidate
+identity from the validated request and stable case ordinal. The model never
+owns routing or identity.
+
+Authoritative identity
+
+- The validated host request supplies the trusted case ID.
+- The validated host request supplies the trusted candidate ID.
+- The stable one-based request ordinal supplies case ordering.
+- Provider-generated identity text never selects, reorders, or reassigns a
+  result.
+
+Provider echo handling
+
+- Prompt 1.0 remains unchanged for the frozen Development experiment.
+- Provider caseId and candidateId remain required nonblank bounded strings
+  because Prompt 1.0 requests them.
+- Echo equality is diagnostic, not authoritative.
+- The host records the provider echoes and exact match flags.
+- The host binds the trusted request IDs to the canonical observation.
+- A mismatch emits a typed case-owned warning and identity-binding audit.
+- Identity binding is not semantic output normalization and does not count
+  toward the normalized-case research gate.
+
+Permitted operation
+
+The host may replace only the provider-generated caseId and candidateId fields
+with the exact validated request values for the same in-process case ordinal.
+
+Prohibited operation
+
+The host must not use provider IDs to route an observation, move semantic
+content between cases, repair any semantic field, change any enum, alter
+evidence timestamps or text, rewrite rationale, change output ordering, or
+accept a missing/blank/malformed identity field.
+
+Audit
+
+Every case records the trusted IDs, provider echoes, match flags, request
+ordinal, provider-payload hash before binding, trusted-bound payload hash,
+policy identity, and zero-offset binding time. The .NET boundary independently
+verifies the audit and the host-bound IDs.

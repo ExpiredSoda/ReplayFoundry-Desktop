@@ -1,0 +1,59 @@
+Replay Foundry Generation Watchdog Policy 1.0
+
+Purpose
+
+This policy bounds local Qwen generation by elapsed wall-clock time in addition
+to the existing token ceilings. It prevents a slow or non-progressing
+constrained generation loop from retaining the GPU indefinitely. It changes no
+model, prompt, input, visual sampling, evidence authority, JSON grammar,
+generation seed, sampling distribution, semantic validator, recovery-pool
+order, or accepted-output rule.
+
+Frozen limits
+
+- Every model.generate invocation receives max_time=240.0 seconds.
+- Every grounded editorial case receives one 900.0-second wall-clock budget.
+- A generation inside a grounded case receives the smaller of the 240.0-second
+  invocation limit and the case time remaining when generation begins.
+- Case time includes visual sampling, prompt processing, grounding generations,
+  ordinary synthesis generations, recovery-pool generations, parsing, and
+  validation for that case.
+- The limits are fixed implementation policy. They are not CLI options and
+  cannot be enlarged by request data.
+
+Termination and failure
+
+- Transformers max_time is a cooperative token-boundary stopping condition. It
+  does not pretend to interrupt an individual CUDA kernel or a native call that
+  never returns.
+- If generation returns at or after the effective wall-clock limit, the host
+  raises GenerationWallClockBudgetExceededError and fails closed regardless of
+  whether that final token is EOS or reaches the token ceiling. A late complete
+  object is not accepted.
+- If a grounded case has no wall-clock time remaining before another generation
+  starts, the host raises the same typed error before invoking the model.
+- A watchdog timeout never advances a recovery-pool seed, invokes a fallback,
+  repairs output, changes evidence, changes a validator, or accepts partial JSON.
+- Maximum-new-token exhaustion and other unexpected early stops retain their
+  existing distinct typed failures only when they occur before the wall-clock
+  limit.
+
+Provenance
+
+- Current success output records this policy version and SHA-256, both frozen
+  limits, the case generation-invocation count, elapsed case time, a false
+  triggered flag, and a null timeout reason.
+- Current failure output records this policy version and SHA-256, both frozen
+  limits, the attributed case and invocation ordinal when available, the exact
+  effective invocation limit, elapsed invocation and case time when available,
+  the triggered flag, and either GenerationInvocationWallClockBudgetExceeded or
+  GroundedCaseWallClockBudgetExceeded.
+- No generated text, evidence text, prompt text, media path, or token IDs are
+  added to watchdog telemetry.
+
+Hard-stop boundary
+
+The host-level cooperative watchdog is intentionally complemented by the
+desktop process boundary. If Python, CUDA, or a native dependency cannot return
+to the token-boundary check, the caller must terminate the complete child
+process tree at its independent hard timeout.

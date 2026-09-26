@@ -1,0 +1,62 @@
+Replay Foundry Grounded Editorial Synthesis Recovery Pool Policy 1.0
+
+Purpose
+
+This policy permits one deterministic, bounded recovery pool only after ordinary
+grounded editorial synthesis pass 2 and pass 3 produced the same canonical
+schema-valid rejected JSON object by both UTF-8 bytes and SHA-256. It changes no
+model, grounding packet, perception pass, visual sampling, evidence authority,
+metadata prompt, metadata schema, or validator.
+
+Immutable recovery source
+
+- The assistant correction target for every pool candidate is the exact bounded
+  schema-valid JSON rejected on ordinary synthesis pass 1.
+- The pass-1 target is non-evidence and non-authority. It authorizes no fact,
+  identity, wording, grounding, or grammatical repair.
+- Every pool candidate receives byte-identical messages: the pass-1 target,
+  cumulative typed rejected rules, the earliest available compact grammar
+  diagnostic, and one sanitized typed-authority anchor derived from unchanged
+  authorized evidence.
+- Messages, evidence scope, correction state, and authority state never mutate
+  between pool candidates.
+
+Authorized recovery configuration
+
+- Trigger: DuplicateGreedyRecoveryActivated.
+- Logical pass ordinal: 4.
+- Pool size: 4 serial batch-one candidates.
+- Candidate seeds in ordinal order: 3407, 3408, 3409, 3410.
+- Decoding: do_sample=true and num_beams=1.
+- Cache: enabled.
+- Temperature: 0.7.
+- Top-p: 0.8.
+- Top-k: 20.
+- Maximum new tokens per candidate: the existing grounded editorial 768-token
+  ceiling.
+- Structured decoding: a fresh batch-one XGrammar matcher for every candidate
+  using the existing compiled strict JSON schema.
+
+Selection and fail-closed boundaries
+
+- Every candidate runs the complete existing schema, grounding, cross-draft,
+  actor-authority, audience, tense, title-period, and reroll-diversity validators.
+- The first fully valid candidate in frozen seed order wins. No score or other
+  candidate comparison is permitted, and no later candidate runs after success.
+- A bounded semantic audience-copy rejection may advance to the next candidate.
+- Any technical, malformed/non-schema, factual, evidence, authority, readable-
+  text, cross-draft, knowledge-grounding, or other grounding rejection terminates
+  immediately and fails closed.
+- Four bounded semantic rejections fail closed.
+- No unconstrained fallback, semantic repair, text repair, conjugation, validator
+  weakening, dynamic seed, beam search, perception rerun, grounding rerun, or
+  additional synthesis pass is permitted.
+
+Attestation
+
+Success and failure artifacts bind the executed Python module identities and
+hashes. Each greedy pass and pool candidate records its logical pass and candidate
+ordinal, seed, correction-source pass and JSON hash, canonical-message hash,
+rendered-prompt hash and byte count, input-token hash and count, output hash,
+typed rejection or acceptance, and retry-anchor state. Audience or source content
+is never copied into attestation fields.

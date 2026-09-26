@@ -1,0 +1,94 @@
+Replay Foundry Grounded Editorial Synthesis Recovery Pool Policy 1.5
+
+Purpose
+
+This policy preserves policy 1.4's immutable sampled recovery pool and extends
+its activation to a third completed ordinary-pass rejection with a known typed
+semantic code. It changes no model, grounding packet, perception pass, visual
+sampling, evidence authority, metadata prompt, metadata schema, validator,
+seed, or decoding parameter.
+
+Bounded activation
+
+- The pool activates after exactly three completed schema-valid ordinary greedy
+  rejections when either ordinary passes 2 and 3 are byte-and-SHA-identical or
+  ordinary pass 3 ends with a known retryable semantic rejection.
+- Technical errors, UsageOrInputError, incomplete EOS, XGrammar failure,
+  malformed output, unknown rejection, StrictOutputValidation, or incomplete
+  attestation never activate the pool and fail closed immediately.
+- Duplicate witnesses remain required and unchanged when passes 2 and 3 are
+  identical. A nonduplicate semantic-exhaustion activation emits no duplicate
+  witness and is independently proven by its three rejected-pass attestations.
+
+Cross-draft retry source withholding
+
+- A completed CrossDraftTitleContamination rejection activates primary-only
+  synthesis evidence exactly as before.
+- The immediately rejected title, description, tags, grounding, and temporal
+  voice are not rendered into the next retry messages. The retry receives no
+  assistant audience-copy target and no compact copy envelope.
+- The rejected pass ordinal and canonical-JSON SHA-256 remain attested with the
+  source-selection reason CrossDraftRejectedAudienceCopyWithheld. This witness
+  identifies the discarded source and does not claim that its text was rendered.
+- Every non-CrossDraft ordinary retry retains the prior policy's exact immediate
+  assistant JSON and correction-envelope behavior.
+
+Conditional immutable recovery source
+
+- When any ordinary pass failed CrossDraftTitleContamination and primary-only
+  synthesis evidence is active, every recovery candidate withholds the pass-3
+  audience copy. Its discarded source pass and hash remain attested with reason
+  PrimaryOnlyCrossDraftAudienceCopyWithheld.
+- That branch also withholds any compact or sticky title-copy envelope captured
+  later in the ordinary passes; the cumulative typed rules and freshly derived
+  sanitized authority remain available without repeating rejected wording.
+- For every other recovery, the correction target remains the exact bounded
+  canonical schema-valid JSON rejected on ordinary pass 1, with reason
+  OriginalFirstRejected.
+- Source selection is frozen before the pool. Messages, selected-primary
+  evidence, correction state, rejected-rule state, authority state, and source
+  witness remain identical for every candidate.
+- A withheld or retained target is non-evidence and non-authority. It authorizes
+  no fact, identity, wording, grounding, or grammatical repair.
+- A sticky grammar target may be captured only when the actual typed rejection
+  code is exactly NonRetrospectiveVoice.
+- No rejected pool candidate is added to any later candidate's messages.
+
+Authorized recovery configuration
+
+- Trigger: BoundedSemanticRecoveryActivated.
+- Logical pass ordinal: 4.
+- Pool size: 4 serial batch-one candidates.
+- Candidate seeds in ordinal order: 3407, 3408, 3409, 3410.
+- Decoding: do_sample=true and num_beams=1.
+- Cache: enabled.
+- Temperature: 0.7.
+- Top-p: 0.8.
+- Top-k: 20.
+- Maximum new tokens per candidate: 768.
+- Structured decoding: a fresh batch-one XGrammar matcher for every candidate.
+
+Typed semantic continuation
+
+- Each candidate must reach bounded EOS, produce one complete canonical
+  schema-valid JSON object, satisfy complete immutable-input attestation, and
+  pass the unchanged parser and complete validator stack.
+- A completed known semantic rejection may advance to the next frozen seed.
+- Technical errors, UsageOrInputError, incomplete EOS, XGrammar failure,
+  malformed output, unknown rejection, StrictOutputValidation, or attestation
+  mismatch terminate immediately and fail closed.
+- The first fully valid candidate wins. Four semantic rejections fail closed.
+- No unconstrained fallback, semantic repair, text repair, conjugation,
+  validator weakening, dynamic seed, beam search, perception rerun, grounding
+  rerun, or additional logical synthesis pass is permitted.
+
+Attestation
+
+- Success and typed failure provenance bind the policy identity, activation
+  class through duplicate-witness presence, source reason, discarded-or-retained
+  source pass and canonical-JSON hash, canonical messages, rendered prompt,
+  input tokens, output, validation result, and module hashes.
+- Current output readers accept a pool without duplicate witnesses only when
+  three ordinary completed rejections are attested and the third is a frozen
+  known retryable semantic code.
+- Historical policy 1.4 artifacts retain their duplicate-only activation rule.

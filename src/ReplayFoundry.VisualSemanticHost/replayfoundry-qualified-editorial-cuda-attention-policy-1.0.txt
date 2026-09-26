@@ -1,0 +1,36 @@
+ReplayFoundry Qualified Editorial CUDA Attention Policy 1.0
+
+Purpose
+
+This policy prevents the qualified Qwen visual-observation pass from selecting
+the quadratic materialized scaled-dot-product-attention path that can consume
+nearly all local GPU memory. It changes no model weight, precision, prompt,
+video sampling, structured-decoding, evidence, or semantic-validation rule.
+
+Fixed configuration
+
+- Scope: qualified editorial visual observation only.
+- Model attention implementation: PyTorch scaled dot product attention.
+- Attention backend: cuDNN attention, explicitly forced around every qualified
+  editorial inference set through torch.nn.attention.sdpa_kernel.
+- Attention fallback: prohibited. If the pinned runtime cannot execute the
+  cuDNN backend, the observation command fails closed.
+- KV cache implementation: Transformers offloaded DynamicCache.
+- Batch ordering, frame count, pixel bounds, decoding limits, and model
+  placement remain unchanged.
+
+Rationale
+
+The qualified Qwen runtime's automatically selected attention path previously
+allowed a long video-and-text context to materialize a multi-gigabyte attention
+workspace. The same qualified weights and input shape completed under the
+explicit cuDNN scaled-dot-product-attention backend with substantially lower
+peak CUDA allocation. ReplayFoundry owns evidence selection and validation;
+PyTorch and cuDNN remain responsible for the low-level GPU attention kernel.
+
+Audit
+
+Every successful qualified editorial observation batch records this exact
+policy version and normalized SHA-256, the SDPA implementation, forced cuDNN
+backend, prohibited fallback, and offloaded KV-cache implementation. The
+managed result parser rejects missing or changed policy evidence.

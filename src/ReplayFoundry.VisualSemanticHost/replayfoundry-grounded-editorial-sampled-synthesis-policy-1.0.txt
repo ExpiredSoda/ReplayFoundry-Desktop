@@ -1,0 +1,44 @@
+ReplayFoundry Grounded Editorial Sampled Synthesis Policy 1.0
+
+Purpose
+
+This policy permits one deterministic sampled, text-only synthesis pass only
+after ordinary grounded editorial synthesis pass 2 and pass 3 produced the
+same canonical schema-valid rejected JSON object by both UTF-8 bytes and
+SHA-256. It changes no prompt, model, grounding packet, visual draft,
+knowledge selection, evidence authority, output schema, or validator.
+
+Authorized recovery configuration
+
+- Trigger: DuplicateGreedyRecoveryActivated.
+- Pass ordinal: 4.
+- Batch size: 1.
+- Decoding: do_sample=true and num_beams=1.
+- Cache: enabled.
+- Seed: 3407 for both the CPU and every CUDA generator.
+- Temperature: 0.7.
+- Top-p: 0.8.
+- Top-k: 20.
+- Maximum new tokens: the existing grounded editorial 768-token ceiling.
+- Structured decoding: a fresh batch-one XGrammar matcher using the existing
+  compiled strict JSON schema.
+
+Boundaries
+
+- Grounding, video sampling, OCR, transcripts, visual drafts, actor authority,
+  game knowledge, and knowledge selection are never rerun for this recovery.
+- The existing Prompt 1.35 messages and accumulated typed correction feedback
+  are used without a sampled-only prompt suffix.
+- The same strict JSON parser, grounding validator, actor validator, audience
+  validator, and reroll-diversity validator remain controlling.
+- No unconstrained fallback, semantic repair, output repair, beam search,
+  dynamic seed, dynamic decoding parameter, or additional synthesis pass is
+  permitted.
+- Any sampled-pass failure remains terminal and fails closed.
+
+Audit
+
+Current output records the policy identity, trigger, pass ordinal, source
+duplicate witness, and exact decoding constants. Failure generation telemetry
+uses this policy identity and doSample=true; its policy SHA-256 binds the exact
+constants above.

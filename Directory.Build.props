@@ -1,12 +1,12 @@
 <Project>
   <PropertyGroup>
+    <DefineConstants>$(DefineConstants);REPLAYFOUNDRY_PUBLIC_SOURCE</DefineConstants>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest-minimum</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
     <ReplayFoundryUserReportEndpoint>https://replayfoundry.com/api/v1/user-reports</ReplayFoundryUserReportEndpoint>
     <ReplayFoundryDataChannel Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('Tests'))">Test</ReplayFoundryDataChannel>
-    <ReplayFoundryDataChannel Condition="'$(MSBuildProjectName)' == 'ReplayFoundry.DeveloperTools'">Development</ReplayFoundryDataChannel>
     <ReplayFoundryDataChannel Condition="'$(ReplayFoundryDataChannel)' == '' and ('$(Configuration)' == '' or '$(Configuration)' == 'Debug')">Development</ReplayFoundryDataChannel>
     <ReplayFoundryDataChannel Condition="'$(ReplayFoundryDataChannel)' == ''">Production</ReplayFoundryDataChannel>
   </PropertyGroup>

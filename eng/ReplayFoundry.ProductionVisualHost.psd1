@@ -55,7 +55,6 @@
         'scene_copy.py'
         'scene_facts.py'
         'copy_judgment.py'
-        'curation.py'
         'editorial/__init__.py'
         'editorial/attempts.py'
         'editorial/canonicalization.py'
@@ -67,17 +66,9 @@
         'editorial/grounded_metadata_command.py'
         'editorial/resident_worker.py'
         'editorial/writer/__init__.py'
-        'editorial/writer/adapter.py'
         'editorial/writer/capture.py'
-        'editorial/writer/contracts.py'
         'editorial/writer/data.py'
-        'editorial/writer/evaluate.py'
         'editorial/writer/runtime.py'
-        'editorial/writer/review.py'
-        'editorial/writer/splits.py'
-        'editorial/writer/video.py'
-        'editorial/writer/train.py'
-        'editorial/writer/workflow.py'
         'editorial/grounded_metadata_context_contract.py'
         'editorial/grounded_metadata_contract.py'
         'editorial/grounded_metadata_contract_values.py'
@@ -151,18 +142,15 @@
     )
 
     ForbiddenSourceFiles = @(
-        'qwen3_vl_development_host.py'
-        'replayfoundry_visual_semantic/development_cli.py'
-        'replayfoundry_visual_semantic/development_commands.py'
-        'replayfoundry_visual_semantic/sampling_audit.py'
-        'replayfoundry_visual_semantic/sampling_capture.py'
-        'replayfoundry_visual_semantic/sampling_timing.py'
-        'replayfoundry_visual_semantic/editorial/constrained_development_command.py'
-        'replayfoundry_visual_semantic/editorial/constrained_pilot_command.py'
-        'replayfoundry_visual_semantic/editorial/development_command.py'
-        'replayfoundry_visual_semantic/editorial/pilot_command.py'
-        'replayfoundry_visual_semantic/editorial/pilot_protocol.py'
-        'replayfoundry_visual_semantic/editorial/sampling_authorization.py'
+        'replayfoundry_visual_semantic/curation.py'
+        'replayfoundry_visual_semantic/editorial/writer/adapter.py'
+        'replayfoundry_visual_semantic/editorial/writer/contracts.py'
+        'replayfoundry_visual_semantic/editorial/writer/evaluate.py'
+        'replayfoundry_visual_semantic/editorial/writer/review.py'
+        'replayfoundry_visual_semantic/editorial/writer/splits.py'
+        'replayfoundry_visual_semantic/editorial/writer/video.py'
+        'replayfoundry_visual_semantic/editorial/writer/train.py'
+        'replayfoundry_visual_semantic/editorial/writer/workflow.py'
     )
 
     PublicTests = @(
@@ -199,13 +187,5 @@
     ForbiddenPublicTests = @(
         'tests/test_writer_learning_loop.py'
         'tests/test_foundry_writer.py'
-        'test_qwen3_vl_sampling_audit.py'
-        'tests/generate_prompt2_attempt_fixtures.py'
-        'tests/test_development_host_surface.py'
-        'tests/test_qwen3_vl_constrained_development.py'
-        'tests/test_qwen3_vl_editorial_contract.py'
-        'tests/test_qwen3_vl_editorial_development.py'
-        'tests/test_qwen3_vl_editorial_pilot.py'
-        'tests/test_qwen3_vl_trusted_identity_attempt.py'
     )
 }

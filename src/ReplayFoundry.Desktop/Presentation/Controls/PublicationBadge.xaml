@@ -1,0 +1,26 @@
+<UserControl x:Class="ReplayFoundry.Desktop.Presentation.Controls.PublicationBadge"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:publish="clr-namespace:ReplayFoundry.Desktop.Features.Publish"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
+    AutomationProperties.Name="{Binding Label}" ToolTip="{Binding Detail}">
+    <UserControl.Style>
+        <Style TargetType="UserControl">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Stage}" Value="{x:Static publish:PublicationStage.Public}"><Setter Property="Foreground" Value="{DynamicResource Brush.StatusSuccess}" /></DataTrigger>
+                <DataTrigger Binding="{Binding Stage}" Value="{x:Static publish:PublicationStage.Scheduled}"><Setter Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" /></DataTrigger>
+                <DataTrigger Binding="{Binding Stage}" Value="{x:Static publish:PublicationStage.Processing}"><Setter Property="Foreground" Value="{DynamicResource Brush.StatusInfo}" /></DataTrigger>
+                <DataTrigger Binding="{Binding Stage}" Value="{x:Static publish:PublicationStage.Attention}"><Setter Property="Foreground" Value="{DynamicResource Brush.StatusWarning}" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Style>
+    <Border Padding="7,4" CornerRadius="4" BorderThickness="1" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Background="{DynamicResource Brush.SurfaceInset}" HorizontalAlignment="Left">
+        <DockPanel LastChildFill="True">
+            <controls:IconPath Width="12" Height="12" Margin="0,0,6,0" IconKey="{Binding Icon}" Stretch="Uniform" StrokeThickness="1.3"
+                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            <TextBlock FontSize="11" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+    </Border>
+</UserControl>
