@@ -33,7 +33,8 @@ public sealed record PublishCalendarSlot(
     string Title,
     string TimeLabel,
     string Status,
-    string Glyph);
+    string Glyph,
+    PublicationStage? PublicationStage = null);
 public sealed record PublishCalendarDay(
     DateTime Date,
     string DayNumber,
@@ -58,8 +59,11 @@ public sealed record PublishLibraryItem(
     string Detail,
     string CollectionDetail,
     string Status,
-    string? ThumbnailFullPath)
+    string? ThumbnailFullPath,
+    PublicationStatus? Publication = null)
 {
+    public string ActionLabel => Publication?.ActionLabel ?? "Prepare";
+    public bool HasRecordedUpload => !string.IsNullOrWhiteSpace(Publication?.VideoUrl);
     public bool HasThumbnail =>
         ThumbnailFullPath is not null &&
         File.Exists(ThumbnailFullPath);

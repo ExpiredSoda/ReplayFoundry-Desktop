@@ -10,6 +10,9 @@ public sealed record SceneCategoryEvidence(SceneMomentCategory Category, SceneEv
     TimeSpan Start, TimeSpan End, TimeSpan SetupStart, TimeSpan PayoffEnd, string Explanation,
     IReadOnlyList<string> EvidenceIds);
 
+/// <summary>Model-checked source text with retained frame/speech citations; not human-confirmed dialogue.</summary>
+public sealed record SceneSourceText(string Claim, string Text, IReadOnlyList<string> EvidenceIds);
+
 public sealed record SceneAudioTrack(int StreamIndex, AudioContentRoleAssignment Role,
     IReadOnlyList<VisualSemanticTranscriptSpan> Speech);
 
@@ -40,7 +43,7 @@ public sealed class SceneMomentEvidence
 {
     public const string Version = "moment-evidence-1";
     public SceneMomentEvidence(IEnumerable<SceneCategoryEvidence> categories, string audioStatus,
-        string audioEvidenceJson, TimeSpan duration)
+        string audioEvidenceJson, TimeSpan duration, IEnumerable<SceneSourceText>? sourceText = null)
     {
         var rows = categories.ToArray();
         if (duration <= TimeSpan.Zero || rows.Length != Enum.GetValues<SceneMomentCategory>().Length ||
@@ -59,10 +62,19 @@ public sealed class SceneMomentEvidence
             { EvidenceIds = Array.AsReadOnly(row.EvidenceIds.ToArray()) }).ToArray());
         AudioStatus = audioStatus;
         AudioEvidenceJson = audioEvidenceJson;
+        var text = (sourceText ?? []).ToArray();
+        if (text.Length > 3 || text.Select(item => item.Claim).Distinct(StringComparer.Ordinal).Count() != text.Length ||
+            text.Any(item => item.Claim is not ("setup" or "event" or "outcome") ||
+                string.IsNullOrWhiteSpace(item.Text) || item.Text.Length > 100 || item.EvidenceIds.Count is < 1 or > 4 ||
+                item.EvidenceIds.Any(string.IsNullOrWhiteSpace)))
+            throw new ArgumentException("Source text requires bounded, cited scene claims.");
+        SourceText = Array.AsReadOnly(text.Select(item => item with
+            { EvidenceIds = Array.AsReadOnly(item.EvidenceIds.ToArray()) }).ToArray());
     }
     public IReadOnlyList<SceneCategoryEvidence> Categories { get; }
     public string AudioStatus { get; }
     public string AudioEvidenceJson { get; }
+    public IReadOnlyList<SceneSourceText> SourceText { get; }
     public bool Supports(SceneMomentCategory category) => Categories.Any(row =>
         row.Category == category && row.Verdict == SceneEvidenceVerdict.Supported);
 }

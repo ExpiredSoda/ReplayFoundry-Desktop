@@ -9,6 +9,13 @@
             <TextBlock Margin="0,4,0,8" Style="{DynamicResource Text.Meta}" Text="{Binding Summary}" />
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Output assembly" />
             <ComboBox Margin="0,4,0,8" ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" AutomationProperties.Name="Cut list output assembly" />
+            <StackPanel Margin="0,0,0,12" Visibility="{Binding IsMontage, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{DynamicResource Text.Meta}" Text="Montage style" />
+                <ComboBox Margin="0,4,0,8" ItemsSource="{Binding MontageStyles}" SelectedItem="{Binding SelectedMontageStyle}" AutomationProperties.Name="Studio montage style" />
+                <Button Content="Arrange kept sections" Command="{Binding ArrangeMontageCommand}" />
+                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding MontageGuidance}" TextWrapping="Wrap" />
+                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="Source lengths and captions stay intact. Move sections below to refine the arrangement; AI copy is refreshed separately." TextWrapping="Wrap" />
+            </StackPanel>
             <TextBlock Style="{DynamicResource Text.Meta}" Text="Split time from selected clip start (seconds)" TextWrapping="Wrap" />
             <TextBox Margin="0,4,0,8" Text="{Binding SplitOffsetSeconds, StringFormat=F3}" AutomationProperties.Name="Clip split time" />
             <Button HorizontalAlignment="Left" Content="Split into two sections" Command="{Binding SplitCommand}" />

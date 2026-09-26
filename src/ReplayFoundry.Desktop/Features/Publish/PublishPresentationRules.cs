@@ -7,6 +7,7 @@ namespace ReplayFoundry.Desktop.Features.Publish;
 
 internal static class PublishPresentationRules
 {
+    internal static readonly TimeSpan MinimumScheduleLeadTime = TimeSpan.FromMinutes(30);
     public static IReadOnlyList<string> ParseTags(string text) =>
         text.Split(
                 [',', '\n', '\r'],
@@ -96,5 +97,56 @@ internal static class PublishPresentationRules
             _ => "online status not checked",
         };
         return timing + " · " + remote;
+    }
+    internal static bool TryGetScheduledUtc(
+        DateTime? date, string text, TimeZoneInfo timeZone, DateTimeOffset now,
+        out DateTimeOffset scheduledUtc,
+        out string error)
+    {
+        scheduledUtc = default;
+        if (date is null)
+        {
+            error = "Choose a release date.";
+            return false;
+        }
+        if (!TryParseTime(text, out TimeOnly time))
+        {
+            error = "Enter a release time such as 6:00 PM.";
+            return false;
+        }
+        try
+        {
+            scheduledUtc = YouTubeSchedulePlanner.ToUtc(
+                DateOnly.FromDateTime(date.Value),
+                time,
+                timeZone);
+        }
+        catch (ArgumentException exception)
+        {
+            error = exception.Message;
+            return false;
+        }
+        if (scheduledUtc < now + MinimumScheduleLeadTime)
+        {
+            error =
+                "Choose a release at least 30 minutes from now so YouTube has time to receive and process the video.";
+            return false;
+        }
+        error = string.Empty;
+        return true;
+    }
+
+    internal static string ScheduleSummary(bool scheduled, YouTubeVideoVisibility visibility, DateTime? date,
+        string text, TimeZoneInfo timeZone, DateTimeOffset now)
+    {
+        if (!scheduled) return visibility switch
+        {
+            YouTubeVideoVisibility.Public => "The video becomes public after YouTube accepts and processes it.",
+            YouTubeVideoVisibility.Unlisted => "The video is available to anyone with the link.",
+            _ => "The video remains private in YouTube Studio.",
+        };
+        return TryGetScheduledUtc(date, text, timeZone, now, out var utc, out string error)
+            ? $"YouTube will publish at {TimeZoneInfo.ConvertTime(utc, timeZone):f} (UTC{TimeZoneInfo.ConvertTime(utc, timeZone):zzz})."
+            : error;
     }
 }

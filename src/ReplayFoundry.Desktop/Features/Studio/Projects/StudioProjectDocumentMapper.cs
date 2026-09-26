@@ -50,7 +50,8 @@ public static class StudioProjectDocumentMapper
             project.Assets.Select(MapAsset).ToArray(),
             project.HiddenMoments.Select(MapHiddenMoment).ToArray(),
             recovery,
-            project.SourceMedia.Select(MapMedia).ToArray());
+            project.SourceMedia.Select(MapMedia).ToArray(), project.MontageStyle,
+            project.MontageMetadata is { } metadata ? MapEditorialMetadata(metadata) : null, project.MontageMetadataFingerprint);
     }
 
     public static GenerationOutputProject Restore(
@@ -76,7 +77,8 @@ public static class StudioProjectDocumentMapper
             document.ResultCountMode,
             hidden,
             document.CandidateSetFingerprint,
-            document.SourceMedia.Select(RestoreMedia));
+            document.SourceMedia.Select(RestoreMedia), document.MontageStyle,
+            document.MontageMetadata is { } metadata ? RestoreEditorialMetadata(metadata) : null, document.MontageMetadataFingerprint);
     }
 
     private static StudioProjectSourceSnapshot CaptureSource(string fullPath)

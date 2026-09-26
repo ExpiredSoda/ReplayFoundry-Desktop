@@ -7,7 +7,7 @@
     <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
     <ReplayFoundryUserReportEndpoint>https://replayfoundry.com/api/v1/user-reports</ReplayFoundryUserReportEndpoint>
     <ReplayFoundryDataChannel Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('Tests'))">Test</ReplayFoundryDataChannel>
-    <ReplayFoundryDataChannel Condition="'$(ReplayFoundryDataChannel)' == '' and '$(Configuration)' == 'Debug'">Development</ReplayFoundryDataChannel>
+    <ReplayFoundryDataChannel Condition="'$(ReplayFoundryDataChannel)' == '' and ('$(Configuration)' == '' or '$(Configuration)' == 'Debug')">Development</ReplayFoundryDataChannel>
     <ReplayFoundryDataChannel Condition="'$(ReplayFoundryDataChannel)' == ''">Production</ReplayFoundryDataChannel>
   </PropertyGroup>
 

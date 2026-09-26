@@ -32,8 +32,12 @@ public sealed class TasteLearningSettingsViewModel : ObservableObject, IDisposab
     }
     public bool IsWorking => _learning?.Status.IsWorking == true;
     public int Ratings => _learning?.Status.Ratings ?? 0;
-    public string State => !IsAvailable ? "Unavailable" : !Enabled ? "Paused" : IsWorking ? "Updating" : _learning!.Status.IsActive ? "Active" : "Collecting feedback";
+    public string State => !IsAvailable ? "Unavailable" : !Enabled ? "Paused" : IsWorking ? "Evaluating" : _learning!.Status.IsActive ? "Active" : "Collecting feedback";
     public string Summary => $"{Ratings} rated clips · {_learning?.Status.Recordings ?? 0} recordings";
+    public string EvidenceSummary => $"{_learning?.Status.Clips ?? 0} observed clips · {_learning?.Status.Likes ?? 0} likes · {_learning?.Status.Dislikes ?? 0} dislikes. Observing or publishing a clip does not rate it.";
+    public string QualificationSummary => _learning?.Status.IsActive == true
+        ? "A qualified personal model is active. New models must improve on separate recordings before replacing it."
+        : "A training attempt can begin after 8 varied ratings. Activation needs at least 60 ratings from 12 recordings and a successful independent comparison. Until then, the general model continues choosing clips.";
     public string Status => _notice ?? _learning?.Status.Message ?? "Local learning is unavailable right now.";
     public ICommand TrainCommand => _train;
     public ICommand ResetCommand => _reset;
@@ -47,7 +51,7 @@ public sealed class TasteLearningSettingsViewModel : ObservableObject, IDisposab
     }
     private void Changed(object? sender, EventArgs e)
     {
-        foreach (string property in new[] { nameof(Enabled), nameof(IsWorking), nameof(Ratings), nameof(State), nameof(Summary), nameof(Status) })
+        foreach (string property in new[] { nameof(Enabled), nameof(IsWorking), nameof(Ratings), nameof(State), nameof(Summary), nameof(Status), nameof(EvidenceSummary), nameof(QualificationSummary) })
             OnPropertyChanged(property);
         _train.RaiseCanExecuteChanged(); _reset.RaiseCanExecuteChanged();
     }

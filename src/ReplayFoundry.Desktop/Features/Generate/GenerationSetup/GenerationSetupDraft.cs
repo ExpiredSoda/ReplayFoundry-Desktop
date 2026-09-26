@@ -23,6 +23,7 @@ public sealed class GenerationSetupDraft
         }
 
         Request = request;
+        MontageStyle = initialOptions?.MontageStyle ?? Handoff.MontageStyle.Impact;
 
         DetectionMethod =
             initialOptions?.DetectionMethod ??
@@ -296,6 +297,8 @@ public sealed class GenerationSetupDraft
         MetadataAuthoringMode = metadataAuthoringMode;
     }
 
+    public Handoff.MontageStyle MontageStyle { get; set; }
+
     public GenerationSetupOptions CreateOptions()
     {
         return new GenerationSetupOptions(
@@ -313,7 +316,8 @@ public sealed class GenerationSetupDraft
             GameContextSettings,
             MaximumClipDuration,
             MetadataAuthoringMode,
-            DiscoveryIntent);
+            DiscoveryIntent,
+            MontageStyle);
     }
 
     private static int GetDefaultResultCount(

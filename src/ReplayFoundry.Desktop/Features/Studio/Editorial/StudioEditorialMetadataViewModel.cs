@@ -11,9 +11,7 @@ using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editor
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 
-public sealed class StudioEditorialMetadataViewModel :
-    INotifyPropertyChanged,
-    IDisposable
+public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly StudioEditorialMetadataService _service;
     private readonly IEditorialRerollPreference _rerollPreference;
@@ -22,6 +20,7 @@ public sealed class StudioEditorialMetadataViewModel :
     private readonly DelegateCommand _saveCommand;
     private readonly DelegateCommand _markReviewedCommand;
     private readonly AsyncDelegateCommand _rerollCommand;
+    private readonly AsyncDelegateCommand _montageCommand;
     private readonly AsyncDelegateCommand _refreshCurrentCutCommand;
     private readonly AsyncDelegateCommand _refreshGameContextCommand;
     private readonly DelegateCommand _removeCachedGameContextCommand;
@@ -88,6 +87,7 @@ public sealed class StudioEditorialMetadataViewModel :
         _rerollCommand = new AsyncDelegateCommand(
             RerollAsync,
             CanReroll);
+        _montageCommand = new AsyncDelegateCommand(() => RewriteAsync(true), () => IsMontage && CanRewrite());
         _refreshCurrentCutCommand = new AsyncDelegateCommand(
             RefreshCurrentCutAsync,
             CanRefreshCurrentCut);
@@ -109,6 +109,17 @@ public sealed class StudioEditorialMetadataViewModel :
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public StudioWordingLearningViewModel WordingLearning { get; }
+
+    private bool _keepTitle, _keepDescription;
+    public bool KeepTitle { get => _keepTitle; set { _keepTitle = value; NotifyState(); } }
+    public bool KeepDescription { get => _keepDescription; set { _keepDescription = value; NotifyState(); } }
+    public IReadOnlyList<string> Tones { get; } = ["Natural", "Playful", "Understated"];
+    public string Tone { get; set; } = "Natural";
+    public bool IsMontage => _project?.Mode == Features.Generate.ModeSelection.GenerationMode.Montage;
+    public string MontageTitle => _project?.IsMontageMetadataCurrent == true ? _project.MontageMetadata!.Title : "Whole-montage copy needs writing";
+    public string MontageDescription => _project?.IsMontageMetadataCurrent == true ? _project.MontageMetadata!.Description
+        : "Generate copy for the complete arrangement. Changing sections or their order requires a new review.";
+    public ICommand RewriteMontageCommand => _montageCommand;
 
     public string Title
     {
@@ -629,7 +640,9 @@ public sealed class StudioEditorialMetadataViewModel :
         NotifyState();
     }
 
-    private async Task RerollAsync()
+    private Task RerollAsync() => RewriteAsync(false);
+
+    private async Task RewriteAsync(bool montage)
     {
         if (_project is null ||
             _asset is null ||
@@ -666,7 +679,7 @@ public sealed class StudioEditorialMetadataViewModel :
         try
         {
             StudioEditorialRerollResult result =
-                await _service.RerollAsync(
+                montage ? await _service.RerollMontageAsync(_project, generationCancellation.Token) : await _service.RerollAsync(
                     _project,
                     _asset,
                     AudienceAddress,
@@ -674,7 +687,7 @@ public sealed class StudioEditorialMetadataViewModel :
                     DescriptionSignature,
                     requireAi,
                     generationCancellation.Token,
-                    SelectedVariantChoice.Value);
+                    SelectedVariantChoice.Value, KeepTitle, KeepDescription, Tone);
             generationCancellation.Token.ThrowIfCancellationRequested();
             _status = result.Status;
         }
@@ -868,7 +881,9 @@ public sealed class StudioEditorialMetadataViewModel :
         !NeedsCurrentCutRefresh &&
         !_draftState.Equals("Reviewed", StringComparison.Ordinal);
 
-    private bool CanReroll() =>
+    private bool CanReroll() => !(KeepTitle && KeepDescription) && CanRewrite();
+
+    private bool CanRewrite() =>
         CanGenerate &&
         !_isStopping &&
         _service.CanEdit(_project, _asset) &&
@@ -876,9 +891,7 @@ public sealed class StudioEditorialMetadataViewModel :
         !IsGenerating &&
         (!HasUnsavedChanges || CanSave());
 
-    private bool CanRefreshCurrentCut() =>
-        NeedsCurrentCutRefresh &&
-        CanReroll();
+    private bool CanRefreshCurrentCut() => NeedsCurrentCutRefresh && CanReroll();
 
     private bool CanRefreshGameContext() =>
         !_isStopping &&
@@ -961,6 +974,8 @@ public sealed class StudioEditorialMetadataViewModel :
 
     private void NotifyState()
     {
+        foreach (string name in new[] { nameof(KeepTitle), nameof(KeepDescription), nameof(IsMontage), nameof(MontageTitle), nameof(MontageDescription) }) OnPropertyChanged(name);
+        _montageCommand.RaiseCanExecuteChanged();
         foreach (string propertyName in StudioEditorialPropertyNotifications.All)
         {
             OnPropertyChanged(propertyName);

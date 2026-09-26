@@ -76,7 +76,7 @@ runtime packs remain available.
 
 ## Build runtime packs
 
-Beta 5.4 requires visual runtime `0.8.31` and model pack `4.0.27` as a matching
+Beta 5.6 requires visual runtime `0.8.32` and model pack `4.0.28` as a matching
 set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
 structured-decoding qualification lock for CPython `3.13.15`, PyTorch
 `2.13.0+cu130`, TorchVision `0.28.0+cu130`, TorchCodec `0.16.0`, and Transformers

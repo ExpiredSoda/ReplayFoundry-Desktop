@@ -38,7 +38,7 @@
                     Style="{DynamicResource Control.InlineSearchTextBox}"
                     Background="{DynamicResource Brush.SurfaceInset}"
                     BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1"
-                    Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                    Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged, Delay=180}"
                     ToolTip="Search Library" />
                 <TextBlock
                     Margin="14,0"
@@ -59,7 +59,13 @@
             </Grid>
             </DockPanel>
 
-            <Expander Grid.Row="1" Margin="0,8,0,0" Header="Filter and sort" IsExpanded="False"
+            <StackPanel Grid.Row="1" Margin="0,8,0,0">
+            <ListBox ItemsSource="{Binding Dates}" SelectedItem="{Binding DateFilter, Mode=TwoWay}"
+                AutomationProperties.Name="Library quick date filters" ToolTip="When the finished videos were added to Library"
+                Style="{DynamicResource Control.TabList}">
+                <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+            </ListBox>
+            <Expander Margin="0,8,0,0" Header="Organize and sort" IsExpanded="False"
                       AutomationProperties.Name="Library filters and organization" Style="{DynamicResource Control.QuietExpander}">
             <WrapPanel Margin="0,4,0,0">
                 <StackPanel Width="118" Margin="0,0,10,10">
@@ -71,7 +77,7 @@
                         Style="{DynamicResource Control.InlineSelectorComboBox}" />
                 </StackPanel>
                 <StackPanel Width="116" Margin="0,0,10,10">
-                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Created" />
+                    <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Added to Library" />
                     <ComboBox
                         AutomationProperties.Name="Library date filter"
                         ItemsSource="{Binding Dates}"
@@ -105,6 +111,7 @@
             </WrapPanel>
 
             </Expander>
+            </StackPanel>
             <Border Grid.Row="2" Padding="0,6,0,0" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="0,1,0,0">
                 <DockPanel LastChildFill="True">
                     <WrapPanel VerticalAlignment="Center">

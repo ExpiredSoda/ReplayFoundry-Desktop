@@ -208,6 +208,7 @@ internal sealed class YouTubePublishingService :
             string? channelId = _knownChannel is { } known && known.CredentialFingerprint == CredentialFingerprint(credential)
                 ? known.ChannelId : null;
             YouTubePublishProvenance? provenance = YouTubePublishProvenance.Capture(request.Asset, channelId);
+            var fileRevision = Features.Publish.PublishedFileRevision.Capture(request.Asset.OutputFullPath);
             string videoId = await _api.UploadVideoAsync(
                     credential.AccessToken,
                     request,
@@ -292,7 +293,8 @@ internal sealed class YouTubePublishingService :
                 result.Visibility,
                 result.CompletedAtUtc,
                 result.ScheduledForUtc,
-                provenance: provenance));
+                provenance: provenance,
+                fileRevision: fileRevision));
             progress?.Report(new YouTubePublishProgress(
                 YouTubePublishPhase.Completed,
                 outcome == YouTubePublishOutcome.Scheduled
@@ -383,34 +385,38 @@ internal sealed class YouTubePublishingService :
                     cancellationToken)
                 .ConfigureAwait(false);
             YouTubePublishHistoryEntry[] original = _history.Current.ToArray();
+            string channelId = await ResolvePublishingChannelAsync(credential, cancellationToken).ConfigureAwait(false);
             string[] ids = original
+                .Where(entry => (entry.Provenance?.ChannelId ?? entry.RemoteDetails?.ChannelId) is not { } owner ||
+                    string.Equals(owner, channelId, StringComparison.Ordinal))
                 .Select(static entry => entry.VideoId)
                 .Where(static id => !string.IsNullOrWhiteSpace(id))
                 .Cast<string>()
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
-            var existing = new HashSet<string>(StringComparer.Ordinal);
+            var observations = new Dictionary<string, YouTubeRemoteVideoDetails>(StringComparer.Ordinal);
             for (int offset = 0; offset < ids.Length; offset += 50)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 string[] batch = ids.Skip(offset).Take(50).ToArray();
-                IReadOnlySet<string> result = await _api.GetExistingVideoIdsAsync(
+                IReadOnlyDictionary<string, YouTubeRemoteVideoDetails> result = await _api.GetVideoStatusesAsync(
                         credential.AccessToken,
                         batch,
                         cancellationToken)
                     .ConfigureAwait(false);
-                existing.UnionWith(result);
+                foreach (var observation in result) observations[observation.Key] = observation.Value;
             }
 
             DateTimeOffset checkedAtUtc = DateTimeOffset.UtcNow;
             YouTubePublishHistoryEntry[] updated = original
-                .Select(entry => entry.VideoId is null
+                .Select(entry => entry.VideoId is null || !ids.Contains(entry.VideoId, StringComparer.Ordinal)
                     ? entry
                     : entry.WithRemoteStatus(
-                        existing.Contains(entry.VideoId)
+                        observations.ContainsKey(entry.VideoId)
                             ? YouTubeRemoteVideoStatus.Exists
                             : YouTubeRemoteVideoStatus.NotFoundOrInaccessible,
-                        checkedAtUtc))
+                        checkedAtUtc,
+                        observations.GetValueOrDefault(entry.VideoId)))
                 .ToArray();
             _history.Replace(updated);
             return updated.Count(static entry =>
@@ -425,6 +431,15 @@ internal sealed class YouTubePublishingService :
         {
             _publishGate.Release();
         }
+    }
+
+    private async Task<string> ResolvePublishingChannelAsync(YouTubeAccessCredential credential, CancellationToken cancellationToken)
+    {
+        string fingerprint = CredentialFingerprint(credential);
+        if (_knownChannel is { } known && known.CredentialFingerprint == fingerprint) return known.ChannelId;
+        YouTubeAccountConnection connection = await _api.GetChannelAsync(credential.AccessToken, cancellationToken).ConfigureAwait(false);
+        _knownChannel = new(fingerprint, connection.ChannelId);
+        return connection.ChannelId;
     }
 
     private void RequireConnectionPermission()

@@ -1,3 +1,4 @@
+using System.Globalization;
 using ReplayFoundry.Desktop.Features.Publish.YouTube;
 
 namespace ReplayFoundry.Desktop.Features.Publish;
@@ -14,11 +15,11 @@ internal sealed class PublishCalendarState
         _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
         _timeZone = timeZone ?? throw new ArgumentNullException(nameof(timeZone));
         DateTime today = LocalToday;
-        Anchor = new DateTime(today.Year, today.Month, 1);
+        Anchor = today;
     }
 
     public PublishCalendarMode Mode { get; private set; } =
-        PublishCalendarMode.Month;
+        PublishCalendarMode.Week;
     public PublishCalendarPlatform Platform { get; private set; } =
         PublishCalendarPlatform.All;
     public DateTime Anchor { get; private set; }
@@ -26,6 +27,11 @@ internal sealed class PublishCalendarState
     public PublishCalendarDay? SelectedDay { get; private set; }
     public DateTime LocalToday =>
         TimeZoneInfo.ConvertTime(_utcNow(), _timeZone).Date;
+    public string RangeTitle => Mode == PublishCalendarMode.Month
+        ? Anchor.ToString("MMMM yyyy", CultureInfo.CurrentCulture)
+        : PublishCalendarProjector.FormatWeekRange(PublishCalendarProjector.GetWeekStart(Anchor));
+    public string TimeZoneLabel =>
+        $"{_timeZone.StandardName} · UTC{PublishCalendarProjector.FormatUtcOffset(_timeZone.GetUtcOffset(_utcNow()))}";
 
     public bool SetMode(PublishCalendarMode mode, DateTime focus)
     {
@@ -94,7 +100,8 @@ internal sealed class PublishCalendarState
         var slots = new List<PublishCalendarSlot>();
         foreach (YouTubePublishHistoryEntry entry in history)
         {
-            if (entry.ScheduledForUtc is not { } scheduledUtc) continue;
+            if ((entry.RemoteDetails?.PublishAtUtc ?? entry.ScheduledForUtc) is not { } scheduledUtc) continue;
+            PublicationStatus publication = PublicationStatus.FromHistory(entry, _utcNow());
             DateTime local = TimeZoneInfo.ConvertTime(
                 scheduledUtc,
                 _timeZone).DateTime;
@@ -103,8 +110,8 @@ internal sealed class PublishCalendarState
                 PublishCalendarPlatform.YouTube,
                 "YouTube",
                 entry.Title,
-                PublishPresentationRules.FormatOutcome(entry.Outcome),
-                "Icon.Play"));
+                publication.Label,
+                publication.Icon) with { PublicationStage = publication.Stage });
         }
         foreach (YouTubePublishDraft draft in drafts)
         {

@@ -156,6 +156,9 @@ public sealed class GenerationEditorialMetadataResult
 
 public interface IGenerationEditorialMetadataService
 {
+    Task<ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialMetadataDraft?> GenerateMontageAsync(
+        ReplayFoundry.Desktop.Features.Generate.Handoff.GenerationOutputProject project, CancellationToken cancellationToken) =>
+        Task.FromResult<ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialMetadataDraft?>(null);
     Task<GenerationEditorialMetadataResult> GenerateAsync(
         GenerationMomentFindingResult moments,
         GenerationCaptionPreparationResult? captions,
@@ -181,6 +184,10 @@ public sealed class GenerationEditorialMetadataService :
     private readonly IClipEditorialProfileSource _profileSource;
     private readonly IGenerationVisualTextAnalysisService? _visualText;
     private readonly IGenerationGameKnowledgeService? _gameKnowledge;
+
+    public async Task<ClipEditorialMetadataDraft?> GenerateMontageAsync(
+        ReplayFoundry.Desktop.Features.Generate.Handoff.GenerationOutputProject project, CancellationToken cancellationToken) =>
+        await _generator.GenerateMontageAsync(MontageEditorialRequests.Create(project, _profileSource.Current), cancellationToken);
 
     public GenerationEditorialMetadataService(
         IClipEditorialMetadataGenerationService generator,

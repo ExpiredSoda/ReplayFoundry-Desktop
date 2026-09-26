@@ -266,7 +266,7 @@ internal static partial class UiUxApplicationSurfaceTests
                 $"A large single Today group must realize only viewport-adjacent cards; realized {initialContainers}.");
             TestAssert.True(
                 EnumerateVisualDescendants<TextBlock>(groupedGrid)
-                    .Any(text => text.Text.Equals("Today", StringComparison.Ordinal)),
+                    .Any(text => text.Text.Contains("Today ·", StringComparison.Ordinal)),
                 "The first explicit group header must remain visible above its cards.");
             ScrollViewer groupedScroll =
                 EnumerateVisualDescendants<ScrollViewer>(groupedView)
@@ -462,7 +462,8 @@ internal static partial class UiUxApplicationSurfaceTests
     private static Task PublishCalendarDefaultsWork()
     {
         var publish = new PublishViewModel();
-        TestAssert.Equal(42, publish.CalendarDays.Count, "Month view should expose a complete six-week calendar grid.");
+        TestAssert.Equal("Queue", publish.SelectedPublishView, "Publishing opens with the unfinished work queue.");
+        TestAssert.Equal(7, publish.CalendarDays.Count, "The alternative calendar opens on the current week.");
         TestAssert.True(publish.SelectedCalendarDay is not null, "A planning day should be selected by default.");
         TestAssert.False(publish.CreatePlanCommand.CanExecute(null), "Scheduling must remain disabled until a finished Library video is selected.");
         return Task.CompletedTask;
@@ -738,7 +739,7 @@ internal static partial class UiUxApplicationSurfaceTests
             "Publish",
             "PublishView.xaml"));
         int decorator = publishView.IndexOf(
-            "<AdornerDecorator Grid.Row=\"1\"",
+            "<AdornerDecorator Grid.Row=\"2\"",
             StringComparison.Ordinal);
         int library = publishView.IndexOf(
             "<sections:PublishLibraryBrowserView",

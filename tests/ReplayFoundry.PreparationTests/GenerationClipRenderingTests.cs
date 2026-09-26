@@ -130,6 +130,8 @@ internal static partial class GenerationClipRenderingTests
         new("Repeated identical generation results receive distinct project identities", RepeatedGenerationResultsHaveDistinctProjectIdentity),
         new("Montage concatenation does not re-encode video", ConcatenationCopiesStreams),
         new("Montage timestamp normalization retains bounded fractional source clocks", MontageClockCommandsAreBounded),
+        new("Montage styles and whole-sequence copy survive save and invalidate after arrangement changes", MontagePlanPersistence),
+        new("Montage audio joins preserve cut duration and caption clocks for every style", MontageStyleAudioClocks),
         new("A successful montage copy that fails media inspection is normalized and revalidated once", MontageValidationFailureRecoversOnce),
         new("Failed or cancelled montage copying never starts an extra encoder", MontageCopyFailureAndCancellationDoNotRecover),
         new("Library thumbnail command samples one bounded rendered frame", ThumbnailCommandIsBounded),

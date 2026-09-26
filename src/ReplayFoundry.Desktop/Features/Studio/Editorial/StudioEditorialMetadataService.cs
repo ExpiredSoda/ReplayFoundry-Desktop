@@ -222,6 +222,18 @@ internal sealed class StudioEditorialMetadataService
                 reviewed));
     }
 
+    public async Task<StudioEditorialRerollResult> RerollMontageAsync(GenerationOutputProject project, CancellationToken cancellationToken)
+    {
+        if (_generator is null || _outputEditor is not IGenerationTimelineEditor timeline)
+            throw new InvalidOperationException("The montage writer is unavailable.");
+        string fingerprint = project.MontageFingerprint;
+        var requests = MontageEditorialRequests.Create(project, _profileEditor?.Current ?? ClipEditorialProfile.Default);
+        var copy = await _generator.GenerateMontageAsync(requests, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        timeline.SetMontageMetadata(project.Id, copy, fingerprint);
+        return new(true, "The whole montage has a title and description. Review the sequence before publishing.");
+    }
+
     public async Task<StudioEditorialRerollResult> RerollAsync(
         GenerationOutputProject project,
         GenerationOutputAsset asset,
@@ -231,8 +243,12 @@ internal sealed class StudioEditorialMetadataService
         bool requireAi,
         CancellationToken cancellationToken,
         StudioEditorialVariant variant =
-            StudioEditorialVariant.DirectAction)
+            StudioEditorialVariant.DirectAction,
+        bool keepTitle = false,
+        bool keepDescription = false,
+        string tone = "Natural")
     {
+        if (keepTitle && keepDescription) throw new InvalidOperationException("Unlock a field before rewriting.");
         using IDisposable priority = MediaWorkBudget.WithPriority(MediaWorkPriority.Foreground);
         if (_generator is null ||
             _outputEditor is null)
@@ -288,7 +304,7 @@ internal sealed class StudioEditorialMetadataService
                     preference,
                     currentAsset.SourceMedia,
                     priorAcceptedTitleExclusions: priorTitles)
-                    .WithVariantIntent(MapVariant(variant)),
+                    .WithVariantIntent(MapVariant(variant)).WithTone(tone),
                 cancellationToken);
         ClipEditorialMetadataGenerationPolicy.EnsureCompatible(
             preference,
@@ -320,8 +336,13 @@ internal sealed class StudioEditorialMetadataService
                 "The captions or clip context changed during the rewrite. Replay Foundry kept the newer edits; try the rewrite again.");
         }
         if (currentAsset.EditorialMetadata is { } previous)
+        {
+            if (keepTitle || keepDescription)
+                rerolled = rerolled.WithUserEdits(keepTitle ? previous.Title : rerolled.Title,
+                    keepDescription ? previous.Description : rerolled.Description, rerolled.Tags);
             rerolled = rerolled.RememberPreviousCopy(previous,
                 currentAsset.EditorialAuthoredContextRevision ?? StudioEditorialContextRevision.UnknownAuthoredContext);
+        }
         _outputEditor.ReplaceAsset(
             currentProject.Id,
             currentAsset.WithCurrentCutEditorialMetadata(
@@ -331,7 +352,7 @@ internal sealed class StudioEditorialMetadataService
             ClipEditorialMetadataOrigin.AiAssisted;
         return new StudioEditorialRerollResult(
             isAiAssisted,
-            isAiAssisted
+            keepTitle || keepDescription ? "Unlocked wording updated; your locked field was preserved. Review how the two read together." : isAiAssisted
                 ? "A new title and description are ready."
                 : "A new version is ready.");
     }

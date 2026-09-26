@@ -649,7 +649,10 @@ public sealed class GenerationLibraryCatalog :
     {
         GenerationClipOutputProfile profile =
             GenerationClipOutputProfile.FromAsset(asset);
-        string? title = asset.EditorialMetadata?.Title;
+        var metadata = project.Mode == GenerationMode.Montage
+            ? (project.IsMontageMetadataCurrent ? project.MontageMetadata : null) : asset.EditorialMetadata;
+        string? title = metadata?.Title;
+        if (project.Mode == GenerationMode.Montage && string.IsNullOrWhiteSpace(title)) title = libraryLabel;
         if (string.IsNullOrWhiteSpace(title))
         {
             title = Path.GetFileNameWithoutExtension(asset.OutputFullPath!);
@@ -665,8 +668,8 @@ public sealed class GenerationLibraryCatalog :
             profile.Width,
             profile.Height,
             title + titleSuffix,
-            asset.EditorialMetadata?.Description ?? string.Empty,
-            asset.EditorialMetadata?.Tags ?? [],
+            metadata?.Description ?? string.Empty,
+            metadata?.Tags ?? [],
             added,
             contributingCount,
             sourceCandidateIds,

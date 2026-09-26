@@ -33,6 +33,21 @@
                 Text="Set the amount, length, and kinds of moments you want."
                 TextWrapping="Wrap" />
 
+            <Border Style="{DynamicResource GenerationSetup.SectionCard}" Visibility="{Binding IsMontage, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource GenerationSetup.FieldLabel}" Text="Montage style" />
+                    <ComboBox ItemsSource="{Binding MontageStyles}" SelectedItem="{Binding SelectedMontageStyle}" AutomationProperties.Name="Montage style" />
+                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding MontageStyleDescription}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Margin="0,0,0,8" Text="What should stand out?"
+                Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" />
+            <ComboBox ItemsSource="{Binding IntentOptions}" Margin="0,0,0,20"
+                SelectedItem="{Binding SelectedIntentOption, Mode=TwoWay}"
+                DisplayMemberPath="Name" Style="{DynamicResource GenerationSetup.ComboBox}"
+                AutomationProperties.Name="Kind of moment to find" />
+
             <Border
                 Style="{DynamicResource GenerationSetup.SectionCard}">
 
@@ -236,11 +251,6 @@
 
 
 
-                    <TextBlock Margin="0,18,0,8" Text="What should stand out?"
-                        Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" />
-                    <ComboBox ItemsSource="{Binding IntentOptions}"
-                        SelectedItem="{Binding SelectedIntentOption, Mode=TwoWay}"
-                        DisplayMemberPath="Name" Style="{DynamicResource GenerationSetup.ComboBox}" />
                     <TextBlock Margin="0,14,0,6" Text="Describe a moment or search for words (optional)"
                         Style="{DynamicResource Text.FormLabel}" TextWrapping="Wrap" />
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" MaxLength="1024"

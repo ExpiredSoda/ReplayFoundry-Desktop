@@ -1,3 +1,4 @@
+
 using System.Globalization;
 using System.IO;
 using System.Windows.Input;
@@ -14,8 +15,6 @@ namespace ReplayFoundry.Desktop.Features.Publish;
 public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     IApplicationStopParticipant, IDisposable
 {
-    private static readonly TimeSpan MinimumScheduleLeadTime =
-        TimeSpan.FromMinutes(30);
 
     private readonly ILibraryCatalog _libraryCatalog;
     private readonly PublishYouTubeOperationController? _youtubeOperations;
@@ -186,6 +185,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         _drafts = drafts ?? new InMemoryYouTubePublishDraftStore();
         _thumbnailPicker = thumbnailPicker;
         _preparationDialog = preparationDialog;
+        _historyLinkLauncher = historyLinkLauncher;
         _bulkConfirmation = bulkConfirmation;
         _surfaceState = surfaceState;
         _utcNow = utcNow;
@@ -398,7 +398,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         ? "No finished videos match"
         : "No finished videos yet";
     public string LibraryEmptyDescription => HasActiveLibraryFilters
-        ? "Clear a filter or search term to see every Library video."
+        ? "Choose All to include scheduled and uploaded videos, or clear the search and date filters."
         : "Render a clip in Studio and it will be ready to schedule here.";
     public bool IsEmpty => SurfaceState == WorkspaceSurfaceState.Empty;
     public bool IsContentReady =>
@@ -968,26 +968,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             : IsMetadataWithinLimits
                 ? "The title, description, and tags fit YouTube's limits."
                 : "Shorten the highlighted title, description, or tags before publishing.";
-    public string ScheduleSummary
-    {
-        get
-        {
-            if (!IsScheduled)
-            {
-                return Visibility switch
-                {
-                    YouTubeVideoVisibility.Public =>
-                        "The video becomes public after YouTube accepts and processes it.",
-                    YouTubeVideoVisibility.Unlisted =>
-                        "The video is available to anyone with the link.",
-                    _ => "The video remains private in YouTube Studio.",
-                };
-            }
-            return TryGetScheduledUtc(out DateTimeOffset scheduled, out string error)
-                ? $"YouTube will publish at {TimeZoneInfo.ConvertTime(scheduled, _timeZone):f} (UTC{TimeZoneInfo.ConvertTime(scheduled, _timeZone):zzz})."
-                : error;
-        }
-    }
+    public string ScheduleSummary => PublishPresentationRules.ScheduleSummary(IsScheduled, Visibility, ScheduledDate, ScheduledTimeText, _timeZone, _utcNow());
     public string TimeZoneLabel => "Times use this computer's time zone, including daylight saving.";
     public string PublishCommandText => IsScheduled
         ? "Upload and schedule"
@@ -997,15 +978,8 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     public string ReadinessSummary => CanPublish
         ? "This video is ready for YouTube."
         : "Finish each required item before starting the upload.";
-    public string CalendarRangeTitle =>
-        SelectedCalendarMode == PublishCalendarMode.Month
-            ? _calendar.Anchor.ToString(
-                "MMMM yyyy",
-                CultureInfo.CurrentCulture)
-            : PublishCalendarProjector.FormatWeekRange(
-                PublishCalendarProjector.GetWeekStart(_calendar.Anchor));
-    public string CalendarTimeZoneLabel =>
-        $"{_timeZone.StandardName} · UTC{PublishCalendarProjector.FormatUtcOffset(_timeZone.GetUtcOffset(_utcNow()))}";
+    public string CalendarRangeTitle => _calendar.RangeTitle;
+    public string CalendarTimeZoneLabel => _calendar.TimeZoneLabel;
     public string CalendarIntegrityText =>
         "USER-CHOSEN PREFERRED TIMES + YOUTUBE-ACCEPTED RELEASES · NO AUTOMATIC PEAK-TIME CLAIM";
     public double CalendarCellMinimumHeight =>
@@ -1075,23 +1049,19 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     public ICommand ConnectCommand => _connectCommand;
     public ICommand DisconnectCommand => _disconnectCommand;
     public ICommand RefreshYouTubeCommand => _refreshYouTubeCommand;
-    public ICommand ReconcileYouTubeHistoryCommand =>
-        _reconcileYouTubeHistoryCommand;
+    public ICommand ReconcileYouTubeHistoryCommand => _reconcileYouTubeHistoryCommand;
     public ICommand PublishCommand => _publishCommand;
     public ICommand CancelPublishCommand => _cancelPublishCommand;
     public ICommand PickThumbnailCommand => _pickThumbnailCommand;
     public ICommand ClearThumbnailCommand => _clearThumbnailCommand;
     public ICommand AddPreferredSlotCommand => _addPreferredSlotCommand;
-    public ICommand RemovePreferredSlotCommand =>
-        _removePreferredSlotCommand;
-    public ICommand UseNextPreferredSlotCommand =>
-        _useNextPreferredSlotCommand;
+    public ICommand RemovePreferredSlotCommand => _removePreferredSlotCommand;
+    public ICommand UseNextPreferredSlotCommand => _useNextPreferredSlotCommand;
     public ICommand ClearHistoryCommand => _clearHistoryCommand;
     public ICommand SaveDraftCommand => _saveDraftCommand;
     public ICommand PrepareAssetCommand => _prepareAssetCommand;
     public ICommand PublishAllNowCommand => _publishAllNowCommand;
-    public ICommand ClearLibraryFiltersCommand =>
-        _clearLibraryFiltersCommand;
+    public ICommand ClearLibraryFiltersCommand => _clearLibraryFiltersCommand;
     public PublishHistoryViewModel History { get; }
     public YouTubeAnalyticsViewModel Analytics { get; }
     public PublishEditorialMetadataViewModel Editorial { get; }
@@ -1132,6 +1102,9 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             if (Connection is not null && IsOnlineConnectionEnabled)
             {
                 await LoadYouTubeChoicesAsync();
+                if (_snapshots.History.Any(entry => entry.VideoId is not null &&
+                    (entry.RemoteCheckedAtUtc is null || _utcNow() - entry.RemoteCheckedAtUtc > TimeSpan.FromMinutes(15))))
+                    await ReconcileYouTubeHistoryAsync();
             }
         }
         catch (YouTubePublishingException exception)
@@ -1363,7 +1336,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
                 static (youtube, cancellationToken) =>
                     youtube.ReconcileHistoryAsync(cancellationToken));
             Notice = flagged == 0
-                ? "Every recorded YouTube video is still accessible to the connected channel."
+                ? "YouTube visibility, processing and schedule status were refreshed for this channel."
                 : $"{flagged} recorded YouTube video{(flagged == 1 ? " is" : "s are")} no longer returned to this channel and may have been removed or become inaccessible.";
         }
         catch (YouTubePublishingException exception)
@@ -1571,7 +1544,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             PreferredSlots,
             _utcNow(),
             _timeZone,
-            MinimumScheduleLeadTime);
+            PublishPresentationRules.MinimumScheduleLeadTime);
         if (next is null)
         {
             Notice = "No valid preferred release time is available in the next two weeks.";
@@ -1609,13 +1582,32 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
 
     private void PrepareAsset(LibraryMediaAsset asset)
     {
+        if (_snapshots.GetUpload(asset) is { } uploaded)
+        {
+            SelectedAsset = asset;
+            if (_historyLinkLauncher is not null && PublishHistoryLinkPolicy.TryCreateTrustedYouTubeUri(uploaded.VideoUrl, out Uri? uri))
+                _historyLinkLauncher.Open(uri);
+            else
+            {
+                History.SearchQuery = uploaded.Title;
+                History.OpenCommand.Execute(null);
+            }
+            return;
+        }
         PrepareAsset(asset, scheduledDate: null);
     }
 
     private void PrepareAsset(
         LibraryMediaAsset asset,
-        DateTime? scheduledDate)
+        DateTime? scheduledDate,
+        bool intentionalRepost = false)
     {
+        if (!intentionalRepost && _snapshots.GetUpload(asset) is not null)
+        {
+            Notice = "This video already has a recorded YouTube upload. Open its status, or use Prepare another upload from the row menu to repost intentionally.";
+            CalendarDropFeedback = Notice;
+            return;
+        }
         SelectedAsset = asset;
         Timing = YouTubePublishTiming.Schedule;
         if (scheduledDate.HasValue)
@@ -1738,6 +1730,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         _librarySearchQuery = string.Empty;
         _libraryDateFilter = PublishLibraryProjector.AnyDateFilter;
         _selectedLibraryFolder = null;
+        _libraryStatusFilter = "All";
         RaiseLibraryProjectionChanged();
     }
 
@@ -1762,7 +1755,9 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             _selectedLibraryFolder,
             LocalToday,
             _timeZone,
-            _snapshots.GetAssetPublishState);
+            _snapshots.GetAssetPublishState,
+            _snapshots.GetPublicationStatus,
+            LibraryStatusFilter);
     }
 
     private void RaiseLibraryProjectionChanged()
@@ -1770,6 +1765,8 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         RebuildLibraryProjection();
         OnPropertyChanged(nameof(LibrarySearchQuery));
         OnPropertyChanged(nameof(LibraryDateFilter));
+        OnPropertyChanged(nameof(LibraryStatusFilter));
+        SaveBrowsePreferences();
         OnPropertyChanged(nameof(SelectedLibraryFolder));
         OnPropertyChanged(nameof(LibraryFolderOptions));
         OnPropertyChanged(nameof(LibraryItems));
@@ -1842,42 +1839,8 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
                 : SelectedCategoryId;
     }
 
-    private bool TryGetScheduledUtc(
-        out DateTimeOffset scheduledUtc,
-        out string error)
-    {
-        scheduledUtc = default;
-        if (ScheduledDate is null)
-        {
-            error = "Choose a release date.";
-            return false;
-        }
-        if (!PublishPresentationRules.TryParseTime(ScheduledTimeText, out TimeOnly time))
-        {
-            error = "Enter a release time such as 6:00 PM.";
-            return false;
-        }
-        try
-        {
-            scheduledUtc = YouTubeSchedulePlanner.ToUtc(
-                DateOnly.FromDateTime(ScheduledDate.Value),
-                time,
-                _timeZone);
-        }
-        catch (ArgumentException exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-        if (scheduledUtc < _utcNow() + MinimumScheduleLeadTime)
-        {
-            error =
-                "Choose a release at least 30 minutes from now so YouTube has time to receive and process the video.";
-            return false;
-        }
-        error = string.Empty;
-        return true;
-    }
+    private bool TryGetScheduledUtc(out DateTimeOffset scheduledUtc, out string error) =>
+        PublishPresentationRules.TryGetScheduledUtc(ScheduledDate, ScheduledTimeText, _timeZone, _utcNow(), out scheduledUtc, out error);
 
     private void RefreshHistoryAndCalendar()
     {
@@ -1897,8 +1860,9 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         _snapshots.Refresh(
             _drafts.Current,
             _youtubeOperations?.History ?? [],
-            AvailableAssets);
+            AvailableAssets, _connection?.ChannelId, _utcNow());
         History.Refresh(_snapshots.History);
+        PublicationHistoryChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void RefreshDraftSnapshot() =>
@@ -2075,4 +2039,42 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         }
     }
 
+    private IPublishHistoryLinkLauncher? _historyLinkLauncher;
+    private IBrowsePreferencesStore? _browsePreferences;
+    private string _libraryStatusFilter = "Ready to publish";
+    private string _selectedPublishView = "Queue";
+    public IReadOnlyList<string> PublishViews { get; } = ["Queue", "Calendar"];
+    public string SelectedPublishView
+    {
+        get => _selectedPublishView;
+        set { if (PublishViews.Contains(value) && value != _selectedPublishView) { _selectedPublishView = value; OnPropertyChanged(); } }
+    }
+    public ICommand PrepareRepostCommand => new DelegateCommand<LibraryMediaAsset>(asset => PrepareAsset(asset, null, true), _ => !IsBusy);
+    public event EventHandler? PublicationHistoryChanged;
+    public IReadOnlyList<YouTubePublishHistoryEntry> PublicationHistory => _snapshots.History;
+    public IReadOnlyList<string> LibraryStatusFilters { get; } = ["Ready to publish", "Scheduled", "Published", "Needs attention", "All"];
+    public string LibraryStatusFilter
+    {
+        get => _libraryStatusFilter;
+        set
+        {
+            if (!LibraryStatusFilters.Contains(value) || value == _libraryStatusFilter) return;
+            _libraryStatusFilter = value;
+            RaiseLibraryProjectionChanged();
+        }
+    }
+    public void RestoreBrowsePreferences(IBrowsePreferencesStore preferences)
+    {
+        _browsePreferences = preferences;
+        string? status = preferences.Get("publish.status");
+        string? date = preferences.Get("publish.date");
+        if (status is not null && LibraryStatusFilters.Contains(status)) _libraryStatusFilter = status;
+        if (date is not null && LibraryDateFilters.Contains(date)) _libraryDateFilter = date;
+        RaiseLibraryProjectionChanged();
+    }
+    private void SaveBrowsePreferences()
+    {
+        _browsePreferences?.Set("publish.status", _libraryStatusFilter);
+        _browsePreferences?.Set("publish.date", _libraryDateFilter);
+    }
 }

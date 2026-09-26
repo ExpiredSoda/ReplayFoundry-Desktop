@@ -12,9 +12,9 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime runtime, IEditorialWriterLearningStore? learning)
 {
-    internal const string Version = "scene-copy-1.7";
-    internal const string PromptHash = "6c1de53b0d5b729026b4e217eac33d7eabcc798d9685f636eca1472061ab2c86";
-    internal const string ReviewPromptHash = "e15c23b0f73b174f52633b689cc715347962b8537156a7029c3dfe41587ab9a0";
+    internal const string Version = "scene-copy-1.8";
+    internal const string PromptHash = "5efe99894d22aa30afb3330a82ca3140a3f3df6c88170e96d7175d5efc577f3f";
+    internal const string ReviewPromptHash = "037c23e37e37ea3a854dbda5368bc51e6995e86152f0e9a15f9cd79a0857bf0a";
     internal static bool CanUse(ClipEditorialMetadataRequest request)
     {
         if (!request.Context.Evidence.Any(item => item.Kind == ClipEditorialEvidenceKind.VisualObservation && item.Id == "scene-review-1.4-setup") ||
@@ -24,6 +24,10 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
         if (binding is null) return false;
         try
         {
+            // Old projects can cheaply replay their cached scene review to restore
+            // independent source text before writing with the current evidence contract.
+            if (ReviewedContext(request) is not { } context || !context.TryGetProperty("sourceText", out var text) ||
+                text.ValueKind != JsonValueKind.Array) return false;
             using var document = JsonDocument.Parse(binding.Description);
             var row = document.RootElement; var source = new FileInfo(request.Context.SourceFullPath);
             return source.Exists && row.GetProperty("start").GetInt64() == request.Context.SourceStart.Ticks &&
@@ -35,7 +39,13 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
         { return false; }
     }
 
-    internal async Task<IReadOnlyList<ClipEditorialMetadataDraft>> GenerateAsync(IReadOnlyList<ClipEditorialMetadataRequest> requests, CancellationToken cancellationToken)
+    internal Task<IReadOnlyList<ClipEditorialMetadataDraft>> GenerateAsync(IReadOnlyList<ClipEditorialMetadataRequest> requests, CancellationToken cancellationToken) =>
+        GenerateCoreAsync(requests, false, cancellationToken);
+
+    internal async Task<ClipEditorialMetadataDraft> GenerateSequenceAsync(IReadOnlyList<ClipEditorialMetadataRequest> requests, CancellationToken cancellationToken) =>
+        (await GenerateCoreAsync(requests, true, cancellationToken))[0];
+
+    private async Task<IReadOnlyList<ClipEditorialMetadataDraft>> GenerateCoreAsync(IReadOnlyList<ClipEditorialMetadataRequest> requests, bool sequence, CancellationToken cancellationToken)
     {
         if (requests.Count is < 1 or > 30 || requests.Any(request => !CanUse(request))) throw new ArgumentException("Reviewed scene facts are required.");
         string directory = ReplayFoundryLocalDataPaths.ResolveTemporary("scene-copy/" + Guid.NewGuid().ToString("N"));
@@ -48,30 +58,13 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
             await File.WriteAllTextAsync(input, JsonSerializer.Serialize(new
             {
                 schemaVersion = Version, modelHash = runtime.Model.ManifestSha256,
-                cases = requests.Select(request => new
-                {
-                    candidateId = request.Context.CandidateId, attempt = request.Attempt,
-                    reviewVideoHash = request.ReviewVideo!.ReviewVideoSha256,
-                    context = new
-                    {
-                        candidateMode = CandidateMode(request),
-                        centralEvent = request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-event").Description,
-                        reviewedContext = ReviewedContext(request),
-                        tags = new[] { request.Context.GameContext.AudienceGameHashtag.TrimStart('#') }
-                            .Concat(request.Profile.DefaultTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(8),
-                        game = request.Context.GameContext.AudienceGameName,
-                        titleLimit = Math.Min(72, 99 - request.Context.GameContext.AudienceGameHashtag.Length),
-                        preferences = new { request.Profile.AudienceAddress, request.Profile.NamingGuidance,
-                            voice = request.Profile.VoicePerspective.ToString(), objective = request.Profile.CopyObjective.ToString(), intent = request.VariantIntent.ToString() },
-                        priorTitles = request.PriorAcceptedTitleExclusions.Select(item => StripHashtag(item.Title, request.Context.GameContext.AudienceGameHashtag))
-                    }
-                })
+                cases = BuildCases(requests, sequence)
             }), cancellationToken);
             var host = runtime.Host;
             List<string> arguments = ["-B", "-m", "replayfoundry_visual_semantic.scene_copy", "--input", input,
                 "--output", output, "--model", host.ModelDirectoryPath,
                 "--cache", ReplayFoundryLocalDataPaths.Resolve(null, "Cache/SceneCopy")];
-            if (learning is { IsEnabled: true, LearningDirectory: { } writerRoot })
+            if (!sequence && learning is { IsEnabled: true, LearningDirectory: { } writerRoot })
                 arguments.AddRange(["--writer-root", writerRoot]);
             var process = await MediaWorkBudget.RunAsync(new WindowsProcessRunner(), new ProcessRunRequest(
                 host.PythonExecutablePath, arguments,
@@ -88,7 +81,7 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                 !runtime.Model.ManifestSha256.Equals(root.GetProperty("modelHash").GetString(), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Scene writer identity changed.");
             var rows = root.GetProperty("cases").EnumerateArray().ToArray();
-            if (rows.Length != requests.Count) throw new InvalidDataException("Scene writer omitted a case.");
+            if (rows.Length != (sequence ? 1 : requests.Count)) throw new InvalidDataException("Scene writer omitted a case.");
             List<ClipEditorialMetadataDraft> drafts = [];
             List<object> captures = [], validated = [];
             for (int i = 0; i < rows.Length; i++)
@@ -105,15 +98,22 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     // the successful drafts must not be mistaken for a parser failure.
                     new SystemQwen3VlGroundedFailureArchive().Archive(output, 1_048_576);
                     throw new ClipEditorialAiGenerationException(ClipEditorialAiFailureKind.CaseRejected,
-                        "AI could not produce supported, useful wording for this clip after a correction. Try another cut or writing angle.",
+                        request.PriorAcceptedTitleExclusions.Count > 0
+                            ? "No reliable new angle was found. Your saved wording is unchanged. Try another angle or keep the current copy."
+                            : "AI could not produce supported, useful wording for this clip after a correction. Try another cut or writing angle.",
                         request.Context.CandidateId);
                 }
-                foreach (string key in new[] { "neuralGrounding", "neuralQuality" })
+                foreach (string key in request.PriorAcceptedTitleExclusions.Count > 0
+                    ? new[] { "neuralGrounding", "neuralQuality", "neuralNovelty" }
+                    : new[] { "neuralGrounding", "neuralQuality" })
                 {
                     JsonElement judgment = row.GetProperty(key);
                     double value = judgment.GetProperty("value").GetDouble();
-                    Qwen3VlSceneReviewProvider.ValidateNeuralValue(judgment, value * 100, "copy-judgment-1");
+                    Qwen3VlSceneReviewProvider.ValidateNeuralValue(judgment, value * 100, "copy-judgment-2");
                     if (value <= .5) throw new InvalidDataException("The neural writer check did not support this draft.");
+                    if (key is "neuralGrounding" or "neuralNovelty" &&
+                        judgment.GetProperty("margins").EnumerateArray().Any(margin => margin.GetDouble() <= 0))
+                        throw new InvalidDataException("The factual or variation checks disagreed; the saved wording was kept.");
                 }
                 string titleBody = row.GetProperty("copy").GetProperty("titleBody").GetString()!.Trim();
                 string description = row.GetProperty("copy").GetProperty("description").GetString()!.Trim();
@@ -127,7 +127,7 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                 var tags = new[] { request.Context.GameContext.AudienceGameHashtag.TrimStart('#') }
                     .Concat(request.Profile.DefaultTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(8).ToArray();
                 var model = runtime.Model;
-                var provenance = new ClipEditorialAiProvenance("Qwen3-VL scene writer", Version, "1.7", model.RepositoryId,
+                var provenance = new ClipEditorialAiProvenance("Qwen3-VL scene writer", Version, "1.8", model.RepositoryId,
                     model.Revision, model.ManifestSha256, "ReplayFoundry reviewed scene copy", Version, PromptHash, process.Duration, null)
                 {
                     WritingAttempts = row.TryGetProperty("writerIdentity", out var writer) && writer.ValueKind == JsonValueKind.Object
@@ -137,8 +137,12 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     NeuralCopyReview = new(row.GetProperty("neuralGrounding").GetProperty("value").GetDouble(),
                         row.GetProperty("neuralQuality").GetProperty("value").GetDouble(), ReviewPromptHash)
                 };
+                var evidence = sequence
+                    ? requests.SelectMany((part, index) => part.Context.Evidence.Select(item =>
+                        new ClipEditorialEvidenceReference($"sequence-{index + 1}-{item.Id}", item.Kind, item.Description))).ToArray()
+                    : request.Context.Evidence.ToArray();
                 var draft = new ClipEditorialMetadataDraft(title, description, tags, ClipEditorialMetadataOrigin.AiAssisted,
-                    Qwen3VlGroundedMetadataGenerator.SharedIdentity, request.Attempt, request.Context.Evidence, aiProvenance: provenance,
+                    Qwen3VlGroundedMetadataGenerator.SharedIdentity, request.Attempt, evidence, aiProvenance: provenance,
                     priorAcceptedTitles: request.PriorAcceptedTitleExclusions.Select(item => item.Title));
                 drafts.Add(draft);
                 var result = new { candidateId = request.Context.CandidateId, attempt = request.Attempt,
@@ -151,7 +155,7 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     prompt = row.GetProperty("prompt").Clone(), factSha256 = row.GetProperty("factHash").GetString(),
                     outputCanonicalHash = Qwen3VlCanonicalJson.ComputeObjectSha256(canonical.RootElement, "__none") });
             }
-            if (learning?.IsEnabled == true)
+            if (!sequence && learning?.IsEnabled == true)
             {
                 try
                 {
@@ -168,6 +172,38 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
         {
             try { Directory.Delete(directory, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
+    }
+
+    private static object[] BuildCases(IReadOnlyList<ClipEditorialMetadataRequest> requests, bool sequence)
+    {
+        object Facts(ClipEditorialMetadataRequest request) => new
+        {
+            recording = Path.GetFileName(request.Context.SourceFullPath),
+            start = request.Context.SourceStart.TotalSeconds, end = request.Context.SourceEnd.TotalSeconds,
+            centralEvent = request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-event").Description,
+            setupObservation = request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-setup").Description,
+            outcomeObservation = request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-outcome").Description,
+            reviewedContext = ReviewedContext(request),
+        };
+        return (sequence ? requests.Take(1) : requests).Select(request => (object)new
+        {
+            candidateId = request.Context.CandidateId, attempt = request.Attempt,
+            reviewVideoHash = sequence ? string.Join("|", requests.Select(value => value.ReviewVideo!.ReviewVideoSha256)) : request.ReviewVideo!.ReviewVideoSha256,
+            context = new
+            {
+                candidateMode = sequence ? "WholeMontage" : CandidateMode(request),
+                centralEvent = sequence ? "Separate reviewed cuts presented in the listed order. No continuous encounter is established between cuts." : request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-event").Description,
+                setupObservation = sequence ? "Use the independent setup observation for each cut." : request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-setup").Description,
+                outcomeObservation = sequence ? "Use the independent outcome observation for each cut." : request.Context.Evidence.Single(item => item.Id == "scene-review-1.4-outcome").Description,
+                reviewedContext = sequence ? (object)new { sequence = requests.Select(Facts).ToArray() } : ReviewedContext(request),
+                tags = new[] { request.Context.GameContext.AudienceGameHashtag.TrimStart('#') }.Concat(request.Profile.DefaultTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(8),
+                game = request.Context.GameContext.AudienceGameName,
+                titleLimit = Math.Min(72, 99 - request.Context.GameContext.AudienceGameHashtag.Length),
+                preferences = new { request.Profile.AudienceAddress, request.Profile.NamingGuidance,
+                    voice = request.Profile.VoicePerspective.ToString(), objective = request.Profile.CopyObjective.ToString(), intent = request.VariantIntent.ToString(), tone = request.Tone },
+                priorTitles = request.PriorAcceptedTitleExclusions.Select(item => StripHashtag(item.Title, request.Context.GameContext.AudienceGameHashtag))
+            }
+        }).ToArray();
     }
 
     internal static string CandidateMode(ClipEditorialMetadataRequest request)

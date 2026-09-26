@@ -90,11 +90,11 @@ if (Test-Path -LiteralPath $buildPropertiesPath -PathType Leaf) {
         ForEach-Object { $_.GetAttribute('Condition') + ' => ' + $_.InnerText })
     $expectedChannelRules = @(
         '$([System.String]::Copy(''$(MSBuildProjectName)'').EndsWith(''Tests'')) => Test'
-        '''$(ReplayFoundryDataChannel)'' == '''' and ''$(Configuration)'' == ''Debug'' => Development'
+        '''$(ReplayFoundryDataChannel)'' == '''' and (''$(Configuration)'' == '''' or ''$(Configuration)'' == ''Debug'') => Development'
         '''$(ReplayFoundryDataChannel)'' == '''' => Production'
     )
     if (($channelRules -join "`n") -cne ($expectedChannelRules -join "`n")) {
-        Add-Failure 'The production build must retain the ordered Test, Debug and Production storage-channel rules.'
+        Add-Failure 'The production build must retain ordered Test, default/Debug Development and explicit Release Production storage-channel rules.'
     }
     $channelMetadata = @($buildProperties.SelectNodes('/Project/ItemGroup/AssemblyMetadata') | Where-Object {
         $_.GetAttribute('Include') -eq 'ReplayFoundry.DataChannel' -and

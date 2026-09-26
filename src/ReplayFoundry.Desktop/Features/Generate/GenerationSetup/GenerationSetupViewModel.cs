@@ -97,11 +97,9 @@ public sealed class GenerationSetupViewModel :
 
         _stepViewModels =
         [
-            DetectionStep,
-            AudioStep,
-            ClipGoalsStep,
-            GameContextStep,
-            MomentGuidanceStep,
+            new GenerationSourcePage(this),
+            new GenerationGoalPage(this),
+            new GenerationAudioPage(this),
         ];
 
         DetectionStep.PropertyChanged +=
@@ -175,7 +173,13 @@ public sealed class GenerationSetupViewModel :
         _stepViewModels[_currentStepIndex];
 
     public GenerationSetupStep CurrentStep =>
-        (GenerationSetupStep)_currentStepIndex;
+        _currentStepIndex switch { 0 => GenerationSetupStep.GameContext, 1 => GenerationSetupStep.ClipGoals, _ => GenerationSetupStep.Audio };
+
+    public string ReviewSummary => $"{SourceSummary} · {Draft.DesiredResultCount} " +
+        $"{(Draft.Request.Mode == GenerationMode.Montage ? "montage segments" : "clips")} · up to {Draft.MaximumClipDuration.TotalSeconds:0} seconds each";
+    public string ReviewDetail => $"{Draft.AnalysisDepth} scan · " +
+        $"{(Draft.MetadataAuthoringMode == GenerationMetadataAuthoringMode.AiRequired ? "Local AI writing" : "Simple titles")} · " +
+        $"{(Draft.CaptionSettings.IsEnabled ? "Captions enabled" : "Captions off")}. Completed compatible analysis is reused; new recordings take longer.";
 
     public bool IsFirstStep =>
         _currentStepIndex == 0;
@@ -278,7 +282,7 @@ public sealed class GenerationSetupViewModel :
             return false;
         }
 
-        int targetIndex = (int)step;
+        int targetIndex = PageIndex(step);
 
         if (targetIndex < 0 ||
             targetIndex >= _stepViewModels.Length)
@@ -315,7 +319,7 @@ public sealed class GenerationSetupViewModel :
                 "until every preceding step is valid.");
         }
 
-        int targetIndex = (int)step;
+        int targetIndex = PageIndex(step);
 
         if (targetIndex == _currentStepIndex)
         {
@@ -385,6 +389,8 @@ public sealed class GenerationSetupViewModel :
 
         OnPropertyChanged(
             nameof(Steps));
+        OnPropertyChanged(nameof(ReviewSummary));
+        OnPropertyChanged(nameof(ReviewDetail));
 
         RaiseCommandStateChanged();
     }
@@ -393,11 +399,9 @@ public sealed class GenerationSetupViewModel :
     {
         return index switch
         {
-            0 => DetectionStep.IsValid,
-            1 => AudioStep.IsValid,
-            2 => ClipGoalsStep.IsValid,
-            3 => GameContextStep.IsValid,
-            4 => MomentGuidanceStep.IsValid,
+            0 => GameContextStep.IsValid,
+            1 => DetectionStep.IsValid && ClipGoalsStep.IsValid && MomentGuidanceStep.IsValid,
+            2 => AudioStep.IsValid,
 
             _ => throw new ArgumentOutOfRangeException(
                 nameof(index),
@@ -493,40 +497,35 @@ public sealed class GenerationSetupViewModel :
             nameof(CanFinish));
     }
 
+    private static int PageIndex(GenerationSetupStep step) => step switch
+    {
+        GenerationSetupStep.GameContext => 0,
+        GenerationSetupStep.Audio => 2,
+        _ => 1,
+    };
+
     private ReadOnlyCollection<GenerationSetupStepItemViewModel>
         BuildStepItems()
     {
         GenerationSetupStepItemViewModel[] items =
         [
             CreateStepItem(
-                GenerationSetupStep.Detection,
+                GenerationSetupStep.GameContext,
                 number: 1,
-                title: "Scan detail",
+                title: "Source and game",
                 index: 0),
 
             CreateStepItem(
-                GenerationSetupStep.Audio,
+                GenerationSetupStep.ClipGoals,
                 number: 2,
-                title: "Audio",
+                title: "Goal and style",
                 index: 1),
 
             CreateStepItem(
-                GenerationSetupStep.ClipGoals,
+                GenerationSetupStep.Audio,
                 number: 3,
-                title: "Clip goals",
+                title: "Audio and review",
                 index: 2),
-
-            CreateStepItem(
-                GenerationSetupStep.GameContext,
-                number: 4,
-                title: "Game details",
-                index: 3),
-
-            CreateStepItem(
-                GenerationSetupStep.MomentGuidance,
-                number: 5,
-                title: "Priority Moments",
-                index: 4),
         ];
 
         return Array.AsReadOnly(items);

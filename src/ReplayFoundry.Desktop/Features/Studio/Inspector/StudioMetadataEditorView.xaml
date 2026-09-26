@@ -11,6 +11,15 @@
         Padding="0"
         Visibility="{Binding IsMetadataEditorVisible, Converter={StaticResource BoolToVisibility}}">
         <StackPanel>
+            <Border Margin="0,0,0,16" Padding="12" Style="{DynamicResource Control.CanvasGhostZone}"
+                Visibility="{Binding Editorial.IsMontage, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="Whole montage" Style="{DynamicResource Text.FormLabel}" />
+                    <TextBlock Margin="0,6,0,4" Text="{Binding Editorial.MontageTitle}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Editorial.MontageDescription}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
+                    <Button Margin="0,8,0,0" Content="Write whole-montage copy" Command="{Binding Editorial.RewriteMontageCommand}" />
+                </StackPanel>
+            </Border>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition
@@ -43,7 +52,7 @@
                     <TextBlock
                         FontWeight="SemiBold"
                         Foreground="{DynamicResource Brush.TextPrimary}"
-                        Text="Writing style" />
+                        Text="Angle" />
                     <ComboBox
                         Margin="0,6,0,0"
                         AutomationProperties.Name="Title and description angle"
@@ -56,6 +65,13 @@
                         Style="{DynamicResource Text.Meta}"
                         Text="{Binding Editorial.SelectedVariantDescription}"
                         TextWrapping="Wrap" />
+                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Tone" />
+                    <ComboBox Margin="0,4,0,0" ItemsSource="{Binding Editorial.Tones}" SelectedItem="{Binding Editorial.Tone}"
+                        AutomationProperties.Name="Writing tone" IsEnabled="{Binding IsProjectDraft}" />
+                    <WrapPanel Margin="0,8,0,0" IsEnabled="{Binding IsProjectDraft}">
+                        <CheckBox Content="Keep title" Margin="0,0,12,0" IsChecked="{Binding Editorial.KeepTitle}" />
+                        <CheckBox Content="Keep description" IsChecked="{Binding Editorial.KeepDescription}" />
+                    </WrapPanel>
                     <Button
                         Margin="0,8,0,0"
                         HorizontalAlignment="Stretch"

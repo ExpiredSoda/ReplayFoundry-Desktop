@@ -7,7 +7,7 @@
         <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <TextBlock Text="Rate this moment" Style="{DynamicResource Text.Meta}"
-                ToolTip="Your ratings teach future clip choices on this PC. They do not approve the title or description." />
+                ToolTip="Rate the moment itself. Use Optional feedback for a cut, caption, or wording problem; these are kept out of moment preference training." />
             <TextBlock Grid.Column="1" Text="{Binding PreferenceSelectionText}" Style="{DynamicResource Text.Meta}"
                 AutomationProperties.LiveSetting="Polite" ToolTip="{Binding PreferenceLearningStatus}" />
         </Grid>

@@ -7,7 +7,7 @@ using ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 namespace ReplayFoundry.Desktop.Features.Generate.Editorial;
 
-public sealed class ClipEditorialMetadataGenerationService :
+public sealed partial class ClipEditorialMetadataGenerationService :
     IClipEditorialMetadataGenerationService
 {
     private const int MaximumNoveltyRetryCount = 2;

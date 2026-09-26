@@ -59,14 +59,14 @@ def validate_copy_numbers(copy, context):
     def texts(value):
         if isinstance(value, dict):
             for key, child in value.items():
-                if key in ("text", "explanation", "description") and isinstance(child, str):
+                if key in ("text", "explanation", "description", "centralEvent", "setupObservation", "outcomeObservation") and isinstance(child, str):
                     yield child
                 elif isinstance(child, (dict, list)):
                     yield from texts(child)
         elif isinstance(value, list):
             for child in value:
                 yield from texts(child)
-    evidence = str(context.get("centralEvent", "")) + " " + " ".join(texts(context.get("reviewedContext", {})))
+    evidence = " ".join(str(context.get(key, "")) for key in ("centralEvent", "setupObservation", "outcomeObservation")) + " " + " ".join(texts(context.get("reviewedContext", {})))
     proposed = set(re.findall(r"\b\d+\b", copy["titleBody"]+" "+copy["description"]))
     if not proposed.issubset(set(re.findall(r"\b\d+\b", evidence))):
         raise ValueError("Copy introduced a number absent from the reviewed evidence")
