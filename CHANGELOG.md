@@ -2,7 +2,15 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.6](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.6).
+downloadable version is [1.0.0 Beta 5.7](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.7).
+
+## 1.0.0 Beta 5.7 — 2026-09-26
+
+- Bring Publish into one workspace with clips, a month calendar, the selected day's agenda, upload progress and recent activity together. Remove the Queue/Calendar view switch.
+- Keep long clip lists bounded and virtualized. Show the selected clip's preparation or YouTube action in a shared footer, with explicit repost preparation retained.
+- Show compact calendar status icons and counts, with full titles and times in the daily agenda. Preserve the selected day when the calendar refreshes and fit every week without an inner calendar scrollbar.
+- Keep connection controls, searchable history and performance observations accessible without stretching the main workspace. Smaller windows stack the same panels.
+- Reuse the verified Beta 5.6 runtime and AI packages. An existing current Advanced AI installation needs no additional model download; projects, feedback and learning data remain on this PC.
 
 ## 1.0.0 Beta 5.6 — 2026-09-26
 

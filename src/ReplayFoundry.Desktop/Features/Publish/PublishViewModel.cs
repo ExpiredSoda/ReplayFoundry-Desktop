@@ -852,7 +852,6 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             OnPropertyChanged();
             RebuildCalendar(focus);
             OnPropertyChanged(nameof(CalendarRangeTitle));
-            OnPropertyChanged(nameof(CalendarCellMinimumHeight));
         }
     }
 
@@ -872,12 +871,25 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         get => _calendar.SelectedDay;
         set
         {
-            if (!_calendar.SelectDay(value)) return;
+            // Replacing CalendarDays briefly clears the ListBox selection. Keep the
+            // logical day until its replacement is rebound, including on first load.
+            if (value is null || !_calendar.SelectDay(value)) return;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedCalendarDayTitle));
             OnPropertyChanged(nameof(SelectedCalendarDaySlots));
             OnPropertyChanged(nameof(HasSelectedCalendarDaySlots));
             OnPropertyChanged(nameof(SelectedCalendarDaySummary));
+            OnPropertyChanged(nameof(SelectedCalendarDate));
+        }
+    }
+
+    public DateTime? SelectedCalendarDate
+    {
+        get => SelectedCalendarDay?.Date;
+        set
+        {
+            if (value is { } date && CalendarDays.FirstOrDefault(day => day.Date == date.Date) is { } day)
+                SelectedCalendarDay = day;
         }
     }
 
@@ -980,10 +992,6 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
         : "Finish each required item before starting the upload.";
     public string CalendarRangeTitle => _calendar.RangeTitle;
     public string CalendarTimeZoneLabel => _calendar.TimeZoneLabel;
-    public string CalendarIntegrityText =>
-        "USER-CHOSEN PREFERRED TIMES + YOUTUBE-ACCEPTED RELEASES · NO AUTOMATIC PEAK-TIME CLAIM";
-    public double CalendarCellMinimumHeight =>
-        SelectedCalendarMode == PublishCalendarMode.Month ? 108d : 210d;
     public string SelectedCalendarDayTitle =>
         SelectedCalendarDay?.Date.ToString(
             "dddd, MMMM d",
@@ -995,10 +1003,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     public string SelectedCalendarDaySummary =>
         HasSelectedCalendarDaySlots
             ? $"{SelectedCalendarDaySlots.Count} release plan{(SelectedCalendarDaySlots.Count == 1 ? string.Empty : "s")}"
-            : "No preferred time or scheduled upload is recorded for this day.";
-    public string PlanningHorizonSummary =>
-        $"{PublishPresentationRules.FormatCount(PreferredSlots.Count, "preferred weekly time")} · " +
-        PublishPresentationRules.FormatCount(History.TotalCount, "history item");
+            : "Nothing planned for this day.";
     public string StatusText => IsPublishing
         ? OperationTitle
         : IsConnected
@@ -1562,7 +1567,6 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     {
         OnPropertyChanged(nameof(PreferredSlots));
         OnPropertyChanged(nameof(HasPreferredSlots));
-        OnPropertyChanged(nameof(PlanningHorizonSummary));
         _useNextPreferredSlotCommand.RaiseCanExecuteChanged();
         RebuildCalendar();
     }
@@ -1846,7 +1850,6 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     {
         RefreshPublishSnapshots();
         RebuildLibraryProjection();
-        OnPropertyChanged(nameof(PlanningHorizonSummary));
         OnPropertyChanged(nameof(PlanningBacklog));
         OnPropertyChanged(nameof(LibraryItems));
         OnPropertyChanged(nameof(AssetDetail));
@@ -1877,6 +1880,7 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
             preferredDate ?? SelectedCalendarDay?.Date);
         OnPropertyChanged(nameof(CalendarDays));
         OnPropertyChanged(nameof(SelectedCalendarDay));
+        OnPropertyChanged(nameof(SelectedCalendarDate));
         OnPropertyChanged(nameof(SelectedCalendarDayTitle));
         OnPropertyChanged(nameof(SelectedCalendarDaySlots));
         OnPropertyChanged(nameof(HasSelectedCalendarDaySlots));
@@ -2042,13 +2046,6 @@ public sealed class PublishViewModel : ObservableObject, IWorkspaceChromeSource,
     private IPublishHistoryLinkLauncher? _historyLinkLauncher;
     private IBrowsePreferencesStore? _browsePreferences;
     private string _libraryStatusFilter = "Ready to publish";
-    private string _selectedPublishView = "Queue";
-    public IReadOnlyList<string> PublishViews { get; } = ["Queue", "Calendar"];
-    public string SelectedPublishView
-    {
-        get => _selectedPublishView;
-        set { if (PublishViews.Contains(value) && value != _selectedPublishView) { _selectedPublishView = value; OnPropertyChanged(); } }
-    }
     public ICommand PrepareRepostCommand => new DelegateCommand<LibraryMediaAsset>(asset => PrepareAsset(asset, null, true), _ => !IsBusy);
     public event EventHandler? PublicationHistoryChanged;
     public IReadOnlyList<YouTubePublishHistoryEntry> PublicationHistory => _snapshots.History;

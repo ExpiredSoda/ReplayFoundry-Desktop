@@ -18,7 +18,7 @@
     <Border Padding="7,4" CornerRadius="4" BorderThickness="1" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}"
             Background="{DynamicResource Brush.SurfaceInset}" HorizontalAlignment="Left">
         <DockPanel LastChildFill="True">
-            <controls:IconPath Width="12" Height="12" Margin="0,0,6,0" IconKey="{Binding Icon}"
+            <controls:IconPath Width="12" Height="12" Margin="0,0,6,0" IconKey="{Binding Icon}" Stretch="Uniform" StrokeThickness="1.3"
                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}" />
             <TextBlock FontSize="11" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
         </DockPanel>

@@ -159,7 +159,17 @@ foreach ($control in @("CheckBox", "RadioButton", "ListBoxItem", "TabControl", "
 if ($popup -notmatch "ToolTip") { Add-Failure "Popup theme is missing ToolTip." }
 $desktopXaml = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot "src/ReplayFoundry.Desktop") -Recurse -Filter *.xaml |
     Get-Content -Raw
-if ($desktopXaml -match '<(ContextMenu|MenuItem|Menu)\b') { Add-Failure "A menu control is in use but its dormant shared styles were removed." }
+foreach ($menuControl in @('ContextMenu', 'MenuItem', 'Menu')) {
+    if ($desktopXaml -match ('<' + $menuControl + '\b') -and
+        $popup -notmatch ('<Style TargetType="\{x:Type ' + $menuControl + '\}"')) {
+        Add-Failure "Menu control $menuControl must use a shared themed style."
+    }
+}
+if ($desktopXaml -match '<ContextMenu\b' -and
+    ($popup -notmatch 'Property="IsHighlighted"' -or $popup -notmatch 'Control.KeyboardFocus' -or
+     $popup -notmatch 'MenuItem.SeparatorStyleKey' -or $popup -notmatch 'Brush.SurfaceElevated')) {
+    Add-Failure 'Action menus must preserve keyboard focus, highlighted items, separators, and shared theme colors.'
+}
 foreach ($control in @("Slider", "ProgressBar", "PART_Indicator", "RangeThumb")) { if ($range -notmatch $control) { Add-Failure "Range/progress theme is missing $control." } }
 foreach ($progressStyle in @("Control.ProgressBar", "Control.ProgressBar.Compact", "Control.ProgressBar.Standard", "Control.ProgressBar.Featured")) {
     if ($range -notmatch [regex]::Escape($progressStyle)) { Add-Failure "Shared progress style is missing $progressStyle." }

@@ -45,7 +45,15 @@ public sealed record PublishCalendarDay(
 {
     public string MonthLabel => IsInActiveRange ? string.Empty :
         Date.ToString("MMM", System.Globalization.CultureInfo.CurrentCulture);
+    public string SlotCountLabel => Slots.Count == 0 ? string.Empty : Slots.Count.ToString();
+    public string AgendaSummary => Slots.Count == 0 ? AccessibleLabel :
+        AccessibleLabel + "\n" + string.Join("\n", Slots.Select(slot => $"{slot.TimeLabel} · {slot.Title} · {slot.Status}"));
+    public IReadOnlyList<PublishCalendarMarker> Markers => Slots
+        .GroupBy(slot => (slot.PublicationStage, slot.Glyph))
+        .Select(group => new PublishCalendarMarker(group.Key.PublicationStage, group.Key.Glyph))
+        .Take(3).ToArray();
 }
+public sealed record PublishCalendarMarker(PublicationStage? Stage, string Glyph);
 public sealed record PublishPlanningItem(
     string Title,
     string Detail,

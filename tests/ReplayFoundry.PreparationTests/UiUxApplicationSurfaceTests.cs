@@ -218,6 +218,7 @@ internal static partial class UiUxApplicationSurfaceTests
         new("UI-04 does not advertise an unconsumed text-scale subsystem", Ui04AvoidsFalseTextScaleState),
         new("High contrast replaces and restores semantic brushes", HighContrastPaletteReplacesSemanticBrushes),
         new("Responsive layouts instantiate one expensive feature tree", ResponsiveLayoutsAvoidDuplicateFeatureTrees),
+        new("Unified Publish keeps long libraries bounded and the calendar available", UnifiedPublishKeepsLongLibrariesBounded),
         new("Hidden Moments stacks and contains keyboard focus", HiddenMomentsReflowsAndContainsFocus),
         new("UI-04 guidance surfaces are searchable and reopenable", Ui04GuidanceSurfacesAreSearchable),
         new("UI-04 issue references are stable and human readable", Ui04IssueReferencesAreStable),
