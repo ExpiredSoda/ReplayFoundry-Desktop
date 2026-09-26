@@ -14,7 +14,7 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
 {
     internal const string Version = "scene-copy-1.8";
     internal const string PromptHash = "5efe99894d22aa30afb3330a82ca3140a3f3df6c88170e96d7175d5efc577f3f";
-    internal const string ReviewPromptHash = "6e216359961ced4c7d381dca415494413afb7c10e7344cb8ebb07919194405bb";
+    internal const string ReviewPromptHash = "037c23e37e37ea3a854dbda5368bc51e6995e86152f0e9a15f9cd79a0857bf0a";
     internal static bool CanUse(ClipEditorialMetadataRequest request)
     {
         if (!request.Context.Evidence.Any(item => item.Kind == ClipEditorialEvidenceKind.VisualObservation && item.Id == "scene-review-1.4-setup") ||
@@ -111,8 +111,9 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     double value = judgment.GetProperty("value").GetDouble();
                     Qwen3VlSceneReviewProvider.ValidateNeuralValue(judgment, value * 100, "copy-judgment-2");
                     if (value <= .5) throw new InvalidDataException("The neural writer check did not support this draft.");
-                    if (key == "neuralGrounding" && judgment.GetProperty("margins").EnumerateArray().Any(margin => margin.GetDouble() <= 0))
-                        throw new InvalidDataException("The grounding checks disagreed; the saved wording was kept.");
+                    if (key is "neuralGrounding" or "neuralNovelty" &&
+                        judgment.GetProperty("margins").EnumerateArray().Any(margin => margin.GetDouble() <= 0))
+                        throw new InvalidDataException("The factual or variation checks disagreed; the saved wording was kept.");
                 }
                 string titleBody = row.GetProperty("copy").GetProperty("titleBody").GetString()!.Trim();
                 string description = row.GetProperty("copy").GetProperty("description").GetString()!.Trim();

@@ -91,7 +91,7 @@ def run(args):
             if row["candidateId"] != case["candidateId"] or not row["review"]["grounded"] or not row["review"]["useful"]: continue
             if any(not valid_judgment(row[key]) or row[key]["value"] <= .5 for key in ("neuralGrounding","neuralQuality")): continue
             if not agrees_supported(row["neuralGrounding"]): continue
-            if case["context"]["priorTitles"] and (not valid_judgment(row.get("neuralNovelty", {})) or row["neuralNovelty"]["value"] <= .5): continue
+            if case["context"]["priorTitles"] and not agrees_supported(row.get("neuralNovelty", {})): continue
             row.update(attempt=case["attempt"],cacheHit=True,cachedInferenceSeconds=row["elapsedSeconds"],elapsedSeconds=0)
             cached[identity(case)]=row
         except (ValueError,KeyError,TypeError): continue

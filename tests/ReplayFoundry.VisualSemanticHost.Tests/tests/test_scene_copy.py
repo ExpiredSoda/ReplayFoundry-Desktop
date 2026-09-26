@@ -88,6 +88,16 @@ class SceneCopyTests(unittest.TestCase):
         changed["reviewVideoHash"] = "b" * 64
         self.assertNotEqual(original, copy_key("model-one", changed))
 
+    def test_ambiguous_variation_cannot_replace_saved_wording_even_with_positive_average(self):
+        context = dict(centralEvent="The door closed.", priorTitles=["The Door Finally Closed"])
+        def compare(model, processor, torch, prompt, evidence, options):
+            return {**relevance([8, -1] if prompt == copy_judgment.NOVELTY else [3, 3]), "version":copy_judgment.VERSION}
+        with patch.object(copy_judgment, "compare", side_effect=compare):
+            selected, rows, _ = copy_judgment.judge(None, None, None, context,
+                [dict(titleBody="Closing the Door at Last", description="The lock clicked shut.")])
+        self.assertGreater(rows[0]["novelty"]["value"], .5)
+        self.assertIsNone(selected)
+
     def test_valid_cached_copy_returns_for_current_attempt_without_loading_model(self):
         case = dict(candidateId="clip", attempt=2, reviewVideoHash="a" * 64,
                     context=dict(titleLimit=72, priorTitles=[]))
