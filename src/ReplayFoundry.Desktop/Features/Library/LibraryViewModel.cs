@@ -1,3 +1,5 @@
+using ReplayFoundry.Desktop.Features.Publish;
+using ReplayFoundry.Desktop.Features.Publish.YouTube;
 using System;
 using System.Collections.Generic;
 using System.Windows.Input;
@@ -172,13 +174,14 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
             new LibraryCategoryItem(LibraryCategory.Montages, "Montages", "Icon.Grid"),
         };
         Statuses = new[] { "All statuses", "Ready", "Missing locally" };
-        Dates = new[] { "Any date", "Today", "This week", "This month" };
+        Dates = new[] { "Any date", "Latest session", "Recent", "Today", "This week", "This month" };
         SortOptions = new[] { "Recently modified", "Name", "Duration", "Status" };
         OrganizationOptions = new[]
         {
             new LibraryOrganizationOption(LibraryOrganizationMode.Date, "Date"),
             new LibraryOrganizationOption(LibraryOrganizationMode.Folder, "Folder"),
             new LibraryOrganizationOption(LibraryOrganizationMode.Project, "Project"),
+            new LibraryOrganizationOption(LibraryOrganizationMode.Game, "Game"),
         };
         ClearFiltersCommand = new DelegateCommand(ClearFilters, () => HasActiveFilters);
         SetGridViewCommand = new DelegateCommand(() => ViewMode = LibraryViewMode.Grid);
@@ -277,15 +280,15 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         }
     }
     public bool IsSingleItemMode => !IsSelectionMode;
-    public int MarkedCount => Items.Count(static item => item.IsMarked);
+    public int MarkedCount => _allItems.Count(static item => item.IsMarked);
     public bool HasMarkedItems => MarkedCount > 0;
     public bool CanRemoveMarked =>
         HasMarkedItems &&
         _assetRemover is not null &&
         _removalConfirmation is not null;
-    public string SelectionSummary => MarkedCount == 1
-        ? "1 video selected"
-        : $"{MarkedCount} videos selected";
+    public string SelectionSummary => (MarkedCount == 1 ? "1 video selected" : $"{MarkedCount} videos selected") +
+        (HiddenMarkedCount == 0 ? "" : $" · {HiddenMarkedCount} hidden by filters or groups");
+    public int HiddenMarkedCount => MarkedCount - (IsGridView ? GridEntries.Count(static entry => entry.Item?.IsMarked == true) : Items.Count(static item => item.IsMarked));
     public bool HasActiveFilters =>
         !string.IsNullOrWhiteSpace(SearchQuery) ||
         StatusFilter != Statuses[0] ||
@@ -297,6 +300,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         LibraryOrganizationMode.Date => "Grouped by date",
         LibraryOrganizationMode.Folder => "Grouped by output folder",
         LibraryOrganizationMode.Project => "Grouped by Studio project",
+        LibraryOrganizationMode.Game => "Grouped by game",
         _ => "Organized Library",
     };
     public string EmptyTitle => HasActiveFilters ? "No items match these filters"
@@ -332,6 +336,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         {
             if (_viewMode == value) return;
             _viewMode = value;
+            _browsePreferences?.Set("library.view", value.ToString());
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsGridView));
             OnPropertyChanged(nameof(IsListView));
@@ -345,6 +350,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         {
             if (_organizationMode == value) return;
             _organizationMode = value;
+            _browsePreferences?.Set("library.group", value.ToString());
             RefreshView();
             OnPropertyChanged();
             OnPropertyChanged(nameof(OrganizationSummary));
@@ -353,7 +359,17 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
 
     public string SearchQuery { get => _searchQuery; set { if (_searchQuery == value) return; _searchQuery = value; RaiseDerivedProperties(); } }
     public string StatusFilter { get => _statusFilter; set { if (_statusFilter == value) return; _statusFilter = value; RaiseDerivedProperties(); } }
-    public string DateFilter { get => _dateFilter; set { if (_dateFilter == value) return; _dateFilter = value; RaiseDerivedProperties(); } }
+    public string DateFilter
+    {
+        get => _dateFilter;
+        set
+        {
+            if (_dateFilter == value || !Dates.Contains(value)) return;
+            _dateFilter = value;
+            _browsePreferences?.Set("library.date", value);
+            RaiseDerivedProperties();
+        }
+    }
     public string SortBy { get => _sortBy; set { if (_sortBy == value) return; _sortBy = value; RefreshView(); OnPropertyChanged(); } }
     public LibraryItem? SelectedItem
     {
@@ -656,7 +672,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
 
     private void RemoveMarkedFromLibrary()
     {
-        LibraryMediaAsset[] marked = Items
+        LibraryMediaAsset[] marked = _allItems
             .Where(static item => item.IsMarked && item.Asset is not null)
             .Select(static item => item.Asset!)
             .ToArray();
@@ -710,6 +726,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         OnPropertyChanged(nameof(MarkedCount));
         OnPropertyChanged(nameof(HasMarkedItems));
         OnPropertyChanged(nameof(CanRemoveMarked));
+        OnPropertyChanged(nameof(HiddenMarkedCount));
         OnPropertyChanged(nameof(SelectionSummary));
         RaiseSelectionCommandStates();
     }
@@ -768,8 +785,11 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
                 item.Status.Equals(StatusFilter, StringComparison.Ordinal));
         }
         DateTime today = DateTime.Today;
+        string? latestProject = _allItems.MaxBy(static item => item.Asset?.AddedAtUtc)?.Asset?.ProjectId;
         query = DateFilter switch
         {
+            "Latest session" => query.Where(item => item.Asset?.ProjectId == latestProject),
+            "Recent" => query.Where(item => item.Asset?.AddedAtUtc.ToLocalTime().Date >= today.AddDays(-6)),
             "Today" => query.Where(item =>
                 item.Asset?.AddedAtUtc.ToLocalTime().Date == today),
             "This week" => query.Where(item =>
@@ -787,7 +807,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         };
         _items = query.ToArray();
         ApplyOrganizationGroups(_items);
-        _gridEntries = LibraryGridProjection.Create(_items);
+        _gridEntries = LibraryGridProjection.Create(_items, _collapsedGroups, _collapseOlderGroups && string.IsNullOrWhiteSpace(SearchQuery));
         if (SelectedItem is null || !_items.Contains(SelectedItem))
         {
             SelectedItem = _items.FirstOrDefault();
@@ -812,7 +832,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
         }
     }
 
-    private static IReadOnlyList<LibraryItem> BuildItems(
+    private IReadOnlyList<LibraryItem> BuildItems(
         IReadOnlyList<LibraryMediaAsset> assets) =>
         assets.Select(asset => new LibraryItem(
                 asset.DisplayName,
@@ -830,7 +850,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
                     ? "Icon.Grid"
                     : "Icon.Spark",
                 asset.ThumbnailFullPath,
-                asset))
+                asset) { Publication = _publicationSnapshots.GetPublicationStatus(asset) })
             .ToArray();
 
     private void ApplyOrganizationGroups(IReadOnlyList<LibraryItem> items)
@@ -846,6 +866,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
                     asset?.OutputFullPath),
                 LibraryOrganizationMode.Project when asset is not null =>
                     projectLabels[asset.ProjectId],
+                LibraryOrganizationMode.Game => asset?.SourceProvenance?.GameName ?? "Game not recorded",
                 _ => GetDateLabel(asset?.AddedAtUtc),
             };
         }
@@ -866,9 +887,7 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
                         .Select(static item => item.Asset!)
                         .OrderByDescending(static asset => asset.AddedAtUtc)
                         .First();
-                    int count = group.Count();
-                    return $"Finished · {newest.AddedAtUtc.ToLocalTime():MMM d, yyyy h:mm tt} · " +
-                        (count == 1 ? "1 video" : $"{count} videos");
+                    return $"Finished · {newest.AddedAtUtc.ToLocalTime():MMM d, yyyy h:mm tt}";
                 },
                 StringComparer.Ordinal);
 
@@ -913,4 +932,41 @@ public sealed class LibraryViewModel : ObservableObject, IWorkspaceChromeSource,
     private static string FormatDuration(TimeSpan duration) =>
         MediaTimeFormatter.Format(duration);
 
+    private IBrowsePreferencesStore? _browsePreferences;
+    private readonly PublishSnapshotIndex _publicationSnapshots = new();
+    private readonly Dictionary<string, bool> _collapsedGroups = new(StringComparer.Ordinal);
+    private bool _collapseOlderGroups;
+    public ICommand ToggleGroupCommand => new DelegateCommand<string>(group =>
+    {
+        var header = GridEntries.FirstOrDefault(entry => entry.IsHeader && entry.GroupName == group);
+        if (header is null) return;
+        _collapsedGroups[group] = !header.IsCollapsed;
+        if (_collapsedGroups.Count > 200) _collapsedGroups.Remove(_collapsedGroups.Keys.First());
+        _browsePreferences?.Set("library.collapsed", System.Text.Json.JsonSerializer.Serialize(_collapsedGroups));
+        RefreshView();
+    });
+    public void RestoreBrowsePreferences(IBrowsePreferencesStore preferences)
+    {
+        _browsePreferences = preferences;
+        _collapseOlderGroups = true;
+        if (Enum.TryParse<LibraryViewMode>(preferences.Get("library.view"), out var view) && Enum.IsDefined(view)) _viewMode = view;
+        if (Enum.TryParse<LibraryOrganizationMode>(preferences.Get("library.group"), out var group) && Enum.IsDefined(group)) _organizationMode = group;
+        else _organizationMode = LibraryOrganizationMode.Project;
+        try
+        {
+            if (preferences.Get("library.collapsed") is { Length: < 65536 } saved &&
+                System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(saved) is { } collapsed)
+                foreach (var pair in collapsed.Take(200)) _collapsedGroups[pair.Key] = pair.Value;
+        }
+        catch (System.Text.Json.JsonException) { }
+        DateFilter = preferences.Get("library.date") is { } date && Dates.Contains(date) ? date : "Latest session";
+        RefreshView(); OnPropertyChanged(nameof(OrganizationMode)); OnPropertyChanged(nameof(ViewMode));
+        OnPropertyChanged(nameof(IsGridView)); OnPropertyChanged(nameof(IsListView));
+    }
+    public void UpdatePublicationHistory(IReadOnlyList<YouTubePublishHistoryEntry> history)
+    {
+        _publicationSnapshots.Refresh([], history, _catalog.Assets);
+        foreach (LibraryItem item in _allItems)
+            if (item.Asset is { } asset) item.Publication = _publicationSnapshots.GetPublicationStatus(asset);
+    }
 }

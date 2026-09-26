@@ -97,14 +97,15 @@ internal static class PublishHistoryProjector
         PublishHistorySortOrder sortOrder,
         int visibleLimit,
         DateTime localToday,
-        TimeZoneInfo timeZone)
+        TimeZoneInfo timeZone,
+        DateTimeOffset? observedAt = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentNullException.ThrowIfNull(searchQuery);
         ArgumentNullException.ThrowIfNull(timeZone);
 
         PublishHistoryListItem[] allItems = entries
-            .Select(entry => CreateItem(entry, localToday, timeZone))
+            .Select(entry => CreateItem(entry, localToday, timeZone, observedAt ?? DateTimeOffset.UtcNow))
             .OrderByDescending(static item => item.AttemptedAtUtc)
             .ToArray();
         PublishHistoryListItem[] recentItems = allItems
@@ -144,38 +145,29 @@ internal static class PublishHistoryProjector
     private static PublishHistoryListItem CreateItem(
         YouTubePublishHistoryEntry entry,
         DateTime localToday,
-        TimeZoneInfo timeZone)
+        TimeZoneInfo timeZone,
+        DateTimeOffset observedAt)
     {
         DateTime localDate = TimeZoneInfo.ConvertTime(
             entry.AttemptedAtUtc,
             timeZone).Date;
-        PublishHistoryCategory category = GetCategory(entry);
+        PublicationStatus publication = PublicationStatus.FromHistory(entry, observedAt);
+        PublishHistoryCategory category = publication.Stage switch
+        {
+            PublicationStage.Scheduled => PublishHistoryCategory.Scheduled,
+            PublicationStage.Public or PublicationStage.Private or PublicationStage.Unlisted => PublishHistoryCategory.Published,
+            _ => PublishHistoryCategory.NeedsAttention,
+        };
         return new PublishHistoryListItem(
             entry.Id,
             entry.Title,
-            PublishPresentationRules.FormatOutcome(entry.Outcome),
-            PublishPresentationRules.BuildHistoryDetail(entry, timeZone),
+            publication.Label,
+            publication.Detail + " " + PublishPresentationRules.BuildHistoryDetail(entry, timeZone),
             BuildDateGroup(localDate, localToday.Date),
             localDate,
             entry.AttemptedAtUtc,
             entry.VideoUrl,
             category);
-    }
-
-    private static PublishHistoryCategory GetCategory(
-        YouTubePublishHistoryEntry entry)
-    {
-        if (entry.RemoteStatus ==
-                YouTubeRemoteVideoStatus.NotFoundOrInaccessible ||
-            entry.Outcome is YouTubePublishOutcome.Failed or
-                YouTubePublishOutcome.Cancelled)
-        {
-            return PublishHistoryCategory.NeedsAttention;
-        }
-
-        return entry.Outcome == YouTubePublishOutcome.Scheduled
-            ? PublishHistoryCategory.Scheduled
-            : PublishHistoryCategory.Published;
     }
 
     private static bool MatchesSearch(

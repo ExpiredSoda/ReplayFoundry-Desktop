@@ -41,9 +41,10 @@ internal static class GenerationSetupDetectionSelectionTests
         TestAssert.False(
             setup.DetectionStep.IsValid,
             "The detection step must remain blocked until an available title writer is explicitly selected.");
-        TestAssert.False(
-            setup.CanGoNext,
-            "Next must remain blocked while the retained AI-required choice is unavailable.");
+        TestAssert.True(setup.CanGoNext, "Source and game review remains available before choosing a writer.");
+        setup.NavigateToStepCommand.Execute(GenerationSetupStep.ClipGoals);
+        TestAssert.False(setup.CanGoNext, "Goal and style cannot proceed while the retained AI-required writer is unavailable.");
+        TestAssert.False(setup.CanFinish, "The consolidated wizard cannot bypass the writer requirement.");
         TestAssert.Equal(
             unavailableReason,
             setup.DetectionStep.ValidationMessage,

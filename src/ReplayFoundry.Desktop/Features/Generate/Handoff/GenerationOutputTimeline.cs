@@ -11,6 +11,8 @@ public interface IGenerationTimelineEditor
     void SplitAsset(string projectId, string assetId, TimeSpan sourcePosition);
     void MoveAsset(string projectId, string assetId, int direction);
     void SetTimelineMode(string projectId, GenerationMode mode);
+    void ArrangeMontage(string projectId, MontageStyle style) => throw new NotSupportedException();
+    void SetMontageMetadata(string projectId, ClipEditorialMetadataDraft metadata, string fingerprint) => throw new NotSupportedException();
 }
 
 public sealed partial class GenerationOutputSession : IGenerationTimelineEditor
@@ -21,6 +23,10 @@ public sealed partial class GenerationOutputSession : IGenerationTimelineEditor
         ChangeTimeline(projectId, project => project.MoveAsset(assetId, direction));
     public void SetTimelineMode(string projectId, GenerationMode mode) =>
         ChangeTimeline(projectId, project => project.WithTimelineAssets(project.Assets, mode));
+    public void ArrangeMontage(string projectId, MontageStyle style) =>
+        ChangeTimeline(projectId, project => project.ArrangeMontage(style));
+    public void SetMontageMetadata(string projectId, ClipEditorialMetadataDraft metadata, string fingerprint) =>
+        ChangeTimeline(projectId, project => project.WithMontageMetadata(metadata, fingerprint));
     private void ChangeTimeline(string projectId, Func<GenerationOutputProject, GenerationOutputProject> change)
     {
         if (Current is null || !Current.Id.Equals(projectId, StringComparison.Ordinal))
@@ -67,7 +73,8 @@ public sealed partial class GenerationOutputProject
         return new(Id, mode ?? Mode, OutputDirectory, RequestedCount, FulfillmentPreference, FulfillmentOutcome,
             assets.Select((asset, index) => asset.WithTimelineRank(index + 1)), CreatedAtUtc,
             resultCountMode: ResultCountMode, hiddenMoments: HiddenMoments,
-            candidateSetFingerprint: CandidateSetFingerprint, sourceMedia: SourceMedia);
+            candidateSetFingerprint: CandidateSetFingerprint, sourceMedia: SourceMedia, montageStyle: MontageStyle,
+            montageMetadata: MontageMetadata, montageMetadataFingerprint: MontageMetadataFingerprint);
     }
 }
 
@@ -76,7 +83,7 @@ public sealed partial class GenerationOutputAsset
     internal GenerationOutputAsset WithTimelineRank(int rank) => rank == Rank ? this :
         RestoreStudioHandoff(Id, rank, SourceMedia, null, null, SourceStart, SourceEnd,
             OriginalSourceStart, OriginalSourceEnd, Score, QualityTarget, SelectionReason, Explanation,
-            Captions, Appearance, EditorialContext, EditorialMetadata, PreferenceFeatures, Disposition, RenderSettings);
+            Captions, Appearance, EditorialContext, EditorialMetadata, PreferenceFeatures, Disposition, RenderSettings, EditorialAuthoredContextRevision);
 
     internal GenerationOutputAsset CreateSplitPiece(TimeSpan sourceStart)
     {

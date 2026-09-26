@@ -8,6 +8,10 @@ public interface IClipEditorialMetadataGenerationService
 
     string? AiUnavailableReason => null;
 
+    Task<ClipEditorialMetadataDraft> GenerateMontageAsync(
+        IReadOnlyList<ClipEditorialMetadataRequest> sequence, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException("Whole-montage AI writing is unavailable in this provider.");
+
     Task<ClipEditorialMetadataDraft> GenerateAsync(
         ClipEditorialMetadataRequest request,
         CancellationToken cancellationToken);

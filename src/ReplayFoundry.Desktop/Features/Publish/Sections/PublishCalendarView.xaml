@@ -185,7 +185,16 @@
                                                     Margin="0,0,0,3"
                                                     Padding="4,3"
                                                     Background="{DynamicResource Brush.InteractiveSelected}"
+                                                    BorderThickness="2,0,0,0" ToolTip="{Binding Status}"
                                                     CornerRadius="4">
+                                                    <Border.Style><Style TargetType="Border">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding PublicationStage}" Value="Public"><Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusSuccess}" /></DataTrigger>
+                                                            <DataTrigger Binding="{Binding PublicationStage}" Value="Attention"><Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusWarning}" /></DataTrigger>
+                                                            <DataTrigger Binding="{Binding PublicationStage}" Value="Unconfirmed"><Setter Property="BorderBrush" Value="{DynamicResource Brush.TextMuted}" /></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style></Border.Style>
                                                     <TextBlock
                                                         FontSize="11"
                                                         Foreground="{DynamicResource Brush.TextPrimary}"

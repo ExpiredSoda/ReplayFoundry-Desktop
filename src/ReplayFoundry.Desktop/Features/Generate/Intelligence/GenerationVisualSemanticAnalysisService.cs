@@ -359,7 +359,11 @@ public sealed partial class GenerationVisualSemanticAnalysisService :
                     value => value.IsHumanPriority, (left, right) => ReferenceEquals(left.Source, right.Source) &&
                         MomentIntervalMath.PairOverlapRatio(left.Candidate.Window, right.Candidate.Window) >= .5), maximumCandidateCount,
                 candidateIntelligence.BaseMoments.Request.Setup.DiscoveryIntent.MomentType,
-                value => value.IsHumanPriority, value => refinementByCandidate.GetValueOrDefault(value.Candidate)?.Components ?? []);
+                value => value.IsHumanPriority, value => refinementByCandidate.GetValueOrDefault(value.Candidate)?.Components ?? [],
+                unmapped: neuralCandidates.Count == 0 ? null : value =>
+                    !(refinementByCandidate.GetValueOrDefault(value.Candidate)?.Components ?? []).Any(component =>
+                        component.Code == GenerationCandidateRefinementComponentCode.NeuralIndexCoverage && component.RawValue >= .8),
+                gameplayHint: value => GenerationGameplayEventCoveragePolicy.IsDeterministicGameplayEvent(value.Candidate));
         if (!candidateIntelligence.Refinements.Any(value => value.Components.Any(component =>
                 component.Code == GenerationCandidateRefinementComponentCode.NeuralPersonalValue)))
         {

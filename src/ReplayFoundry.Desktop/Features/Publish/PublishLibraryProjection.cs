@@ -24,7 +24,7 @@ internal static class PublishLibraryProjector
     private const string ThisMonthFilter = "This month";
 
     public static IReadOnlyList<string> CreateDateFilters() =>
-        [AnyDateFilter, TodayFilter, ThisWeekFilter, ThisMonthFilter];
+        [AnyDateFilter, "Latest session", "Recent", TodayFilter, ThisWeekFilter, ThisMonthFilter];
 
     public static PublishLibraryProjection Build(
         IReadOnlyList<LibraryMediaAsset> assets,
@@ -33,7 +33,9 @@ internal static class PublishLibraryProjector
         string? selectedFolder,
         DateTime localDate,
         TimeZoneInfo timeZone,
-        Func<LibraryMediaAsset, string> resolvePublishState)
+        Func<LibraryMediaAsset, string> resolvePublishState,
+        Func<LibraryMediaAsset, PublicationStatus>? resolvePublication = null,
+        string statusFilter = "All")
     {
         ArgumentNullException.ThrowIfNull(assets);
         ArgumentNullException.ThrowIfNull(searchQuery);
@@ -42,6 +44,7 @@ internal static class PublishLibraryProjector
         ArgumentNullException.ThrowIfNull(resolvePublishState);
 
         IEnumerable<LibraryMediaAsset> query = assets;
+        if (resolvePublication is not null) query = query.Where(asset => resolvePublication(asset).Matches(statusFilter));
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             string search = searchQuery.Trim();
@@ -61,8 +64,11 @@ internal static class PublishLibraryProjector
                 selectedFolder,
                 StringComparison.OrdinalIgnoreCase));
         }
+        string? latestProject = assets.MaxBy(static value => value.AddedAtUtc)?.ProjectId;
         query = dateFilter switch
         {
+            "Latest session" => query.Where(asset => asset.ProjectId == latestProject),
+            "Recent" => query.Where(asset => GetLocalDate(asset, timeZone) >= localDate.Date.AddDays(-6)),
             TodayFilter => query.Where(asset =>
                 GetLocalDate(asset, timeZone) == localDate.Date),
             ThisWeekFilter => query.Where(asset =>
@@ -83,12 +89,13 @@ internal static class PublishLibraryProjector
                 $"{PublishPresentationRules.FormatDuration(asset.Duration)} · {asset.AspectRatioText}",
                 BuildCollectionDetail(asset, timeZone),
                 resolvePublishState(asset),
-                asset.ThumbnailFullPath))
+                asset.ThumbnailFullPath,
+                resolvePublication?.Invoke(asset)))
             .ToArray();
         bool hasActiveFilters =
             !string.IsNullOrWhiteSpace(searchQuery) ||
             !dateFilter.Equals(AnyDateFilter, StringComparison.Ordinal) ||
-            selectedFolder is not null;
+            selectedFolder is not null || statusFilter != "All";
         return new PublishLibraryProjection(
             BuildFolderOptions(assets),
             items,
@@ -132,7 +139,7 @@ internal static class PublishLibraryProjector
         TimeZoneInfo timeZone)
     {
         DateTimeOffset local = TimeZoneInfo.ConvertTime(asset.AddedAtUtc, timeZone);
-        return $"{GetFolderLabel(asset)} · {local:MMM d, yyyy}";
+        return $"{GetFolderLabel(asset)} · added {local:MMM d, yyyy}";
     }
 
     private static string GetFolderLabel(LibraryMediaAsset asset) =>

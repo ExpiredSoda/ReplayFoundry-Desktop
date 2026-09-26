@@ -53,8 +53,16 @@ internal static partial class GenerationSpeechActivityTests
                 firstFrame = 0, lastFrame = 11, kind = "Action", hasDistinctEvent = "Yes", hasPayoff = "Yes",
                 onlyRoutineMovementOrMenus = "No", needsEarlierContext = "No", onlyLightingOrCameraChanges = "No",
                 transcriptSupport = "NotSupplied", editorialValue = 85, recommendation = "Keep" });
-            var results = request.Requests.Select(item => Qwen3VlSceneReviewProvider.ParseAssessment(item, value,
-                JsonSerializer.SerializeToElement(Enumerable.Range(0, 12).Select(i => i * (item.CandidateEndRelative.TotalSeconds - .1) / 11)), TimeSpan.Zero));
+            var results = request.Requests.Select(item => {
+                var parsed = Qwen3VlSceneReviewProvider.ParseAssessment(item, value,
+                    JsonSerializer.SerializeToElement(Enumerable.Range(0, 12).Select(i => i * (item.CandidateEndRelative.TotalSeconds - .1) / 11)), TimeSpan.Zero);
+                var moment = new SceneMomentEvidence(Enum.GetValues<SceneMomentCategory>().Select(category =>
+                    new SceneCategoryEvidence(category, SceneEvidenceVerdict.Uncertain, TimeSpan.Zero, TimeSpan.Zero,
+                        TimeSpan.Zero, TimeSpan.Zero, "No category established.", [])), "NoAudio", "{\"tracks\":[]}",
+                    item.CandidateEndRelative - item.CandidateStartRelative);
+                return new VisualSemanticEditorialResult(item, parsed.Observation, parsed.CanonicalizationAudit, TimeSpan.Zero,
+                    parsed.NeuralEditorialValue, moment);
+            });
             return Task.FromResult(new VisualSemanticEditorialBatchResult(request, results, TimeSpan.Zero, null));
         }
     }

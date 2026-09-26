@@ -432,7 +432,10 @@ public sealed class StudioProjectDocument
         IReadOnlyList<StudioProjectAssetDocument> assets,
         IReadOnlyList<StudioHiddenMomentDocument> hiddenMoments,
         StudioProjectRecoveryState? recovery = null,
-        IReadOnlyList<StudioMediaDocument>? sourceMedia = null)
+        IReadOnlyList<StudioMediaDocument>? sourceMedia = null,
+        ReplayFoundry.Desktop.Features.Generate.Handoff.MontageStyle montageStyle = ReplayFoundry.Desktop.Features.Generate.Handoff.MontageStyle.Impact,
+        StudioEditorialMetadataDocument? montageMetadata = null,
+        string? montageMetadataFingerprint = null)
     {
         if (schemaVersion is not CurrentSchemaVersion and
                 not LegacySchemaVersion and
@@ -494,6 +497,10 @@ public sealed class StudioProjectDocument
         }
 
         SchemaVersion = schemaVersion;
+        if (!Enum.IsDefined(montageStyle)) throw new ArgumentOutOfRangeException(nameof(montageStyle));
+        MontageStyle = montageStyle;
+        MontageMetadata = montageMetadata;
+        MontageMetadataFingerprint = montageMetadataFingerprint;
         ProjectId = projectId.Trim();
         Revision = revision;
         Mode = mode;
@@ -516,6 +523,9 @@ public sealed class StudioProjectDocument
     }
 
     public IReadOnlyList<StudioMediaDocument> SourceMedia { get; }
+    public ReplayFoundry.Desktop.Features.Generate.Handoff.MontageStyle MontageStyle { get; }
+    public StudioEditorialMetadataDocument? MontageMetadata { get; }
+    public string? MontageMetadataFingerprint { get; }
 
     private static bool IsBoundedSelectedKnowledge(
         StudioSelectedGameKnowledgeDocument? knowledge)

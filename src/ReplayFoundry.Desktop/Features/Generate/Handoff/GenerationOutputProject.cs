@@ -34,7 +34,10 @@ public sealed partial class GenerationOutputProject
             GenerationResultCountMode.Exact,
         IEnumerable<GenerationHiddenMoment>? hiddenMoments = null,
         string? candidateSetFingerprint = null,
-        IEnumerable<MediaProbeResult>? sourceMedia = null)
+        IEnumerable<MediaProbeResult>? sourceMedia = null,
+        MontageStyle montageStyle = MontageStyle.Impact,
+        ClipEditorialMetadataDraft? montageMetadata = null,
+        string? montageMetadataFingerprint = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -104,6 +107,10 @@ public sealed partial class GenerationOutputProject
         }
 
         Id = id.Trim();
+        if (!Enum.IsDefined(montageStyle)) throw new ArgumentOutOfRangeException(nameof(montageStyle));
+        MontageStyle = montageStyle;
+        MontageMetadata = montageMetadata;
+        MontageMetadataFingerprint = montageMetadataFingerprint;
         Mode = mode;
         OutputDirectory = Path.GetFullPath(outputDirectory);
         RequestedCount = requestedCount;
@@ -187,7 +194,8 @@ public sealed partial class GenerationOutputProject
             resultCountMode: ResultCountMode,
             hiddenMoments: HiddenMoments,
             candidateSetFingerprint: CandidateSetFingerprint,
-            sourceMedia: SourceMedia);
+            sourceMedia: SourceMedia, montageStyle: MontageStyle,
+            montageMetadata: MontageMetadata, montageMetadataFingerprint: MontageMetadataFingerprint);
     }
 
     internal GenerationOutputProject CreateRenderBatch(string renderToken)
@@ -220,7 +228,8 @@ public sealed partial class GenerationOutputProject
             resultCountMode: ResultCountMode,
             hiddenMoments: HiddenMoments,
             candidateSetFingerprint: CandidateSetFingerprint,
-            sourceMedia: SourceMedia);
+            sourceMedia: SourceMedia, montageStyle: MontageStyle,
+            montageMetadata: MontageMetadata, montageMetadataFingerprint: MontageMetadataFingerprint);
     }
 
     private string FindAvailableRevisionOutputDirectory(
@@ -316,7 +325,8 @@ public sealed partial class GenerationOutputProject
             resultCountMode: ResultCountMode,
             hiddenMoments: HiddenMoments,
             candidateSetFingerprint: CandidateSetFingerprint,
-            sourceMedia: SourceMedia);
+            sourceMedia: SourceMedia, montageStyle: MontageStyle,
+            montageMetadata: MontageMetadata, montageMetadataFingerprint: MontageMetadataFingerprint);
     }
 
     internal GenerationOutputProject ReplaceAssets(
@@ -444,7 +454,8 @@ public sealed partial class GenerationOutputProject
             hiddenMoments: _hiddenMoments.Where(value =>
                 !value.Id.Equals(hiddenMomentId, StringComparison.Ordinal)),
             candidateSetFingerprint: CandidateSetFingerprint,
-            sourceMedia: SourceMedia);
+            sourceMedia: SourceMedia, montageStyle: MontageStyle,
+            montageMetadata: MontageMetadata, montageMetadataFingerprint: MontageMetadataFingerprint);
     }
 
     internal GenerationOutputAsset CreateManualSourceAsset(string sourceFullPath, TimeSpan start, TimeSpan end)
@@ -484,7 +495,8 @@ public sealed partial class GenerationOutputProject
         new(Id, Mode, OutputDirectory, RequestedCount, FulfillmentPreference, FulfillmentOutcome,
             [.. _assets, CreateManualSourceAsset(sourceFullPath, start, end)], CreatedAtUtc,
             resultCountMode: ResultCountMode, hiddenMoments: HiddenMoments,
-            candidateSetFingerprint: CandidateSetFingerprint, sourceMedia: SourceMedia);
+            candidateSetFingerprint: CandidateSetFingerprint, sourceMedia: SourceMedia, montageStyle: MontageStyle,
+            montageMetadata: MontageMetadata, montageMetadataFingerprint: MontageMetadataFingerprint);
 
     private static StudioCaptionLook? ResolveCaptionLook(
         IReadOnlyList<GenerationOutputAsset> assets) => assets
@@ -565,7 +577,8 @@ public sealed partial class GenerationOutputProject
             ResultCountMode,
             HiddenMoments,
             CandidateSetFingerprint,
-            sourceMedia: SourceMedia);
+            sourceMedia: SourceMedia, montageStyle: MontageStyle,
+            montageMetadata: MontageMetadata, montageMetadataFingerprint: MontageMetadataFingerprint);
     }
 
     public static GenerationOutputProject FromResult(
@@ -634,7 +647,7 @@ public sealed partial class GenerationOutputProject
             result.Moments.RequestedCount,
             result.Request.SetupOptions.ClipFulfillmentPreference,
             result.Moments.FulfillmentOutcome,
-            assets,
+            result.Mode == GenerationMode.Montage ? MontageSequencePlanner.Arrange(assets, result.Request.SetupOptions.MontageStyle) : assets,
             DateTimeOffset.UtcNow,
             resultCountMode:
                 result.Request.SetupOptions.ResultCountMode,
@@ -642,7 +655,8 @@ public sealed partial class GenerationOutputProject
                 static hidden => hidden.ToStudioHandoff()),
             candidateSetFingerprint:
                 $"candidates-{candidateSetFingerprint[..20].ToLowerInvariant()}",
-            sourceMedia: result.Request.PreparedSources.Select(static source => source.Media));
+            sourceMedia: result.Request.PreparedSources.Select(static source => source.Media),
+            montageStyle: result.Request.SetupOptions.MontageStyle);
     }
 
     private static string CreateCandidateSetFingerprint(

@@ -266,6 +266,9 @@ public sealed class Qwen3VlGroundedMetadataGenerator :
 
     public bool IsAvailable => true;
 
+    internal Task<ClipEditorialMetadataDraft> GenerateSequenceAsync(IReadOnlyList<ClipEditorialMetadataRequest> requests, CancellationToken cancellationToken) =>
+        new Qwen3VlSceneCopyGenerator(_runtime, null).GenerateSequenceAsync(requests, cancellationToken);
+
     public IClipEditorialMetadataBatchSession CreateBatchSession() =>
         new Qwen3VlGroundedMetadataBatchSession(_executor, _runtime, Identity);
 

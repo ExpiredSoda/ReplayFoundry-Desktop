@@ -34,7 +34,10 @@ internal static class GenerationSceneEditorialEvidence
                 categories = supported.Select(row => new { category = row.Category.ToString(), explanation = row.Explanation,
                     start = row.Start.TotalSeconds, end = row.End.TotalSeconds,
                     setupStart = row.SetupStart.TotalSeconds, payoffEnd = row.PayoffEnd.TotalSeconds }),
-                speech, attribution = "Only UserConfirmed CreatorSpeech identifies creator routing. GameDialogue is game speech; " +
+                sourceText = evidence.SourceText.Select(item => new { claim = item.Claim, text = item.Text, evidenceIds = item.EvidenceIds }),
+                speech, attribution = "Source text retains model-checked frame/speech citations, not human confirmation. " +
+                    "Names addressed in dialogue identify the recipient, not the speaker. " +
+                    "Only UserConfirmed CreatorSpeech identifies creator routing. GameDialogue is game speech; " +
                     "MixedSpeech/Unknown do not identify the speaker. Speech recognition remains unreviewed text; " +
                     "do not invent quotations or physical events." }));
     }

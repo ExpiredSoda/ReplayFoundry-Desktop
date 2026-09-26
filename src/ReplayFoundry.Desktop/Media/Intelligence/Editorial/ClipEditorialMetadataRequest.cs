@@ -21,7 +21,8 @@ public sealed class ClipEditorialMetadataRequest
         VisualSemanticInputManifest? reviewVideo = null,
         IEnumerable<ClipEditorialPriorTitleExclusion>?
             priorAcceptedTitleExclusions = null,
-        ClipEditorialVariantIntent? variantIntent = null)
+        ClipEditorialVariantIntent? variantIntent = null,
+        string tone = "Natural")
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(profile);
@@ -79,6 +80,8 @@ public sealed class ClipEditorialMetadataRequest
             .ToArray();
 
         Context = context;
+        if (tone is not ("Natural" or "Playful" or "Understated")) throw new ArgumentException("Unknown writing tone.", nameof(tone));
+        Tone = tone;
         Profile = profile;
         Attempt = attempt;
         Preference = preference;
@@ -104,6 +107,9 @@ public sealed class ClipEditorialMetadataRequest
         PriorAcceptedTitleExclusions => _priorAcceptedTitleExclusions;
 
     public ClipEditorialVariantIntent VariantIntent { get; }
+    public string Tone { get; }
+    public ClipEditorialMetadataRequest WithTone(string tone) =>
+        new(Context, Profile, Attempt, Preference, SourceMedia, ReviewVideo, PriorAcceptedTitleExclusions, VariantIntent, tone);
 
     public ClipEditorialRevisionKind RevisionKind => Attempt == 0
         ? ClipEditorialRevisionKind.InitialDraft
@@ -127,7 +133,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             reviewVideo,
             PriorAcceptedTitleExclusions,
-            VariantIntent);
+            VariantIntent, Tone);
     }
 
     public ClipEditorialMetadataRequest WithAttempt(int attempt) =>
@@ -139,7 +145,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             ReviewVideo,
             PriorAcceptedTitleExclusions,
-            variantIntent: null);
+            variantIntent: null, tone: Tone);
 
     public ClipEditorialMetadataRequest WithPriorAcceptedTitleExclusions(
         IEnumerable<ClipEditorialPriorTitleExclusion> exclusions)
@@ -153,7 +159,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             ReviewVideo,
             exclusions,
-            VariantIntent);
+            VariantIntent, Tone);
     }
 
     public ClipEditorialMetadataRequest WithVariantIntent(
@@ -171,7 +177,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             ReviewVideo,
             PriorAcceptedTitleExclusions,
-            variantIntent);
+            variantIntent, Tone);
     }
 
     private static ClipEditorialVariantIntent ResolveVariantIntent(

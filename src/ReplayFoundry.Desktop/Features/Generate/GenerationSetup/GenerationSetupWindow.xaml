@@ -7,6 +7,7 @@
     xmlns:detection="clr-namespace:ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.Detection"
     xmlns:gameContext="clr-namespace:ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.GameContext"
     xmlns:momentGuidance="clr-namespace:ReplayFoundry.Desktop.Features.Generate.GenerationSetup.Steps.MomentGuidance"
+    xmlns:setup="clr-namespace:ReplayFoundry.Desktop.Features.Generate.GenerationSetup"
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     xmlns:windowing="clr-namespace:ReplayFoundry.Desktop.Shell.Windowing"
@@ -29,13 +30,44 @@
     <Window.Resources>
 
         <ResourceDictionary>
-
             <ResourceDictionary.MergedDictionaries>
-
-                <ResourceDictionary
-                    Source="GenerationSetupStyles.xaml" />
-
+                <ResourceDictionary Source="GenerationSetupStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <DataTemplate DataType="{x:Type setup:GenerationSourcePage}">
+                <StackPanel DataContext="{Binding Wizard}">
+                    <TextBlock Text="{Binding ReferenceSourceName}" Style="{DynamicResource Text.FormLabel}" Margin="0,0,0,12" TextWrapping="Wrap" />
+                    <gameContext:GameContextStepView DataContext="{Binding GameContextStep}" />
+                </StackPanel>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type setup:GenerationGoalPage}">
+                <StackPanel DataContext="{Binding Wizard}">
+                    <clipGoals:ClipGoalsStepView DataContext="{Binding ClipGoalsStep}" />
+                    <TextBlock Text="{Binding DetectionStep.ValidationMessage}" Margin="0,8,0,0" Foreground="{DynamicResource Brush.StatusWarning}" TextWrapping="Wrap" />
+                    <Expander Header="Advanced scan and priority moments" Margin="0,16,0,0">
+                        <Expander.Style>
+                            <Style TargetType="Expander" BasedOn="{StaticResource Control.DisclosureExpander}">
+                                <Style.Triggers><DataTrigger Binding="{Binding DetectionStep.IsValid}" Value="False"><Setter Property="IsExpanded" Value="True" /></DataTrigger></Style.Triggers>
+                            </Style>
+                        </Expander.Style>
+                        <StackPanel Margin="0,12,0,0">
+                            <detection:DetectionStepView DataContext="{Binding DetectionStep}" />
+                            <momentGuidance:MomentGuidanceStepView DataContext="{Binding MomentGuidanceStep}" Margin="0,20,0,0" />
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type setup:GenerationAudioPage}">
+                <StackPanel DataContext="{Binding Wizard}">
+                    <audio:AudioStepView DataContext="{Binding AudioStep}" />
+                    <Border Style="{DynamicResource Control.CanvasInsetCard}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Ready to find your moments" Style="{DynamicResource Text.SectionTitle}" />
+                            <TextBlock Text="{Binding ReviewSummary}" Style="{DynamicResource Text.Body}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                            <TextBlock Text="{Binding ReviewDetail}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </DataTemplate>
 
             <DataTemplate
                 DataType="{x:Type detection:DetectionStepViewModel}">
@@ -209,7 +241,7 @@
 
         </Border>
 
-        <!-- Clickable Detection, Audio, Clip Goals, Game Context, and Priority Moments navigation. -->
+        <!-- Task-oriented navigation keeps specialized controls inside the goal page. -->
         <ScrollViewer
             Grid.Row="2"
             Margin="0,12,0,10"
@@ -226,7 +258,7 @@
 
                     <UniformGrid
                         Rows="1"
-                        Columns="5" />
+                        Columns="3" />
 
                 </ItemsPanelTemplate>
 
@@ -269,7 +301,7 @@
 
                             <TextBlock
                                 Margin="8,0,0,0"
-                                MaxWidth="84"
+                                MaxWidth="150"
                                 TextWrapping="Wrap"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"

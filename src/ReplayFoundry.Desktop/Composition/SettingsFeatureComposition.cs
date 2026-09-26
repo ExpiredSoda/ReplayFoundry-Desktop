@@ -44,6 +44,7 @@ internal static class SettingsFeatureComposition
             dependencies.Preferences.EditorialReroll,
             dependencies.Preferences.MetadataLearningConsent);
         model.AttachTasteLearning(dependencies.Feedback.TasteLearning);
+        model.AttachWritingLearning(() => WriterLearningOverviewReader.Read());
         return model;
     }
 

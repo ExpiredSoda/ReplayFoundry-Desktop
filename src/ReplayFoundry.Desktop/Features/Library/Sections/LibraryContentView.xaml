@@ -33,7 +33,6 @@
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsHeader}" Value="True">
                     <Setter Property="Focusable" Value="False" />
-                    <Setter Property="IsHitTestVisible" Value="False" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -182,24 +181,29 @@
                     <ItemsPanelTemplate>
                         <local:LibraryVirtualizingWrapPanel
                             HeaderHeight="42"
-                            ItemHeight="350"
+                            ItemHeight="380"
                             ItemWidth="250" />
                     </ItemsPanelTemplate>
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Grid>
-                        <TextBlock
+                        <Button
                             Margin="2,12,0,8"
                             VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
                             Foreground="{DynamicResource Brush.TextSecondary}"
                             FontSize="12"
                             FontWeight="SemiBold"
-                            Text="{Binding GroupName}"
+                            Content="{Binding HeaderLabel}"
+                            Command="{Binding DataContext.ToggleGroupCommand, ElementName=Root}"
+                            CommandParameter="{Binding GroupName}"
+                            AutomationProperties.Name="{Binding HeaderLabel}"
+                            Style="{DynamicResource Control.GhostButton}"
                             Visibility="{Binding IsHeader, Converter={StaticResource BoolToVisibility}}" />
                         <Border
                             Width="240"
-                            Height="340"
+                            Height="370"
                             Margin="0,0,10,10"
                             DataContext="{Binding Item}"
                             Visibility="{Binding DataContext.IsCard, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Converter={StaticResource BoolToVisibility}}">
@@ -296,7 +300,8 @@
                                         Foreground="{DynamicResource Brush.StatusInfo}"
                                         Text="{Binding Status}" />
                                 </Grid>
-                                <TextBlock Margin="0,8,0,0" MaxHeight="36" Style="{DynamicResource Text.Meta}" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" />
+                                <controls:PublicationBadge Margin="0,6,0,0" DataContext="{Binding Publication}" />
+                                <TextBlock Margin="0,6,0,0" MaxHeight="36" Style="{DynamicResource Text.Meta}" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" />
                             </StackPanel>
                                 <Border
                                     Width="3"
@@ -389,6 +394,7 @@
                                 <TextBlock Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis">
                                     <Run Text="{Binding Type, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Detail, Mode=OneWay}" />
                                 </TextBlock>
+                                <controls:PublicationBadge Margin="0,4,0,0" DataContext="{Binding Publication}" />
                             </StackPanel>
                             <TextBlock Grid.Column="3" Margin="10,0,0,0" VerticalAlignment="Center" Style="{DynamicResource Text.Meta}" Text="{Binding Duration}" />
                             <TextBlock Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Center" Style="{DynamicResource Text.Meta}" Text="{Binding Modified}" />

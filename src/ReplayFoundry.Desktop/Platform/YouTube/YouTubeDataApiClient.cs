@@ -1,3 +1,4 @@
+using static ReplayFoundry.Desktop.Platform.YouTube.YouTubeApiResponses;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -41,7 +42,7 @@ internal interface IYouTubeDataApiClient
         string playlistId,
         CancellationToken cancellationToken);
 
-    Task<IReadOnlySet<string>> GetExistingVideoIdsAsync(
+    Task<IReadOnlyDictionary<string, YouTubeRemoteVideoDetails>> GetVideoStatusesAsync(
         string accessToken,
         IReadOnlyList<string> videoIds,
         CancellationToken cancellationToken);
@@ -111,7 +112,7 @@ internal sealed partial class YouTubeDataApiClient : IYouTubeDataApiClient
             DateTimeOffset.UtcNow);
     }
 
-    public async Task<IReadOnlySet<string>> GetExistingVideoIdsAsync(
+    public async Task<IReadOnlyDictionary<string, YouTubeRemoteVideoDetails>> GetVideoStatusesAsync(
         string accessToken,
         IReadOnlyList<string> videoIds,
         CancellationToken cancellationToken)
@@ -132,7 +133,7 @@ internal sealed partial class YouTubeDataApiClient : IYouTubeDataApiClient
                 HttpMethod.Get,
                 new Uri(
                     ApiRoot,
-                    "videos?part=id&id=" +
+                    "videos?part=snippet%2Cstatus%2CprocessingDetails&id=" +
                     Uri.EscapeDataString(string.Join(',', snapshot))),
                 accessToken,
                 content: null,
@@ -152,10 +153,21 @@ internal sealed partial class YouTubeDataApiClient : IYouTubeDataApiClient
                 JsonReadOptions,
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
-        return new HashSet<string>(
-            payload?.Items?.Select(static item => item.Id)
-                .Where(static id => !string.IsNullOrWhiteSpace(id)) ?? [],
-            StringComparer.Ordinal);
+        return (payload?.Items ?? [])
+            .Where(item => snapshot.Contains(item.Id, StringComparer.Ordinal))
+            .DistinctBy(static item => item.Id, StringComparer.Ordinal)
+            .ToDictionary(static item => item.Id, static item => new YouTubeRemoteVideoDetails(
+                item.Snippet?.ChannelId,
+                item.Status?.PrivacyStatus switch
+                {
+                    "public" => YouTubeVideoVisibility.Public,
+                    "private" => YouTubeVideoVisibility.Private,
+                    "unlisted" => YouTubeVideoVisibility.Unlisted,
+                    _ => (YouTubeVideoVisibility?)null,
+                },
+                item.Status?.UploadStatus,
+                item.ProcessingDetails?.ProcessingStatus,
+                item.Status?.PublishAt?.ToUniversalTime()), StringComparer.Ordinal);
     }
 
     public async Task<IReadOnlyList<YouTubePlaylist>> GetPlaylistsAsync(
@@ -917,69 +929,4 @@ internal sealed partial class YouTubeDataApiClient : IYouTubeDataApiClient
 
     private sealed record UploadStatus(long Offset, string? VideoId);
 
-    private sealed class ChannelListResponse
-    {
-        public ChannelItem[]? Items { get; set; }
-    }
-
-    private sealed class ChannelItem
-    {
-        public string Id { get; set; } = string.Empty;
-        public Snippet? Snippet { get; set; }
-    }
-
-    private sealed class PlaylistListResponse
-    {
-        public PlaylistItem[]? Items { get; set; }
-        public string? NextPageToken { get; set; }
-    }
-
-    private sealed class PlaylistItem
-    {
-        public string Id { get; set; } = string.Empty;
-        public Snippet? Snippet { get; set; }
-        public Status? Status { get; set; }
-    }
-
-    private sealed class CategoryListResponse
-    {
-        public CategoryItem[]? Items { get; set; }
-    }
-
-    private sealed class CategoryItem
-    {
-        public string Id { get; set; } = string.Empty;
-        public CategorySnippet? Snippet { get; set; }
-    }
-
-    private sealed class CategorySnippet
-    {
-        public string Title { get; set; } = string.Empty;
-        public bool Assignable { get; set; }
-    }
-
-    private sealed class Snippet
-    {
-        public string Title { get; set; } = string.Empty;
-    }
-
-    private sealed class Status
-    {
-        public string? PrivacyStatus { get; set; }
-    }
-
-    private sealed class VideoInsertResponse
-    {
-        public string Id { get; set; } = string.Empty;
-    }
-
-    private sealed class VideoListResponse
-    {
-        public VideoIdentity[]? Items { get; set; }
-    }
-
-    private sealed class VideoIdentity
-    {
-        public string Id { get; set; } = string.Empty;
-    }
 }

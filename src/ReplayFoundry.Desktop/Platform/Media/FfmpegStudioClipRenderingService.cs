@@ -356,7 +356,9 @@ internal sealed class FfmpegStudioProjectRenderingService :
                     asset.Appearance.VideoEffectIntensityPercent,
                     asset.Appearance.GraphicOverlays,
                     asset.RenderSettings,
-                    timedTextFileName),
+                    timedTextFileName,
+                    MontageSequencePlanner.AudioEdgeSeconds(draft.MontageStyle),
+                    MontageSequencePlanner.VideoEdgeSeconds(draft.MontageStyle)),
                 cancellationToken,
                 "montage segment render", profile, asset.Duration,
                 (fraction, detail) => progress.Report(new StudioProjectRenderProgress(

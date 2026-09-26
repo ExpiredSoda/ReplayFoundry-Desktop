@@ -18,6 +18,7 @@ internal static partial class GenerationSpeechActivityTests
         yield return new("Moment review rejects changed speech, speaker, waveform identity and out-of-cut citations", MomentWireOwnership);
         yield return new("Moment context sends only cited speech and supported categories to title writing", MomentWriterEvidence);
         yield return new("Category review admission preserves human priority and its fixed review budget", CategoryAdmissionPreservesBudget);
+        yield return new("Partial recording maps cannot consume all review slots or let broad labels stand in for action", PartialMapCategoryAdmission);
         yield return new("Recording event nominations use owned source frames and never invent missing timestamps", IndexedEventOwnership);
     }
 
@@ -98,6 +99,10 @@ internal static partial class GenerationSpeechActivityTests
         return JsonSerializer.SerializeToNode(new
         {
             frameTimes = Enumerable.Range(0, 12).Select(index => (duration-.1)*index/11),
+            factReview = new { grounded = true, claims = new {
+                setup = new { supported = true, verbatimSourceText = "Lift handset to call.", evidenceIds = new[] { "frame-0" } },
+                @event = new { supported = false, verbatimSourceText = "Unverified identity", evidenceIds = new[] { "frame-5" } },
+                outcome = new { supported = true, verbatimSourceText = "Hey Simon. Thanks for returning my call.", evidenceIds = new[] { "frame-11" } } } },
             audioEvidence = new { version = "audio-evidence-1", status = "AcousticOnly", similaritiesAreProbabilities = false,
                 tracks = request.SceneContext!.AudioTracks.Select(track => new
                 {
@@ -129,6 +134,7 @@ internal static partial class GenerationSpeechActivityTests
             row => row["audioEvidence"]!["tracks"]!.AsArray().RemoveAt(1),
             row => row["momentEvidence"]!["categories"]![2]!["evidenceIds"]![0] = "speech-2-game",
             row => row["momentEvidence"]!["categories"]![2]!["setupStart"] = 3,
+            row => row["factReview"]!["claims"]!["outcome"]!["evidenceIds"]![0] = "frame-100",
         ];
         foreach (var change in changes)
         {
@@ -153,6 +159,16 @@ internal static partial class GenerationSpeechActivityTests
         TestAssert.Equal(1, speech.GetArrayLength(), "Uncited dialogue cannot be borrowed to fill a title.");
         TestAssert.Equal("CreatorSpeech", speech[0].GetProperty("role").GetString(), "Writer input preserves speaker routing.");
         TestAssert.Equal("UserConfirmed", speech[0].GetProperty("roleSource").GetString(), "Writer input preserves the source of attribution.");
+        var sourceText = json.RootElement.GetProperty("sourceText");
+        TestAssert.Equal(2, sourceText.GetArrayLength(), "Only supported source text reaches the writer.");
+        TestAssert.Equal("Hey Simon. Thanks for returning my call.", sourceText[1].GetProperty("text").GetString(),
+            "Dialogue address and speaker relationships cannot disappear between scene review and writing.");
+        var speechCited = MomentWire(request);
+        speechCited["factReview"]!["claims"]!["outcome"]!["evidenceIds"]![0] = request.Transcript.Spans[0].Id;
+        speechCited["factReview"]!["claims"]!["outcome"]!["verbatimSourceText"] = request.Transcript.Spans[0].Text;
+        var retained = QwenSceneMomentEvidenceParser.Parse(JsonSerializer.SerializeToElement(speechCited), request);
+        TestAssert.Equal(request.Transcript.Spans[0].Text, retained.SourceText[1].Text,
+            "Fact-check transcript IDs remain valid even when category evidence uses routed audio IDs.");
         return Task.CompletedTask;
     });
 
@@ -168,6 +184,24 @@ internal static partial class GenerationSpeechActivityTests
         TestAssert.Equal(4, selected.Count, "Category coverage cannot enlarge the configured review budget.");
         TestAssert.True(selected.Contains("human") && selected.Contains("quiet-lore"), "A quiet lore candidate gets reviewed without displacing a manual selection.");
         TestAssert.False(selected.Contains("funny"), "An unrelated category does not acquire an output quota.");
+        return Task.CompletedTask;
+    }
+
+    private static Task PartialMapCategoryAdmission()
+    {
+        string[] ordered = ["human", "menu-a", "menu-b", "menu-c", "joke", "lore", "fight", "late-puzzle"];
+        IReadOnlyList<GenerationCandidateRefinementComponent> Evidence(string id) =>
+            [new(GenerationCandidateRefinementComponentCode.NeuralIndexCoverage, id == "late-puzzle" ? 0 : 1, 0, "Coverage"),
+             new(GenerationCandidateRefinementComponentCode.NeuralHumor, id == "joke" ? .9 : .32, 0, "Nomination"),
+             new(GenerationCandidateRefinementComponentCode.NeuralLore, id == "lore" ? .95 : .32, 0, "Nomination"),
+             new(GenerationCandidateRefinementComponentCode.NeuralCommentary, id.StartsWith("menu", StringComparison.Ordinal) ? .99 : .2, 0, "Nomination"),
+             new(GenerationCandidateRefinementComponentCode.NeuralGameplay, id == "fight" ? .95 : .3, 0, "Nomination")];
+        var selected = GenerationCategoryReviewAdmission.Select(ordered, 6, GenerationMomentIntent.Any, id => id == "human", Evidence,
+            id => id == "late-puzzle", id => id == "fight");
+        TestAssert.Equal(6, selected.Count, "Coverage stays within the configured review budget.");
+        foreach (string expected in new[] { "human", "joke", "lore", "fight", "late-puzzle" })
+            TestAssert.True(selected.Contains(expected), "The review should retain " + expected);
+        TestAssert.Equal(1, selected.Count(id => id.StartsWith("menu", StringComparison.Ordinal)), "Broad secondary labels cannot monopolize diverse review nominations.");
         return Task.CompletedTask;
     }
 

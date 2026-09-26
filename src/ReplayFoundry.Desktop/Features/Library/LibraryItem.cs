@@ -22,6 +22,7 @@ public enum LibraryOrganizationMode
     Date,
     Folder,
     Project,
+    Game,
 }
 
 public sealed record LibraryCategoryItem(
@@ -40,6 +41,7 @@ public sealed class LibraryItem : ObservableObject
     private string _status;
     private int _thumbnailRevision;
     private string _organizationGroup = string.Empty;
+    private Features.Publish.PublicationStatus _publication = Features.Publish.PublicationStatus.Ready;
 
     public LibraryItem(
         string title,
@@ -72,6 +74,11 @@ public sealed class LibraryItem : ObservableObject
     public string Duration { get; }
     public string Modified { get; }
     public string Status => _status;
+    public Features.Publish.PublicationStatus Publication
+    {
+        get => _publication;
+        internal set { if (_publication == value) return; _publication = value; OnPropertyChanged(); }
+    }
     public string AspectRatio { get; }
     public string Detail { get; }
     public string Glyph { get; }

@@ -2,7 +2,19 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.5](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.5).
+downloadable version is [1.0.0 Beta 5.6](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.6).
+
+## 1.0.0 Beta 5.6 — 2026-09-26
+
+- Share verified YouTube publication status between Library, Publish, history and calendar. Distinguish scheduled, public, private, processing and attention states; open existing uploads instead of inviting accidental duplicates. Changed local files become ready for a new upload, and intentional reposting remains available.
+- Keep Library date choices visible and remember its view, grouping and collapsed sections. Group by game or project, start with the latest session, and retain marked selections hidden by a filter. Publish starts with unfinished work across dates and opens its calendar on the current week.
+- Consolidate Generate into Source and game, Goal and style, and Audio and review. Keep the moment objective visible and summarize the choices before starting.
+- Add Impact, Banter and Tension montage styles with different moment objectives, suggested lengths and audio joins. Preserve order within nearby encounters; Tension adds restrained fades without overlapping caption clocks. Save an editable sequence and separate whole-montage wording; changing the sequence invalidates its old copy.
+- Put Angle, Tone and field locks directly in the Studio writing controls. Keep saved wording when a new draft cannot pass factual or meaningful-variation checks. Pass independently cited scene text to the writer so dialogue direction and pending actions are not lost between review and authoring. Generated wording still needs creator review.
+- Reserve review opportunities for the requested moment category and for gameplay or uncovered sections when a recording map is incomplete. These are review opportunities, not output quotas or weaker quality requirements.
+- Clarify general AI versus personal clip and writing models, explicit feedback counts, and activation requirements. Keep caption and wording corrections out of clip-taste labels. Require new taste models to outperform a simple recording-separated baseline before activation; this update does not manufacture ratings or activate an underqualified model.
+- Update the matching optional visual runtime/model packs to `0.8.32` and `4.0.28`. Pretrained weights are unchanged. Music beat editing, mixed-audio separation and broader semantic montage planning remain future experiments rather than included model claims.
+- Keep developer and release data isolated even when a build omits an explicit configuration.
 
 ## 1.0.0 Beta 5.5 — 2026-09-25
 

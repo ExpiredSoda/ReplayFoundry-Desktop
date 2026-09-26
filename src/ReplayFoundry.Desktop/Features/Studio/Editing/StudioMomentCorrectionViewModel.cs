@@ -17,6 +17,8 @@ public sealed class StudioMomentCorrectionViewModel(Action<TasteMomentCorrection
         new(TasteCorrectionReason.WrongSpeaker, "Wrong speaker"), new(TasteCorrectionReason.MissingSetup, "Missing the setup"),
         new(TasteCorrectionReason.MissingPayoff, "Missing the ending"), new(TasteCorrectionReason.Repetitive, "Too repetitive"),
         new(TasteCorrectionReason.NotInteresting, "Not interesting to me"),
+        new(TasteCorrectionReason.WrongCaption, "Caption problem (keep moment feedback separate)"),
+        new(TasteCorrectionReason.WrongWording, "Title or description problem"),
     };
     public IReadOnlyList<StudioCorrectionCategory> Categories { get; } = new[] { new StudioCorrectionCategory(null, "Correct category (optional)") }
         .Concat(Enum.GetValues<SceneMomentCategory>().Select(category => new StudioCorrectionCategory(category,

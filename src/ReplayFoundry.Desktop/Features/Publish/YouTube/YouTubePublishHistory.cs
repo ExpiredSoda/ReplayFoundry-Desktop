@@ -24,7 +24,9 @@ public sealed class YouTubePublishHistoryEntry
         YouTubeRemoteVideoStatus remoteStatus =
             YouTubeRemoteVideoStatus.NotChecked,
         DateTimeOffset? remoteCheckedAtUtc = null,
-        YouTubePublishProvenance? provenance = null)
+        YouTubePublishProvenance? provenance = null,
+        YouTubeRemoteVideoDetails? remoteDetails = null,
+        PublishedFileRevision? fileRevision = null)
     {
         bool requiresFailure = outcome is
             YouTubePublishOutcome.Failed or
@@ -73,6 +75,8 @@ public sealed class YouTubePublishHistoryEntry
         RemoteStatus = remoteStatus;
         RemoteCheckedAtUtc = remoteCheckedAtUtc;
         Provenance = provenance;
+        RemoteDetails = remoteDetails;
+        FileRevision = fileRevision;
     }
 
     public string Id { get; }
@@ -89,10 +93,13 @@ public sealed class YouTubePublishHistoryEntry
     public YouTubeRemoteVideoStatus RemoteStatus { get; }
     public DateTimeOffset? RemoteCheckedAtUtc { get; }
     public YouTubePublishProvenance? Provenance { get; }
+    public YouTubeRemoteVideoDetails? RemoteDetails { get; }
+    public PublishedFileRevision? FileRevision { get; }
 
     public YouTubePublishHistoryEntry WithRemoteStatus(
         YouTubeRemoteVideoStatus status,
-        DateTimeOffset checkedAtUtc) => new(
+        DateTimeOffset checkedAtUtc,
+        YouTubeRemoteVideoDetails? details = null) => new(
             Id,
             AssetId,
             Title,
@@ -106,7 +113,9 @@ public sealed class YouTubePublishHistoryEntry
             FailureMessage,
             status,
             checkedAtUtc,
-            Provenance);
+            Provenance,
+            status == YouTubeRemoteVideoStatus.Exists ? details : null,
+            FileRevision);
 }
 
 public interface IYouTubePublishHistoryStore

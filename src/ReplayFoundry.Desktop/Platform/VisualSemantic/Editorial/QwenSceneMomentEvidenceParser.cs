@@ -99,7 +99,22 @@ internal static class QwenSceneMomentEvidenceParser
                 TimeSpan.FromSeconds(setup), TimeSpan.FromSeconds(payoff),
                 item.GetProperty("explanation").GetString()!, references);
         }).ToArray();
+        var sourceText = new List<SceneSourceText>();
+        // Scene fact checks cite the review transcript's original IDs; category
+        // checks cite routed audio IDs. Both are source-owned, distinct ledgers.
+        var factIds = ids.Keys.Concat(request.Transcript.Spans.Select(span => span.Id)).ToHashSet(StringComparer.Ordinal);
+        var claims = row.GetProperty("factReview").GetProperty("claims");
+        foreach (string name in new[] { "setup", "event", "outcome" })
+        {
+            var claim = claims.GetProperty(name);
+            string? text = claim.GetProperty("verbatimSourceText").GetString();
+            if (!claim.GetProperty("supported").GetBoolean() || string.IsNullOrWhiteSpace(text)) continue;
+            var references = claim.GetProperty("evidenceIds").EnumerateArray().Select(value => value.GetString()!).ToArray();
+            if (references.Any(id => !factIds.Contains(id)))
+                throw new InvalidDataException("Source text cites an unavailable observation.");
+            sourceText.Add(new(name, text, references));
+        }
         return new(categories, audio.GetProperty("status").GetString()!, audio.GetRawText(),
-            request.CandidateEndRelative - request.CandidateStartRelative);
+            request.CandidateEndRelative - request.CandidateStartRelative, sourceText);
     }
 }

@@ -148,7 +148,9 @@ public sealed class JsonYouTubePublishHistoryStore :
                         ? YouTubeRemoteVideoStatus.NotChecked
                         : Enum.Parse<YouTubeRemoteVideoStatus>(entry.RemoteStatus),
                     entry.RemoteCheckedAtUtc,
-                    entry.Provenance));
+                    entry.Provenance,
+                    entry.RemoteDetails,
+                    entry.FileRevision));
             }
             if (result.Select(static value => value.Id)
                     .Distinct(StringComparer.Ordinal).Count() != result.Count)
@@ -189,6 +191,8 @@ public sealed class JsonYouTubePublishHistoryStore :
                     RemoteStatus = entry.RemoteStatus.ToString(),
                     RemoteCheckedAtUtc = entry.RemoteCheckedAtUtc,
                     Provenance = entry.Provenance,
+                    RemoteDetails = entry.RemoteDetails,
+                    FileRevision = entry.FileRevision,
                 }).ToArray(),
         };
         AtomicJsonFile.Write(_path, document, JsonOptions);
@@ -216,5 +220,7 @@ public sealed class JsonYouTubePublishHistoryStore :
         public string? RemoteStatus { get; set; }
         public DateTimeOffset? RemoteCheckedAtUtc { get; set; }
         public YouTubePublishProvenance? Provenance { get; set; }
+        public YouTubeRemoteVideoDetails? RemoteDetails { get; set; }
+        public Features.Publish.PublishedFileRevision? FileRevision { get; set; }
     }
 }

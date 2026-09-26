@@ -945,9 +945,9 @@ internal static class OutputLocationAndLibraryTests
         using var library = new LibraryViewModel(catalog);
 
         TestAssert.Equal(
-            3,
+            4,
             library.OrganizationOptions.Count,
-            "Library must expose focused date, folder, and project organization choices.");
+            "Library must expose date, folder, project, and game organization choices.");
         TestAssert.Equal(
             2,
             library.Items.Select(static item => item.OrganizationGroup).Distinct().Count(),

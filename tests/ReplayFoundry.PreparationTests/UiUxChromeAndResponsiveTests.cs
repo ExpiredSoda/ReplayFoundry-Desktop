@@ -1524,8 +1524,8 @@ internal static partial class UiUxApplicationSurfaceTests
                 setup.NextCommand.Execute(null);
                 Dispatcher.CurrentDispatcher.Invoke(static () => { }, DispatcherPriority.ContextIdle);
                 window.UpdateLayout();
-                TestAssert.Equal(GenerationSetupStep.MomentGuidance, setup.CurrentStep,
-                    "The fixture must navigate to the actual Priority Moments step.");
+                TestAssert.Equal(GenerationSetupStep.ClipGoals, setup.CurrentStep,
+                    "The consolidated wizard navigates from Source and game to Goal and style.");
                 TestAssert.True(scroll.ScrollableHeight > 0d && scroll.VerticalOffset < 0.5d,
                     "The next scrollable step must open at its title and explanation, not at the previous step's offset.");
             }

@@ -46,13 +46,16 @@ public static class StudioPlatformExportPackageWriter
             var files = new { video = Path.GetRelativePath(supporting, path).Replace('\\', '/'), subtitlesSrt = ExistingSupport(".srt"), subtitlesVtt = ExistingSupport(".vtt"), thumbnail = ExistingSupport(".thumbnail.jpg"),
                 originalTimeline = "source-cuts.otio", renderedTimeline = "rendered.otio" };
             bool montage = project.Mode == GenerationMode.Montage;
+            var copy = montage ? (project.IsMontageMetadataCurrent ? project.MontageMetadata : null) : clips[0].EditorialMetadata;
             var document = new
             {
                 schemaVersion = 1, projectId = project.Id, platforms, mode = montage ? "montage" : "individual",
                 files, durationSeconds = clips.Sum(static asset => asset.Duration.TotalSeconds),
-                title = montage ? null : clips[0].EditorialMetadata?.Title,
-                description = montage ? null : clips[0].EditorialMetadata?.Description,
-                tags = montage ? null : clips[0].EditorialMetadata?.Tags,
+                title = copy?.Title,
+                description = copy?.Description,
+                tags = copy?.Tags,
+                montageStyle = montage ? project.MontageStyle.ToString() : null,
+                sequence = montage ? project.MontageBeats : null,
                 requiresPublishingReview = true,
                 clips = clips.Select(static asset => new
                 {
@@ -75,7 +78,13 @@ public static class StudioPlatformExportPackageWriter
             if (files.subtitlesSrt is not null) readable.Append("Subtitles (SRT): ").AppendLine(files.subtitlesSrt);
             if (files.subtitlesVtt is not null) readable.Append("Subtitles (WebVTT): ").AppendLine(files.subtitlesVtt);
             if (files.thumbnail is not null) readable.Append("Thumbnail: ").AppendLine(files.thumbnail);
-            if (montage) readable.AppendLine().AppendLine("This montage combines the clips below. Write a title and description that describe the whole montage before uploading; the retained clip metadata is provided for reference.");
+            if (montage)
+            {
+                readable.AppendLine().AppendLine($"Montage style: {project.MontageStyle}. Separate cuts do not imply an uninterrupted encounter.");
+                if (copy is null) readable.AppendLine("Write or regenerate the whole-montage copy in Studio; any earlier wording is missing or stale for this arrangement.");
+                else readable.AppendLine().AppendLine("## Whole montage").AppendLine().AppendLine(copy.Title)
+                    .AppendLine().AppendLine(copy.Description).AppendLine().AppendLine(string.Join(", ", copy.Tags));
+            }
             foreach (GenerationOutputAsset asset in clips)
             {
                 if (montage) readable.AppendLine().Append("## Clip ").AppendLine(asset.Rank.ToString(CultureInfo.InvariantCulture));

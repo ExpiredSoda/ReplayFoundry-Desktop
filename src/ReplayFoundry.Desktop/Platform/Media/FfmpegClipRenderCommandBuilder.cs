@@ -72,7 +72,9 @@ internal static class FfmpegClipRenderCommandBuilder
         double videoEffectIntensityPercent = 0,
         IReadOnlyList<StudioGraphicOverlay>? graphicOverlays = null,
         StudioRenderSettings? renderSettings = null,
-        string? timedTextFileName = null)
+        string? timedTextFileName = null,
+        double audioEdgeSeconds = 0,
+        double videoEdgeSeconds = 0)
     {
         ArgumentNullException.ThrowIfNull(media);
         ArgumentNullException.ThrowIfNull(profile);
@@ -118,6 +120,14 @@ internal static class FfmpegClipRenderCommandBuilder
         }
 
         TimeSpan clipDuration = sourceEnd - sourceStart;
+        if (!double.IsFinite(audioEdgeSeconds) || audioEdgeSeconds is < 0 or > .05)
+            throw new ArgumentOutOfRangeException(nameof(audioEdgeSeconds));
+        if (!double.IsFinite(videoEdgeSeconds) || videoEdgeSeconds is < 0 or > .2)
+            throw new ArgumentOutOfRangeException(nameof(videoEdgeSeconds));
+        double videoEdge = Math.Min(videoEdgeSeconds, clipDuration.TotalSeconds / 4);
+        string videoJoin = videoEdge > 0 ?
+            $"fade=t=in:st=0:d={videoEdge.ToString("0.#####", CultureInfo.InvariantCulture)}," +
+            $"fade=t=out:st={(clipDuration.TotalSeconds - videoEdge).ToString("0.#####", CultureInfo.InvariantCulture)}:d={videoEdge.ToString("0.#####", CultureInfo.InvariantCulture)}," : "";
         string start = Seconds(sourceStart);
         string duration = Seconds(clipDuration);
         int videoBitRate = CalculateVideoBitRate(profile);
@@ -136,7 +146,7 @@ internal static class FfmpegClipRenderCommandBuilder
             $"fps={profile.FfmpegFrameRate}:start_time=0:eof_action=pass," +
             BuildVideoEffectFilter(
                 videoEffect,
-                videoEffectIntensityPercent) +
+                videoEffectIntensityPercent) + videoJoin +
             (subtitleFileName is null
                 ? string.Empty
                 : $"ass=filename='{subtitleFileName}',") +
@@ -176,7 +186,7 @@ internal static class FfmpegClipRenderCommandBuilder
         {
             videoInput = FfmpegStudioCompositionGraph.AppendVideo(filterGraph, media, profile, renderSettings, sourceStart);
             filter = $"fps={profile.FfmpegFrameRate}:start_time=0:eof_action=pass," +
-                BuildVideoEffectFilter(videoEffect, videoEffectIntensityPercent) +
+                BuildVideoEffectFilter(videoEffect, videoEffectIntensityPercent) + videoJoin +
                 (subtitleFileName is null ? string.Empty : $"ass=filename='{subtitleFileName}',") +
                 (timedTextFileName is null ? string.Empty : $"ass=filename='{timedTextFileName}',") +
                 "format=yuv420p";
@@ -223,6 +233,21 @@ internal static class FfmpegClipRenderCommandBuilder
                 "duration=longest:dropout_transition=0:" +
                 "normalize=0," +
                 "alimiter=limit=0.95:level=disabled:latency=1[aout]");
+        }
+        if (audioEdgeSeconds > 0)
+        {
+            string audioInput = customAudioMap ?? (audioStreamCount switch
+            {
+                0 => $"[{overlays.Length + 1}:a:0]",
+                1 => $"[0:{media.AudioStreams[0].Index}]",
+                _ => "[aout]",
+            });
+            if (!audioInput.StartsWith('[')) audioInput = "[" + audioInput + "]";
+            double edge = Math.Min(audioEdgeSeconds, clipDuration.TotalSeconds / 4);
+            filterGraph.Add(audioInput + "afade=t=in:st=0:d=" + edge.ToString("0.#####", CultureInfo.InvariantCulture) +
+                ",afade=t=out:st=" + (clipDuration.TotalSeconds - edge).ToString("0.#####", CultureInfo.InvariantCulture) +
+                ":d=" + edge.ToString("0.#####", CultureInfo.InvariantCulture) + "[ajoin]");
+            customAudioMap = "[ajoin]";
         }
         if (filterGraph.Count > 0)
         {

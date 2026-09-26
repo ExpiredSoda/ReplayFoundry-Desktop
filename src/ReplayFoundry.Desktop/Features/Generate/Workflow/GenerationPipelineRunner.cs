@@ -345,10 +345,24 @@ internal sealed class GenerationPipelineRunner : IGenerationRunner
                 hiddenMoments);
             string outputDirectory =
                 _outputPathProvider.CreateOutputDirectoryPath(moments);
-            _outputSink?.Publish(
-                GenerationOutputProject.FromResult(
-                    result,
-                    outputDirectory));
+            GenerationOutputProject project = GenerationOutputProject.FromResult(result, outputDirectory);
+            if (project.Mode == ModeSelection.GenerationMode.Montage &&
+                request.SetupOptions.MetadataAuthoringMode == GenerationMetadataAuthoringMode.AiRequired)
+            {
+                progress.Report(new GenerationProgressUpdate("Writing the montage title and description",
+                    "Checking the completed sequence against the evidence for every section.", isIndeterminate: true));
+                try
+                {
+                    var copy = await _editorialMetadata.GenerateMontageAsync(project, cancellationToken);
+                    if (copy is not null) project = project.WithMontageMetadata(copy, project.MontageFingerprint);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    // Retain the editable sequence if a writer rejects it; missing copy is explicit in Studio and export.
+                    Platform.Diagnostics.SafeDiagnosticTrace.Write("Whole-montage wording was not accepted", exception);
+                }
+            }
+            _outputSink?.Publish(project);
             return result;
         }
         finally

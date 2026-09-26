@@ -97,6 +97,27 @@ public sealed class ClipGoalsStepViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public bool IsMontage => _draft.Request.Mode == GenerationMode.Montage;
+    public IReadOnlyList<Handoff.MontageStyle> MontageStyles { get; } = Enum.GetValues<Handoff.MontageStyle>();
+    public Handoff.MontageStyle SelectedMontageStyle
+    {
+        get => _draft.MontageStyle;
+        set
+        {
+            if (!Enum.IsDefined(value) || value == _draft.MontageStyle) return;
+            _draft.MontageStyle = value;
+            MaximumClipDurationSeconds = Handoff.MontageSequencePlanner.SuggestedSeconds(value);
+            SelectedIntentOption = IntentOptions.Single(option => option.Value == (value switch
+            {
+                Handoff.MontageStyle.Impact => GenerationMomentIntent.Action,
+                Handoff.MontageStyle.Banter => GenerationMomentIntent.Humor,
+                _ => GenerationMomentIntent.Discovery,
+            }));
+            OnPropertyChanged(); OnPropertyChanged(nameof(MontageStyleDescription));
+        }
+    }
+    public string MontageStyleDescription => Handoff.MontageSequencePlanner.Describe(SelectedMontageStyle);
+
     public IReadOnlyList<SelectionOption<GenerationMomentIntent>> IntentOptions { get; } =
     [
         new(GenerationMomentIntent.Any, "Any strong moment", "Discover a balanced range of moments."),

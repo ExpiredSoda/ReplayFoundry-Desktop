@@ -200,6 +200,12 @@ internal static class ApplicationCompositionRoot
                 experience,
                 tasteInteractions));
         if (publish.Publishing is { } publishing) tasteInteractions?.ImportPublishHistory(publishing.History);
+        var browsePreferences = new Platform.Storage.JsonBrowsePreferencesStore();
+        primaryFeatures.Library.RestoreBrowsePreferences(browsePreferences);
+        publish.ViewModel.RestoreBrowsePreferences(browsePreferences);
+        primaryFeatures.Library.UpdatePublicationHistory(publish.ViewModel.PublicationHistory);
+        publish.ViewModel.PublicationHistoryChanged += (_, _) =>
+            primaryFeatures.Library.UpdatePublicationHistory(publish.ViewModel.PublicationHistory);
         DiagnosticReportingServices diagnostics =
             DiagnosticReportingComposition.Create();
         var settings = SettingsFeatureComposition.Create(

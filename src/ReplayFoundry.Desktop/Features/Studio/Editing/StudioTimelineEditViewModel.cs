@@ -11,7 +11,7 @@ public sealed class StudioTimelineEditViewModel : INotifyPropertyChanged
     private readonly IGenerationOutputEditor? _editor;
     private readonly IGenerationTimelineEditor? _timeline;
     private readonly Func<bool> _hasNoPendingDraft;
-    private readonly DelegateCommand _split, _earlier, _later;
+    private readonly DelegateCommand _split, _earlier, _later, _arrange;
     private GenerationOutputProject? _project;
     private GenerationOutputAsset? _asset;
     private bool _busy;
@@ -21,8 +21,15 @@ public sealed class StudioTimelineEditViewModel : INotifyPropertyChanged
         _split = new DelegateCommand(Split, () => CanEdit);
         _earlier = new DelegateCommand(() => Move(-1), () => CanEdit && _asset!.Rank > 1);
         _later = new DelegateCommand(() => Move(1), () => CanEdit && _asset!.Rank < _project!.Assets.Count);
+        _arrange = new DelegateCommand(() => Change(() => _timeline!.ArrangeMontage(_project!.Id, SelectedMontageStyle)), () => CanEdit && IsMontage);
     }
     public event PropertyChangedEventHandler? PropertyChanged;
+    public bool IsMontage => Mode == GenerationMode.Montage;
+    public IReadOnlyList<MontageStyle> MontageStyles { get; } = Enum.GetValues<MontageStyle>();
+    public MontageStyle SelectedMontageStyle { get; set; }
+    public string MontageGuidance => MontageSequencePlanner.Describe(_project?.MontageStyle ?? MontageStyle.Impact);
+    public IReadOnlyList<MontageBeat> Sequence => _project?.MontageBeats ?? [];
+    public ICommand ArrangeMontageCommand => _arrange;
     public bool CanEdit => !_busy && _timeline is not null && _asset is not null && _project?.IsFinalized == false;
     public IReadOnlyList<GenerationMode> Modes { get; } = [GenerationMode.IndividualClips, GenerationMode.Montage];
     public string Summary => _project is null ? "Choose a clip." :
@@ -51,6 +58,8 @@ public sealed class StudioTimelineEditViewModel : INotifyPropertyChanged
     {
         if (_asset?.Id != asset?.Id || _project?.Id != project?.Id || SplitOffsetSeconds >= asset?.Duration.TotalSeconds)
             SplitOffsetSeconds = Math.Round((asset?.Duration.TotalSeconds ?? 0) / 2, 3);
+        if (_project?.Id != project?.Id || _project?.MontageStyle != project?.MontageStyle)
+            SelectedMontageStyle = project?.MontageStyle ?? MontageStyle.Impact;
         _project = project; _asset = asset; Notify();
     }
     public void SetHostBusy(bool busy) { _busy = busy; Notify(); }
@@ -76,5 +85,6 @@ public sealed class StudioTimelineEditViewModel : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new(string.Empty));
         _split.RaiseCanExecuteChanged(); _earlier.RaiseCanExecuteChanged(); _later.RaiseCanExecuteChanged();
+        _arrange.RaiseCanExecuteChanged();
     }
 }

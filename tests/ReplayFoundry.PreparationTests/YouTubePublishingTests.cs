@@ -164,7 +164,8 @@ internal static partial class YouTubePublishingTests
                 _ => CreateHistoryEntry(
                     index,
                     YouTubePublishOutcome.Published,
-                    now.AddDays(-index)),
+                    now.AddDays(-index)).WithRemoteStatus(YouTubeRemoteVideoStatus.Exists, now,
+                        new("channel", YouTubeVideoVisibility.Public, "processed", "succeeded", null)),
             })
             .Reverse()
             .ToArray();
@@ -1959,11 +1960,13 @@ internal static partial class YouTubePublishingTests
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlySet<string>> GetExistingVideoIdsAsync(
+        public Task<IReadOnlyDictionary<string, YouTubeRemoteVideoDetails>> GetVideoStatusesAsync(
             string accessToken,
             IReadOnlyList<string> videoIds,
             CancellationToken cancellationToken) =>
-            Task.FromResult(ExistingVideoIds);
+            Task.FromResult<IReadOnlyDictionary<string, YouTubeRemoteVideoDetails>>(
+                ExistingVideoIds.ToDictionary(static id => id,
+                    static _ => new YouTubeRemoteVideoDetails(null, null, null, null, null)));
     }
 
     private sealed class FixedCatalog(LibraryMediaAsset asset) : ILibraryCatalog

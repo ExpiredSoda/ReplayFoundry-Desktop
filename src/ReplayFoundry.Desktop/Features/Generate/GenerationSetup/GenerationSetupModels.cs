@@ -198,7 +198,8 @@ public sealed class GenerationSetupOptions
         TimeSpan? maximumClipDuration = null,
         GenerationMetadataAuthoringMode metadataAuthoringMode =
             GenerationMetadataAuthoringMode.AiRequired,
-        GenerationDiscoveryIntent? discoveryIntent = null)
+        GenerationDiscoveryIntent? discoveryIntent = null,
+        ReplayFoundry.Desktop.Features.Generate.Handoff.MontageStyle montageStyle = ReplayFoundry.Desktop.Features.Generate.Handoff.MontageStyle.Impact)
     {
         if (!Enum.IsDefined(typeof(GenerationMode), mode))
         {
@@ -302,6 +303,8 @@ public sealed class GenerationSetupOptions
         }
 
         Mode = mode;
+        if (!Enum.IsDefined(montageStyle)) throw new ArgumentOutOfRangeException(nameof(montageStyle));
+        MontageStyle = montageStyle;
         DetectionMethod = detectionMethod;
         AudioSelectionMode = audioSelectionMode;
         DesiredResultCount = desiredResultCount;
@@ -320,6 +323,8 @@ public sealed class GenerationSetupOptions
     }
 
     public GenerationMode Mode { get; }
+
+    public ReplayFoundry.Desktop.Features.Generate.Handoff.MontageStyle MontageStyle { get; }
 
     public DetectionMethod DetectionMethod { get; }
 

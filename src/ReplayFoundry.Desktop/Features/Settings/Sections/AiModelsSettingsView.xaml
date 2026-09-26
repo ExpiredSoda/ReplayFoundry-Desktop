@@ -13,7 +13,7 @@
                 Margin="0,6,0,0"
                 Style="{DynamicResource Text.Body}"
                 TextWrapping="Wrap"
-                Text="Choose how Replay Foundry finds your moments and writes about them. All learning stays on this PC." />
+                Text="General AI finds moments and writes copy even before you train anything. Your optional personal models learn separately from explicit feedback, on this PC." />
             <Border
                 Margin="0,16,0,0"
                 Style="{DynamicResource Control.CanvasInsetCard}"
@@ -50,6 +50,8 @@
                         Style="{DynamicResource Text.Meta}"
                         TextWrapping="Wrap"
                         AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding EvidenceSummary}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding QualificationSummary}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
             <Border
@@ -94,13 +96,22 @@
                         Margin="0,5,0,0"
                         Style="{DynamicResource Text.Meta}"
                         TextWrapping="Wrap"
-                        Text="Optional, off by default. Uses wording you save or mark reviewed in Studio. Clip likes do not approve wording." />
+                        ><Run Text="Optional, off by default. Explicit wording edits and approvals teach your writing style. " />
+                        <Run Text="Clip likes, renders and uploads do not approve the wording. " />
+                        <Run Text="Training requires 64 eligible examples from 6 recordings, followed by independent qualification." /></TextBlock>
                     <TextBlock
                         Margin="0,5,0,0"
                         Foreground="{DynamicResource Brush.StatusInfo}"
                         TextWrapping="Wrap"
                         Text="{Binding EditorialMetadataPreferenceLearningNotice}"
                         Visibility="{Binding HasEditorialMetadataPreferenceLearningNotice, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+            <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}" DataContext="{Binding WritingLearning}">
+                <StackPanel>
+                    <TextBlock Text="{Binding State}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.BrandCyan}" />
+                    <TextBlock Margin="0,5,0,8" Text="{Binding Summary}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
+                    <Button HorizontalAlignment="Left" Content="Refresh writing feedback" Command="{Binding RefreshCommand}" />
                 </StackPanel>
             </Border>
             <Expander

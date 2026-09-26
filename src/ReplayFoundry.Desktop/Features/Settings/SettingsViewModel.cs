@@ -337,6 +337,12 @@ public sealed class SettingsViewModel :
     public BugReportSettingsViewModel BugReports { get; }
     public LocalDataSettingsViewModel LocalData { get; }
     public Personalization.TasteLearningSettingsViewModel Learning { get; private set; } = new(null);
+    public Personalization.WriterLearningOverviewViewModel? WritingLearning { get; private set; }
+    internal void AttachWritingLearning(Func<Personalization.WriterLearningOverview> read)
+    {
+        WritingLearning = new(read); OnPropertyChanged(nameof(WritingLearning));
+        WritingLearning.RefreshCommand.Execute(null);
+    }
     internal void AttachTasteLearning(Media.Intelligence.Learning.ITasteLearningService? learning)
     {
         Learning.Dispose(); Learning = new(learning); OnPropertyChanged(nameof(Learning));

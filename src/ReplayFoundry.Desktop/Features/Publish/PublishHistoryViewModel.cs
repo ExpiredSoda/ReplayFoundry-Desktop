@@ -281,7 +281,7 @@ public sealed class PublishHistoryViewModel : ObservableObject
             _selectedSortOrder,
             _visibleLimit,
             localToday,
-            _timeZone);
+            _timeZone, _utcNow());
         RaiseProjectionChanged();
     }
 

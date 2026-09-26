@@ -64,6 +64,7 @@ internal static class Program
             .. FfmpegVideoPreviewFrameProviderTests.GetTests(),
             .. UiUxApplicationSurfaceTests.GetTests(),
             .. YouTubePublishingTests.GetTests(),
+            .. PublicationWorkflowTests.GetTests(),
             .. YouTubeAnalyticsTests.GetTests(),
             .. ProductionHandoffLifecycleTests.GetTests(),
             .. OutputLocationAndLibraryTests.GetTests(),
