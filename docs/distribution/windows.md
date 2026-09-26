@@ -76,6 +76,11 @@ runtime packs remain available.
 
 ## Build runtime packs
 
+Beta 5.7 changes the desktop Publish workspace only. Reuse the exact Beta 5.6
+runtime pack build index and Advanced catalog, including their download URLs
+and hashes. Do not rebuild or republish the unchanged AI archives for this UI
+release; existing matching installations should remain current.
+
 Beta 5.6 requires visual runtime `0.8.32` and model pack `4.0.28` as a matching
 set. The weights remain Qwen3-VL 4B Instruct; the model pack carries a fresh
 structured-decoding qualification lock for CPython `3.13.15`, PyTorch

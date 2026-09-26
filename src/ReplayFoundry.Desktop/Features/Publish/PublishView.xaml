@@ -7,33 +7,28 @@
     xmlns:sections="clr-namespace:ReplayFoundry.Desktop.Features.Publish.Sections"
     Background="Transparent">
     <controls:WorkspaceScrollViewport CueText="More publishing activity below">
-        <Grid MaxWidth="1600" Margin="8" HorizontalAlignment="Stretch">
+        <Grid x:Name="WorkspaceLayout" MaxWidth="1600" Margin="8" HorizontalAlignment="Stretch">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition x:Name="ActivityRow" Height="136" />
             </Grid.RowDefinitions>
             <sections:PublishDestinationsView />
-            <ListBox Grid.Row="1" Margin="0,12,0,0" ItemsSource="{Binding PublishViews}" SelectedItem="{Binding SelectedPublishView}"
-                Style="{DynamicResource Control.TabList}" AutomationProperties.Name="Publishing view">
-                <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
-            </ListBox>
-            <AdornerDecorator Grid.Row="2" Margin="0,12,0,0">
+            <AdornerDecorator Grid.Row="1" Margin="0,12,0,0">
                 <Grid x:Name="AdaptiveLayout">
                     <Grid.RowDefinitions>
-                        <RowDefinition x:Name="PrimaryPublishRow" Height="Auto" />
+                        <RowDefinition x:Name="PrimaryPublishRow" Height="*" />
                         <RowDefinition x:Name="SecondaryPublishRow" Height="0" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="LibraryPublishColumn" Width="0.9*" />
-                        <ColumnDefinition x:Name="CalendarPublishColumn" Width="1.1*" />
+                        <ColumnDefinition x:Name="LibraryPublishColumn" Width="0.85*" />
+                        <ColumnDefinition x:Name="CalendarPublishColumn" Width="1.15*" />
                     </Grid.ColumnDefinitions>
                     <sections:PublishLibraryBrowserView x:Name="LibraryBrowser" Margin="0,0,6,0" />
                     <sections:PublishCalendarView x:Name="PublishCalendar" Grid.Column="1" Margin="6,0,0,0" />
                 </Grid>
             </AdornerDecorator>
-            <sections:PublishQueueHistoryView Grid.Row="3" Margin="0,12,0,0" />
+            <sections:PublishQueueHistoryView Grid.Row="2" Margin="0,12,0,0" />
         </Grid>
     </controls:WorkspaceScrollViewport>
 </UserControl>

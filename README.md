@@ -4,9 +4,9 @@ A Windows app for finding moments in gameplay recordings, editing clips, styling
 
 ## Download and install
 
-The current public release is **[1.0.0 Beta 5.6](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.6)**.
+The current public release is **[1.0.0 Beta 5.7](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.7)**.
 
-- [Download the publisher-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.5.6/ReplayFoundry-1.0.0-beta.5.6-Base-win-x64-setup.exe).
+- [Download the publisher-signed Windows x64 installer](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/download/v1.0.0-beta.5.7/ReplayFoundry-1.0.0-beta.5.7-Base-win-x64-setup.exe).
 - Windows 10 or 11, x64. Setup installs for the current user.
 - Advanced AI is optional and unchecked by default. Setup shows its download size before installation; the qualified visual AI configuration uses a compatible NVIDIA GPU with 16 GB VRAM. Readiness also depends on available memory.
 - The Base app works without the optional AI package. Use Settings or the installer to add, repair, or remove optional capabilities.
@@ -17,7 +17,7 @@ The current public release is **[1.0.0 Beta 5.6](https://github.com/ExpiredSoda/
 
 **Beta 5 adds** full-recording timelines, visually reviewed Balanced AI picks, draggable clip ranges, clearer Studio controls, preview-area ratings, animated caption previews, and a local personal learning model in official downloads. Titles and descriptions use refreshed scene evidence, and remembered game names require confirmation for each recording. First-time visual analysis takes longer; completed reviews are reused. New profiles start without trained preferences, and independent quality checks are required before personal ranking activates. Review generated captions and wording before publishing. [CHANGELOG.md](CHANGELOG.md) records the release scope.
 
-**Beta 5.6** adds shared publication badges, persistent Library organization, a three-stage Generate flow, and Impact/Banter/Tension montage styles. Studio exposes Angle, Tone and wording locks; independent source text reaches the writer, and failed rerolls keep the saved copy. Learning settings explain what is collecting feedback and what has qualified. Update Advanced AI to get the matching writing checks. New models and automatic personal training are not implied by this update.
+**Beta 5.7** brings Publish back into one workspace: a bounded clip list, an always-visible month calendar and daily agenda, and a compact upload/activity strip. Select a clip to see its actions in one place; publication badges and explicit repost preparation remain available. Calendar refresh preserves the selected day. The same Beta 5.6 AI packages remain compatible, so an up-to-date Advanced AI installation needs no further model download. Saved projects, feedback, montage styles and writing controls are retained.
 
 ## Prepare and publish
 

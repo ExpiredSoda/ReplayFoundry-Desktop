@@ -462,8 +462,8 @@ internal static partial class UiUxApplicationSurfaceTests
     private static Task PublishCalendarDefaultsWork()
     {
         var publish = new PublishViewModel();
-        TestAssert.Equal("Queue", publish.SelectedPublishView, "Publishing opens with the unfinished work queue.");
-        TestAssert.Equal(7, publish.CalendarDays.Count, "The alternative calendar opens on the current week.");
+        TestAssert.Equal(PublishCalendarMode.Month, publish.SelectedCalendarMode, "The unified workspace opens on the current month.");
+        TestAssert.Equal(42, publish.CalendarDays.Count, "The visible calendar should cover complete weeks across month boundaries.");
         TestAssert.True(publish.SelectedCalendarDay is not null, "A planning day should be selected by default.");
         TestAssert.False(publish.CreatePlanCommand.CanExecute(null), "Scheduling must remain disabled until a finished Library video is selected.");
         return Task.CompletedTask;
@@ -739,7 +739,7 @@ internal static partial class UiUxApplicationSurfaceTests
             "Publish",
             "PublishView.xaml"));
         int decorator = publishView.IndexOf(
-            "<AdornerDecorator Grid.Row=\"2\"",
+            "<AdornerDecorator Grid.Row=\"1\"",
             StringComparison.Ordinal);
         int library = publishView.IndexOf(
             "<sections:PublishLibraryBrowserView",

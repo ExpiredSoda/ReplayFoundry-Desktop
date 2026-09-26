@@ -19,7 +19,7 @@ internal sealed class PublishCalendarState
     }
 
     public PublishCalendarMode Mode { get; private set; } =
-        PublishCalendarMode.Week;
+        PublishCalendarMode.Month;
     public PublishCalendarPlatform Platform { get; private set; } =
         PublishCalendarPlatform.All;
     public DateTime Anchor { get; private set; }

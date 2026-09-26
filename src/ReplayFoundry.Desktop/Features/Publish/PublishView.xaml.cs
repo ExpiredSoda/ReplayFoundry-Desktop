@@ -19,9 +19,9 @@ public partial class PublishView : UserControl
     public PublishView()
     {
         InitializeComponent();
+        ApplyContentLayout(compact: false);
         SizeChanged += OnSizeChanged;
         Loaded += OnLoaded;
-        Unloaded += (_, _) => { if (DataContext is PublishViewModel model) model.PropertyChanged -= ViewModelChanged; };
     }
 
     public bool IsCompactLayout => (bool)GetValue(IsCompactLayoutProperty);
@@ -35,16 +35,10 @@ public partial class PublishView : UserControl
         UpdateResponsiveState(ActualWidth);
         if (DataContext is PublishViewModel viewModel)
         {
-            viewModel.PropertyChanged -= ViewModelChanged;
-            viewModel.PropertyChanged += ViewModelChanged;
             await viewModel.InitializeAsync();
         }
     }
     private void OnSizeChanged(object sender, SizeChangedEventArgs e) => UpdateResponsiveState(e.NewSize.Width);
-    private void ViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(PublishViewModel.SelectedPublishView)) ApplyContentLayout(IsCompactLayout);
-    }
 
     private void UpdateResponsiveState(double width)
     {
@@ -52,18 +46,21 @@ public partial class PublishView : UserControl
         SetValue(IsCompactLayoutPropertyKey, layout.IsCompact);
         SetValue(IsStandardLayoutPropertyKey, layout.IsStandard);
         SetValue(IsWideLayoutPropertyKey, layout.IsWide);
-        ApplyContentLayout(layout.IsCompact);
+        // Keep both panels together while there is room for readable clip titles and day cells.
+        // On small windows the same controls stack, with bounded lists and page scrolling.
+        ApplyContentLayout(width > 0 && width < 960);
     }
 
     private void ApplyContentLayout(bool compact)
     {
-        bool calendar = (DataContext as PublishViewModel)?.SelectedPublishView == "Calendar";
-        LibraryPublishColumn.Width = new GridLength(calendar && !compact ? .9 : 1, GridUnitType.Star);
-        CalendarPublishColumn.Width = calendar && !compact ? new GridLength(1.1, GridUnitType.Star) : new GridLength(0);
-        SecondaryPublishRow.Height = calendar && compact ? GridLength.Auto : new GridLength(0);
+        LibraryPublishColumn.Width = new GridLength(compact ? 1 : .85, GridUnitType.Star);
+        CalendarPublishColumn.Width = compact ? new GridLength(0) : new GridLength(1.15, GridUnitType.Star);
+        PrimaryPublishRow.Height = compact ? new GridLength(470) : new GridLength(1, GridUnitType.Star);
+        SecondaryPublishRow.Height = compact ? new GridLength(490) : new GridLength(0);
         Grid.SetColumn(PublishCalendar, compact ? 0 : 1); Grid.SetRow(PublishCalendar, compact ? 1 : 0);
-        LibraryBrowser.Visibility = Visibility.Visible;
-        PublishCalendar.Visibility = calendar ? Visibility.Visible : Visibility.Collapsed;
-        LibraryBrowser.Margin = new Thickness(0); PublishCalendar.Margin = new Thickness(0);
+        LibraryBrowser.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 6, 0);
+        PublishCalendar.Margin = compact ? new Thickness(0, 12, 0, 0) : new Thickness(6, 0, 0, 0);
+        ActivityRow.Height = new GridLength(compact ? 260 : 112);
+        WorkspaceLayout.Height = Math.Max(compact ? 1290 : 560, ActualHeight - 48);
     }
 }
