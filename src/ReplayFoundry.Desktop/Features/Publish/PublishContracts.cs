@@ -63,6 +63,7 @@ public sealed record PublishLibraryItem(
     PublicationStatus? Publication = null)
 {
     public string ActionLabel => Publication?.ActionLabel ?? "Prepare";
+    public bool HasRecordedUpload => !string.IsNullOrWhiteSpace(Publication?.VideoUrl);
     public bool HasThumbnail =>
         ThumbnailFullPath is not null &&
         File.Exists(ThumbnailFullPath);

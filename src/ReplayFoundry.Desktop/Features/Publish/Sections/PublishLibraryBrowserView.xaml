@@ -128,21 +128,21 @@
                                         <TextBlock Margin="0,2,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding CollectionDetail}" TextTrimming="CharacterEllipsis" />
                                         <controls:PublicationBadge Margin="0,5,0,0" DataContext="{Binding Publication}" />
                                     </StackPanel>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                     <Button
-                                        Grid.Column="2"
                                         VerticalAlignment="Center"
                                         AutomationProperties.Name="{Binding ActionLabel}"
                                         ToolTip="{Binding Publication.Detail}"
                                         Command="{Binding DataContext.PrepareAssetCommand, ElementName=Root}"
                                         CommandParameter="{Binding Asset}"
                                         Content="{Binding ActionLabel}"
-                                        Style="{DynamicResource Control.GhostButton}" Tag="{Binding DataContext, ElementName=Root}">
-                                        <Button.ContextMenu>
-                                            <ContextMenu DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
-                                                <MenuItem Header="Prepare another upload" Command="{Binding Tag.PrepareRepostCommand}" CommandParameter="{Binding DataContext.Asset}" />
-                                            </ContextMenu>
-                                        </Button.ContextMenu>
-                                    </Button>
+                                        Style="{DynamicResource Control.GhostButton}" />
+                                    <Button Margin="0,3,0,0" Content="Prepare repost"
+                                        ToolTip="Prepare a separate upload of this video. You will review it before uploading."
+                                        Command="{Binding DataContext.PrepareRepostCommand, ElementName=Root}" CommandParameter="{Binding Asset}"
+                                        Visibility="{Binding HasRecordedUpload, Converter={StaticResource BoolToVisibility}}"
+                                        Style="{DynamicResource Control.GhostButton}" />
+                                    </StackPanel>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
