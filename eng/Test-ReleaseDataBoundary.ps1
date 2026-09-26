@@ -1,9 +1,18 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Repository', 'Publish', 'RuntimePacks', 'Installer', 'DistributionAssets')]
+    [ValidateSet(
+        'Repository',
+        'Publish',
+        'RuntimePacks',
+        'Installer',
+        'SourceExport',
+        'DistributionAssets')]
     [string]$Profile = 'Repository',
+
     [string[]]$Path,
+
     [string]$RuntimePackBuildRoot,
+
     [string]$AdvancedCatalogPath
 )
 
@@ -11,53 +20,242 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$violations = [Collections.Generic.List[string]]::new()
 $forbiddenFileNames = @(
-    'RecentGenerationProjects.json', 'GenerationAudioRoles.json',
-    'studio-project.json', 'studio-project.json.bak', 'library-catalog.json',
-    'game-context-memory.json', 'clip-preferences.json',
-    'taste-state.json', 'taste-training-report.json', 'taste-evaluation-report.json',
+    'RecentGenerationProjects.json',
+    'GenerationAudioRoles.json',
+    'studio-project.json',
+    'studio-project.json.bak',
+    'library-catalog.json',
+    'game-context-memory.json',
+    'clip-preferences.json',
+    'taste-state.json',
+    'taste-training-report.json',
+    'taste-evaluation-report.json',
     'editorial-metadata-preference-consent.json',
-    'editorial-metadata-preferences.json', 'editorial-reroll-preference.json',
-    'bug-report-consent.json', 'generation-output-location.json',
-    'hidden-moment-decisions.json', 'studio-candidate-decisions.json',
-    'youtube-connection-permission.json', 'youtube-publish-drafts.json',
-    'youtube-publish-history.json', 'youtube-publish-preferences.json',
+    'editorial-metadata-preferences.json',
+    'editorial-reroll-preference.json',
+    'bug-report-consent.json',
+    'generation-output-location.json',
+    'hidden-moment-decisions.json',
+    'research-feedback.json',
+    'research-participation.json',
+    'studio-candidate-decisions.json',
+    'youtube-connection-permission.json',
+    'youtube-publish-drafts.json',
+    'youtube-publish-history.json',
+    'youtube-publish-preferences.json',
     'pending-local-data-reset.json'
     'updates-eddsa.dpapi'
 )
 $forbiddenMediaExtensions = @('.avi', '.m4a', '.mkv', '.mov', '.mp3', '.mp4', '.wav', '.webm')
 $textExtensions = @(
-    '.cs', '.css', '.html', '.js', '.json', '.md', '.mjs', '.props',
+    '.cs', '.css', '.html', '.js', '.json', '.map', '.md', '.mjs', '.props',
     '.ps1', '.psd1', '.py', '.svg', '.targets', '.ts', '.tsx', '.txt',
-    '.xaml', '.xml', '.yaml', '.yml'
+    '.vtt', '.xaml', '.xml', '.yaml', '.yml'
 )
+$localStateSchemas = @(
+    'replayfoundry-game-knowledge-snapshot-',
+    'studio-project-1.',
+    'user-report-1.0',
+    'clip-preference-store-1.0',
+    'foundry-taste-local-state-1',
+    'foundry-taste-example-1',
+    'foundry-taste-checkpoint-1',
+    'foundry-taste-training-1',
+    'replayfoundry-editorial-reroll-preference-1.0',
+    'editorial-metadata-preference-store-1.0',
+    'editorial-metadata-preference-learning-consent-1.0',
+    'replayfoundry-generation-output-location-1.0',
+    'replayfoundry-game-context-memory-1.',
+    'replayfoundry-hidden-moment-decisions-1.0',
+    'replayfoundry-studio-candidate-decisions-1.0',
+    'replayfoundry-library-catalog-1.',
+    'replayfoundry-youtube-connection-permission-1.0',
+    'replayfoundry-youtube-publish-drafts-1.',
+    'replayfoundry-youtube-publish-history-1.',
+    'replayfoundry-youtube-publish-preferences-1.0',
+    'bug-report-consent-1.0',
+    'research-participation-1.0',
+    'local-data-reset-1.0'
+)
+$violations = [Collections.Generic.List[string]]::new()
+$personalPathFragments = @(
+    [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile),
+    $env:USERPROFILE
+) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+$configurationPathFragments = @($repositoryRoot)
+$sourceExportTopologyNames = @(
+    'UmVwbGF5Rm91bmRyeS5EZXZlbG9wZXJUb29scw=='
+    'UmVwbGF5Rm91bmRyeS5FdmlkZW5jZVRlc3Rz'
+    'RGV2ZWxvcGVyIENvbnNvbGU='
+    'VmlzdWFsU2VtYW50aWNSZXNlYXJjaA=='
+    'RXhwb3J0LVJlcGxheUZvdW5kcnlQcm9kdWN0aW9uUmVwb3NpdG9yeQ=='
+    'Q29weS1SZXBsYXlGb3VuZHJ5RGV2ZWxvcG1lbnRTdGF0ZQ=='
+    'cXdlbjNfdmxfZGV2ZWxvcG1lbnRfaG9zdC5weQ=='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZGV2ZWxvcG1lbnRfY2xpLnB5'
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZGV2ZWxvcG1lbnRfY29tbWFuZHMucHk='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvc2FtcGxpbmdfYXVkaXQucHk='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvc2FtcGxpbmdfY2FwdHVyZS5weQ=='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvc2FtcGxpbmdfdGltaW5nLnB5'
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZWRpdG9yaWFsL2NvbnN0cmFpbmVkX2RldmVsb3BtZW50X2NvbW1hbmQucHk='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZWRpdG9yaWFsL2NvbnN0cmFpbmVkX3BpbG90X2NvbW1hbmQucHk='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZWRpdG9yaWFsL2RldmVsb3BtZW50X2NvbW1hbmQucHk='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZWRpdG9yaWFsL3BpbG90X2NvbW1hbmQucHk='
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZWRpdG9yaWFsL3BpbG90X3Byb3RvY29sLnB5'
+    'cmVwbGF5Zm91bmRyeV92aXN1YWxfc2VtYW50aWMvZWRpdG9yaWFsL3NhbXBsaW5nX2F1dGhvcml6YXRpb24ucHk='
+    'dGVzdF9xd2VuM192bF9zYW1wbGluZ19hdWRpdC5weQ=='
+    'dGVzdHMvZ2VuZXJhdGVfcHJvbXB0Ml9hdHRlbXB0X2ZpeHR1cmVzLnB5'
+    'dGVzdHMvdGVzdF9kZXZlbG9wbWVudF9ob3N0X3N1cmZhY2UucHk='
+    'dGVzdHMvdGVzdF9xd2VuM192bF9jb25zdHJhaW5lZF9kZXZlbG9wbWVudC5weQ=='
+    'dGVzdHMvdGVzdF9xd2VuM192bF9lZGl0b3JpYWxfY29udHJhY3QucHk='
+    'dGVzdHMvdGVzdF9xd2VuM192bF9lZGl0b3JpYWxfZGV2ZWxvcG1lbnQucHk='
+    'dGVzdHMvdGVzdF9xd2VuM192bF9lZGl0b3JpYWxfcGlsb3QucHk='
+    'dGVzdHMvdGVzdF9xd2VuM192bF90cnVzdGVkX2lkZW50aXR5X2F0dGVtcHQucHk='
+    'VGVzdC1NZWRpYUV2aWRlbmNlQXJjaGl0ZWN0dXJlLnBzMQ=='
+    'VGVzdC1WaXN1YWxTZW1hbnRpY0FyY2hpdGVjdHVyZS5wczE='
+    'VGVzdC1WaXN1YWxTZW1hbnRpY1Byb21wdDJBcmNoaXRlY3R1cmUucHMx'
+    'VGVzdC1WaXN1YWxTZW1hbnRpY1N0cnVjdHVyZWREZWNvZGluZ0FyY2hpdGVjdHVyZS5wczE='
+    'VGVzdC1SZWxlYXNlRGF0YUJvdW5kYXJ5QXJjaGl0ZWN0dXJlLnBzMQ=='
+) | ForEach-Object {
+    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_))
+}
 
-function ConvertTo-PortablePath([string]$Value) {
+function Convert-ToPortablePath([string]$Value) {
     return $Value.Replace('\', '/').TrimStart('/')
 }
 
-function Get-Sha256([string]$Value) {
-    $stream = [IO.FileStream]::new($Value, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+function Test-ForbiddenPath([string]$RelativePath) {
+    $portable = Convert-ToPortablePath $RelativePath
+    $name = [IO.Path]::GetFileName($portable)
+    if ($forbiddenFileNames -contains $name) { return $true }
+    if ([IO.Path]::GetExtension($name) -ieq '.dpapi') { return $true }
+    if ($name -match '(?i)\.taste-(example|model)\.json$') { return $true }
+    if ($portable -match '(?i)(^|/)(Cache/(GameKnowledge|StudioPreview)|Diagnostics/(Outbox|VisualSemanticFailures))(/|$)') {
+        return $true
+    }
+    if ($forbiddenMediaExtensions -contains [IO.Path]::GetExtension($name).ToLowerInvariant()) {
+        return $true
+    }
+    return $false
+}
+
+function Test-LocalStateJson([string]$Text) {
+    foreach ($schema in $localStateSchemas) {
+        if ($Text.Contains($schema, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    return $false
+}
+
+function Get-NormalizedInspectionText([string]$Text) {
+    return $Text.Replace('\\', '\').Replace('/', '\')
+}
+
+function Test-MachineSpecificText(
+    [string]$Text,
+    [string]$RelativePath,
+    [string]$Extension) {
+    $normalized = Get-NormalizedInspectionText $Text
+    foreach ($fragment in $personalPathFragments) {
+        if ($normalized.Contains($fragment, [StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    if ($normalized -match '(?i)\b[A-Z]:\\Users\\[A-Z0-9]{1,6}~[0-9]+(?:\\|\b)') {
+        return $true
+    }
+    if ($Extension -in @('.json', '.props', '.psd1', '.targets') -and
+        $normalized -match '(?i)\bC:\\Users\\[^\\\r\n"'']+') {
+        return $true
+    }
+    if ($Extension -in @('.json', '.props', '.psd1', '.targets')) {
+        foreach ($fragment in $configurationPathFragments) {
+            if ($normalized.Contains($fragment, [StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+    }
+    if ([IO.Path]::GetFileName($RelativePath) -ieq 'launchSettings.json' -and
+        $normalized -match '(?i)\b[A-D]:\\') {
+        return $true
+    }
+    return $false
+}
+
+function Test-ExcludedSourceTopology([string]$Text) {
+    if ($Profile -ne 'SourceExport') { return $false }
+    $portable = Convert-ToPortablePath $Text
+    foreach ($name in $sourceExportTopologyNames) {
+        if ($portable.Contains($name, [StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Add-FileViolation([string]$Container, [string]$RelativePath, [string]$Reason) {
+    $violations.Add("$Container::$((Convert-ToPortablePath $RelativePath)) ($Reason)")
+}
+
+function Test-TextStream(
+    [IO.Stream]$Stream,
+    [string]$Container,
+    [string]$RelativePath,
+    [long]$Length,
+    [string]$Extension) {
+    if ($Length -gt 16MB) {
+        if ($Extension -ieq '.json') {
+            Add-FileViolation $Container $RelativePath 'unexpected oversized JSON'
+        }
+        return
+    }
+    $reader = [IO.StreamReader]::new($Stream, [Text.UTF8Encoding]::new($false), $true, 4096, $true)
+    try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }
+    if ($Extension -ieq '.json' -and (Test-LocalStateJson $text)) {
+        Add-FileViolation $Container $RelativePath 'mutable local-state schema'
+    }
+    if (Test-MachineSpecificText $text $RelativePath $Extension) {
+        Add-FileViolation $Container $RelativePath 'machine-specific absolute path'
+    }
+    if (Test-ExcludedSourceTopology $text) {
+        Add-FileViolation $Container $RelativePath 'excluded source topology'
+    }
+}
+
+function Get-FileSha256([string]$PathValue) {
+    $stream = [IO.FileStream]::new($PathValue, [IO.FileMode]::Open, [IO.FileAccess]::Read,
         [IO.FileShare]::Read, 1048576, [IO.FileOptions]::SequentialScan)
     try { return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) }
     finally { $stream.Dispose() }
 }
 
+function Open-BufferedReleaseArchive([string]$ArchivePath) {
+    $stream = [IO.FileStream]::new($ArchivePath, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+        [IO.FileShare]::Read, 1048576, [IO.FileOptions]::SequentialScan)
+    try { return [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Read, $false) }
+    catch { $stream.Dispose(); throw }
+}
+
+function Get-StreamSha256([IO.Stream]$Stream) {
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        return [Convert]::ToHexString($hasher.ComputeHash($Stream))
+    } finally {
+        $hasher.Dispose()
+    }
+}
+
 function Test-Sha256Equal([string]$Left, [string]$Right) {
-    return -not [string]::IsNullOrWhiteSpace($Left) -and
-        $Left.Equals($Right, [StringComparison]::OrdinalIgnoreCase)
+    return $Left.Equals($Right, [StringComparison]::OrdinalIgnoreCase)
 }
 
 function Resolve-SafeChild([string]$Root, [string]$RelativePath) {
-    $portable = ConvertTo-PortablePath $RelativePath
-    if ([string]::IsNullOrWhiteSpace($portable) -or
+    if ([string]::IsNullOrWhiteSpace($RelativePath) -or
         [IO.Path]::IsPathFullyQualified($RelativePath) -or
-        $portable.Split('/') -contains '..') {
+        (Convert-ToPortablePath $RelativePath).Split('/') -contains '..') {
         throw "A release manifest contains an unsafe relative path: $RelativePath"
     }
     $rootFull = [IO.Path]::GetFullPath($Root).TrimEnd([IO.Path]::DirectorySeparatorChar)
-    $full = [IO.Path]::GetFullPath((Join-Path $rootFull $portable))
+    $full = [IO.Path]::GetFullPath((Join-Path $rootFull $RelativePath))
     if (-not $full.StartsWith(
         $rootFull + [IO.Path]::DirectorySeparatorChar,
         [StringComparison]::OrdinalIgnoreCase)) {
@@ -66,82 +264,46 @@ function Resolve-SafeChild([string]$Root, [string]$RelativePath) {
     return $full
 }
 
-function Assert-NoReparsePoint([string]$FullPath) {
-    $current = [IO.Path]::GetFullPath($FullPath)
-    while (-not [string]::IsNullOrWhiteSpace($current)) {
-        if (Test-Path -LiteralPath $current) {
-            $item = Get-Item -LiteralPath $current -Force
-            if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-                throw "Release inspection cannot traverse a reparse point: $current"
-            }
-        }
-        $parent = [IO.Directory]::GetParent($current)
-        if ($null -eq $parent) { break }
-        $current = $parent.FullName
-    }
-}
-
-function Test-PayloadFile([string]$FullPath, [string]$Container, [string]$RelativePath) {
-    $portable = ConvertTo-PortablePath $RelativePath
-    $name = [IO.Path]::GetFileName($portable)
-    $extension = [IO.Path]::GetExtension($name).ToLowerInvariant()
-    if ($name -in $forbiddenFileNames -or
-        $name -match '(?i)\.taste-(example|model)\.json$' -or
-        $portable -match '(?i)(^|/)(Cache/(GameKnowledge|StudioPreview)|Diagnostics/(Outbox|VisualSemanticFailures))(/|$)' -or
-        $extension -in $forbiddenMediaExtensions) {
-        $violations.Add("$Container::$portable (mutable or captured user payload)")
-        return
-    }
-    if ($extension -notin $textExtensions -or
-        (Get-Item -LiteralPath $FullPath).Length -gt 16MB) { return }
-    $text = [IO.File]::ReadAllText($FullPath)
-    if ($extension -eq '.json' -and $text -match 'foundry-taste-(local-state|example|checkpoint|training)-1') {
-        $violations.Add("$Container::$portable (personal learning data)")
-        return
-    }
-    $userRoots = @(
-        [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile),
-        $env:USERPROFILE
-    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
-    foreach ($userRoot in $userRoots) {
-        if ($text.Contains($userRoot, [StringComparison]::OrdinalIgnoreCase)) {
-            $violations.Add("$Container::$portable (machine-specific absolute path)")
-            break
-        }
-    }
-    if ($text -match '(?i)(-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|github_pat_[0-9A-Za-z_]{20,}|ghp_[0-9A-Za-z]{30,}|client_secret\s*[:=]\s*["''][^"'']+)') {
-        $violations.Add("$Container::$portable (credential-shaped text)")
-    }
-}
-
-function Assert-ManifestFiles(
+function Assert-ManifestFileRecords(
     [string]$Root,
     [object[]]$Records,
     [string[]]$ExcludedRelativePaths) {
     $recordMap = [Collections.Generic.Dictionary[string, object]]::new(
         [StringComparer]::OrdinalIgnoreCase)
     foreach ($record in $Records) {
-        $relative = ConvertTo-PortablePath ([string]$record.path)
+        $relative = Convert-ToPortablePath ([string]$record.path)
         [void](Resolve-SafeChild $Root $relative)
         if (-not $recordMap.TryAdd($relative, $record)) {
             throw "A release manifest contains a duplicate path: $relative"
         }
     }
-    $excluded = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $excluded = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
     foreach ($relative in $ExcludedRelativePaths) { [void]$excluded.Add($relative) }
     $actual = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Force |
-        ForEach-Object { ConvertTo-PortablePath ([IO.Path]::GetRelativePath($Root, $_.FullName)) } |
-        Where-Object { -not $excluded.Contains($_) })
-    if ($actual.Count -ne $recordMap.Count -or
-        @($actual | Where-Object { -not $recordMap.ContainsKey($_) }).Count -ne 0) {
-        throw "Release payload files differ from their manifest under $Root."
+        ForEach-Object {
+            Convert-ToPortablePath ([IO.Path]::GetRelativePath($Root, $_.FullName))
+        } | Where-Object { -not $excluded.Contains($_) })
+    $actualSet = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    foreach ($relative in $actual) { [void]$actualSet.Add($relative) }
+    if ($actualSet.Count -ne $actual.Count) {
+        throw "Release payload contains case-insensitive duplicate paths under $Root."
     }
-    foreach ($relative in $actual) {
-        $record = $recordMap[$relative]
+    if ($actualSet.Count -ne $recordMap.Count -or
+        @($actualSet | Where-Object { -not $recordMap.ContainsKey($_) }).Count -ne 0) {
+        throw "Release payload files differ from their declarative manifest under $Root."
+    }
+    foreach ($relative in $actualSet) {
         $file = Resolve-SafeChild $Root $relative
-        $length = if ($null -ne $record.size) { [long]$record.size } else { [long]$record.byteLength }
-        if ((Get-Item -LiteralPath $file).Length -ne $length -or
-            -not (Test-Sha256Equal (Get-Sha256 $file) ([string]$record.sha256))) {
+        $record = $recordMap[$relative]
+        $expectedLength = if ($null -ne $record.size) {
+            [long]$record.size
+        } else {
+            [long]$record.byteLength
+        }
+        if ((Get-Item -LiteralPath $file).Length -ne $expectedLength -or
+            -not (Test-Sha256Equal (Get-FileSha256 $file) ([string]$record.sha256))) {
             throw "Release payload failed manifest verification: $relative"
         }
     }
@@ -153,26 +315,161 @@ function Assert-PublishManifest([string]$Root) {
         throw "Publish boundary requires release-manifest.json under $Root."
     }
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-    if ($manifest.schemaVersion -ne 'replayfoundry-release-manifest-1.1' -or
-        $manifest.releaseChannel -notin @('Production', 'Development') -or
-        $manifest.dataChannel -ne $manifest.releaseChannel) {
-        throw 'Publish boundary found an unsupported or inconsistent release manifest.'
+    if ($manifest.schemaVersion -ne 'replayfoundry-release-manifest-1.1') {
+        throw 'Publish boundary found an unsupported release manifest.'
     }
-    Assert-ManifestFiles $Root @($manifest.files) @('release-manifest.json')
+    $expectedChannel = if ($manifest.releaseChannel -eq 'Production') {
+        'Production'
+    } elseif ($manifest.releaseChannel -eq 'Development') {
+        'Development'
+    } else {
+        throw 'Publish release channel is invalid.'
+    }
+    if ($manifest.dataChannel -ne $expectedChannel) {
+        throw 'Publish release and mutable-data channels do not match.'
+    }
+    Assert-ManifestFileRecords $Root @($manifest.files) @('release-manifest.json')
+    $manifestFiles = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    foreach ($file in @($manifest.files)) {
+        [void]$manifestFiles.Add((Convert-ToPortablePath ([string]$file.path)))
+    }
+    foreach ($signature in @($manifest.signing.files)) {
+        if (-not $manifestFiles.Contains((Convert-ToPortablePath ([string]$signature.path)))) {
+            throw "A signed-file record is not sealed by the release manifest: $($signature.path)"
+        }
+    }
     if ($manifest.releaseChannel -eq 'Production') {
-        if ($manifest.sourceTreeDirty -or -not $manifest.signing.required -or
-            $manifest.signing.mode -ne 'ArtifactSigning') {
-            throw 'Production publish manifest is not clean and signing-required.'
+        if ($manifest.sourceTreeDirty -or
+            -not $manifest.signing.required -or
+            $manifest.signing.mode -ne 'ArtifactSigning' -or
+            @($manifest.signing.files | Where-Object { $_.status -ne 'Valid' }).Count -ne 0) {
+            throw 'Production publish manifest does not attest a clean, valid signed payload.'
         }
         foreach ($signature in @($manifest.signing.files)) {
-            $file = Resolve-SafeChild $Root ([string]$signature.path)
-            $actual = Get-AuthenticodeSignature -LiteralPath $file
-            if ($signature.status -ne 'Valid' -or $actual.Status.ToString() -ne 'Valid' -or
+            $signedFile = Resolve-SafeChild $Root ([string]$signature.path)
+            $actual = Get-AuthenticodeSignature -LiteralPath $signedFile
+            if ($actual.Status.ToString() -ne 'Valid' -or
                 $null -eq $actual.SignerCertificate -or
                 $actual.SignerCertificate.Thumbprint -ne [string]$signature.signerThumbprint) {
                 throw "Production Authenticode verification failed: $($signature.path)"
             }
         }
+    }
+}
+
+function Test-ZipArchive([string]$ArchivePath, [string]$Container) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = Open-BufferedReleaseArchive $ArchivePath
+    try {
+        foreach ($entry in $archive.Entries) {
+            if ([string]::IsNullOrEmpty($entry.Name)) { continue }
+            $relative = Convert-ToPortablePath $entry.FullName
+            if ($relative -match '(^|/)\.\.(/|$)' -or [IO.Path]::IsPathFullyQualified($relative)) {
+                Add-FileViolation $Container $relative 'unsafe archive path'
+                continue
+            }
+            if (Test-ForbiddenPath $relative) {
+                Add-FileViolation $Container $relative 'mutable or captured user payload'
+            }
+            $extension = [IO.Path]::GetExtension($relative).ToLowerInvariant()
+            if ($extension -in $textExtensions) {
+                $stream = $entry.Open()
+                try {
+                    Test-TextStream $stream $Container $relative $entry.Length $extension
+                } finally { $stream.Dispose() }
+            }
+        }
+    } finally {
+        $archive.Dispose()
+    }
+}
+
+function Test-PayloadFile([string]$FullPath, [string]$Container, [string]$RelativePath) {
+    if (Test-ExcludedSourceTopology $RelativePath) {
+        Add-FileViolation $Container $RelativePath 'excluded source topology'
+    }
+    if (Test-ForbiddenPath $RelativePath) {
+        Add-FileViolation $Container $RelativePath 'mutable or captured user payload'
+    }
+    $extension = [IO.Path]::GetExtension($FullPath)
+    if ($extension -ieq '.zip') {
+        Test-ZipArchive $FullPath $Container
+    } elseif ($extension.ToLowerInvariant() -in $textExtensions) {
+        $stream = [IO.File]::OpenRead($FullPath)
+        try {
+            Test-TextStream $stream $Container $RelativePath $stream.Length $extension
+        } finally { $stream.Dispose() }
+    }
+}
+
+function Assert-RuntimeArchiveManifest(
+    [string]$ArchivePath,
+    [string]$PackageId,
+    [string]$ManifestHash) {
+    $archive = Open-BufferedReleaseArchive $ArchivePath
+    try {
+        $entries = @($archive.Entries | Where-Object {
+            -not [string]::IsNullOrEmpty($_.Name)
+        })
+        $manifestEntries = @($entries | Where-Object {
+            (Convert-ToPortablePath $_.FullName) -ceq 'runtime-pack-manifest.json'
+        })
+        if ($manifestEntries.Count -ne 1) {
+            throw "Runtime archive has no unique manifest: $PackageId"
+        }
+        $reader = [IO.StreamReader]::new(
+            $manifestEntries[0].Open(),
+            [Text.UTF8Encoding]::new($false),
+            $true)
+        try { $manifestText = $reader.ReadToEnd() } finally { $reader.Dispose() }
+        $manifest = $manifestText | ConvertFrom-Json
+        if ($manifest.identity.packageId -cne $PackageId -or
+            -not (Test-Sha256Equal ([string]$manifest.manifestHash) $ManifestHash)) {
+            throw "Runtime archive identity differs from its build index: $PackageId"
+        }
+        $records = [Collections.Generic.Dictionary[string, object]]::new(
+            [StringComparer]::OrdinalIgnoreCase)
+        foreach ($file in @($manifest.files)) {
+            $relative = Convert-ToPortablePath ([string]$file.relativePath)
+            if ([IO.Path]::IsPathFullyQualified($relative) -or
+                $relative.Split('/') -contains '..' -or
+                -not $records.TryAdd($relative, $file)) {
+                throw "Runtime manifest contains an unsafe or duplicate path: $PackageId::$relative"
+            }
+        }
+        $payloadEntries = @($entries | Where-Object {
+            (Convert-ToPortablePath $_.FullName) -cne 'runtime-pack-manifest.json'
+        })
+        $entrySet = [Collections.Generic.HashSet[string]]::new(
+            [StringComparer]::OrdinalIgnoreCase)
+        foreach ($entry in $payloadEntries) {
+            $relative = Convert-ToPortablePath $entry.FullName
+            $record = if ($records.ContainsKey($relative)) {
+                $records[$relative]
+            } else {
+                $null
+            }
+            if (-not $entrySet.Add($relative) -or
+                $null -eq $record -or
+                $entry.Length -ne [long]$record.byteLength) {
+                throw "Runtime archive differs from its internal manifest: $PackageId::$relative"
+            }
+            $entryStream = $entry.Open()
+            try {
+                $entryHash = Get-StreamSha256 $entryStream
+            } finally {
+                $entryStream.Dispose()
+            }
+            if (-not (Test-Sha256Equal $entryHash ([string]$record.sha256))) {
+                throw "Runtime archive content hash differs from its internal manifest: $PackageId::$relative"
+            }
+        }
+        if ($entrySet.Count -ne $records.Count) {
+            throw "Runtime archive file set differs from its internal manifest: $PackageId"
+        }
+    } finally {
+        $archive.Dispose()
     }
 }
 
@@ -186,96 +483,42 @@ function Assert-RuntimePackIndex([string]$Root) {
         $index.profile -notin @('Base', 'Advanced')) {
         throw 'Runtime-pack boundary found an unsupported build index.'
     }
-    $expectedArchives = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $rootFull = [IO.Path]::GetFullPath($Root).TrimEnd([IO.Path]::DirectorySeparatorChar)
+    $indexedArchives = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    $packageIds = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::Ordinal)
     foreach ($pack in @($index.packs)) {
         $packageId = [string]$pack.packageId
-        if ($packageId -notmatch '^[a-z0-9][a-z0-9.-]{0,127}$') {
-            throw "Runtime-pack index contains an invalid package ID: $packageId"
+        if ($packageId -notmatch '^[a-z0-9][a-z0-9.-]{0,127}$' -or
+            -not $packageIds.Add($packageId)) {
+            throw "Runtime-pack index contains an invalid or duplicate package ID: $packageId"
         }
-        $relative = ConvertTo-PortablePath ([string]$pack.archive)
-        if ($relative -cne "archives/$packageId.zip") {
-            throw "Runtime-pack archive path is not canonical: $packageId"
+        $archiveRelative = Convert-ToPortablePath ([string]$pack.archive)
+        $archive = Resolve-SafeChild $rootFull $archiveRelative
+        if ($archiveRelative -cne "archives/$packageId.zip" -or
+            -not $indexedArchives.Add($archive)) {
+            throw "Runtime-pack index points outside its exact archive set: $packageId"
         }
-        $archivePath = Resolve-SafeChild $Root $relative
-        if (-not $expectedArchives.Add($archivePath) -or
-            -not (Test-Path -LiteralPath $archivePath -PathType Leaf) -or
-            (Get-Item -LiteralPath $archivePath).Length -ne [long]$pack.byteLength -or
-            -not (Test-Sha256Equal (Get-Sha256 $archivePath) ([string]$pack.sha256))) {
+        if (-not (Test-Path -LiteralPath $archive -PathType Leaf) -or
+            (Get-Item -LiteralPath $archive).Length -ne [long]$pack.byteLength -or
+            -not (Test-Sha256Equal (Get-FileSha256 $archive) ([string]$pack.sha256))) {
             throw "Runtime-pack archive failed build-index verification: $packageId"
         }
-        $archive = [IO.Compression.ZipFile]::OpenRead($archivePath)
-        try {
-            $entries = @($archive.Entries | Where-Object {
-                -not [string]::IsNullOrEmpty($_.Name)
-            })
-            $manifestEntry = @($entries | Where-Object {
-                [StringComparer]::OrdinalIgnoreCase.Equals(
-                    (ConvertTo-PortablePath $_.FullName),
-                    'runtime-pack-manifest.json')
-            })
-            if ($manifestEntry.Count -ne 1) {
-                throw "Runtime archive has no unique manifest: $packageId"
-            }
-            $reader = [IO.StreamReader]::new($manifestEntry[0].Open(), [Text.UTF8Encoding]::new($false))
-            try { $packManifest = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
-            if ($packManifest.identity.packageId -cne $packageId -or
-                -not (Test-Sha256Equal ([string]$packManifest.manifestHash) ([string]$pack.manifestHash))) {
-                throw "Runtime archive identity differs from its build index: $packageId"
-            }
-            $recordMap = [Collections.Generic.Dictionary[string, object]]::new(
-                [StringComparer]::OrdinalIgnoreCase)
-            foreach ($record in @($packManifest.files)) {
-                $relative = ConvertTo-PortablePath ([string]$record.relativePath)
-                if ([string]::IsNullOrWhiteSpace($relative) -or
-                    [IO.Path]::IsPathFullyQualified($relative) -or
-                    $relative.Split('/') -contains '..' -or
-                    -not $recordMap.TryAdd($relative, $record)) {
-                    throw "Runtime manifest contains an unsafe or duplicate path: $packageId::$relative"
-                }
-            }
-            $payloadEntries = @($entries | Where-Object {
-                -not [StringComparer]::OrdinalIgnoreCase.Equals(
-                    (ConvertTo-PortablePath $_.FullName),
-                    'runtime-pack-manifest.json')
-            })
-            $entryMap = [Collections.Generic.Dictionary[string, object]]::new(
-                [StringComparer]::OrdinalIgnoreCase)
-            foreach ($entry in $payloadEntries) {
-                $relative = ConvertTo-PortablePath $entry.FullName
-                if (-not $entryMap.TryAdd($relative, $entry) -or
-                    -not $recordMap.ContainsKey($relative)) {
-                    throw "Runtime archive differs from its internal manifest: $packageId::$relative"
-                }
-            }
-            if ($recordMap.Count -ne $entryMap.Count) {
-                throw "Runtime archive differs from its internal manifest: $packageId"
-            }
-            foreach ($pair in $recordMap.GetEnumerator()) {
-                $relative = $pair.Key
-                $record = $pair.Value
-                $entry = $entryMap[$relative]
-                if ($entry.Length -ne [long]$record.byteLength) {
-                    throw "Runtime archive file differs from its manifest: $packageId::$relative"
-                }
-                $stream = $entry.Open()
-                try {
-                    $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)).ToLowerInvariant()
-                } finally { $stream.Dispose() }
-                if (-not (Test-Sha256Equal $hash ([string]$record.sha256))) {
-                    throw "Runtime archive content hash differs from its manifest: $packageId::$relative"
-                }
-            }
-        } finally { $archive.Dispose() }
+        Assert-RuntimeArchiveManifest $archive $packageId ([string]$pack.manifestHash)
     }
     $actualArchives = @(Get-ChildItem -LiteralPath (Join-Path $Root 'archives') -File -Filter '*.zip' |
         ForEach-Object { $_.FullName })
-    if ($actualArchives.Count -ne $expectedArchives.Count -or
-        @($actualArchives | Where-Object { -not $expectedArchives.Contains($_) }).Count -ne 0) {
+    if ($actualArchives.Count -ne $indexedArchives.Count -or
+        @($actualArchives | Where-Object { -not $indexedArchives.Contains($_) }).Count -ne 0) {
         throw 'Runtime-pack archive directory differs from its build index.'
     }
 }
 
-function Assert-InstallerManifest([string]$Root) {
+function Assert-InstallerManifest(
+    [string]$Root,
+    [string]$RuntimeRoot,
+    [string]$CatalogPath) {
     $manifestPath = Join-Path $Root 'installer-release-manifest.json'
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
         throw "Installer boundary requires installer-release-manifest.json under $Root."
@@ -285,41 +528,65 @@ function Assert-InstallerManifest([string]$Root) {
         throw 'Installer boundary found an unsupported release manifest.'
     }
     $installer = Resolve-SafeChild $Root (Join-Path 'installer' ([string]$manifest.installer.fileName))
-    if ((Get-Item -LiteralPath $installer).Length -ne [long]$manifest.installer.byteLength -or
-        -not (Test-Sha256Equal (Get-Sha256 $installer) ([string]$manifest.installer.sha256))) {
+    if (-not (Test-Path -LiteralPath $installer -PathType Leaf) -or
+        (Get-Item -LiteralPath $installer).Length -ne [long]$manifest.installer.byteLength -or
+        -not (Test-Sha256Equal (Get-FileSha256 $installer) ([string]$manifest.installer.sha256))) {
         throw 'Installer executable differs from its release manifest.'
     }
     $appManifest = Resolve-SafeChild $Root 'app/release-manifest.json'
-    if (-not (Test-Sha256Equal (Get-Sha256 $appManifest) ([string]$manifest.appReleaseManifest.sha256))) {
+    if (-not (Test-Sha256Equal (Get-FileSha256 $appManifest) ([string]$manifest.appReleaseManifest.sha256))) {
         throw 'Installer manifest does not bind the application release manifest.'
     }
     Assert-PublishManifest (Join-Path $Root 'app')
-    $branding = Resolve-SafeChild $Root 'branding/installer-branding-manifest.json'
-    if (-not (Test-Sha256Equal (Get-Sha256 $branding) ([string]$manifest.installerBrandingManifestSha256))) {
+    $brandingManifest = Resolve-SafeChild $Root 'branding/installer-branding-manifest.json'
+    if (-not (Test-Sha256Equal (Get-FileSha256 $brandingManifest) ([string]$manifest.installerBrandingManifestSha256))) {
         throw 'Installer manifest does not bind the branding manifest.'
     }
-    if ([string]::IsNullOrWhiteSpace($RuntimePackBuildRoot)) {
+    if ([string]::IsNullOrWhiteSpace($RuntimeRoot)) {
         throw 'Installer boundary requires -RuntimePackBuildRoot.'
     }
-    $runtimeRoot = [IO.Path]::GetFullPath($RuntimePackBuildRoot)
-    if (-not (Test-Sha256Equal (Get-Sha256 (Join-Path $runtimeRoot 'runtime-pack-build-index.json')) ([string]$manifest.runtimePackBuildIndexSha256))) {
+    $runtimeIndex = Join-Path ([IO.Path]::GetFullPath($RuntimeRoot)) 'runtime-pack-build-index.json'
+    if (-not (Test-Sha256Equal (Get-FileSha256 $runtimeIndex) ([string]$manifest.runtimePackBuildIndexSha256))) {
         throw 'Installer manifest does not bind the runtime-pack build index.'
     }
-    Assert-RuntimePackIndex $runtimeRoot
+    Assert-RuntimePackIndex ([IO.Path]::GetFullPath($RuntimeRoot))
     if ($null -ne $manifest.advancedCatalogSha256) {
-        if ([string]::IsNullOrWhiteSpace($AdvancedCatalogPath) -or
-            -not (Test-Sha256Equal (Get-Sha256 ([IO.Path]::GetFullPath($AdvancedCatalogPath))) ([string]$manifest.advancedCatalogSha256))) {
+        $catalogHash = if ([string]::IsNullOrWhiteSpace($CatalogPath)) {
+            $null
+        } else {
+            Get-FileSha256 ([IO.Path]::GetFullPath($CatalogPath))
+        }
+        if ($null -eq $catalogHash -or
+            -not (Test-Sha256Equal $catalogHash ([string]$manifest.advancedCatalogSha256))) {
             throw 'Installer manifest does not bind the Advanced AI catalog.'
         }
     }
     if ($manifest.releaseChannel -eq 'Production') {
         $signature = Get-AuthenticodeSignature -LiteralPath $installer
-        if ($manifest.sourceTreeDirty -or -not $manifest.signing.required -or
+        if ($manifest.sourceTreeDirty -or
+            -not $manifest.signing.required -or
             $manifest.signing.mode -ne 'ArtifactSigning' -or
             $manifest.signing.status -ne 'Valid' -or
-            $signature.Status.ToString() -ne 'Valid') {
+            $signature.Status.ToString() -ne 'Valid' -or
+            $null -eq $signature.SignerCertificate -or
+            $signature.SignerCertificate.Thumbprint -ne [string]$manifest.signing.signerThumbprint) {
             throw 'Production installer is not a clean, valid signed payload.'
         }
+    }
+}
+
+function Assert-NoReparsePoint([string]$FullPath) {
+    $current = [IO.Path]::GetFullPath($FullPath)
+    while (-not [string]::IsNullOrWhiteSpace($current)) {
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "Release data-boundary inspection cannot traverse a reparse point: $current"
+            }
+        }
+        $parent = [IO.Directory]::GetParent($current)
+        if ($null -eq $parent) { break }
+        $current = $parent.FullName
     }
 }
 
@@ -328,15 +595,24 @@ if ($Profile -eq 'Repository') {
         throw 'Repository profile resolves its path from the script location.'
     }
     $gitProbe = [string](& git -C $repositoryRoot rev-parse --is-inside-work-tree 2>$null)
-    if ($LASTEXITCODE -eq 0 -and $gitProbe.Trim() -eq 'true') {
-        $paths = @(& git -C $repositoryRoot ls-files --cached --others --exclude-standard)
-        if ($LASTEXITCODE -ne 0) { throw 'Could not enumerate repository files.' }
-    } elseif (Test-Path -LiteralPath (Join-Path $repositoryRoot '.replayfoundry-public-source') -PathType Leaf) {
+    $isGitRepository = $LASTEXITCODE -eq 0 -and $gitProbe.Trim() -eq 'true'
+    if ($isGitRepository) {
+        $paths = @(
+            & git -C $repositoryRoot ls-files --cached --others --exclude-standard
+        )
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Could not enumerate repository files for data-boundary inspection.'
+        }
+    } elseif (Test-Path -LiteralPath `
+        (Join-Path $repositoryRoot '.replayfoundry-public-source') -PathType Leaf) {
         $paths = @(Get-ChildItem -LiteralPath $repositoryRoot -Recurse -File -Force |
-            Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
-            ForEach-Object { [IO.Path]::GetRelativePath($repositoryRoot, $_.FullName) })
+            Where-Object {
+                $_.FullName -notmatch '[\\/](bin|obj)[\\/]'
+            } | ForEach-Object {
+                [IO.Path]::GetRelativePath($repositoryRoot, $_.FullName)
+            })
     } else {
-        throw 'Repository inspection requires a Git worktree or sealed public source.'
+        throw 'Repository data-boundary inspection requires a Git worktree or sealed public source.'
     }
     foreach ($relative in $paths) {
         $full = Join-Path $repositoryRoot $relative
@@ -346,36 +622,59 @@ if ($Profile -eq 'Repository') {
     }
 } else {
     if ($null -eq $Path -or $Path.Count -eq 0) {
-        throw "$Profile inspection requires at least one -Path."
+        throw "$Profile data-boundary inspection requires at least one -Path."
     }
     foreach ($candidate in $Path) {
         $full = [IO.Path]::GetFullPath($candidate)
         Assert-NoReparsePoint $full
         if (Test-Path -LiteralPath $full -PathType Leaf) {
             Test-PayloadFile $full $full ([IO.Path]::GetFileName($full))
-        } elseif (Test-Path -LiteralPath $full -PathType Container) {
-            foreach ($file in Get-ChildItem -LiteralPath $full -Recurse -File -Force) {
-                Test-PayloadFile $file.FullName $full ([IO.Path]::GetRelativePath($full, $file.FullName))
+            continue
+        }
+        if (-not (Test-Path -LiteralPath $full -PathType Container)) {
+            throw "Release data-boundary path was not found: $full"
+        }
+        foreach ($file in Get-ChildItem -LiteralPath $full -Recurse -File -Force) {
+            if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "Release data-boundary inspection found a reparse point: $($file.FullName)"
             }
-        } else {
-            throw "Release inspection path was not found: $full"
+            $relative = [IO.Path]::GetRelativePath($full, $file.FullName)
+            if ($Profile -eq 'Installer' -and
+                (Convert-ToPortablePath $relative).StartsWith(
+                    'reports/',
+                    [StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            Test-PayloadFile $file.FullName $full $relative
         }
     }
 }
 
 if ($Profile -eq 'Publish') {
-    if ($Path.Count -ne 1) { throw 'Publish profile requires one directory.' }
+    if ($Path.Count -ne 1 -or
+        -not (Test-Path -LiteralPath $Path[0] -PathType Container)) {
+        throw 'Publish profile requires exactly one publish directory.'
+    }
     Assert-PublishManifest ([IO.Path]::GetFullPath($Path[0]))
 } elseif ($Profile -eq 'RuntimePacks') {
-    if ($Path.Count -ne 1) { throw 'RuntimePacks profile requires one directory.' }
+    if ($Path.Count -ne 1 -or
+        -not (Test-Path -LiteralPath $Path[0] -PathType Container)) {
+        throw 'RuntimePacks profile requires exactly one runtime-pack build directory.'
+    }
     Assert-RuntimePackIndex ([IO.Path]::GetFullPath($Path[0]))
 } elseif ($Profile -eq 'Installer') {
-    if ($Path.Count -ne 1) { throw 'Installer profile requires one directory.' }
-    Assert-InstallerManifest ([IO.Path]::GetFullPath($Path[0]))
+    if ($Path.Count -ne 1 -or
+        -not (Test-Path -LiteralPath $Path[0] -PathType Container)) {
+        throw 'Installer profile requires exactly one installer artifact directory.'
+    }
+    Assert-InstallerManifest `
+        ([IO.Path]::GetFullPath($Path[0])) `
+        $RuntimePackBuildRoot `
+        $AdvancedCatalogPath
 }
 
 if ($violations.Count -gt 0) {
-    throw "Release data boundary rejected unsafe payloads:$([Environment]::NewLine)$($violations -join [Environment]::NewLine)"
+    throw "Release data boundary rejected mutable or machine-specific payloads:$([Environment]::NewLine)$($violations -join [Environment]::NewLine)"
 }
 
 Write-Output "Release data boundary passed for $Profile."

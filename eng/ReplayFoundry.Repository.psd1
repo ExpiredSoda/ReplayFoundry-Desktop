@@ -10,6 +10,7 @@
 
     ToolProjects = @(
         'tools/ReplayFoundry.RuntimeInstaller/ReplayFoundry.RuntimeInstaller.csproj'
+        'tools/ReplayFoundry.DeveloperTools/ReplayFoundry.DeveloperTools.csproj'
     )
 
     TestSupportProjects = @(
@@ -18,6 +19,8 @@
 
     DotNetTestProjects = @(
         'tests/ReplayFoundry.CompositionTests/ReplayFoundry.CompositionTests.csproj'
+        'tests/ReplayFoundry.DeveloperTools.Tests/ReplayFoundry.DeveloperTools.Tests.csproj'
+        'tests/ReplayFoundry.EvidenceTests/ReplayFoundry.EvidenceTests.csproj'
         'tests/ReplayFoundry.InspectionTests/ReplayFoundry.InspectionTests.csproj'
         'tests/ReplayFoundry.PreparationTests/ReplayFoundry.PreparationTests.csproj'
         'tests/ReplayFoundry.RuntimePacks.Tests/ReplayFoundry.RuntimePacks.Tests.csproj'
@@ -32,53 +35,53 @@
         'eng/Test-CreativeCommerceArchitecture.ps1'
         'eng/Test-GenerateWorkflowArchitecture.ps1'
         'eng/Test-InstallerBranding.ps1'
+        'eng/Test-MediaEvidenceArchitecture.ps1'
         'eng/Test-MomentFinderArchitecture.ps1'
-        'eng/Test-ReleaseDataBoundary.ps1'
         'eng/Test-ReleaseEngineering.ps1'
+        'eng/Test-ReleaseDataBoundaryArchitecture.ps1'
         'eng/Test-RepositoryArchitecture.ps1'
         'eng/Test-RepositoryPayloadGuard.ps1'
+        'eng/Test-ReleaseDataBoundary.ps1'
+        'eng/Test-RuntimePackArchitecture.ps1'
         'eng/Test-SecurityBoundaries.ps1'
         'eng/Test-UiUxArchitecture.ps1'
         'eng/Test-UiUxHumanCenteredExperience.ps1'
         'eng/Test-UiUxVisualSystem.ps1'
+        'eng/Test-VisualSemanticArchitecture.ps1'
+        'eng/Test-VisualSemanticPrompt2Architecture.ps1'
+        'eng/Test-VisualSemanticStructuredDecodingArchitecture.ps1'
     )
 
-    PublicSource = @{
-        RequiredFiles = @(
-            '.replayfoundry-public-source'
-            'CHANGELOG.md'
+    PublicExport = @{
+        RootFiles = @(
+            '.editorconfig'
+            '.gitattributes'
+            '.gitignore'
             'Directory.Build.props'
+            'LICENSE.txt'
             'README.md'
-            'ReplayFoundry.slnx'
+            'CHANGELOG.md'
+            'SECURITY.md'
+        )
+
+        ExactFiles = @(
+            '.github/assets/buy-me-a-coffee-qr.png'
+            '.github/assets/replayfoundry-demo-poster.jpg'
+            '.github/assets/replayfoundry-workflow-hero.gif'
+            '.github/assets/setup-base-advanced.png'
+            '.github/assets/workflow-01-generate.gif'
+            '.github/assets/workflow-02-studio.gif'
+            '.github/assets/workflow-03-library.gif'
+            '.github/assets/workflow-04-publish.gif'
             '.github/workflows/desktop-ci.yml'
             '.github/workflows/redistributable-ffmpeg.yml'
             'docs/README.md'
-            'eng/ReplayFoundry.ps1'
-            'eng/ReplayFoundry.Repository.psd1'
-            'eng/ReplayFoundry.ProductionVisualHost.psd1'
-            'eng/Test-RepositoryArchitecture.ps1'
-            'eng/Test-ReleaseDataBoundary.ps1'
-        )
-
-        ProjectRoots = @(
-            'src/ReplayFoundry.Desktop'
-            'src/ReplayFoundry.RuntimePacks'
-            'tools/ReplayFoundry.RuntimeInstaller'
-            'tests/ReplayFoundry.CompositionTests'
-            'tests/ReplayFoundry.InspectionTests'
-            'tests/ReplayFoundry.PreparationTests'
-            'tests/ReplayFoundry.RuntimePacks.Tests'
-            'tests/ReplayFoundry.Testing'
-        )
-
-        StandaloneTools = @('tools/evaluate_moment_discernment.py')
-
-        EngineeringFiles = @(
             'eng/Assert-ReplayFoundryRuntimePackCatalogBinding.ps1'
             'eng/Build-ReplayFoundryInstaller.ps1'
             'eng/Build-ReplayFoundryRuntimePacks.ps1'
             'eng/Copy-VerifiedAudioEvidenceModel.ps1'
             'eng/Prepare-AudioEvidenceModel.py'
+            'tools/evaluate_moment_discernment.py'
             'eng/Copy-ReplayFoundryProductionVisualHost.ps1'
             'eng/Invoke-ReplayFoundryArtifactSigning.ps1'
             'eng/New-PythonRuntimeNotices.ps1'
@@ -110,15 +113,155 @@
             'eng/Test-UiUxVisualSystem.ps1'
         )
 
-        WorkflowFiles = @(
+        RequiredFiles = @(
+            'CHANGELOG.md'
+            '.github/assets/buy-me-a-coffee-qr.png'
+            '.github/assets/replayfoundry-demo-poster.jpg'
+            '.github/assets/replayfoundry-workflow-hero.gif'
+            '.github/assets/setup-base-advanced.png'
+            '.github/assets/workflow-01-generate.gif'
+            '.github/assets/workflow-02-studio.gif'
+            '.github/assets/workflow-03-library.gif'
+            '.github/assets/workflow-04-publish.gif'
             '.github/workflows/desktop-ci.yml'
             '.github/workflows/redistributable-ffmpeg.yml'
+            'docs/README.md'
+            'eng/ReplayFoundry.ps1'
+            'eng/ReplayFoundry.Repository.psd1'
+            'eng/ReplayFoundry.ProductionVisualHost.psd1'
+            'eng/Assert-ReplayFoundryRuntimePackCatalogBinding.ps1'
+            'eng/Copy-ReplayFoundryProductionVisualHost.ps1'
+            'eng/Test-RepositoryArchitecture.ps1'
+            'eng/Test-ReleaseDataBoundary.ps1'
         )
 
-        PublicationDocs = @(
-            'docs/README.md'
-            'docs/distribution/windows.md'
-            'docs/distribution/third-party-compliance.md'
+        PublicSourceReplacements = @(
+            @{
+                Template = 'eng/PublicSourceTemplates/foundry_writer_runtime.py'
+                Destination = 'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/runtime.py'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/TasteLearningService.cs'
+                Destination = 'src/ReplayFoundry.Desktop/Platform/Intelligence/TasteLearningService.cs'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/Directory.Build.props'
+                Destination = 'Directory.Build.props'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/ReplayFoundry.Repository.psd1'
+                Destination = 'eng/ReplayFoundry.Repository.psd1'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/ReplayFoundry.ProductionVisualHost.psd1'
+                Destination = 'eng/ReplayFoundry.ProductionVisualHost.psd1'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/ReplayFoundry.ps1'
+                Destination = 'eng/ReplayFoundry.ps1'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/Test-RepositoryArchitecture.ps1'
+                Destination = 'eng/Test-RepositoryArchitecture.ps1'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/Test-ReleaseDataBoundary.ps1'
+                Destination = 'eng/Test-ReleaseDataBoundary.ps1'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/Test-RepositoryPayloadGuard.ps1'
+                Destination = 'eng/Test-RepositoryPayloadGuard.ps1'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/desktop-ci.yml'
+                Destination = '.github/workflows/desktop-ci.yml'
+            }
+            @{
+                Template = 'eng/PublicSourceTemplates/AssemblyInfo.cs'
+                Destination = 'src/ReplayFoundry.Desktop/AssemblyInfo.cs'
+            }
+        )
+
+        PrivateRoots = @('src/ReplayFoundry.Desktop/Media/Intelligence/Learning', 'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer')
+        PublicContracts = @(
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteContracts.cs'
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteMomentCorrection.cs'
+            'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/__init__.py'
+            'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/capture.py'
+            'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/data.py'
+            'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/runtime.py'
+        )
+
+        Roots = @(
+            'src/ReplayFoundry.Desktop'
+            'src/ReplayFoundry.RuntimePacks'
+            'tools/ReplayFoundry.RuntimeInstaller'
+            'tests/ReplayFoundry.CompositionTests'
+            'tests/ReplayFoundry.InspectionTests'
+            'tests/ReplayFoundry.PreparationTests'
+            'tests/ReplayFoundry.RuntimePacks.Tests'
+            'tests/ReplayFoundry.Testing'
+            'docs/distribution'
+            'installer'
+        )
+
+        ExcludedFiles = @(
+            'tests/ReplayFoundry.VisualSemanticHost.Tests/tests/test_writer_learning_loop.py'
+            'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/curation.py'
+            'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/curation_train.py'
+            'tests/ReplayFoundry.VisualSemanticHost.Tests/tests/test_curation.py'
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteDifferentiation.cs'
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteEvaluation.cs'
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteNetwork.cs'
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteOptimizer.cs'
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteTrainer.cs'
+            'src/ReplayFoundry.Desktop/Media/Intelligence/Learning/TasteLinearBaseline.cs'
+            'src/ReplayFoundry.Desktop/Platform/Storage/JsonTasteLearningStore.cs'
+            'tests/ReplayFoundry.PreparationTests/TasteLearningTests.cs'
+            'tests/ReplayFoundry.PreparationTests/TasteStorageTests.cs'
+            'tests/ReplayFoundry.PreparationTests/MomentCorrectionTests.cs'
+            'eng/Copy-ReplayFoundryDevelopmentState.ps1'
+            'eng/Export-ReplayFoundryProductionRepository.ps1'
+            'eng/Test-ReleaseDataBoundaryArchitecture.ps1'
+            'eng/Test-MediaEvidenceArchitecture.ps1'
+            'eng/Test-VisualSemanticArchitecture.ps1'
+            'eng/Test-VisualSemanticPrompt2Architecture.ps1'
+            'eng/Test-VisualSemanticStructuredDecodingArchitecture.ps1'
+        )
+
+        ForbiddenRoots = @(
+            'ReplayFoundry.Desktop'
+            'ReplayFoundry.DeveloperTools'
+            'ReplayFoundry.DeveloperTools.Tests'
+            'ReplayFoundry.EvidenceTests'
+            'tools/ReplayFoundry.DeveloperTools'
+            'tests/ReplayFoundry.DeveloperTools.Tests'
+            'tests/ReplayFoundry.EvidenceTests'
+            'tmp'
+            'outputs'
+            'artifacts'
+            'installer/Output'
+        )
+
+        ForbiddenExtensions = @(
+            '.exe'
+            '.dll'
+            '.pdb'
+            '.zip'
+            '.7z'
+            '.onnx'
+            '.bin'
+            '.safetensors'
+            '.pfx'
+            '.p12'
+            '.cer'
+            '.key'
+            '.pem'
+            '.dpapi'
+            '.mp4'
+            '.mkv'
+            '.mov'
+            '.wav'
         )
     }
 }

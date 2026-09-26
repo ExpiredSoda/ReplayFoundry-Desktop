@@ -39,9 +39,22 @@ jobs:
       - name: Install audio test dependency
         run: 'python -m pip install --only-binary=:all: numpy==2.5.3'
 
-      - name: Verify production source
+      - name: Verify complete repository
         shell: pwsh
         run: >-
           .\eng\ReplayFoundry.ps1 verify
           -Configuration Release
           -PythonExecutable (Get-Command python).Source
+
+      - name: Verify exported production snapshot
+        if: ${{ hashFiles('.replayfoundry-public-source') == '' }}
+        shell: pwsh
+        run: |
+          $publicSource = Join-Path $env:RUNNER_TEMP 'ReplayFoundry-public-source'
+          .\eng\ReplayFoundry.ps1 export -Destination $publicSource
+          git -C $publicSource init
+          git -C $publicSource add --all
+          git -C $publicSource -c user.name='Replay Foundry CI' -c user.email='ci@replayfoundry.invalid' commit -m 'Public export smoke'
+          & (Join-Path $publicSource 'eng\ReplayFoundry.ps1') verify `
+            -Configuration Release `
+            -PythonExecutable (Get-Command python).Source

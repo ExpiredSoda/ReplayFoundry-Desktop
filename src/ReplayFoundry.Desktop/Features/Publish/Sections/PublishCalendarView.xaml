@@ -117,7 +117,6 @@
                                         </Trigger>
                                         <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
                                             <Setter Property="Background" Value="{DynamicResource Brush.KineticGlowSoft}" />
-                                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.StatusInfo}" />
                                         </DataTrigger>
                                         <Trigger Property="local:PublishCalendarView.IsDropTargetActive" Value="True">
                                             <Setter Property="Background" Value="{DynamicResource Brush.InteractiveSelected}" />

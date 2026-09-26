@@ -15,7 +15,7 @@
                 </DockPanel>
                 <StackPanel Grid.Row="1" Margin="0,8,0,0" Visibility="{Binding IsPublishing, Converter={StaticResource BoolToVisibility}}">
                     <TextBlock Text="{Binding OperationTitle}" Foreground="{DynamicResource Brush.TextPrimary}" TextTrimming="CharacterEllipsis" />
-                    <ProgressBar Margin="0,6" Height="5" Minimum="0" Maximum="100" Value="{Binding OperationPercentage, Mode=OneWay, TargetNullValue=0}"
+                    <ProgressBar Margin="0,6" Style="{DynamicResource Control.ProgressBar.Compact}" Minimum="0" Maximum="100" Value="{Binding OperationPercentage, Mode=OneWay, TargetNullValue=0}"
                         IsIndeterminate="{Binding IsOperationIndeterminate}" AutomationProperties.Name="YouTube upload progress" />
                     <TextBlock Text="{Binding OperationDetail}" ToolTip="{Binding OperationDetail}" Style="{DynamicResource Text.Meta}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
