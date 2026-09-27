@@ -31,6 +31,8 @@ def load_style_examples(root, maximum=3):
                 continue
             chosen = example["chosen"]
             fields = {"titleBody", "description"} if approved else set(feedback.get("fields", [])) & {"titleBody", "description"}
+            # Preserve extended edits in storage without expanding each generation prompt.
+            fields = {field for field in fields if len(chosen[field]) <= (100 if field == "titleBody" else 420)}
             if not fields:
                 continue
             selected = {key:chosen[key] for key in sorted(fields)}

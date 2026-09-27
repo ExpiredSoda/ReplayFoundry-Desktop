@@ -39,12 +39,12 @@ def valid_hash(value) -> bool:
 def validate_copy(value):
     if not isinstance(value, dict) or set(value) != {"titleBody", "description", "tags", "grounding", "temporalVoice"}:
         raise ValueError("A writer target must contain the complete structured metadata object.")
-    for name, maximum in (("titleBody", 100), ("description", 420)):
+    for name, maximum in (("titleBody", 100), ("description", 5000)):
         if not isinstance(value[name], str) or not value[name].strip() or len(value[name]) > maximum:
             raise ValueError("Writer target text exceeds its bounded field contract.")
     if value["temporalVoice"] != "RetrospectivePast":
         raise ValueError("Writer targets must retain their temporal voice.")
-    if (not isinstance(value["tags"], list) or not 1 <= len(value["tags"]) <= 8
+    if (not isinstance(value["tags"], list) or not 0 <= len(value["tags"]) <= 8
             or any(not isinstance(tag, str) or not tag or len(tag) > 60 for tag in value["tags"])):
         raise ValueError("Invalid writer target tags.")
     if not isinstance(value["grounding"], list) or len(value["grounding"]) > 24:

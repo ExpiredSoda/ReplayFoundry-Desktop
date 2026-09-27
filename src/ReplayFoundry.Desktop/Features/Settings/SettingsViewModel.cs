@@ -575,16 +575,16 @@ public sealed class SettingsViewModel :
     public bool HasOnlineConnectionNotice => !string.IsNullOrWhiteSpace(OnlineConnectionNotice);
     public string PrivacySummary =>
         "Finding clips, editing, rendering, Library records, and local " +
-        "preferences stay on this PC. Replay Foundry has no advertising " +
-        "or background data sharing. Only a report you review and explicitly " +
-        "send may use the separately configured support connection.";
+        "preferences stay on this PC. Replay Foundry has no advertising. " +
+        "Shared writer training is a separate opt-in: when enabled, future text and metadata " +
+        "are sent automatically under the notice above. Support reports are sent only after you review and send them.";
     public string YouTubeDataSummary =>
         "Only actions you start in Publish contact Google. A publish action sends the selected video and the YouTube details you reviewed.";
     public string YouTubeStorageSummary =>
         "Replay Foundry never sees your Google password. Windows Credential Manager protects the connection, and local publish history remembers what was uploaded.";
     public string DiagnosticsStatus => IsYouTubeConnectionEnabled
-        ? "YouTube allowed · no background data sharing · reviewed reports only"
-        : "Local by default · no background data sharing · reviewed reports only";
+        ? "YouTube allowed · writer sharing requires separate consent · reviewed reports only"
+        : "Local by default · writer sharing requires separate consent · reviewed reports only";
     public string VersionText =>
         $"Replay Foundry Desktop · {GetDisplayVersion()}";
 
