@@ -16,7 +16,7 @@ internal static partial class GenerationSpeechActivityTests
         yield return new("Moment audio retains separate tracks and confirms only the assigned speaker route", SeparateMomentTracks);
         yield return new("Timed moment review replaces coarse overlapping category labels and supports explicit subtypes", TimedCategoriesReplaceCoarseHints);
         yield return new("Moment review rejects changed speech, speaker, waveform identity and out-of-cut citations", MomentWireOwnership);
-        yield return new("Moment context sends only cited speech and supported categories to title writing", MomentWriterEvidence);
+        yield return new("Moment context prioritizes cited speech and retains bounded role-aware context", MomentWriterEvidence);
         yield return new("Category review admission preserves human priority and its fixed review budget", CategoryAdmissionPreservesBudget);
         yield return new("Partial recording maps cannot consume all review slots or let broad labels stand in for action", PartialMapCategoryAdmission);
         yield return new("Recording event nominations use owned source frames and never invent missing timestamps", IndexedEventOwnership);
@@ -156,7 +156,9 @@ internal static partial class GenerationSpeechActivityTests
         using var json = JsonDocument.Parse(context.Description);
         TestAssert.Equal(1, json.RootElement.GetProperty("categories").GetArrayLength(), "Uncertain categories cannot seed a title claim.");
         var speech = json.RootElement.GetProperty("speech");
-        TestAssert.Equal(1, speech.GetArrayLength(), "Uncited dialogue cannot be borrowed to fill a title.");
+        TestAssert.Equal(2, speech.GetArrayLength(), "Other speech in this cut remains available as attributed context, not as proof of a category.");
+        TestAssert.Equal("Unknown", speech[1].GetProperty("role").GetString(), "An unassigned voice cannot become creator or game dialogue by inference.");
+        TestAssert.Equal("CompleteSuppliedSpans", json.RootElement.GetProperty("speechCoverage").GetString(), "Coverage describes the supplied spans rather than claiming a complete transcript.");
         TestAssert.Equal("CreatorSpeech", speech[0].GetProperty("role").GetString(), "Writer input preserves speaker routing.");
         TestAssert.Equal("UserConfirmed", speech[0].GetProperty("roleSource").GetString(), "Writer input preserves the source of attribution.");
         var sourceText = json.RootElement.GetProperty("sourceText");

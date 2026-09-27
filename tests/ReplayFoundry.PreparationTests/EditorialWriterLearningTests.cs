@@ -17,7 +17,49 @@ internal static class EditorialWriterLearningTests
         new("Old structural consent cannot silently enable storing wording", OldConsentRequiresUpdatedNotice),
         new("Montage feedback preserves the rendered order without approving wording", RetainsMontageSequence),
         new("Wording feedback follows its cut and survives pending drafts", FeedbackTracksCut),
+        new("Shared training requires separate consent and projects text only", SharedTrainingConsent),
     ];
+
+    private static async Task SharedTrainingConsent()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "ReplayFoundry-SharedTraining-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var sent = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            bool deleted = false;
+            var service = new ReplayFoundry.Desktop.Platform.Research.SharedTrainingContributionService(root, (token, json, delete, cancel) =>
+            {
+                TestAssert.Equal(64, token.Length, "Deletion capability is random and bounded.");
+                if (delete) deleted = true; else sent.TrySetResult(json);
+                return Task.CompletedTask;
+            });
+            var context = new ClipEditorialContext("candidate", Path.Combine(root, "private-recording.mp4"), "private name", TimeSpan.Zero,
+                TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(60), 50, "An event.");
+            var captured = System.Text.Json.Nodes.JsonNode.Parse("""
+                {"sourceGroup":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                 "prompt":[{"content":"writer prompt"},{"content":"{\"setupObservation\":\"A scene.\",\"sourcePath\":\"private.mp4\",\"reviewedContext\":{\"speech\":[{\"text\":\"My commentary\",\"role\":\"CreatorSpeech\",\"roleSource\":\"UserConfirmed\",\"start\":1,\"end\":2,\"filePath\":\"secret.wav\"}]}}"}],
+                 "generated":{"titleBody":"A title","description":"A description","tags":["game"],"grounding":[],"temporalVoice":"RetrospectivePast"}}
+                """)!.AsObject();
+            captured["capturedAtUtc"] = DateTimeOffset.UtcNow.AddDays(-1).ToString("O");
+            service.Capture(captured, context);
+            TestAssert.False(sent.Task.IsCompleted, "No consent means no upload.");
+            service.Enable();
+            service.Capture(captured, context);
+            TestAssert.False(sent.Task.IsCompleted, "Enabling sharing cannot upload historical data.");
+            captured["capturedAtUtc"] = DateTimeOffset.UtcNow.ToString("O");
+            service.Capture(captured, context);
+            string wire = await sent.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            TestAssert.False(wire.Contains("private", StringComparison.Ordinal) || wire.Contains("secret.wav", StringComparison.Ordinal), "Projection excludes paths and filenames.");
+            using var payload = JsonDocument.Parse(wire);
+            TestAssert.False(payload.RootElement.GetProperty("humanWordingFeedback").GetBoolean(), "A generated draft is not human approval.");
+            TestAssert.Equal("CreatorSpeech", payload.RootElement.GetProperty("evidence").GetProperty("speech")[0].GetProperty("role").GetString(), "Role provenance survives sharing.");
+            await service.DeleteSharedAsync();
+            TestAssert.True(deleted && !service.IsEnabled, "Deletion stops collection before remote deletion.");
+            var reloaded = new ReplayFoundry.Desktop.Platform.Research.SharedTrainingContributionService(root, (_, _, _, _) => throw new InvalidOperationException("No send expected"));
+            TestAssert.False(reloaded.IsEnabled, "Deletion cannot silently re-enable sharing after restart.");
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
 
     private static Task FeedbackTracksCut()
     {
@@ -123,7 +165,13 @@ internal static class EditorialWriterLearningTests
             TestAssert.Equal("HumanCorrection", saved.RootElement.GetProperty("kind").GetString(), "The label is explicit.");
             TestAssert.Equal(title, saved.RootElement.GetProperty("rejected").GetProperty("titleBody").GetString(), "The rejected wording is preserved.");
             TestAssert.Equal(facts, saved.RootElement.GetProperty("prompt")[1].GetProperty("content").GetString(), "Factual context stays unchanged.");
-            TestAssert.Equal("foundry-writer-example-2", saved.RootElement.GetProperty("schema").GetString(), "Field-specific feedback has its own contract.");
+            TestAssert.Equal("foundry-writer-example-3", saved.RootElement.GetProperty("schema").GetString(), "Lossless edits have their own contract.");
+            var edit = saved.RootElement.GetProperty("edits").GetProperty("fields")[0];
+            TestAssert.Equal(title, edit.GetProperty("before").GetString(), "Trace retains the previous wording.");
+            TestAssert.Equal("I found a passage", edit.GetProperty("after").GetString(), "Trace retains the saved wording.");
+            var operations = edit.GetProperty("operations").EnumerateArray().ToArray();
+            TestAssert.Equal(title, string.Concat(operations.Where(op => op.GetProperty("op").GetString() != "add").Select(op => op.GetProperty("text").GetString())), "Remove and keep reconstruct the original.");
+            TestAssert.Equal("I found a passage", string.Concat(operations.Where(op => op.GetProperty("op").GetString() != "remove").Select(op => op.GetProperty("text").GetString())), "Add and keep reconstruct the revision.");
             var fields = saved.RootElement.GetProperty("feedback").GetProperty("fields");
             TestAssert.Equal(1, fields.GetArrayLength(), "Changing a title cannot approve an unchanged description.");
             TestAssert.Equal("titleBody", fields[0].GetString(), "Only the changed field is supervised.");
@@ -136,6 +184,8 @@ internal static class EditorialWriterLearningTests
                 .Single(doc => doc.RootElement.GetProperty("kind").GetString() == "ExplicitWordingApproval");
             TestAssert.Equal("WrongEvent", approved.RootElement.GetProperty("feedback").GetProperty("reason").GetString(), "Review must not discard the reason for a factual correction.");
             TestAssert.True(approved.RootElement.GetProperty("feedback").GetProperty("factsReviewed").GetBoolean(), "Only the explicit review supplies reviewed facts.");
+            TestAssert.Equal(0, approved.RootElement.GetProperty("edits").GetProperty("fields").GetArrayLength(), "An approval cannot invent a text edit.");
+            TestAssert.True(approved.RootElement.GetProperty("edits").GetProperty("parentExampleId").GetString() is { Length: 64 }, "Successive saves link to their preceding feedback.");
             enabled = false;
             TestAssert.False(store.Record(context, "I found a passage", description, tags, title, description, tags), "Turning learning off stops capture.");
         }

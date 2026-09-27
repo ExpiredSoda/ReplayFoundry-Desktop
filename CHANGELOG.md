@@ -2,7 +2,27 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.7](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.7).
+downloadable version is [1.0.0 Beta 5.8](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.8).
+
+## 1.0.0 Beta 5.8 — 2026-09-26
+
+- Save lossless title/description additions and removals, link successive edits, and export evidence-bound JSONL for supervised and preference training. Historical feedback remains unchanged; an edit is not automatic approval of untouched fields or source facts.
+- Add a separate, default-off shared-training opt-in for future game metadata, generated wording, saved edits, and text evidence. Exclude media, filenames, local paths and account credentials. Include retry, stop-sharing and authenticated contribution deletion controls.
+- Keep the existing production reviewer after source-role and conversational-claim experiments failed their development controls. The optional DeepSeek writer remains a development candidate, and no new personal model is activated.
+
+- Introduce an optional local DeepSeek R1 8B writing candidate with a separate verified runtime, source-linked evidence handoff, bounded reasoning, preserved raw final drafts and independent review. It remains under evaluation; this does not switch the installed app's default writer or claim perfect understanding or improved click-through rates.
+- Separate completed reasoning from native schema-constrained final writing, reject unfinished answers, and retain active-grammar evidence. Remove an experimental regex that the native runtime converted into an overly permissive JSON string; the final decoder uses bounded JSON strings.
+- Recover verified scene-copy 1.6 feedback and explain training exclusions without changing saved edits. Saved examples, eligible examples and recording counts are now distinct in the learning status report.
+- Begin the writing-system upgrade with separate Rewrite and New angle actions, source-linked editorial plans, role-aware speech context, field locks and retained alternatives. Model and prompt qualification is still in progress; the Townfall stress pilot does not yet meet the release quality target.
+- Save writing defaults across app restarts. Keep newer typing and saved copy when a pending rewrite finishes, and retain full alternative descriptions and copy history in saved projects.
+- Add opt-in guidance from explicitly supervised local wording examples and grouped raw-output evaluation. Keep model acceptance separate from human publishability, and leave unqualified personal models inactive.
+- Continue the development writer with natural-language examples, evidence-only planning, and retries that preserve valid scene facts and the selected editing action. Reroll attempts get distinct cache identities; identical requests can still reuse verified results.
+- Preserve older saved writing examples across prompt changes, exclude locked fields and tag-only edits from training, and reconstruct locked copy for adapter review while retaining raw output. Whole-montage examples await training splits that account for every source recording.
+- Keep non-selected observations and speech corrections available to the writer, retain complete bounded dialogue in montage checks, and exclude learning pairs that cannot fit their original writing request. Rewrite failures now report the writing issue without asking for a new angle.
+- Require both quality-check answer orders to agree before selecting or reusing a title/description draft, including retained alternatives. Conflicting quality checks no longer pass because their average score is positive.
+- Give Publish a full-height upload and activity column beside the clips and calendar. Keep the idle upload area compact, expand it for active progress, and retain a readable history viewport throughout.
+- Show the latest 20 activity records with wrapping titles, separate status and date lines, and independent scrolling. Keep the full searchable archive available through View all.
+- Stack panels with useful minimum heights in smaller windows, and allow clip titles to wrap to two lines.
 
 ## 1.0.0 Beta 5.7 — 2026-09-26
 

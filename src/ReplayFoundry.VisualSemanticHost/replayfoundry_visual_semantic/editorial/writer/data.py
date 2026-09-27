@@ -53,9 +53,11 @@ def validate_copy(value):
 
 def validate_example(value, *, qualification_run=False):
     keys = {"schema", "id", "sourceGroup", "factSha256", "prompt", "chosen", "rejected", "kind"}
-    if isinstance(value, dict) and value.get("schema") == "foundry-writer-example-2":
+    if isinstance(value, dict) and value.get("schema") in ("foundry-writer-example-2", "foundry-writer-example-3"):
         keys |= {"feedback", "evidence"}
-    if not isinstance(value, dict) or set(value) != keys or value["schema"] not in (SCHEMA, "foundry-writer-example-2"):
+    if isinstance(value, dict) and value.get("schema") == "foundry-writer-example-3":
+        keys |= {"edits"}
+    if not isinstance(value, dict) or set(value) != keys or value["schema"] not in (SCHEMA, "foundry-writer-example-2", "foundry-writer-example-3"):
         raise ValueError("Unsupported writer example contract.")
     if any(not valid_hash(value[key]) for key in ("id", "sourceGroup", "factSha256")):
         raise ValueError("Writer evidence identities must be SHA-256 values.")
@@ -78,7 +80,7 @@ def validate_example(value, *, qualification_run=False):
             raise ValueError("A preference pair must contain two different wordings.")
     if value["kind"] in {"HumanCorrection", "ExplicitWordingPreference"} and value["rejected"] is None:
         raise ValueError("A wording correction requires its rejected wording under the same facts.")
-    if value["schema"] == "foundry-writer-example-2":
+    if value["schema"] in ("foundry-writer-example-2", "foundry-writer-example-3"):
         feedback = value["feedback"]
         if (not isinstance(feedback, dict) or set(feedback) != {"reason", "correctedEvent", "fields", "factsReviewed"}
                 or feedback["reason"] not in {"Unspecified", "Style", "TooGeneric", "WrongSpeaker", "WrongEvent", "InventedOutcome", "WrongScope"}
@@ -90,6 +92,9 @@ def validate_example(value, *, qualification_run=False):
             raise ValueError("Writer feedback must name its explicitly supervised fields and review state")
         if value["evidence"] is not None and not isinstance(value["evidence"], dict):
             raise ValueError("Learning evidence must be a local source descriptor")
+    if "edits" in value:
+        from .edits import validate
+        validate(value["edits"], value)
     identity = {key: item for key, item in value.items() if key != "id"}
     if digest(identity) != value["id"]:
         raise ValueError("Writer example identity changed.")

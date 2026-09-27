@@ -8,6 +8,8 @@ using ReplayFoundry.Desktop.Features.Settings;
 using ReplayFoundry.Desktop.Presentation.Commands;
 // Immutable saved wording for display/restore; never supplies inference authority.
 using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialCopyVersion;
+using ClipEditorialAlternative = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialAlternative;
+using ClipEditorialWritingAction = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialWritingAction;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 
@@ -20,6 +22,9 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
     private readonly DelegateCommand _saveCommand;
     private readonly DelegateCommand _markReviewedCommand;
     private readonly AsyncDelegateCommand _rerollCommand;
+    private readonly AsyncDelegateCommand _newAngleCommand;
+    private readonly DelegateCommand _useAlternativeCommand;
+    private ClipEditorialAlternative? _selectedAlternative;
     private readonly AsyncDelegateCommand _montageCommand;
     private readonly AsyncDelegateCommand _refreshCurrentCutCommand;
     private readonly AsyncDelegateCommand _refreshGameContextCommand;
@@ -45,12 +50,11 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
     private string _savedAudienceAddress = "Chat";
     private string _savedNamingGuidance = string.Empty;
     private string _savedDescriptionSignature = string.Empty;
-    private string _status =
-        "Select a generated clip to review its title and description.";
+    private string _savedTone = "Natural";
+    private string _status = "Select a generated clip to review its title and description.";
     private string _draftState = "Unavailable";
     private bool _needsCurrentCutRefresh;
-    private string _currentCutStatus =
-        "Select a clip to edit its title and description.";
+    private string _currentCutStatus = "Select a clip to edit its title and description.";
     private bool _isGenerating;
     private bool _isGameContextUpdating;
     private bool _isStopping;
@@ -87,6 +91,11 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         _rerollCommand = new AsyncDelegateCommand(
             RerollAsync,
             CanReroll);
+        _newAngleCommand = new AsyncDelegateCommand(() => RewriteAsync(false, ClipEditorialWritingAction.NewAngle), CanReroll);
+        _useAlternativeCommand = new DelegateCommand(UseAlternative, () => _service.CanEdit(_project, _asset) &&
+            !_isHostBusy && !_isStopping && !IsGenerating && !HasUnsavedChanges &&
+            SelectedAlternative is { } choice && Alternatives.Contains(choice) &&
+            (!KeepTitle || choice.Title == Title) && (!KeepDescription || choice.Description == Description));
         _montageCommand = new AsyncDelegateCommand(() => RewriteAsync(true), () => IsMontage && CanRewrite());
         _refreshCurrentCutCommand = new AsyncDelegateCommand(
             RefreshCurrentCutAsync,
@@ -109,17 +118,6 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public StudioWordingLearningViewModel WordingLearning { get; }
-
-    private bool _keepTitle, _keepDescription;
-    public bool KeepTitle { get => _keepTitle; set { _keepTitle = value; NotifyState(); } }
-    public bool KeepDescription { get => _keepDescription; set { _keepDescription = value; NotifyState(); } }
-    public IReadOnlyList<string> Tones { get; } = ["Natural", "Playful", "Understated"];
-    public string Tone { get; set; } = "Natural";
-    public bool IsMontage => _project?.Mode == Features.Generate.ModeSelection.GenerationMode.Montage;
-    public string MontageTitle => _project?.IsMontageMetadataCurrent == true ? _project.MontageMetadata!.Title : "Whole-montage copy needs writing";
-    public string MontageDescription => _project?.IsMontageMetadataCurrent == true ? _project.MontageMetadata!.Description
-        : "Generate copy for the complete arrangement. Changing sections or their order requires a new review.";
-    public ICommand RewriteMontageCommand => _montageCommand;
 
     public string Title
     {
@@ -220,14 +218,11 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         }
     }
 
-    public string TitleCharacterCount =>
-        $"{Title.Length}/{_service.MaximumTitleLength}";
+    public string TitleCharacterCount => $"{Title.Length}/{_service.MaximumTitleLength}";
 
-    public string DescriptionCharacterCount =>
-        $"{Description.Length}/{_service.MaximumDescriptionLength}";
+    public string DescriptionCharacterCount => $"{Description.Length}/{_service.MaximumDescriptionLength}";
 
-    public string PackagingGuidance =>
-        StudioGameContextPresentation.PackagingGuidance(Title, Description);
+    public string PackagingGuidance => StudioGameContextPresentation.PackagingGuidance(Title, Description);
 
     public IReadOnlyList<ClipEditorialCopyVersion> CopyVersions =>
         _asset?.EditorialMetadata?.CopyVersions.Reverse().ToArray() ?? [];
@@ -266,70 +261,49 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
 
     public string Status => _status;
 
-    public bool HasCopyReview =>
-        _asset?.EditorialMetadata?.QualityIssues.Count > 0;
+    public bool HasCopyReview => _asset?.EditorialMetadata?.QualityIssues.Count > 0;
 
     public string DraftState => StudioEditorialDraftPresentation.State(IsGenerating, HasUnsavedChanges, _asset, _draftState);
 
-    public string MetadataOriginText =>
-        StudioGameContextPresentation.BuildMetadataOrigin(_asset);
+    public string MetadataOriginText => StudioGameContextPresentation.BuildMetadataOrigin(_asset);
 
-    public string WhyThisTitleText =>
-        StudioGameContextPresentation.BuildWhyThisTitle(_asset);
+    public string WhyThisTitleText => StudioGameContextPresentation.BuildWhyThisTitle(_asset);
 
     public bool NeedsCurrentCutRefresh => _needsCurrentCutRefresh && !IsGenerating && !StudioEditorialDraftPresentation.IsUnwritten(_asset);
 
     public string CurrentCutStatus => _currentCutStatus;
 
-    public bool HasContextReceipt =>
-        _asset?.EditorialContext?.EditorialBrief is not null;
+    public bool HasContextReceipt => _asset?.EditorialContext?.EditorialBrief is not null;
 
-    public string ContextUsedSummary =>
-        StudioGameContextPresentation.BuildContextUsedSummary(_asset);
+    public string ContextUsedSummary => StudioGameContextPresentation.BuildContextUsedSummary(_asset);
 
-    public string ContextAuthoritySummary =>
-        StudioGameContextPresentation.BuildContextAuthoritySummary(_asset);
+    public string ContextAuthoritySummary => StudioGameContextPresentation.BuildContextAuthoritySummary(_asset);
 
     public bool ContextNeedsReview => StudioGameContextPresentation.ContextNeedsReview(_asset);
 
-    public string ContextReviewSummary =>
-        StudioGameContextPresentation.BuildContextReviewSummary(_asset);
+    public string ContextReviewSummary => StudioGameContextPresentation.BuildContextReviewSummary(_asset);
 
-    public string CanonicalGameContextText =>
-        _gameContextReceipt.CanonicalGameTitle;
+    public string CanonicalGameContextText => _gameContextReceipt.CanonicalGameTitle;
 
-    public string GameContextFreshnessText =>
-        StudioGameContextPresentation.BuildFreshnessText(
-            _gameContextReceipt);
+    public string GameContextFreshnessText => StudioGameContextPresentation.BuildFreshnessText(_gameContextReceipt);
 
-    public bool HasGameContextSources =>
-        _gameContextReceipt.Sources.Count > 0;
+    public bool HasGameContextSources => _gameContextReceipt.Sources.Count > 0;
 
-    public string GameContextSourcesText =>
-        StudioGameContextPresentation.BuildSourceAttributionText(
-            _gameContextReceipt);
+    public string GameContextSourcesText => StudioGameContextPresentation.BuildSourceAttributionText(_gameContextReceipt);
 
-    public bool HasSupportedGameContextClaims =>
-        _gameContextReceipt.SupportedClaims.Count > 0;
+    public bool HasSupportedGameContextClaims => _gameContextReceipt.SupportedClaims.Count > 0;
 
-    public string SupportedGameContextClaimsText =>
-        StudioGameContextPresentation.BuildSupportedGameContextClaimsText(_gameContextReceipt);
+    public string SupportedGameContextClaimsText => StudioGameContextPresentation.BuildSupportedGameContextClaimsText(_gameContextReceipt);
 
-    public bool HasAmbiguousGameContextSuggestions =>
-        StudioGameContextPresentation
-            .AmbiguousKnowledgeClaims(_asset).Count > 0;
+    public bool HasAmbiguousGameContextSuggestions => StudioGameContextPresentation.AmbiguousKnowledgeClaims(_asset).Count > 0;
 
-    public string AmbiguousGameContextSuggestionsText =>
-        StudioGameContextPresentation.BuildAmbiguousGameContextSuggestionsText(_asset);
+    public string AmbiguousGameContextSuggestionsText => StudioGameContextPresentation.BuildAmbiguousGameContextSuggestionsText(_asset);
 
-    public string GameContextComponentsText =>
-        StudioGameContextPresentation.BuildGameContextComponentsText(_gameContextReceipt);
+    public string GameContextComponentsText => StudioGameContextPresentation.BuildGameContextComponentsText(_gameContextReceipt);
 
-    public bool CanRefreshPublicGameContext =>
-        _gameContextReceipt.CanRefresh;
+    public bool CanRefreshPublicGameContext => _gameContextReceipt.CanRefresh;
 
-    public bool HasCachedPublicGameContext =>
-        _gameContextReceipt.CanRemove;
+    public bool HasCachedPublicGameContext => _gameContextReceipt.CanRemove;
 
     public bool IsGameContextUpdating => _isGameContextUpdating;
 
@@ -337,21 +311,10 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         ? "Rewrite for this clip and captions"
         : "Update for this clip and captions";
 
-    public bool HasUnsavedChanges =>
-        !Title.Equals(_savedTitle, StringComparison.Ordinal) ||
-        !Description.Equals(_savedDescription, StringComparison.Ordinal) ||
-        !Tags.Equals(_savedTags, StringComparison.Ordinal);
+    public bool HasUnsavedChanges => Title != _savedTitle || Description != _savedDescription || Tags != _savedTags;
 
-    public bool HasUnsavedProfileChanges =>
-        !AudienceAddress.Equals(
-            _savedAudienceAddress,
-            StringComparison.Ordinal) ||
-        !NamingGuidance.Equals(
-            _savedNamingGuidance,
-            StringComparison.Ordinal) ||
-        !DescriptionSignature.Equals(
-            _savedDescriptionSignature,
-            StringComparison.Ordinal);
+    public bool HasUnsavedProfileChanges => AudienceAddress != _savedAudienceAddress ||
+        NamingGuidance != _savedNamingGuidance || DescriptionSignature != _savedDescriptionSignature || Tone != _savedTone;
 
     public string SaveButtonText => "Save changes";
 
@@ -366,27 +329,16 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
     public bool UsesLocalAiForRerolls => _rerollPreference.UseLocalAi;
 
     public string RerollButtonText => HasUnsavedChanges ? "Save & rewrite" : StudioEditorialDraftPresentation.IsUnwritten(_asset)
-        ? "Write title & description" : UsesLocalAiForRerolls
-        ? "Rewrite with local AI"
-        : "Try another angle";
+        ? "Write copy" : "Rewrite";
 
     public string RerollAutomationName => HasUnsavedChanges ? "Save changes and rewrite title and description" : UsesLocalAiForRerolls
         ? "Rewrite title and description with local AI"
         : "Try another title and description angle";
 
-    public string RerollProviderText => HasUnsavedChanges
-        ? "Saves your edits before writing another version. Your saved wording remains in History."
-        : UsesLocalAiForRerolls
-            ? IsAiAvailable
-                ? "Local AI will write a title and description for this clip. Your current draft stays in place if it cannot finish."
-                : _service.AiUnavailableReason ??
-                    "Local AI is not ready. Check Advanced AI in Settings before trying again."
-            : "Replay Foundry will create a quick local rewrite.";
+    public string RerollProviderText => StudioEditorialDraftPresentation.ProviderText(
+        HasUnsavedChanges, UsesLocalAiForRerolls, IsAiAvailable, _service.AiUnavailableReason);
 
-    public IReadOnlyList<StudioEditorialVariantChoice> VariantChoices
-    {
-        get;
-    }
+    public IReadOnlyList<StudioEditorialVariantChoice> VariantChoices { get; }
 
     public StudioEditorialVariantChoice SelectedVariantChoice
     {
@@ -405,13 +357,13 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
                 return;
             }
             _selectedVariantChoice = value;
+            CancelWritingForEdit();
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedVariantDescription));
         }
     }
 
-    public string SelectedVariantDescription =>
-        SelectedVariantChoice.Description;
+    public string SelectedVariantDescription => SelectedVariantChoice.Description;
 
     public ICommand SaveCommand => _saveCommand;
 
@@ -423,8 +375,7 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
 
     public ICommand RefreshGameContextCommand => _refreshGameContextCommand;
 
-    public ICommand RemoveCachedGameContextCommand =>
-        _removeCachedGameContextCommand;
+    public ICommand RemoveCachedGameContextCommand => _removeCachedGameContextCommand;
 
     public ICommand SaveProfileCommand => _saveProfileCommand;
 
@@ -438,7 +389,7 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         _copyContextRevision = asset?.EditorialContext is not null && asset.EditorialMetadata?.CopyVersions.Count > 0
             ? StudioEditorialContextRevision.CreateDurable(asset.CreateCurrentCutEditorialContext()) : null;
         _selectedCopyVersion = CopyVersions.FirstOrDefault();
-        LoadProfile();
+        LoadProfile(preserveUnsaved: true);
         LoadDraft();
     }
 
@@ -457,7 +408,7 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         HasUnsavedChanges ? WordingLearning.CaptureDraft(Title, Description, Tags) : null;
 
     internal StudioPendingEditorialProfileDraft? CapturePendingProfileDraft() =>
-        HasUnsavedProfileChanges ? new StudioPendingEditorialProfileDraft(AudienceAddress, NamingGuidance, DescriptionSignature) : null;
+        HasUnsavedProfileChanges ? new StudioPendingEditorialProfileDraft(AudienceAddress, NamingGuidance, DescriptionSignature, Tone) : null;
 
     internal void RestorePendingDrafts(
         StudioPendingEditorialDraft? metadata,
@@ -480,6 +431,7 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
             _audienceAddress = profile.AudienceAddress;
             _namingGuidance = profile.NamingGuidance;
             _descriptionSignature = profile.DescriptionSignature;
+            _tone = profile.Tone;
         }
         NotifyState();
     }
@@ -640,9 +592,9 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         NotifyState();
     }
 
-    private Task RerollAsync() => RewriteAsync(false);
+    private Task RerollAsync() => RewriteAsync(false, ClipEditorialWritingAction.Rewrite);
 
-    private async Task RewriteAsync(bool montage)
+    private async Task RewriteAsync(bool montage, ClipEditorialWritingAction action = ClipEditorialWritingAction.NewAngle)
     {
         if (_project is null ||
             _asset is null ||
@@ -687,7 +639,7 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
                     DescriptionSignature,
                     requireAi,
                     generationCancellation.Token,
-                    SelectedVariantChoice.Value, KeepTitle, KeepDescription, Tone);
+                    SelectedVariantChoice.Value, KeepTitle, KeepDescription, Tone, action);
             generationCancellation.Token.ThrowIfCancellationRequested();
             _status = result.Status;
         }
@@ -842,41 +794,14 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         NotifyState();
     }
 
-    private void SaveProfile()
-    {
-        try
-        {
-            _service.SaveProfile(
-                AudienceAddress,
-                NamingGuidance,
-                DescriptionSignature);
-            _savedAudienceAddress = AudienceAddress;
-            _savedNamingGuidance = NamingGuidance;
-            _savedDescriptionSignature = DescriptionSignature;
-            _status =
-                "Reusable wording saved for future suggestions.";
-        }
-        catch (Exception exception)
-        {
-            _status = exception.Message;
-        }
-
-        NotifyState();
-    }
-
-    private bool CanSave() =>
-        _service.CanEdit(_project, _asset) &&
-        !_isHostBusy &&
-        !IsGenerating &&
+    private bool CanEditWhenIdle => _service.CanEdit(_project, _asset) && !_isHostBusy && !IsGenerating;
+    private bool CanSave() => CanEditWhenIdle &&
         !string.IsNullOrWhiteSpace(Title) &&
         Title.Trim().Length <= _service.MaximumTitleLength &&
         !string.IsNullOrWhiteSpace(Description) &&
         Description.Trim().Length <= _service.MaximumDescriptionLength;
 
-    private bool CanMarkReviewed() =>
-        _service.CanEdit(_project, _asset) &&
-        !_isHostBusy &&
-        !IsGenerating &&
+    private bool CanMarkReviewed() => CanEditWhenIdle &&
         !HasUnsavedChanges &&
         !NeedsCurrentCutRefresh &&
         !_draftState.Equals("Reviewed", StringComparison.Ordinal);
@@ -886,9 +811,7 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
     private bool CanRewrite() =>
         CanGenerate &&
         !_isStopping &&
-        _service.CanEdit(_project, _asset) &&
-        !_isHostBusy &&
-        !IsGenerating &&
+        CanEditWhenIdle &&
         (!HasUnsavedChanges || CanSave());
 
     private bool CanRefreshCurrentCut() => NeedsCurrentCutRefresh && CanReroll();
@@ -896,18 +819,14 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
     private bool CanRefreshGameContext() =>
         !_isStopping &&
         !_isGameContextUpdating &&
-        !_isHostBusy &&
-        !IsGenerating &&
         _gameContextReceipt.CanRefresh &&
-        _service.CanEdit(_project, _asset);
+        CanEditWhenIdle;
 
     private bool CanRemoveCachedGameContext() =>
         !_isStopping &&
         !_isGameContextUpdating &&
-        !_isHostBusy &&
-        !IsGenerating &&
         _gameContextReceipt.CanRemove &&
-        _service.CanEdit(_project, _asset);
+        CanEditWhenIdle;
 
     private void RerollPreference_Changed(object? sender, EventArgs args) =>
         NotifyState();
@@ -941,10 +860,13 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         _savedAudienceAddress = snapshot.AudienceAddress;
         _savedNamingGuidance = snapshot.NamingGuidance;
         _savedDescriptionSignature = snapshot.DescriptionSignature;
+        _tone = snapshot.Tone;
+        _savedTone = snapshot.Tone;
     }
 
     private void NotifyDraftEdited(string propertyName, bool wasDirty)
     {
+        CancelWritingForEdit();
         // Typing changes the draft, not the saved copy history, clip evidence,
         // or game context. Rebinding those surfaces on every key blocks input.
         OnPropertyChanged(propertyName);
@@ -963,17 +885,36 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         _saveCommand.RaiseCanExecuteChanged();
         _markReviewedCommand.RaiseCanExecuteChanged();
         _rerollCommand.RaiseCanExecuteChanged();
+        _newAngleCommand.RaiseCanExecuteChanged();
+        _useAlternativeCommand.RaiseCanExecuteChanged();
         _refreshCurrentCutCommand.RaiseCanExecuteChanged();
     }
 
     private void NotifyProfileEdited(string propertyName)
     {
+        CancelWritingForEdit();
         OnPropertyChanged(propertyName);
         OnPropertyChanged(nameof(HasUnsavedProfileChanges));
+        if (_asset?.EditorialMetadata?.Alternatives.Count > 0)
+        {
+            OnPropertyChanged(nameof(Alternatives));
+            OnPropertyChanged(nameof(HasAlternatives));
+        }
+        _useAlternativeCommand.RaiseCanExecuteChanged();
+    }
+
+    private void CancelWritingForEdit()
+    {
+        if (_isGenerating) TryCancel(_generationCancellation);
     }
 
     private void NotifyState()
     {
+        OnPropertyChanged(nameof(Tone));
+        OnPropertyChanged(nameof(Alternatives));
+        OnPropertyChanged(nameof(HasAlternatives));
+        _newAngleCommand.RaiseCanExecuteChanged();
+        _useAlternativeCommand.RaiseCanExecuteChanged();
         foreach (string name in new[] { nameof(KeepTitle), nameof(KeepDescription), nameof(IsMontage), nameof(MontageTitle), nameof(MontageDescription) }) OnPropertyChanged(name);
         _montageCommand.RaiseCanExecuteChanged();
         foreach (string propertyName in StudioEditorialPropertyNotifications.All)
@@ -996,4 +937,62 @@ public sealed class StudioEditorialMetadataViewModel : INotifyPropertyChanged, I
         PropertyChanged?.Invoke(
             this,
             new PropertyChangedEventArgs(propertyName));
+
+    private bool _keepTitle, _keepDescription;
+    private string _tone = "Natural";
+    public bool KeepTitle { get => _keepTitle; set { if (_keepTitle == value) return; CancelWritingForEdit(); _keepTitle = value; NotifyState(); } }
+    public bool KeepDescription { get => _keepDescription; set { if (_keepDescription == value) return; CancelWritingForEdit(); _keepDescription = value; NotifyState(); } }
+    public IReadOnlyList<string> Tones { get; } = ["Natural", "Playful", "Understated"];
+    public string Tone
+    {
+        get => _tone;
+        set
+        {
+            if (_tone == value) return;
+            if (!Tones.Contains(value)) throw new ArgumentOutOfRangeException(nameof(value));
+            CancelWritingForEdit();
+            _tone = value;
+            NotifyState();
+        }
+    }
+    public bool IsMontage => _project?.Mode == Features.Generate.ModeSelection.GenerationMode.Montage;
+    public string MontageTitle => _project?.IsMontageMetadataCurrent == true ? _project.MontageMetadata!.Title : "Whole-montage copy needs writing";
+    public string MontageDescription => _project?.IsMontageMetadataCurrent == true ? _project.MontageMetadata!.Description
+        : "Generate copy for the complete arrangement. Changing sections or their order requires a new review.";
+    public ICommand RewriteMontageCommand => _montageCommand;
+    public IReadOnlyList<ClipEditorialAlternative> Alternatives => _service.Alternatives(_asset, AudienceAddress, NamingGuidance, DescriptionSignature, Tone);
+    public bool HasAlternatives => Alternatives.Count > 0;
+    public ClipEditorialAlternative? SelectedAlternative
+    {
+        get => _selectedAlternative;
+        set { _selectedAlternative = value; OnPropertyChanged(); _useAlternativeCommand.RaiseCanExecuteChanged(); }
+    }
+    public ICommand UseAlternativeCommand => _useAlternativeCommand;
+    public ICommand NewAngleCommand => _newAngleCommand;
+    private void UseAlternative()
+    {
+        if (_project is null || _asset is null || SelectedAlternative is not { } choice || !_useAlternativeCommand.CanExecute(null)) return;
+        try
+        {
+            _service.SelectAlternative(_project, _asset, choice, AudienceAddress, NamingGuidance, DescriptionSignature, Tone, KeepTitle, KeepDescription);
+            _status = "Selected wording saved. The previous version is in History.";
+        }
+        catch (InvalidOperationException exception) { _status = exception.Message; }
+        NotifyState();
+    }
+
+    private void SaveProfile()
+    {
+        try
+        {
+            _service.SaveProfile(AudienceAddress, NamingGuidance, DescriptionSignature, Tone);
+            _savedAudienceAddress = AudienceAddress;
+            _savedNamingGuidance = NamingGuidance;
+            _savedDescriptionSignature = DescriptionSignature;
+            _savedTone = Tone;
+            _status = "Reusable wording saved for future suggestions.";
+        }
+        catch (Exception exception) { _status = exception.Message; }
+        NotifyState();
+    }
 }

@@ -70,7 +70,7 @@ internal sealed class Qwen3VlEditorialSceneContextReviewer(
                     context.DeterministicReason, context.Transcripts, evidence, context.GameContext, context.GameKnowledge,
                     context.GameplayRegion, context.VisualText, context.EditorialBrief);
                 result[i] = new(refreshed, request.Profile, request.Attempt, request.Preference, request.SourceMedia,
-                    request.ReviewVideo, request.PriorAcceptedTitleExclusions, request.VariantIntent, request.Tone);
+                    request.ReviewVideo, request.PriorAcceptedTitleExclusions, request.VariantIntent, request.Tone, request.Writing);
                 if (!Qwen3VlSceneCopyGenerator.CanUse(result[i]))
                     throw new InvalidDataException("The picture review did not supply a complete scene for this cut.");
             }

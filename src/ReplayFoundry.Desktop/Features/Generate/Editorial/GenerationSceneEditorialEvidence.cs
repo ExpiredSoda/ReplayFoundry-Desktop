@@ -16,14 +16,18 @@ internal static class GenerationSceneEditorialEvidence
         if (evidence is null) return null;
         var supported = evidence.Categories.Where(row => row.Verdict == SceneEvidenceVerdict.Supported).ToArray();
         var cited = supported.SelectMany(row => row.EvidenceIds).ToHashSet(StringComparer.Ordinal);
+        cited.UnionWith(evidence.SourceText.SelectMany(item => item.EvidenceIds));
         using var audio = JsonDocument.Parse(evidence.AudioEvidenceJson);
         var speech = new List<object>();
         int remaining = 3000;
-        foreach (var track in audio.RootElement.GetProperty("tracks").EnumerateArray())
-            foreach (var span in track.GetProperty("speech").EnumerateArray())
+        var available = audio.RootElement.GetProperty("tracks").EnumerateArray()
+            .SelectMany(track => track.GetProperty("speech").EnumerateArray().Select(span => (track, span)))
+            .OrderByDescending(item => cited.Contains(item.span.GetProperty("id").GetString()!))
+            .ThenBy(item => item.span.GetProperty("start").GetDouble()).ToArray();
+        foreach (var (track, span) in available)
             {
                 string text = span.GetProperty("text").GetString()!;
-                if (!cited.Contains(span.GetProperty("id").GetString()!) || text.Length > remaining || speech.Count >= 8) continue;
+                if (text.Length > remaining || speech.Count >= 8) continue;
                 speech.Add(new { id = span.GetProperty("id").GetString(), streamIndex = track.GetProperty("streamIndex").GetInt32(),
                     role = track.GetProperty("role").GetString(), roleSource = track.GetProperty("roleSource").GetString(),
                     start = span.GetProperty("start").GetDouble(), end = span.GetProperty("end").GetDouble(), text });
@@ -33,9 +37,11 @@ internal static class GenerationSceneEditorialEvidence
             JsonSerializer.Serialize(new { schema = SceneMomentEvidence.Version, audioStatus = evidence.AudioStatus,
                 categories = supported.Select(row => new { category = row.Category.ToString(), explanation = row.Explanation,
                     start = row.Start.TotalSeconds, end = row.End.TotalSeconds,
-                    setupStart = row.SetupStart.TotalSeconds, payoffEnd = row.PayoffEnd.TotalSeconds }),
+                    setupStart = row.SetupStart.TotalSeconds, payoffEnd = row.PayoffEnd.TotalSeconds, evidenceIds = row.EvidenceIds }),
                 sourceText = evidence.SourceText.Select(item => new { claim = item.Claim, text = item.Text, evidenceIds = item.EvidenceIds }),
-                speech, attribution = "Source text retains model-checked frame/speech citations, not human confirmation. " +
+                speech, speechCoverage = speech.Count == available.Length ? "CompleteSuppliedSpans" : "PartialSuppliedSpans",
+                omittedSpeechSpanCount = available.Length - speech.Count,
+                attribution = "Source text retains model-checked frame/speech citations, not human confirmation. " +
                     "Names addressed in dialogue identify the recipient, not the speaker. " +
                     "Only UserConfirmed CreatorSpeech identifies creator routing. GameDialogue is game speech; " +
                     "MixedSpeech/Unknown do not identify the speaker. Speech recognition remains unreviewed text; " +

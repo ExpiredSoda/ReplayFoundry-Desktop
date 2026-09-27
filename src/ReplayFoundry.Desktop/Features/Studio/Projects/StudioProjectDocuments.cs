@@ -231,7 +231,8 @@ public sealed record StudioEditorialMetadataDocument(
     IReadOnlyList<StudioEditorialQualityIssueDocument> QualityIssues,
     IReadOnlyList<string>? PriorAcceptedTitles = null,
     GameKnowledgeInfluenceAudit? GroundingAudit = null,
-    IReadOnlyList<ClipEditorialCopyVersion>? CopyVersions = null);
+    IReadOnlyList<ClipEditorialCopyVersion>? CopyVersions = null,
+    IReadOnlyList<ClipEditorialAlternative>? Alternatives = null);
 
 public sealed record StudioPreferenceFeatureDocument(
     ClipPreferenceFeatureCode Code,

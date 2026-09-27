@@ -683,7 +683,7 @@ public sealed partial class ClipEditorialMetadataGenerationService :
             draft.Readiness,
             issues,
             priorTitles,
-            draft.GroundingAudit);
+            draft.GroundingAudit, draft.CopyVersions, draft.Alternatives);
     }
 
     private static IReadOnlyList<ClipEditorialMetadataQualityIssue>

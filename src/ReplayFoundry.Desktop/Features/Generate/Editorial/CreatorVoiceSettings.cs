@@ -52,6 +52,7 @@ public sealed class CreatorVoiceSettings
 
 public interface ICreatorVoiceSettingsEditor
 {
+    bool IsPersistent => false;
     CreatorVoiceSettings CurrentCreatorVoice { get; }
 
     CreatorVoiceSettings UpdateCreatorVoice(

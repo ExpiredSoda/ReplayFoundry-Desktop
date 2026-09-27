@@ -692,10 +692,9 @@ internal static partial class UiUxApplicationSurfaceTests
             !studioPreview.Contains("BorderThickness=\"2\"", StringComparison.Ordinal),
             "Studio preview should center its status with the transport while keeping a quiet ghost zone without a harsh video border.");
         TestAssert.True(
-            publishQueue.Contains("<Grid.ColumnDefinitions>", StringComparison.Ordinal) &&
-            publishQueue.Contains("Grid.Column=\"1\"", StringComparison.Ordinal) &&
-            publishQueue.Contains("VerticalAlignment=\"Center\"", StringComparison.Ordinal),
-            "Publish queue status must occupy a dedicated centered header column instead of overlapping the heading.");
+            publishQueue.Contains("Control.CanvasPane", StringComparison.Ordinal) &&
+            publishQueue.Contains("Control.ProgressBar.Standard", StringComparison.Ordinal),
+            "Publish activity must reuse the shared pane and progress styles.");
         TestAssert.True(
             studioInspector.Contains("Control.CanvasPane", StringComparison.Ordinal) &&
             studioInspector.Contains("Control.CanvasInsetCard", StringComparison.Ordinal),

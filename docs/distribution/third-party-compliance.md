@@ -1,5 +1,20 @@
 # Third-party compliance record
 
+## Local reasoning writer candidate
+
+The development-only text writer evaluates
+[`deepseek-ai/DeepSeek-R1-0528-Qwen3-8B`](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B)
+using Unsloth's Q5_K_M GGUF conversion at revision
+`eb48357c179d34dbf515983f798dfb8752a0f261` (MIT), with
+[`llama.cpp` b11146](https://github.com/ggml-org/llama.cpp/releases/tag/b11146)
+and its Windows CUDA 13.4 runtime. The exact model, executable and DLL hashes
+are recorded in `src/ReplayFoundry.TextWriterHost/deepseek-writer-lock.json`.
+This is a separate candidate runtime, not a change to the qualified BF16
+visual host. The installed release does not select it. Distribution still
+requires retained upstream model/runtime licenses, CUDA notices, an installer
+package and independent quality/latency qualification; the source integration
+and local experiment alone do not establish those release requirements.
+
 ## Application updater
 
 The Windows app includes WinSparkle 0.9.4 (MIT), from the

@@ -33,7 +33,8 @@ public sealed class ClipEditorialMetadataDraft
         IEnumerable<ClipEditorialMetadataQualityIssue>? qualityIssues = null,
         IEnumerable<string>? priorAcceptedTitles = null,
         GameKnowledgeInfluenceAudit? groundingAudit = null,
-        IEnumerable<ClipEditorialCopyVersion>? copyVersions = null)
+        IEnumerable<ClipEditorialCopyVersion>? copyVersions = null,
+        IEnumerable<ClipEditorialAlternative>? alternatives = null)
     {
         if (!Enum.IsDefined(origin))
         {
@@ -107,6 +108,10 @@ public sealed class ClipEditorialMetadataDraft
         if (versions.Any(static version => version is null))
             throw new ArgumentException("Earlier copy cannot contain null entries.", nameof(copyVersions));
         CopyVersions = Array.AsReadOnly(versions.TakeLast(20).ToArray());
+        ClipEditorialAlternative[] choices = alternatives?.ToArray() ?? [];
+        if (choices.Length > 3 || choices.Any(static choice => choice is null))
+            throw new ArgumentException("At most three valid writing alternatives can be retained.", nameof(alternatives));
+        Alternatives = Array.AsReadOnly(choices.DistinctBy(static choice => (choice.Title, choice.Description)).ToArray());
     }
 
     public string Title { get; }
@@ -151,6 +156,20 @@ public sealed class ClipEditorialMetadataDraft
     public GameKnowledgeInfluenceAudit? GroundingAudit { get; }
 
     public IReadOnlyList<ClipEditorialCopyVersion> CopyVersions { get; }
+    public IReadOnlyList<ClipEditorialAlternative> Alternatives { get; }
+
+    public ClipEditorialMetadataDraft SelectAlternative(ClipEditorialAlternative choice, string contextFingerprint)
+    {
+        if (!Alternatives.Contains(choice)) throw new ArgumentException("The alternative belongs to another writing batch.", nameof(choice));
+        // Selection is an explicit user choice. Do not transfer the selected draft's
+        // individual neural score to a different candidate or label it as approval.
+        return new ClipEditorialMetadataDraft(choice.Title, choice.Description, choice.Tags,
+            ClipEditorialMetadataOrigin.UserEdited, Generator, Attempt, Evidence, Warnings,
+            AiProvenance is null ? null : AiProvenance with { NeuralCopyReview = null }, ClipEditorialMetadataReadiness.UserEditedDraft, [],
+            ClipEditorialPriorTitleExclusion.MergeTitleHistory(PriorAcceptedTitles, Title),
+            GroundingAudit, CopyVersions, Alternatives.Where(item => item != choice))
+            .RememberPreviousCopy(this, contextFingerprint);
+    }
 
     public ClipEditorialMetadataDraft RememberPreviousCopy(
         ClipEditorialMetadataDraft previous, string contextFingerprint)
@@ -165,7 +184,7 @@ public sealed class ClipEditorialMetadataDraft
             .DistinctBy(static value => (value.ContextFingerprint, value.Title, value.Description, string.Join(",", value.Tags)))
             .Reverse();
         return new(Title, Description, Tags, Origin, Generator, Attempt, Evidence,
-            Warnings, AiProvenance, Readiness, QualityIssues, PriorAcceptedTitles, GroundingAudit, versions);
+            Warnings, AiProvenance, Readiness, QualityIssues, PriorAcceptedTitles, GroundingAudit, versions, Alternatives);
     }
 
     public IReadOnlyList<ClipEditorialPriorTitleExclusion>
@@ -221,7 +240,7 @@ public sealed class ClipEditorialMetadataDraft
             QualityIssues,
             PriorAcceptedTitles,
             GroundingAudit,
-            CopyVersions);
+            CopyVersions, Alternatives);
 
     internal ClipEditorialMetadataDraft WithoutGroundingAudit() =>
         GroundingAudit is null
@@ -240,7 +259,7 @@ public sealed class ClipEditorialMetadataDraft
                 QualityIssues,
                 PriorAcceptedTitles,
                 groundingAudit: null,
-                copyVersions: CopyVersions);
+                copyVersions: CopyVersions, alternatives: Alternatives);
 
     private static string RequiredBounded(
         string value,

@@ -29,7 +29,7 @@ internal static class EditorialComposition
     public static EditorialServices Create(
         EditorialCompositionDependencies dependencies)
     {
-        var profileSession = new ClipEditorialProfileSession();
+        var profileSession = new ClipEditorialProfileSession(new JsonClipEditorialProfileStore());
         Qwen3VlGroundedMetadataGenerator? aiProvider =
             dependencies.VisualReview.EditorialAiProvider;
         var metadataGenerator = new ClipEditorialMetadataGenerationService(

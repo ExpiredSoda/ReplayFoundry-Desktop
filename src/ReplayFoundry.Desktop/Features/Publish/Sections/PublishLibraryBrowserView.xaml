@@ -58,7 +58,8 @@
                                 </Grid>
                             </Border>
                             <StackPanel Grid.Column="1" Margin="10,0,2,0">
-                                <TextBlock Text="{Binding Title}" ToolTip="{Binding Title}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Title}" ToolTip="{Binding Title}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}"
+                                    TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="36" LineHeight="18" LineStackingStrategy="BlockLineHeight" />
                                 <TextBlock Margin="0,2,0,3" Text="{Binding Detail}" Style="{DynamicResource Text.Meta}" TextTrimming="CharacterEllipsis" />
                                 <controls:PublicationBadge DataContext="{Binding Publication}" />
                             </StackPanel>

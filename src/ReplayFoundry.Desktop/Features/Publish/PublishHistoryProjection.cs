@@ -67,7 +67,7 @@ internal sealed record PublishHistoryProjection(
 
 internal static class PublishHistoryProjector
 {
-    public const int DashboardItemLimit = 5;
+    public const int DashboardItemLimit = 20;
     public const int PageSize = 25;
 
     public static IReadOnlyList<

@@ -716,7 +716,7 @@ public static class StudioProjectDocumentMapper
                     value.SourceRuleCode)).ToArray(),
             metadata.PriorAcceptedTitles.ToArray(),
             metadata.GroundingAudit,
-            metadata.CopyVersions.ToArray());
+            metadata.CopyVersions.ToArray(), metadata.Alternatives.ToArray());
 
     private static ClipEditorialMetadataDraft RestoreEditorialMetadata(
         StudioEditorialMetadataDocument metadata) =>
@@ -761,7 +761,7 @@ public static class StudioProjectDocumentMapper
                     value.SourceRuleCode)),
             metadata.PriorAcceptedTitles ?? [],
             metadata.GroundingAudit,
-            metadata.CopyVersions ?? []);
+            metadata.CopyVersions ?? [], metadata.Alternatives ?? []);
 
     private static StudioPreferenceVectorDocument MapPreferenceVector(
         ClipPreferenceFeatureVector vector) =>

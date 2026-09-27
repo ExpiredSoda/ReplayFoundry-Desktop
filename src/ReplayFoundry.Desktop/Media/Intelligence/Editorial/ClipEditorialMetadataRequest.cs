@@ -22,7 +22,8 @@ public sealed class ClipEditorialMetadataRequest
         IEnumerable<ClipEditorialPriorTitleExclusion>?
             priorAcceptedTitleExclusions = null,
         ClipEditorialVariantIntent? variantIntent = null,
-        string tone = "Natural")
+        string? tone = null,
+        ClipEditorialWritingRequest? writing = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(profile);
@@ -80,8 +81,11 @@ public sealed class ClipEditorialMetadataRequest
             .ToArray();
 
         Context = context;
+        tone ??= profile.DefaultTone;
         if (tone is not ("Natural" or "Playful" or "Understated")) throw new ArgumentException("Unknown writing tone.", nameof(tone));
         Tone = tone;
+        writing?.Validate();
+        Writing = writing;
         Profile = profile;
         Attempt = attempt;
         Preference = preference;
@@ -108,8 +112,14 @@ public sealed class ClipEditorialMetadataRequest
 
     public ClipEditorialVariantIntent VariantIntent { get; }
     public string Tone { get; }
+    public ClipEditorialWritingRequest? Writing { get; }
+    public bool RequiresNewAngle => Writing?.Action != ClipEditorialWritingAction.Rewrite && Writing?.KeepTitle != true;
+    public bool RequiresNoveltyReview => Writing?.Action != ClipEditorialWritingAction.Rewrite &&
+        (PriorAcceptedTitleExclusions.Count > 0 || Writing?.KeepTitle == true);
+    public ClipEditorialMetadataRequest WithWriting(ClipEditorialWritingRequest? writing) =>
+        new(Context, Profile, Attempt, Preference, SourceMedia, ReviewVideo, PriorAcceptedTitleExclusions, VariantIntent, Tone, writing);
     public ClipEditorialMetadataRequest WithTone(string tone) =>
-        new(Context, Profile, Attempt, Preference, SourceMedia, ReviewVideo, PriorAcceptedTitleExclusions, VariantIntent, tone);
+        new(Context, Profile, Attempt, Preference, SourceMedia, ReviewVideo, PriorAcceptedTitleExclusions, VariantIntent, tone, Writing);
 
     public ClipEditorialRevisionKind RevisionKind => Attempt == 0
         ? ClipEditorialRevisionKind.InitialDraft
@@ -133,7 +143,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             reviewVideo,
             PriorAcceptedTitleExclusions,
-            VariantIntent, Tone);
+            VariantIntent, Tone, Writing);
     }
 
     public ClipEditorialMetadataRequest WithAttempt(int attempt) =>
@@ -145,7 +155,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             ReviewVideo,
             PriorAcceptedTitleExclusions,
-            variantIntent: null, tone: Tone);
+            variantIntent: null, tone: Tone, writing: Writing);
 
     public ClipEditorialMetadataRequest WithPriorAcceptedTitleExclusions(
         IEnumerable<ClipEditorialPriorTitleExclusion> exclusions)
@@ -159,7 +169,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             ReviewVideo,
             exclusions,
-            VariantIntent, Tone);
+            VariantIntent, Tone, Writing);
     }
 
     public ClipEditorialMetadataRequest WithVariantIntent(
@@ -177,7 +187,7 @@ public sealed class ClipEditorialMetadataRequest
             SourceMedia,
             ReviewVideo,
             PriorAcceptedTitleExclusions,
-            variantIntent, Tone);
+            variantIntent, Tone, Writing);
     }
 
     private static ClipEditorialVariantIntent ResolveVariantIntent(

@@ -248,7 +248,8 @@ public sealed class ClipEditorialProfile
         ClipEditorialVoicePerspective voicePerspective =
             ClipEditorialVoicePerspective.CreatorFirstPerson,
         ClipEditorialCopyObjective copyObjective =
-            ClipEditorialCopyObjective.BalancedActionAndCommentary)
+            ClipEditorialCopyObjective.BalancedActionAndCommentary,
+        string defaultTone = "Natural")
     {
         if (!Enum.IsDefined(voicePerspective))
         {
@@ -272,6 +273,8 @@ public sealed class ClipEditorialProfile
             nameof(reusableDescriptionSignature));
         VoicePerspective = voicePerspective;
         CopyObjective = copyObjective;
+        if (defaultTone is not ("Natural" or "Playful" or "Understated")) throw new ArgumentException("Unknown writing tone.", nameof(defaultTone));
+        DefaultTone = defaultTone;
 
         string[] tags = (defaultTags ?? [])
             .Select(NormalizeTag)
@@ -293,6 +296,7 @@ public sealed class ClipEditorialProfile
     public ClipEditorialVoicePerspective VoicePerspective { get; }
 
     public ClipEditorialCopyObjective CopyObjective { get; }
+    public string DefaultTone { get; }
 
     public static ClipEditorialProfile Default { get; } = new();
 
