@@ -711,11 +711,13 @@ internal static partial class UiUxApplicationSurfaceTests
             !storageSettings.Contains("Also delete", StringComparison.Ordinal) &&
             !storageSettings.Contains("Also forget", StringComparison.Ordinal),
             "Settings must distinguish visible turn-off actions from clearly destructive data-removal actions using plain language.");
+        string writingSettings = File.ReadAllText(Path.Combine(RepositoryLayout.Root,
+            "src", "ReplayFoundry.Desktop", "Features", "Settings", "Sections", "CreatorVoiceSettingsView.xaml"));
         TestAssert.True(
-            aiSettings.Contains("Title &amp; description", StringComparison.Ordinal) &&
-            aiSettings.Contains("Use local AI for rewrites", StringComparison.Ordinal) &&
+            writingSettings.Contains("Writing &amp; learning", StringComparison.Ordinal) &&
+            writingSettings.Contains("Use local AI for rewrites", StringComparison.Ordinal) &&
             aiSettings.Contains("Control.DestructiveButton", StringComparison.Ordinal),
-            "Local AI settings should explain title rewriting and present model removal as a destructive action.");
+            "Writing settings should explain title rewriting; installed tools keep model removal clearly destructive.");
 
         return Task.CompletedTask;
     }

@@ -58,9 +58,12 @@ public partial class StudioPreviewView : UserControl
         PreviewPlayer.IsMuted = true;
         _positionTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(1000d / 30d),
-            DispatcherPriority.Normal,
+            // Sampling may yield to mouse and keyboard input; the monotonic
+            // playback clock still resolves the current frame after a delay.
+            DispatcherPriority.Background,
             OnPositionTimerTick,
             Dispatcher);
+        _positionTimer.Stop();
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;

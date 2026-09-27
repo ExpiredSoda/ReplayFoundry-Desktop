@@ -24,3 +24,15 @@ def select(*args, **kwargs):
 
 def scene_selection(*args, **kwargs):
     return None
+
+
+def community_selection(*args, **kwargs):
+    return None
+
+
+def load_selection(*args, **kwargs):
+    raise ValueError("Community writing is available in the signed Replay Foundry app.")
+
+
+def community_messages(messages):
+    return messages

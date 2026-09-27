@@ -2,7 +2,18 @@
 
 This file records user-visible product changes and the release-engineering work
 that supports them. Versions follow the public GitHub releases. The current
-downloadable version is [1.0.0 Beta 5.8](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.8).
+downloadable version is [1.0.0 Beta 5.9](https://github.com/ExpiredSoda/ReplayFoundry-Desktop/releases/tag/v1.0.0-beta.5.9).
+
+## 1.0.0 Beta 5.9 — 2026-09-27
+
+- Simplify Settings into five searchable groups, use a compact search field, preserve unsaved writing preferences, and distinguish local learning from optional community text sharing.
+- Reduce caption-slider notification traffic, cache drag-preview shadows, restore nested scrolling, resume Library playback reliably after scrubbing, debounce history search, and stop idle playback timers.
+- Add private community contribution review, scheduled PC candidate training, contributor-disjoint evaluation, privacy and adversarial probes, owner release approval, and inference-only export into the signed update pipeline. Training and publishing use separate scoped credentials. No community model is activated before real examples pass independent review.
+- Harden private dashboard access, script execution, release revision checks, dataset revocation and model/package integrity. Existing users retain their choice to download and install updates.
+
+## 1.0.0 Beta 5.8.1 — 2026-09-27
+
+- Preserve longer descriptions and exact wording edits, clarify separate sharing consent, and retain readable publishing activity.
 
 ## 1.0.0 Beta 5.8 — 2026-09-26
 

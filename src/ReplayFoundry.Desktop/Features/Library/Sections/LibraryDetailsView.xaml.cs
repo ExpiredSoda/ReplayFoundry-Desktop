@@ -21,6 +21,15 @@ public partial class LibraryDetailsView : UserControl
             DispatcherPriority.Background,
             OnPositionTick,
             Dispatcher);
+        _positionTimer.Stop();
+        // Slider/Thumb can consume release and capture events. Always finish
+        // scrubbing so the transport cannot remain paused after a drag.
+        PreviewPositionSlider.AddHandler(Mouse.PreviewMouseDownEvent,
+            new MouseButtonEventHandler(PreviewPosition_OnPreviewMouseLeftButtonDown), true);
+        PreviewPositionSlider.AddHandler(Mouse.PreviewMouseUpEvent,
+            new MouseButtonEventHandler(PreviewPosition_OnPreviewMouseLeftButtonUp), true);
+        PreviewPositionSlider.AddHandler(Mouse.LostMouseCaptureEvent,
+            new MouseEventHandler(PreviewPosition_OnLostMouseCapture), true);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e) =>
@@ -47,7 +56,6 @@ public partial class LibraryDetailsView : UserControl
             _isActive = true;
             Bind((DataContext as LibraryViewModel)?.Playback);
             ApplyAll();
-            _positionTimer.Start();
             return;
         }
         Deactivate();
@@ -133,13 +141,15 @@ public partial class LibraryDetailsView : UserControl
 
     private void ApplyPlayback()
     {
-        if (_playback?.IsPlaying == true)
+        if (_isActive && _playback?.IsPlaying == true)
         {
             PreviewPlayer.Play();
+            _positionTimer.Start();
         }
         else
         {
             PreviewPlayer.Pause();
+            _positionTimer.Stop();
         }
     }
 
@@ -155,13 +165,17 @@ public partial class LibraryDetailsView : UserControl
         object sender,
         MouseButtonEventArgs e)
     {
+        if (e.ChangedButton != MouseButton.Left) return;
         _isScrubbing = true;
         _playback?.BeginScrub();
     }
 
     private void PreviewPosition_OnPreviewMouseLeftButtonUp(
         object sender,
-        MouseButtonEventArgs e) => EndScrub();
+        MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left) EndScrub();
+    }
 
     private void PreviewPosition_OnLostMouseCapture(
         object sender,

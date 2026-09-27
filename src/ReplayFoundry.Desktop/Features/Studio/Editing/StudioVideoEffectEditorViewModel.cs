@@ -17,7 +17,13 @@ public sealed class StudioVideoEffectEditorViewModel : INotifyPropertyChanged
     {
         _clip = clip;
         _reset = new DelegateCommand(Reset, () => CanAdjust);
-        _clip.PropertyChanged += (_, _) => NotifyState();
+        _clip.PropertyChanged += (_, change) =>
+        {
+            if (string.IsNullOrEmpty(change.PropertyName) || change.PropertyName is
+                nameof(StudioClipEditorViewModel.SelectedVideoEffect) or
+                nameof(StudioClipEditorViewModel.IsApplyingBoundaryEdit))
+                NotifyState();
+        };
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

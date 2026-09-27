@@ -7,16 +7,33 @@
     xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls"
     xmlns:sections="clr-namespace:ReplayFoundry.Desktop.Features.Settings.Sections"
     Background="Transparent">
-    <Grid MaxWidth="1500" Margin="8">
+    <Grid MaxWidth="1400" Margin="8">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <controls:FoundryPageHeader Title="Make it yours" IconKey="Icon.Settings"
+        <controls:FoundryPageHeader Title="Settings" IconKey="Icon.Settings"
             Description="{Binding PersistenceBannerText}" />
 
-        <DockPanel Grid.Row="1" LastChildFill="True">
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="420" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,16,0">
+                <TextBlock Text="Find a setting" Style="{DynamicResource Text.FormLabel}" Margin="0,0,0,5" />
+                <TextBox x:Name="SettingsSearchBox" AutomationProperties.Name="Search settings"
+                    Height="28" MinHeight="28" Padding="10,3" VerticalContentAlignment="Center"
+                    ToolTip="Search folders, titles, learning, sharing or updates"
+                    Style="{DynamicResource Control.FormTextBox}"
+                    Text="{Binding SettingsSearch, UpdateSourceTrigger=PropertyChanged, Delay=120}" />
+            </StackPanel>
+            <WrapPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,0,5">
+                <controls:StatusBadge Text="{Binding RuntimeProfileStatus}" Margin="0,0,10,5" />
+                <controls:StatusBadge Text="{Binding SharedTraining.ConsentStatus, TargetNullValue=Sharing unavailable, FallbackValue=Sharing unavailable}" Margin="0,0,10,5" />
+                <TextBlock Text="{Binding SelectedSectionLabel}" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextSecondary}" />
+            </WrapPanel>
+        </Grid>
+        <DockPanel Grid.Row="2" LastChildFill="True">
             <Border
                 Width="240"
                 Margin="0,0,12,0"
@@ -42,12 +59,12 @@
                         Grid.Row="1"
                         Margin="0,5,0,18"
                         Style="{DynamicResource Text.Meta}"
-                        Text="Your workspace, tools and connections."
+                        Text="Choose what you want to adjust."
                         TextWrapping="Wrap" />
                     <ListBox
                         Grid.Row="2"
                         AutomationProperties.Name="Settings section selector"
-                        ItemsSource="{Binding Sections}"
+                        ItemsSource="{Binding FilteredSections}"
                         SelectedItem="{Binding SelectedSectionItem, Mode=TwoWay}"
                         SelectionChanged="OnSectionSelectionChanged"
                         Style="{DynamicResource Control.SectionList}">
@@ -78,7 +95,7 @@
                 Margin="0,0,0,12"
                 AutomationProperties.Name="Settings section selector"
                 DockPanel.Dock="Top"
-                ItemsSource="{Binding Sections}"
+                ItemsSource="{Binding FilteredSections}"
                 SelectedItem="{Binding SelectedSectionItem, Mode=TwoWay}"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
@@ -115,7 +132,14 @@
             </ListBox>
 
             <controls:WorkspaceScrollViewport x:Name="SectionScrollViewport" CueText="More settings below">
-                <sections:SettingsSectionHostView />
+                <StackPanel>
+                    <Border Padding="16" Margin="0,0,0,12" Style="{DynamicResource Control.CanvasInsetCard}"
+                        Visibility="{Binding HasNoSettingsMatches, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="No matching section. Try titles, folders, sharing or updates, or clear your search."
+                            TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                    </Border>
+                    <sections:SettingsSectionHostView />
+                </StackPanel>
             </controls:WorkspaceScrollViewport>
         </DockPanel>
     </Grid>

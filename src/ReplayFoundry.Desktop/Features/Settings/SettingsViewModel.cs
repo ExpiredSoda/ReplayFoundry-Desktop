@@ -49,6 +49,7 @@ public sealed class SettingsViewModel :
     private readonly WorkspaceSurfaceState _surfaceState;
     private readonly SettingsActionCoordinator _actions;
     private SettingsSection _selectedSection = SettingsSection.Storage;
+    private string _settingsSearch = string.Empty;
     private string _onlineNotice = string.Empty;
     private string _storageNotice = string.Empty;
     private string _runtimeNotice = string.Empty;
@@ -218,19 +219,19 @@ public sealed class SettingsViewModel :
         {
             new SettingsSectionItem(
                 SettingsSection.Storage,
-                "Files & storage",
+                "Workspace",
                 "Icon.Folder",
-                "Where finished videos are saved"),
+                "Folders, storage and cleanup"),
             new SettingsSectionItem(
                 SettingsSection.CreatorVoice,
-                "Creator voice",
+                "Writing & learning",
                 "Icon.Edit",
-                "Default wording for titles and descriptions"),
+                "Your voice, rewrites and saved edits"),
             new SettingsSectionItem(
                 SettingsSection.AiModels,
-                "Local tools & AI",
+                "Clips & AI tools",
                 "Icon.Spark",
-                "Clip learning, writing and installed tools"),
+                "Clip preferences and installed models"),
             new SettingsSectionItem(
                 SettingsSection.PrivacyDiagnostics,
                 "Privacy & connections",
@@ -238,9 +239,9 @@ public sealed class SettingsViewModel :
                 "YouTube and optional research sharing"),
             new SettingsSectionItem(
                 SettingsSection.About,
-                "About & updates",
+                "Help & updates",
                 "Icon.Info",
-                "Version and local-first promise"),
+                "Updates, version and support reports"),
         });
         AiCapabilities = Array.AsReadOnly(
             runtimeCapabilities?.Capabilities.ToArray() ?? []);
@@ -331,8 +332,33 @@ public sealed class SettingsViewModel :
     }
 
     public IReadOnlyList<SettingsSectionItem> Sections { get; }
+    public string SettingsSearch
+    {
+        get => _settingsSearch;
+        set
+        {
+            if (!SetProperty(ref _settingsSearch, value ?? string.Empty)) return;
+            OnPropertyChanged(nameof(FilteredSections));
+            OnPropertyChanged(nameof(HasNoSettingsMatches));
+        }
+    }
+    public IReadOnlyList<SettingsSectionItem> FilteredSections => Sections.Where(section =>
+        SettingsSearch.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .All(term => $"{section.Label} {section.Description} {SearchTerms(section.Key)}".Contains(term, StringComparison.OrdinalIgnoreCase))).ToArray();
+    public bool HasNoSettingsMatches => FilteredSections.Count == 0;
+    private static string SearchTerms(SettingsSection section) => section switch
+    {
+        SettingsSection.Storage => "export output files directory disk temporary reset",
+        SettingsSection.CreatorVoice => "titles descriptions tone audience tags signature naming corrections personal writer local AI feedback",
+        SettingsSection.AiModels => "clip likes dislike taste learning training runtime GPU repair install maintenance",
+        SettingsSection.PrivacyDiagnostics => "share sharing community consent YouTube connections delete contributions",
+        SettingsSection.About => "version update automatic upgrade release support reports diagnostic bug crash feedback",
+        _ => string.Empty,
+    };
     public IReadOnlyList<SettingsCapabilityItem> AiCapabilities { get; }
     public SettingsSectionItem AiModelsSection => GetSection(SettingsSection.AiModels);
+    public SettingsSectionItem WritingSection => GetSection(SettingsSection.CreatorVoice);
+    public SettingsSectionItem PrivacySection => GetSection(SettingsSection.PrivacyDiagnostics);
     public CreatorVoiceSettingsViewModel CreatorVoice { get; }
     public BugReportSettingsViewModel BugReports { get; }
     public LocalDataSettingsViewModel LocalData { get; }
@@ -366,7 +392,7 @@ public sealed class SettingsViewModel :
         {
             if (!Enum.IsDefined(value) || _selectedSection == value) return;
             _selectedSection = value;
-            if (value == SettingsSection.CreatorVoice)
+            if (value == SettingsSection.CreatorVoice && !CreatorVoice.HasUnsavedChanges)
             {
                 CreatorVoice.Reload();
             }
@@ -390,7 +416,7 @@ public sealed class SettingsViewModel :
     public string SelectedSectionLabel => GetSection(SelectedSection).Label;
     public string PersistenceBannerText =>
         SelectedSection == SettingsSection.CreatorVoice
-            ? "Creator voice defaults last for this app session."
+            ? CreatorVoice.PersistenceDetail
             : SelectedSection == SettingsSection.AiModels &&
               !_editorialRerollPreference.IsPersistent
                 ? "The title-rewrite choice lasts only until you close this preview."
@@ -402,7 +428,7 @@ public sealed class SettingsViewModel :
     public string WorkspaceDescription =>
         "Choose where videos go, set creator wording, manage local tools, and decide when Replay Foundry may connect online.";
     public string StatusText =>
-        SelectedSection == SettingsSection.CreatorVoice ||
+        SelectedSection == SettingsSection.CreatorVoice && !CreatorVoice.IsPersistent ||
         SelectedSection == SettingsSection.AiModels &&
         !_editorialRerollPreference.IsPersistent
             ? "Session only"

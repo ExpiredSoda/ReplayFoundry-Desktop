@@ -79,7 +79,7 @@
                         <TextBox
                             Margin="0,5,0,0"
                             AutomationProperties.Name="Search YouTube history titles"
-                            Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
+                            Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged, Delay=180}" />
                     </StackPanel>
                     <StackPanel Width="170" Margin="0,0,10,8">
                         <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Status" />

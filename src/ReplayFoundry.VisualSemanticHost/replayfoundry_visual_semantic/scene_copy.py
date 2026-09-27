@@ -75,8 +75,10 @@ def run(args):
     prompt_hash=AUTHOR_POLICY_HASH
     review_hash=REVIEW_HASH
     cache_directory=getattr(args,"cache",None)
-    from .editorial.writer.runtime import scene_selection
-    selection=scene_selection(getattr(args,"writer_root",None))
+    from .editorial.writer.runtime import scene_selection, community_selection, load_selection, community_messages
+    selection=scene_selection(getattr(args,"writer_root",None)) or community_selection(args.model)
+    if selection and selection.get("community") and any(c["context"].get("candidateMode") == "WholeMontage" for c in request["cases"]):
+        selection = None
     style_examples = load_style_examples(getattr(args,"writer_root",None))
     for case in request["cases"]:
         if style_examples:
@@ -118,8 +120,7 @@ def run(args):
         try:
             if torch.cuda.mem_get_info()[0] < 4*1024**3:
                 raise ValueError("Insufficient free memory for the personal writer")
-            from .editorial.writer.evaluate import load_candidate
-            writer,writer_tokenizer,_=load_candidate(selection["base"],selection["candidate"])
+            writer,writer_tokenizer,_=load_selection(selection)
             writer_session=StructuredDecodingSession(writer_tokenizer,writer.config.vocab_size)
         except (OSError,ValueError,RuntimeError):
             writer=None
@@ -128,6 +129,11 @@ def run(args):
     def generate(messages, properties, limit, seed, planner=False):
         wire=json.dumps({"type":"object","additionalProperties":False,"properties":properties,"required":list(properties)})
         use_writer = writer is not None and not planner
+        if use_writer and selection.get("community"):
+            author_context = json.loads(messages[1]["content"])
+            # Collection composition needs its own independent evaluation set.
+            use_writer = author_context.get("candidateMode") != "WholeMontage"
+            if use_writer: messages = community_messages(messages)
         author=writer if use_writer else model
         decoder=writer_session if use_writer else session
         grammar,_=decoder.compile_json_schema(wire,VERSION,hashlib.sha256(wire.encode()).hexdigest(),any_whitespace=False)

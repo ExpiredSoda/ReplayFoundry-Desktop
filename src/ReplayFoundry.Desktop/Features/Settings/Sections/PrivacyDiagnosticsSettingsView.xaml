@@ -96,10 +96,10 @@
             <StackPanel>
                 <flair:FoundryHeading Style="{DynamicResource Text.SectionTitle}" Text="Learning on this PC" />
                 <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Body}" TextWrapping="Wrap"
-                    Text="Clip preferences and writing corrections have separate learning switches in Local tools &amp; AI. Local learning does not enable sharing." />
+                    Text="Writing corrections and clip preferences have separate local learning switches. Neither enables community sharing." />
                 <Button Margin="0,10,0,0" HorizontalAlignment="Left" Style="{DynamicResource Control.GhostButton}"
-                    Content="Manage local learning →" AutomationProperties.Name="Open local learning settings"
-                    Command="{Binding SelectSectionCommand}" CommandParameter="{Binding AiModelsSection}" />
+                    Content="Manage writing learning →" AutomationProperties.Name="Open local learning settings"
+                    Command="{Binding SelectSectionCommand}" CommandParameter="{Binding WritingSection}" />
             </StackPanel>
         </Border>
 
@@ -124,165 +124,6 @@
                     <Button Margin="0,0,8,8" Style="{DynamicResource Control.GhostButton}" Content="Delete my contributions" Command="{Binding DeleteCommand}" />
                 </WrapPanel>
                 <TextBlock Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Text="{Binding Status}" />
-            </StackPanel>
-        </Border>
-
-        <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasPane}">
-            <StackPanel DataContext="{Binding BugReports}">
-                <Grid>
-                    <StackPanel Margin="0,0,190,0">
-                        <flair:FoundryHeading Style="{DynamicResource Text.SectionTitle}" Text="FEEDBACK &amp; CRASH REPORTS" />
-                        <TextBlock
-                            Margin="0,4,0,0"
-                            Style="{DynamicResource Text.Body}"
-                            Text="Create a report for Replay Foundry support. Crash records are sanitized and saved locally; nothing is ever sent automatically."
-                            TextWrapping="Wrap" />
-                    </StackPanel>
-                    <controls:StatusBadge
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Text="{Binding DeliveryStatus}" />
-                </Grid>
-
-                <TextBlock Margin="0,10,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding DeliveryDetail}" TextWrapping="Wrap" />
-                <WrapPanel Margin="0,12,0,0">
-                    <Button
-                        Margin="0,0,8,0"
-                        AutomationProperties.Name="Allow explicitly reviewed bug reports to be sent"
-                        Command="{Binding EnableDeliveryCommand}"
-                        Content="Allow report delivery">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource Control.PrimaryButton}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsDeliveryAllowed}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Button
-                        AutomationProperties.Name="Turn off bug report delivery"
-                        Command="{Binding DisableDeliveryCommand}"
-                        Content="Turn delivery off">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource Control.GhostButton}">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsDeliveryAllowed}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                </WrapPanel>
-
-                <Border Margin="0,14,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
-                    <StackPanel>
-                        <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Manual feedback" />
-                        <TextBox
-                            Margin="0,8,0,0"
-                            MaxLength="160"
-                            AutomationProperties.Name="Bug report summary"
-                            Style="{DynamicResource Control.FormTextBox}"
-                            Text="{Binding Summary, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBox
-                            Margin="0,8,0,0"
-                            MinHeight="92"
-                            MaxLength="4000"
-                            AcceptsReturn="True"
-                            AutomationProperties.Name="Bug report details"
-                            Style="{DynamicResource Control.FormTextBox}"
-                            Text="{Binding Details, UpdateSourceTrigger=PropertyChanged}"
-                            TextWrapping="Wrap" />
-                        <CheckBox
-                            Margin="0,10,0,0"
-                            IsChecked="{Binding IncludeDiagnostics}"
-                            Content="Include a sanitized system summary (no media, titles, transcripts, tokens, or local paths)" />
-                        <Button
-                            Margin="0,12,0,0"
-                            HorizontalAlignment="Left"
-                            AutomationProperties.Name="Save manual bug report locally"
-                            Command="{Binding SaveManualReportCommand}"
-                            Content="Save report for review"
-                            Style="{DynamicResource Control.PrimaryButton}" />
-                    </StackPanel>
-                </Border>
-
-                <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
-                    <StackPanel>
-                        <TextBlock Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="Saved reports" />
-                        <TextBlock Margin="0,4,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding OutboxStatus}" />
-                        <ListBox
-                            Margin="0,10,0,0"
-                            MaxHeight="220"
-                            AutomationProperties.Name="Local feedback and crash report outbox"
-                            ItemsSource="{Binding Reports}"
-                            SelectedItem="{Binding SelectedReport}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="3,5">
-                                        <TextBlock FontWeight="SemiBold" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}">
-                                            <Run Text="{Binding KindText, Mode=OneWay}" />
-                                            <Run Text=" · " />
-                                            <Run Text="{Binding CreatedText, Mode=OneWay}" />
-                                            <Run Text=" · " />
-                                            <Run Text="{Binding StatusText, Mode=OneWay}" />
-                                        </TextBlock>
-                                        <TextBlock Margin="0,3,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding AttachmentSummary}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                        <Border Margin="0,10,0,0" Padding="10" Style="{DynamicResource Control.CanvasInsetCard}">
-                            <StackPanel>
-                                <TextBlock
-                                    Foreground="{DynamicResource Brush.TextPrimary}"
-                                    FontWeight="SemiBold"
-                                    Text="{Binding SelectedReport.Summary, TargetNullValue=Select a saved report to review}" />
-                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding SelectedReport.Details}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Text="Included support information" />
-                                <ScrollViewer Margin="0,5,0,0" MaxHeight="180" VerticalScrollBarVisibility="Auto">
-                                    <TextBox
-                                        AutomationProperties.Name="Preview included support information"
-                                        IsReadOnly="True"
-                                        Style="{DynamicResource Control.FormTextBox}"
-                                        Text="{Binding SelectedDiagnosticPreview, Mode=OneWay}"
-                                        TextWrapping="Wrap" />
-                                </ScrollViewer>
-                            </StackPanel>
-                        </Border>
-                        <WrapPanel Margin="0,12,0,0">
-                            <Button
-                                Margin="0,0,8,8"
-                                AutomationProperties.Name="Send selected reviewed report"
-                                Command="{Binding SendSelectedReportCommand}"
-                                Content="Send selected report"
-                                Style="{DynamicResource Control.PrimaryButton}" />
-                            <Button
-                                Margin="0,0,8,8"
-                                AutomationProperties.Name="Delete selected local report"
-                                Command="{Binding DeleteSelectedReportCommand}"
-                                Content="Delete selected"
-                                Style="{DynamicResource Control.DestructiveButton}" />
-                            <Button
-                                Margin="0,0,0,8"
-                                AutomationProperties.Name="Delete all local reports"
-                                Command="{Binding DeleteAllReportsCommand}"
-                                Content="{Binding DeleteAllLabel}"
-                                Style="{DynamicResource Control.DestructiveButton}" />
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-
-                <Border
-                    Margin="0,12,0,0"
-                    Style="{DynamicResource Control.CanvasInsetCard}"
-                    Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Style="{DynamicResource Text.Body}" Text="{Binding Notice}" TextWrapping="Wrap" />
-                </Border>
             </StackPanel>
         </Border>
 

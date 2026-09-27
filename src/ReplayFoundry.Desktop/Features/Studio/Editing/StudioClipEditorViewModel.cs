@@ -29,8 +29,10 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
         set
         {
             if (_captionTypography == value) return;
-            _captionTypography = value; NotifyTypography(); NotifyDraftProperties();
-            DraftAppearanceChanged?.Invoke(this, EventArgs.Empty);
+            var previous = _captionTypography;
+            _captionTypography = value;
+            NotifyTypography(previous);
+            NotifyAppearanceChanged();
         }
     }
     public string CaptionFontFamily { get => CaptionTypography.FontFamily; set => ChangeTypography(font: value); }
@@ -111,15 +113,17 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
             alignment ?? t.Alignment, casing ?? t.Casing, intensity ?? t.AnimationIntensityPercent, lineSpacing ?? t.LineSpacingPercent,
             replaceInsets ? insets : t.SafeAreaInsets);
     }
-    private void NotifyTypography()
+    private void NotifyTypography(StudioCaptionTypography? previous = null) =>
+        StudioClipPropertyChanges.NotifyTypography(previous, CaptionTypography, OnPropertyChanged);
+
+    private void NotifyAppearanceChanged()
     {
-        OnPropertyChanged(nameof(SelectedCaptionAccentChoice));
-        foreach (string property in new[] { nameof(CaptionTypography), nameof(CaptionFontFamily), nameof(CaptionTextColor), nameof(CaptionAccentColor),
-            nameof(CaptionOutlineColor), nameof(CaptionBold), nameof(CaptionRightToLeft), nameof(CaptionOutlineWidth), nameof(CaptionShadowDepth), nameof(CaptionSafeArea),
-            nameof(CaptionBackground), nameof(CaptionBackgroundColor), nameof(CaptionBackgroundOpacityPercent), nameof(CaptionAlignment), nameof(CaptionCasing),
-            nameof(CaptionAnimationIntensityPercent), nameof(CaptionLineSpacingPercent), nameof(CaptionFontFamilies), nameof(CaptionFontWarning), nameof(HasCaptionFontWarning),
-            nameof(UseCustomCaptionSafeArea), nameof(CaptionSafeLeftPercent), nameof(CaptionSafeRightPercent),
-            nameof(CaptionSafeTopPercent), nameof(CaptionSafeBottomPercent) }) OnPropertyChanged(property);
+        OnPropertyChanged(nameof(HasPendingEdit));
+        CaptionLooks.Refresh();
+        _applyCommand.RaiseCanExecuteChanged();
+        _resetCommand.RaiseCanExecuteChanged();
+        _applyCaptionLookToAllCommand.RaiseCanExecuteChanged();
+        DraftAppearanceChanged?.Invoke(this, EventArgs.Empty);
     }
     private void SaveNamedLook()
     {
@@ -352,8 +356,14 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
 
             _selectedCaptionStyle = value;
             OnPropertyChanged();
-            NotifyDraftProperties();
-            DraftAppearanceChanged?.Invoke(this, EventArgs.Empty);
+            OnPropertyChanged(nameof(SelectedCaptionPhraseSizeDescription));
+            OnPropertyChanged(nameof(IsCaptionPhraseSizeEditorEnabled));
+            OnPropertyChanged(nameof(IsCaptionPhraseSizeSelectorVisible));
+            OnPropertyChanged(nameof(IsPopCaptionPhraseSizeLocked));
+            OnPropertyChanged(nameof(PopCaptionPhraseSizeText));
+            OnPropertyChanged(nameof(CaptionPresentationWarning));
+            OnPropertyChanged(nameof(HasCaptionPresentationWarning));
+            NotifyAppearanceChanged();
         }
     }
 
@@ -890,57 +900,7 @@ public sealed class StudioClipEditorViewModel : INotifyPropertyChanged
 
     private void NotifyDraftProperties()
     {
-        foreach (string propertyName in new[]
-        {
-            nameof(StartAdjustmentSeconds),
-            nameof(EndAdjustmentSeconds),
-            nameof(StartAdjustmentMinimumSeconds),
-            nameof(StartAdjustmentMaximumSeconds),
-            nameof(EndAdjustmentMinimumSeconds),
-            nameof(EndAdjustmentMaximumSeconds),
-            nameof(DraftSourceStart),
-            nameof(DraftSourceEnd),
-            nameof(DraftDuration),
-            nameof(DraftSourceStartText),
-            nameof(DraftSourceEndText),
-            nameof(DraftDurationText),
-            nameof(StartAdjustmentText),
-            nameof(EndAdjustmentText),
-            nameof(StartAdjustmentSummary),
-            nameof(EndAdjustmentSummary),
-            nameof(BoundaryFrameStepSeconds),
-            nameof(BoundaryPrecisionText),
-            nameof(IsBoundaryDraftValid),
-            nameof(HasPendingEdit),
-            nameof(IsApplyingBoundaryEdit),
-            nameof(BoundaryEditStatus),
-            nameof(BoundaryEditError),
-            nameof(HasBoundaryEditError),
-            nameof(CaptionStyleOptions),
-            nameof(SelectedCaptionStyle),
-            nameof(CaptionWordLimitOptions),
-            nameof(SelectedCaptionWordLimit),
-            nameof(SelectedCaptionPhraseSizeDescription),
-            nameof(IsCaptionPhraseSizeEditorEnabled),
-            nameof(IsCaptionPhraseSizeSelectorVisible),
-            nameof(IsPopCaptionPhraseSizeLocked),
-            nameof(PopCaptionPhraseSizeText),
-            nameof(CaptionVerticalPositionPercent),
-            nameof(CaptionVerticalPositionText),
-            nameof(CaptionPresentationWarning),
-            nameof(HasCaptionPresentationWarning),
-            nameof(CaptionMaximumWidthPercent),
-            nameof(CaptionMaximumWidthText),
-            nameof(CaptionFontScalePercent),
-            nameof(CaptionFontScaleText),
-            nameof(CaptionedClipCount),
-            nameof(ApplyCaptionLookToAllText),
-            nameof(VideoEffectOptions),
-            nameof(SelectedVideoEffect),
-            nameof(SelectedVideoEffectDescription),
-            nameof(VideoEffectIntensityPercent),
-            nameof(VideoEffectIntensityText),
-        })
+        foreach (string propertyName in StudioClipPropertyChanges.Draft)
         {
             OnPropertyChanged(propertyName);
         }
