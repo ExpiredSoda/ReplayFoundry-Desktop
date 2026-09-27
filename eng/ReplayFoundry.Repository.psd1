@@ -119,6 +119,7 @@
             'docs/README.md'
             'docs/distribution/windows.md'
             'docs/distribution/third-party-compliance.md'
+            'docs/distribution/shared-training.md'
         )
     }
 }
