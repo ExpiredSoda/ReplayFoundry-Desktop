@@ -526,7 +526,8 @@ public sealed class SettingsViewModel :
               "Saved learning stays on this PC until you reset app data in Files & storage.";
 
     public string EditorialMetadataPreferenceLearningPrivacy =>
-        "Wording, clip facts, correction notes, original recording references and montage order stay on this PC. Nothing is uploaded. " +
+        "Local learning saves wording, clip facts, correction notes, recording references and montage order on this PC. " +
+        "Local learning alone does not authorize uploads. Optional writer sharing has its own consent in Privacy & connections. " +
         "Keep your recordings available for later video checks. Separate recordings are reserved for testing each new model. " +
         "The existing writer stays available until a personal update passes review.";
 

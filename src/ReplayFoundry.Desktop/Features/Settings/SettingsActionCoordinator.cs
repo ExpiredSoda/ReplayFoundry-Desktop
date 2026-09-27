@@ -198,7 +198,7 @@ internal sealed class SettingsActionCoordinator
 
     private void EnableEditorialLearning() => SetEditorialLearning(
         () => _services.EditorialLearningConsent.Enable(DateTimeOffset.UtcNow),
-        "Local writing learning is on. Saved corrections and their supporting clip facts stay on this PC. Nothing was uploaded.",
+        "Local writing learning is on. This action did not upload anything or change your separate writer-sharing choice.",
         "Replay Foundry could not save the local learning choice: ");
 
     private void DisableEditorialLearning() => SetEditorialLearning(
