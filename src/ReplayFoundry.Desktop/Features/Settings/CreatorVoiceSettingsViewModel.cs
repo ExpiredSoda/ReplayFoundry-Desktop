@@ -73,7 +73,7 @@ public sealed class CreatorVoiceSettingsViewModel : ObservableObject
         _descriptionSignature =
             profile.DescriptionSignature;
         _defaultTags = string.Join(", ", profile.DefaultTags);
-        _status = "These defaults last until Replay Foundry closes.";
+        _status = _profileEditor.IsPersistent ? "These writing defaults are saved on this PC." : "These defaults last until Replay Foundry closes.";
         NotifyAll();
     }
 
@@ -93,9 +93,10 @@ public sealed class CreatorVoiceSettingsViewModel : ObservableObject
                 profile.DescriptionSignature;
             _defaultTags = string.Join(", ", profile.DefaultTags);
             _status =
+                _profileEditor.IsPersistent ? "Creator voice saved for future titles and rewrites, including after restart." :
                 "Creator voice saved for new titles and rewrites in this app session.";
         }
-        catch (ArgumentException exception)
+        catch (Exception exception) when (exception is ArgumentException or System.IO.IOException or UnauthorizedAccessException)
         {
             _status = "Creator voice could not be saved: " + exception.Message;
         }

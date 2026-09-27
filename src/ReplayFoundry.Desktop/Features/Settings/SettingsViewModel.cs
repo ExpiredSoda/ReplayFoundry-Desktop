@@ -338,6 +338,11 @@ public sealed class SettingsViewModel :
     public LocalDataSettingsViewModel LocalData { get; }
     public Personalization.TasteLearningSettingsViewModel Learning { get; private set; } = new(null);
     public Personalization.WriterLearningOverviewViewModel? WritingLearning { get; private set; }
+    public SharedTrainingSettingsViewModel? SharedTraining { get; private set; }
+    internal void AttachSharedTraining(Features.Research.ISharedTrainingContributions service)
+    {
+        SharedTraining = new(service); OnPropertyChanged(nameof(SharedTraining));
+    }
     internal void AttachWritingLearning(Func<Personalization.WriterLearningOverview> read)
     {
         WritingLearning = new(read); OnPropertyChanged(nameof(WritingLearning));

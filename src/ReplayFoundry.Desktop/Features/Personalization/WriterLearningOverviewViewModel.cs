@@ -26,7 +26,8 @@ public sealed class WriterLearningOverviewViewModel : ObservableObject
             var status = await Task.Run(_read);
             State = status.SelectionPresent ? "Personal selection saved · checked when loaded" : "Collecting writing feedback";
             Summary = $"{status.SavedExamples} saved examples · {status.Recordings} recordings · {status.FactsAwaitingReview} fact corrections awaiting review. " +
-                "Eligibility is checked during evaluation; saved counts alone do not qualify a model.";
+                "Saved edits retain the previous wording, your additions and removals, and the original clip evidence. Approved wording can guide style before a personal model qualifies. " +
+                "Training eligibility is checked during evaluation; saved counts alone do not qualify a model.";
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)
         { State = "Feedback unavailable"; Summary = "The saved feedback could not be read. Your existing data was kept."; }

@@ -71,13 +71,14 @@ class SceneCopyTests(unittest.TestCase):
         self.assertIsNone(selected)
         self.assertLess(rows[0]["novelty"]["value"], .5)
 
-    def test_cache_reuses_retry_but_binds_video_model_and_writing_context(self):
+    def test_cache_reuses_identical_request_but_rerolls_get_a_separate_attempt(self):
         case = dict(candidateId="clip", attempt=1, reviewVideoHash="a" * 64,
                     context=dict(titleLimit=72, priorTitles=[], voice="Plain", facts=["A car reached the runway."]))
         original = copy_key("model-one", case)
         retry = copy.deepcopy(case)
         retry["attempt"] = 2
-        self.assertEqual(original, copy_key("model-one", retry))
+        self.assertEqual(original, copy_key("model-one", copy.deepcopy(case)))
+        self.assertNotEqual(original, copy_key("model-one", retry))
         self.assertNotEqual(original, copy_key("model-two", case))
         for field, value in (("priorTitles", ["A car reached the runway"]), ("voice", "Playful"),
                              ("facts", ["A car stopped before the runway."]), ("candidateMode", "MontageSegment")):
@@ -116,6 +117,23 @@ class SceneCopyTests(unittest.TestCase):
             self.assertEqual(2, result["cases"][0]["attempt"])
             self.assertEqual(row["copy"], result["cases"][0]["copy"])
             self.assertEqual(12, result["cases"][0]["cachedInferenceSeconds"])
+
+    def test_disagreed_quality_cache_cannot_bypass_fresh_review(self):
+        case=dict(candidateId="clip",attempt=2,reviewVideoHash="a"*64,context=dict(titleLimit=72,priorTitles=[]))
+        row=dict(candidateId="clip",attempt=2,status="Succeeded",elapsedSeconds=12,
+                 copy=dict(titleBody="A key appeared",description="A hotel room key was visible."),
+                 review=dict(grounded=True,useful=True),
+                 neuralGrounding={**relevance([2,2]),"version":copy_judgment.VERSION},
+                 neuralQuality={**relevance([20,-8]),"version":copy_judgment.VERSION})
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            save_review(root/"cache",copy_key("model-one",case),row)
+            (root/"input.json").write_text(json.dumps(dict(schemaVersion=VERSION,modelHash="model-one",cases=[case])))
+            # This test exercises cache invalidation before model loading, so it
+            # must also run on source-only CI without the optional AI runtime.
+            with patch.dict("sys.modules", {"torch": SimpleNamespace(), "transformers": SimpleNamespace()}), patch("replayfoundry_visual_semantic.model_runtime._load_model_and_processor",side_effect=RuntimeError("Fresh review required")):
+                with self.assertRaisesRegex(RuntimeError,"Fresh review required"):
+                    run(SimpleNamespace(input=root/"input.json",output=root/"output.json",cache=root/"cache",model=root/"no-model"))
 
     def test_repeat_or_overlong_copy_is_rejected(self):
         for value in (dict(titleBody="Same",description="Same."),dict(titleBody="Old title",description="A different result."),

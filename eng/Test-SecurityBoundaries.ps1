@@ -22,6 +22,7 @@ $networkMatches = Get-ChildItem -LiteralPath (Join-Path $root 'src\ReplayFoundry
     ForEach-Object { $_.Path.Substring($root.Length + 1).Replace('\', '/') } |
     Sort-Object -Unique
 $approvedNetworkFiles = @(
+    'src/ReplayFoundry.Desktop/Platform/Research/HttpsTrainingContributionTransport.cs',
     'src/ReplayFoundry.Desktop/Platform/Diagnostics/HttpsUserReportTransport.cs',
     'src/ReplayFoundry.Desktop/Platform/GameKnowledge/WikimediaGameKnowledgeProvider.cs',
     'src/ReplayFoundry.Desktop/Platform/GameKnowledge/WikimediaGameKnowledgeProvider.Retrieval.cs',
@@ -36,6 +37,13 @@ $unexpected = @($networkMatches | Where-Object { $_ -notin $approvedNetworkFiles
 if ($unexpected.Count -gt 0) {
     Fail "unreviewed desktop network client(s): $($unexpected -join ', ')"
 }
+
+$trainingTransport = 'src/ReplayFoundry.Desktop/Platform/Research/HttpsTrainingContributionTransport.cs'
+foreach ($required in @('https://replayfoundry\.com/api/v1/training-contributions',
+    'AllowAutoRedirect = false', 'UseCookies = false', '65_536', 'MaxResponseContentBufferSize = 4096')) {
+    Require-Text $trainingTransport $required 'Shared training transport lost a reviewed outbound boundary'
+}
+Require-Text 'src/ReplayFoundry.Desktop/Platform/Research/SharedTrainingContributionService.cs' 'if \(!IsEnabled\) return;' 'Shared training requires independent consent'
 
 # First-use model acquisition sends only fixed artifact URLs. Local recordings,
 # transcripts and captions remain outside these HTTP requests. Require bounded,

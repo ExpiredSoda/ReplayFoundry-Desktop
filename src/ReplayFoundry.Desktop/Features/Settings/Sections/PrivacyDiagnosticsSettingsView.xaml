@@ -96,10 +96,34 @@
             <StackPanel>
                 <flair:FoundryHeading Style="{DynamicResource Text.SectionTitle}" Text="Learning on this PC" />
                 <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Body}" TextWrapping="Wrap"
-                    Text="Clip preferences and writing corrections have separate learning switches in Local tools &amp; AI. Learning data stays on this PC." />
+                    Text="Clip preferences and writing corrections have separate learning switches in Local tools &amp; AI. Local learning does not enable sharing." />
                 <Button Margin="0,10,0,0" HorizontalAlignment="Left" Style="{DynamicResource Control.GhostButton}"
                     Content="Manage local learning →" AutomationProperties.Name="Open local learning settings"
                     Command="{Binding SelectSectionCommand}" CommandParameter="{Binding AiModelsSection}" />
+            </StackPanel>
+        </Border>
+
+        <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasPane}">
+            <StackPanel DataContext="{Binding SharedTraining}">
+                <flair:FoundryHeading Style="{DynamicResource Text.SectionTitle}" Text="Help improve the writer" />
+                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Body}" TextWrapping="Wrap">
+                    <Run Text="Optional: automatically share future game names, generated titles and descriptions, your saved wording edits," />
+                    <Run Text="and the text observations and speech excerpts used to write them with Expired Soda Studios LLC for AI evaluation and training." />
+                    <Run Text="Text may contain names or personal information mentioned in your recording. Only contribute content you have permission to share." />
+                </TextBlock>
+                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap">
+                    <Run Text="No audio, video, images, recording filenames, local paths, email addresses from your account, or YouTube credentials are uploaded." />
+                    <Run Text="Existing feedback is not uploaded retroactively. Records are kept for up to one year." />
+                    <Run Text="Turning sharing off clears pending uploads; deleting contributions removes stored records, but cannot undo training already completed." />
+                </TextBlock>
+                <controls:StatusBadge Margin="0,12,0,0" HorizontalAlignment="Left" Text="{Binding ConsentStatus}" />
+                <WrapPanel Margin="0,10,0,0">
+                    <Button Margin="0,0,8,8" Style="{DynamicResource Control.PrimaryButton}" Content="Agree and share text" Command="{Binding EnableCommand}" />
+                    <Button Margin="0,0,8,8" Style="{DynamicResource Control.GhostButton}" Content="Stop sharing" Command="{Binding DisableCommand}" />
+                    <Button Margin="0,0,8,8" Style="{DynamicResource Control.GhostButton}" Content="Retry pending uploads" Command="{Binding SendCommand}" />
+                    <Button Margin="0,0,8,8" Style="{DynamicResource Control.GhostButton}" Content="Delete my contributions" Command="{Binding DeleteCommand}" />
+                </WrapPanel>
+                <TextBlock Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" Text="{Binding Status}" />
             </StackPanel>
         </Border>
 

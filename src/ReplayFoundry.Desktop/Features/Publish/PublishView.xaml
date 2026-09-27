@@ -7,11 +7,10 @@
     xmlns:sections="clr-namespace:ReplayFoundry.Desktop.Features.Publish.Sections"
     Background="Transparent">
     <controls:WorkspaceScrollViewport CueText="More publishing activity below">
-        <Grid x:Name="WorkspaceLayout" MaxWidth="1600" Margin="8" HorizontalAlignment="Stretch">
+        <Grid x:Name="WorkspaceLayout" MaxWidth="1760" Margin="8" HorizontalAlignment="Stretch">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
-                <RowDefinition x:Name="ActivityRow" Height="136" />
             </Grid.RowDefinitions>
             <sections:PublishDestinationsView />
             <AdornerDecorator Grid.Row="1" Margin="0,12,0,0">
@@ -19,16 +18,18 @@
                     <Grid.RowDefinitions>
                         <RowDefinition x:Name="PrimaryPublishRow" Height="*" />
                         <RowDefinition x:Name="SecondaryPublishRow" Height="0" />
+                        <RowDefinition x:Name="TertiaryPublishRow" Height="0" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="LibraryPublishColumn" Width="0.85*" />
-                        <ColumnDefinition x:Name="CalendarPublishColumn" Width="1.15*" />
+                        <ColumnDefinition x:Name="LibraryPublishColumn" Width="0.95*" />
+                        <ColumnDefinition x:Name="CalendarPublishColumn" Width="1.05*" />
+                        <ColumnDefinition x:Name="ActivityPublishColumn" Width="360" />
                     </Grid.ColumnDefinitions>
                     <sections:PublishLibraryBrowserView x:Name="LibraryBrowser" Margin="0,0,6,0" />
-                    <sections:PublishCalendarView x:Name="PublishCalendar" Grid.Column="1" Margin="6,0,0,0" />
+                    <sections:PublishCalendarView x:Name="PublishCalendar" Grid.Column="1" Margin="6,0" />
+                    <sections:PublishQueueHistoryView x:Name="PublishActivity" Grid.Column="2" Margin="6,0,0,0" />
                 </Grid>
             </AdornerDecorator>
-            <sections:PublishQueueHistoryView Grid.Row="2" Margin="0,12,0,0" />
         </Grid>
     </controls:WorkspaceScrollViewport>
 </UserControl>

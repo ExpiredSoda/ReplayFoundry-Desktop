@@ -49,6 +49,9 @@
                 Padding="12"
                 Style="{DynamicResource Control.CanvasGhostZone}">
                 <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
+                        <StackPanel>
                     <TextBlock
                         FontWeight="SemiBold"
                         Foreground="{DynamicResource Brush.TextPrimary}"
@@ -60,26 +63,41 @@
                         IsEnabled="{Binding IsProjectDraft}"
                         ItemsSource="{Binding Editorial.VariantChoices}"
                         SelectedItem="{Binding Editorial.SelectedVariantChoice, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{DynamicResource Text.FormLabel}" Text="Tone" />
+                            <ComboBox Margin="0,6,0,0" ItemsSource="{Binding Editorial.Tones}" SelectedItem="{Binding Editorial.Tone}"
+                                AutomationProperties.Name="Writing tone" IsEnabled="{Binding IsProjectDraft}" />
+                        </StackPanel>
+                    </Grid>
                     <TextBlock
                         Margin="0,4,0,0"
                         Style="{DynamicResource Text.Meta}"
                         Text="{Binding Editorial.SelectedVariantDescription}"
                         TextWrapping="Wrap" />
-                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource Text.FormLabel}" Text="Tone" />
-                    <ComboBox Margin="0,4,0,0" ItemsSource="{Binding Editorial.Tones}" SelectedItem="{Binding Editorial.Tone}"
-                        AutomationProperties.Name="Writing tone" IsEnabled="{Binding IsProjectDraft}" />
                     <WrapPanel Margin="0,8,0,0" IsEnabled="{Binding IsProjectDraft}">
                         <CheckBox Content="Keep title" Margin="0,0,12,0" IsChecked="{Binding Editorial.KeepTitle}" />
                         <CheckBox Content="Keep description" IsChecked="{Binding Editorial.KeepDescription}" />
                     </WrapPanel>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <Button
-                        Margin="0,8,0,0"
                         HorizontalAlignment="Stretch"
                         AutomationProperties.HelpText="{Binding Editorial.RerollProviderText}"
                         AutomationProperties.Name="{Binding Editorial.RerollAutomationName}"
                         Command="{Binding Editorial.RerollCommand}"
                         Content="{Binding Editorial.RerollButtonText}"
                         Style="{DynamicResource Control.StudioSecondaryButton}" />
+                    <Button Grid.Column="2" HorizontalAlignment="Stretch"
+                        Command="{Binding Editorial.NewAngleCommand}" Content="New angle"
+                        AutomationProperties.Name="Find a different supported story angle"
+                        ToolTip="Change the focus while keeping the story grounded in this clip."
+                        Style="{DynamicResource Control.StudioSecondaryButton}" />
+                    </Grid>
+                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap"
+                        Text="Rewrite improves the same idea. New angle looks for another supported focus." />
+                    <Button Margin="0,5,0,0" HorizontalAlignment="Left" Content="Save writing defaults"
+                        Command="{Binding Editorial.SaveProfileCommand}" Visibility="{Binding Editorial.HasUnsavedProfileChanges, Converter={StaticResource BoolToVisibility}}" Style="{DynamicResource Control.StudioQuietButton}" />
                     <TextBlock
                         Margin="0,6,0,0"
                         Style="{DynamicResource Text.Meta}"
@@ -218,6 +236,29 @@
                     Content="Mark reviewed"
                     Style="{DynamicResource Control.StudioQuietButton}" />
             </WrapPanel>
+            <Border Margin="0,0,0,12" Padding="12" CornerRadius="8"
+                Background="{DynamicResource Brush.SurfaceElevated}" BorderBrush="{DynamicResource Brush.BorderSubtle}" BorderThickness="1"
+                Visibility="{Binding Editorial.HasAlternatives, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="More wording from this clip" FontWeight="SemiBold" Foreground="{DynamicResource Brush.TextPrimary}" />
+                    <TextBlock Margin="0,4,0,8" Text="Compare a checked alternative. Choosing one saves it; your previous wording stays in History."
+                        Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
+                    <ListBox ItemsSource="{Binding Editorial.Alternatives}" SelectedItem="{Binding Editorial.SelectedAlternative}"
+                        MaxHeight="260" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        HorizontalContentAlignment="Stretch" AutomationProperties.Name="Alternative titles and descriptions">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="4,8">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Description}" Margin="0,5,0,0" TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Button Margin="0,8,0,0" Content="Use selected wording" Command="{Binding Editorial.UseAlternativeCommand}"
+                        Style="{DynamicResource Control.StudioSecondaryButton}" />
+                </StackPanel>
+            </Border>
             <Expander
                 Margin="0,12,0,0"
                 Header="History, learning &amp; sources"

@@ -12,9 +12,9 @@ namespace ReplayFoundry.Desktop.Platform.VisualSemantic;
 
 internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime runtime, IEditorialWriterLearningStore? learning)
 {
-    internal const string Version = "scene-copy-1.8";
-    internal const string PromptHash = "5efe99894d22aa30afb3330a82ca3140a3f3df6c88170e96d7175d5efc577f3f";
-    internal const string ReviewPromptHash = "037c23e37e37ea3a854dbda5368bc51e6995e86152f0e9a15f9cd79a0857bf0a";
+    internal const string Version = "scene-copy-1.9";
+    internal const string PromptHash = "cc5efc864e96f2748efac771a21fa5ad84e1416057d51226352d561b342b4c8b";
+    internal const string ReviewPromptHash = "d42c2fa3e8359a15e5366500e2ac4826b20e86c9d7f0e7853238e1b23dfbf5a9";
     internal static bool CanUse(ClipEditorialMetadataRequest request)
     {
         if (!request.Context.Evidence.Any(item => item.Kind == ClipEditorialEvidenceKind.VisualObservation && item.Id == "scene-review-1.4-setup") ||
@@ -98,12 +98,12 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     // the successful drafts must not be mistaken for a parser failure.
                     new SystemQwen3VlGroundedFailureArchive().Archive(output, 1_048_576);
                     throw new ClipEditorialAiGenerationException(ClipEditorialAiFailureKind.CaseRejected,
-                        request.PriorAcceptedTitleExclusions.Count > 0
+                        request.RequiresNoveltyReview
                             ? "No reliable new angle was found. Your saved wording is unchanged. Try another angle or keep the current copy."
                             : "AI could not produce supported, useful wording for this clip after a correction. Try another cut or writing angle.",
                         request.Context.CandidateId);
                 }
-                foreach (string key in request.PriorAcceptedTitleExclusions.Count > 0
+                foreach (string key in request.RequiresNoveltyReview
                     ? new[] { "neuralGrounding", "neuralQuality", "neuralNovelty" }
                     : new[] { "neuralGrounding", "neuralQuality" })
                 {
@@ -111,23 +111,23 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     double value = judgment.GetProperty("value").GetDouble();
                     Qwen3VlSceneReviewProvider.ValidateNeuralValue(judgment, value * 100, "copy-judgment-2");
                     if (value <= .5) throw new InvalidDataException("The neural writer check did not support this draft.");
-                    if (key is "neuralGrounding" or "neuralNovelty" &&
-                        judgment.GetProperty("margins").EnumerateArray().Any(margin => margin.GetDouble() <= 0))
-                        throw new InvalidDataException("The factual or variation checks disagreed; the saved wording was kept.");
+                    if (judgment.GetProperty("margins").EnumerateArray().Any(margin => margin.GetDouble() <= 0))
+                        throw new InvalidDataException("The source, quality or variation checks disagreed; the saved wording was kept.");
                 }
                 string titleBody = row.GetProperty("copy").GetProperty("titleBody").GetString()!.Trim();
                 string description = row.GetProperty("copy").GetProperty("description").GetString()!.Trim();
-                string title = titleBody + " " + request.Context.GameContext.AudienceGameHashtag;
-                if (title.Length > 100 || titleBody.Contains('#') || description.Length is < 1 or > 420 ||
+                ValidateLocks(titleBody, description, request);
+                string title = request.Writing?.KeepTitle == true ? request.Writing.CurrentTitle : titleBody + " " + request.Context.GameContext.AudienceGameHashtag;
+                if (title.Length > 100 || request.Writing?.KeepTitle != true && titleBody.Contains('#') || description.Length < 1 ||
+                    description.Length > (request.Writing?.KeepDescription == true ? 5000 : 420) ||
                     titleBody.TrimEnd('.', '!', '?').Equals(description.TrimEnd('.', '!', '?'), StringComparison.OrdinalIgnoreCase) ||
-                    request.PriorAcceptedTitleExclusions.Any(prior => prior.Title.Equals(title, StringComparison.OrdinalIgnoreCase)))
+                    request.RequiresNewAngle && request.PriorAcceptedTitleExclusions.Any(prior => prior.Title.Equals(title, StringComparison.OrdinalIgnoreCase)))
                     throw new InvalidDataException("Scene copy is repetitive or out of bounds.");
-                string? signature = request.Profile.ReusableDescriptionSignature;
-                if (!string.IsNullOrWhiteSpace(signature)) description += "\n\n" + signature;
+                description = FinishDescription(description, request);
                 var tags = new[] { request.Context.GameContext.AudienceGameHashtag.TrimStart('#') }
                     .Concat(request.Profile.DefaultTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(8).ToArray();
                 var model = runtime.Model;
-                var provenance = new ClipEditorialAiProvenance("Qwen3-VL scene writer", Version, "1.8", model.RepositoryId,
+                var provenance = new ClipEditorialAiProvenance("Qwen3-VL scene writer", Version, "1.9", model.RepositoryId,
                     model.Revision, model.ManifestSha256, "ReplayFoundry reviewed scene copy", Version, PromptHash, process.Duration, null)
                 {
                     WritingAttempts = row.TryGetProperty("writerIdentity", out var writer) && writer.ValueKind == JsonValueKind.Object
@@ -143,7 +143,8 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                     : request.Context.Evidence.ToArray();
                 var draft = new ClipEditorialMetadataDraft(title, description, tags, ClipEditorialMetadataOrigin.AiAssisted,
                     Qwen3VlGroundedMetadataGenerator.SharedIdentity, request.Attempt, evidence, aiProvenance: provenance,
-                    priorAcceptedTitles: request.PriorAcceptedTitleExclusions.Select(item => item.Title));
+                    priorAcceptedTitles: request.PriorAcceptedTitleExclusions.Select(item => item.Title),
+                    alternatives: QwenSceneCopyAlternatives.Read(row, request));
                 drafts.Add(draft);
                 var result = new { candidateId = request.Context.CandidateId, attempt = request.Attempt,
                     // Grounding here is the writer's public-knowledge binding field.
@@ -198,9 +199,21 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
                 reviewedContext = sequence ? (object)new { sequence = requests.Select(Facts).ToArray() } : ReviewedContext(request),
                 tags = new[] { request.Context.GameContext.AudienceGameHashtag.TrimStart('#') }.Concat(request.Profile.DefaultTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(8),
                 game = request.Context.GameContext.AudienceGameName,
-                titleLimit = Math.Min(72, 99 - request.Context.GameContext.AudienceGameHashtag.Length),
+                titleLimit = request.Writing?.KeepTitle == true ? 100 : Math.Min(72, 99 - request.Context.GameContext.AudienceGameHashtag.Length),
+                descriptionLimit = request.Writing?.KeepDescription == true ? 5000 : 420,
                 preferences = new { request.Profile.AudienceAddress, request.Profile.NamingGuidance,
                     voice = request.Profile.VoicePerspective.ToString(), objective = request.Profile.CopyObjective.ToString(), intent = request.VariantIntent.ToString(), tone = request.Tone },
+                writing = request.Writing is not { } writing ? null : new
+                {
+                    action = writing.Action.ToString(),
+                    // Wire names stay explicit; C# record naming is not the Python protocol.
+                    keepTitle = writing.KeepTitle, keepDescription = writing.KeepDescription,
+                    current = new { titleBody = StripHashtag(writing.CurrentTitle, request.Context.GameContext.AudienceGameHashtag),
+                        description = StripSignature(writing.CurrentDescription, request.Profile.ReusableDescriptionSignature) },
+                    history = (writing.History ?? []).Select(version => new {
+                        titleBody = StripHashtag(version.Title, request.Context.GameContext.AudienceGameHashtag),
+                        description = StripSignature(version.Description, request.Profile.ReusableDescriptionSignature) })
+                },
                 priorTitles = request.PriorAcceptedTitleExclusions.Select(item => StripHashtag(item.Title, request.Context.GameContext.AudienceGameHashtag))
             }
         }).ToArray();
@@ -225,6 +238,23 @@ internal sealed class Qwen3VlSceneCopyGenerator(Qwen3VlQualifiedEditorialRuntime
         return document.RootElement.Clone();
     }
 
+    internal static void ValidateLocks(string titleBody, string description, ClipEditorialMetadataRequest request)
+    {
+        if (request.Writing is not { } writing) return;
+        if (writing.KeepTitle && titleBody != StripHashtag(writing.CurrentTitle, request.Context.GameContext.AudienceGameHashtag) ||
+            writing.KeepDescription && description != StripSignature(writing.CurrentDescription, request.Profile.ReusableDescriptionSignature))
+            throw new InvalidDataException("The reviewed copy changed a locked field; the saved wording was kept.");
+    }
+
+    internal static string FinishDescription(string body, ClipEditorialMetadataRequest request) =>
+        request.Writing?.KeepDescription == true ? request.Writing.CurrentDescription :
+        string.IsNullOrWhiteSpace(request.Profile.ReusableDescriptionSignature) ? body :
+            body + "\n\n" + request.Profile.ReusableDescriptionSignature;
+
     private static string StripHashtag(string title, string hashtag) => title.EndsWith(" " + hashtag, StringComparison.OrdinalIgnoreCase)
         ? title[..^(hashtag.Length + 1)] : title;
+
+    private static string StripSignature(string description, string? signature) => !string.IsNullOrWhiteSpace(signature) &&
+        description.EndsWith("\n\n" + signature, StringComparison.Ordinal)
+            ? description[..^(signature.Length + 2)] : description;
 }

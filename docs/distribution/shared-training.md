@@ -1,0 +1,13 @@
+# Shared writer contributions
+
+The `shared-writer-training-1` opt-in is independent of local learning, research participation and support reports. It is off by default. Only contexts captured after consent are eligible for automatic sharing; no historical sweep occurs. The user may stop collection, retry pending delivery, or delete submitted records in Settings → Privacy.
+
+The client projects a fixed `shared-writer-example-1` contract: game name/source, clip times, a contributor-scoped recording group, prompt identity, generated or edited wording, correction labels and bounded text evidence with speech attribution. Media, filenames, local paths, full prompts, account identifiers and OAuth credentials are not serialized. User-authored text may contain personal information; the consent notice discloses this. Users must have permission to contribute it.
+
+The fixed HTTPS intake is `/api/v1/training-contributions` on replayfoundry.com. Redirects and cookies are disabled. A random per-installation capability is protected with Windows DPAPI; its hash identifies database ownership. It is not a Google identity or an embedded shared application secret. The website validates fields, bounds requests, limits abuse, and stores all contributions as `unreviewed` in its protected D1 database. There is no public dataset-read endpoint and no support-mail delivery of training content.
+
+Operators can inspect/export the protected `training_contributions` table using the site's authenticated database tools. Keep contributor and recording groups together when splitting evaluation data. Generated examples are context, not positive labels. Saved wording edits support preference/supervised examples only for changed or explicitly approved fields. Facts require separate source review. Contributions do not trigger automatic training or model promotion.
+
+Retention is one year. DELETE first records a revocation, then removes that contributor's records; late POST retries cannot recreate them. Disabling clears pending uploads. Deletion of records cannot reverse a model trained earlier. Preserve the installation's deletion capability until deletion is confirmed. Support reports retain their separate 30-day policy.
+
+Local `foundry-writer-example-3` records retain original prompts, evidence and before/after pairs plus `foundry-wording-edits-1` operations. Operations reconstruct both sides exactly. `export-edits` emits immutable `foundry-edit-supervision-1` JSONL, including excluded examples and exclusion reasons without rewriting the originals. Training receipts bind the edit-supervision export by SHA-256; SFT learns final edited fields and DPO compares their before/after wording. No semantic reason is inferred solely from a text difference.

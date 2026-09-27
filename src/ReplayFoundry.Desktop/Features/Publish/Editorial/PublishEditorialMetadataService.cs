@@ -138,7 +138,7 @@ internal sealed class PublishEditorialMetadataService :
             descriptionSignature,
             _profileEditor.Current.DefaultTags,
             _profileEditor.Current.VoicePerspective,
-            _profileEditor.Current.CopyObjective);
+            _profileEditor.Current.CopyObjective, _profileEditor.Current.DefaultTone);
         // A valid immutable cut may outlive the old wording's authored-context
         // receipt. That permits fresh generation, not assigning the old title
         // history to the newly resolved context.

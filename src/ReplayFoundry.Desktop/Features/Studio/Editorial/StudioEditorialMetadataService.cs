@@ -3,6 +3,8 @@ using ReplayFoundry.Desktop.Features.Generate.Editorial.GameKnowledge;
 using ReplayFoundry.Desktop.Features.Generate.Handoff;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Platform.Media;
+using System.IO;
+using System.Text.Json;
 
 namespace ReplayFoundry.Desktop.Features.Studio.Editorial;
 
@@ -20,7 +22,8 @@ internal sealed record StudioEditorialProfileSnapshot(
     string NamingGuidance,
     string DescriptionSignature,
     ClipEditorialCopyObjective CopyObjective =
-        ClipEditorialCopyObjective.BalancedActionAndCommentary);
+        ClipEditorialCopyObjective.BalancedActionAndCommentary,
+    string Tone = "Natural");
 
 internal sealed record StudioEditorialRerollResult(
     bool IsAiAssisted,
@@ -141,7 +144,7 @@ internal sealed class StudioEditorialMetadataService
             profile.AudienceAddress,
             profile.NamingGuidance ?? string.Empty,
             profile.ReusableDescriptionSignature ?? string.Empty,
-            profile.CopyObjective);
+            profile.CopyObjective, profile.DefaultTone);
     }
 
     public void Save(
@@ -246,7 +249,8 @@ internal sealed class StudioEditorialMetadataService
             StudioEditorialVariant.DirectAction,
         bool keepTitle = false,
         bool keepDescription = false,
-        string tone = "Natural")
+        string tone = "Natural",
+        ClipEditorialWritingAction action = ClipEditorialWritingAction.NewAngle)
     {
         if (keepTitle && keepDescription) throw new InvalidOperationException("Unlock a field before rewriting.");
         using IDisposable priority = MediaWorkBudget.WithPriority(MediaWorkPriority.Foreground);
@@ -280,6 +284,8 @@ internal sealed class StudioEditorialMetadataService
         ClipEditorialContext requestedCutContext =
             currentAsset.CreateCurrentCutEditorialContext();
         string startingContextRevision = StudioEditorialContextRevision.Create(requestedCutContext);
+        var startingCopy = currentAsset.EditorialMetadata;
+        var startingDefaults = _profileEditor?.Current;
         requestedCutContext = requestedCutContext.PrepareForEditorialGeneration();
         if (requireAi && _gameKnowledge is not null)
         {
@@ -304,7 +310,12 @@ internal sealed class StudioEditorialMetadataService
                     preference,
                     currentAsset.SourceMedia,
                     priorAcceptedTitleExclusions: priorTitles)
-                    .WithVariantIntent(MapVariant(variant)).WithTone(tone),
+                    .WithVariantIntent(MapVariant(variant)).WithTone(tone)
+                    .WithWriting(StudioEditorialDraftPresentation.IsUnwritten(currentAsset) ||
+                        !currentAsset.IsEditorialMetadataCurrentForCut && !keepTitle && !keepDescription ? null :
+                        new(action, startingCopy.Title, startingCopy.Description, keepTitle, keepDescription,
+                        Array.AsReadOnly(startingCopy.CopyVersions.Where(version => version.ContextFingerprint ==
+                            currentAsset.EditorialAuthoredContextRevision).TakeLast(8).ToArray()))),
                 cancellationToken);
         ClipEditorialMetadataGenerationPolicy.EnsureCompatible(
             preference,
@@ -317,6 +328,11 @@ internal sealed class StudioEditorialMetadataService
         (currentProject, currentAsset) = ResolveCurrent(
             currentProject,
             currentAsset);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!ReferenceEquals(currentAsset.EditorialMetadata, startingCopy))
+            throw new InvalidOperationException("The saved wording changed during generation. Your newer wording was kept.");
+        if (!ReferenceEquals(startingDefaults, _profileEditor?.Current))
+            throw new InvalidOperationException("The writing defaults changed during generation. Your saved wording was kept; try again with the new defaults.");
         if (currentProject.IsFinalized)
         {
             throw new InvalidOperationException(
@@ -337,7 +353,7 @@ internal sealed class StudioEditorialMetadataService
         }
         if (currentAsset.EditorialMetadata is { } previous)
         {
-            if (keepTitle || keepDescription)
+            if (keepTitle && rerolled.Title != previous.Title || keepDescription && rerolled.Description != previous.Description)
                 rerolled = rerolled.WithUserEdits(keepTitle ? previous.Title : rerolled.Title,
                     keepDescription ? previous.Description : rerolled.Description, rerolled.Tags);
             rerolled = rerolled.RememberPreviousCopy(previous,
@@ -355,6 +371,56 @@ internal sealed class StudioEditorialMetadataService
             keepTitle || keepDescription ? "Unlocked wording updated; your locked field was preserved. Review how the two read together." : isAiAssisted
                 ? "A new title and description are ready."
                 : "A new version is ready.");
+    }
+
+    internal IReadOnlyList<ClipEditorialAlternative> Alternatives(GenerationOutputAsset? asset,
+        string audience, string naming, string signature, string tone)
+    {
+        if (asset?.IsEditorialMetadataCurrentForCut != true || asset.EditorialMetadata is not { } metadata) return [];
+        var profile = new ClipEditorialProfile(audience, naming, signature, _profileEditor?.Current.DefaultTags ?? [],
+            _profileEditor?.Current.VoicePerspective ?? ClipEditorialVoicePerspective.CreatorFirstPerson,
+            _profileEditor?.Current.CopyObjective ?? ClipEditorialCopyObjective.BalancedActionAndCommentary);
+        string fingerprint = ClipEditorialAlternative.ProfileKey(profile, tone);
+        return metadata.Alternatives.Where(choice => choice.ProfileFingerprint == fingerprint &&
+            (choice.Title != metadata.Title || choice.Description != metadata.Description)).ToArray();
+    }
+
+    internal void SelectAlternative(GenerationOutputProject project, GenerationOutputAsset asset,
+        ClipEditorialAlternative choice, string audience, string naming, string signature, string tone,
+        bool keepTitle, bool keepDescription)
+    {
+        var (currentProject, currentAsset) = ResolveCurrent(project, asset);
+        if (_outputEditor is null || currentProject.IsFinalized ||
+            !Alternatives(currentAsset, audience, naming, signature, tone).Contains(choice) ||
+            keepTitle && choice.Title != currentAsset.EditorialMetadata!.Title ||
+            keepDescription && choice.Description != currentAsset.EditorialMetadata!.Description)
+            throw new InvalidOperationException("This alternative no longer matches the clip, writing preferences or locked fields.");
+        var metadata = currentAsset.EditorialMetadata!;
+        var context = currentAsset.CreateCurrentCutEditorialContext();
+        if (!AlternativeSourceIsCurrent(context))
+            throw new InvalidOperationException("The original recording has changed or is unavailable. Rewrite for the current clip before choosing an alternative.");
+        var selected = metadata.SelectAlternative(choice,
+            currentAsset.EditorialAuthoredContextRevision ?? StudioEditorialContextRevision.UnknownAuthoredContext);
+        _outputEditor.ReplaceAsset(currentProject.Id, currentAsset.WithCurrentCutEditorialMetadata(context, selected));
+    }
+
+    private static bool AlternativeSourceIsCurrent(ClipEditorialContext context)
+    {
+        var binding = context.Evidence.SingleOrDefault(item => item.Id == "scene-review-source-binding");
+        if (binding is null) return false;
+        try
+        {
+            using var document = JsonDocument.Parse(binding.Description);
+            var row = document.RootElement;
+            var source = new FileInfo(context.SourceFullPath);
+            return source.Exists && row.GetProperty("start").GetInt64() == context.SourceStart.Ticks &&
+                row.GetProperty("end").GetInt64() == context.SourceEnd.Ticks &&
+                row.GetProperty("length").GetInt64() == source.Length &&
+                row.GetProperty("modified").GetInt64() == source.LastWriteTimeUtc.Ticks &&
+                source.FullName.Equals(row.GetProperty("source").GetString(), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or KeyNotFoundException)
+        { return false; }
     }
 
     private static ClipEditorialVariantIntent MapVariant(
@@ -473,7 +539,8 @@ internal sealed class StudioEditorialMetadataService
     public void SaveProfile(
         string audienceAddress,
         string namingGuidance,
-        string descriptionSignature)
+        string descriptionSignature,
+        string tone = "Natural")
     {
         if (_profileEditor is null)
         {
@@ -488,7 +555,7 @@ internal sealed class StudioEditorialMetadataService
                 descriptionSignature,
                 _profileEditor.Current.DefaultTags,
                 _profileEditor.Current.VoicePerspective,
-                _profileEditor.Current.CopyObjective));
+                _profileEditor.Current.CopyObjective, tone));
     }
 
     private (GenerationOutputProject Project,

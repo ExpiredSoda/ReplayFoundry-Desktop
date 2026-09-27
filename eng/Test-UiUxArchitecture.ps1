@@ -134,7 +134,11 @@ $featureRoots = @('Studio', 'Library', 'Publish', 'Settings')
 $reviewedValueAliases = @{
     'StudioOutputEditorViewModel.cs' = 'using NormalizedRectangle = ReplayFoundry.Desktop.Media.Composition.NormalizedRectangle;'
     'StudioCaptionTrackEditorViewModel.cs' = 'using SubtitleSidecarFormat = ReplayFoundry.Desktop.Media.Subtitles.SubtitleSidecarFormat;'
-    'StudioEditorialMetadataViewModel.cs' = 'using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialCopyVersion;'
+    'StudioEditorialMetadataViewModel.cs' = @(
+        'using ClipEditorialCopyVersion = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialCopyVersion;'
+        'using ClipEditorialAlternative = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialAlternative;'
+        'using ClipEditorialWritingAction = ReplayFoundry.Desktop.Media.Intelligence.Editorial.ClipEditorialWritingAction;'
+    )
     'StudioWordingLearningViewModel.cs' = 'using EditorialWordingFeedback = ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences.EditorialWordingFeedback;'
     'StudioClipPreferenceViewModel.cs' = 'using TasteMomentCorrection = ReplayFoundry.Desktop.Media.Intelligence.Learning.TasteMomentCorrection;'
     'StudioMomentCorrectionViewModel.cs' = @(

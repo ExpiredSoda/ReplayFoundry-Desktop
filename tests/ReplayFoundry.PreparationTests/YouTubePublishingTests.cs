@@ -129,14 +129,14 @@ internal static partial class YouTubePublishingTests
         TestAssert.Equal(
             PublishHistoryProjector.DashboardItemLimit,
             history.RecentItems.Count,
-            "The dashboard must remain compact at five newest records.");
+            "The activity list must retain the twenty newest records without loading an unbounded archive.");
         TestAssert.Equal(
             "history-79",
             history.RecentItems[0].Id,
             "The compact dashboard must sort explicitly by attempt time instead of trusting store order.");
         TestAssert.True(
             history.HasAdditionalDashboardItems &&
-            history.DashboardRangeSummary == "Newest 5 of 80",
+            history.DashboardRangeSummary == "Newest 20 of 80",
             "A larger history must clearly disclose that the dashboard is only a preview.");
         return Task.CompletedTask;
     }

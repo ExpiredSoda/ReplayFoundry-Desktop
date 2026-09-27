@@ -31,13 +31,21 @@ public sealed class ClipEditorialProfileSession :
     IClipEditorialProfileEditor,
     ICreatorVoiceSettingsEditor
 {
+    private readonly IClipEditorialProfileStore? _store;
+    public ClipEditorialProfileSession(IClipEditorialProfileStore? store = null)
+    {
+        _store = store;
+        Current = store?.Load() ?? ClipEditorialProfile.Default;
+    }
+    public bool IsPersistent => _store is not null;
     public ClipEditorialProfile Current { get; private set; } =
         ClipEditorialProfile.Default;
 
     public void Update(ClipEditorialProfile profile)
     {
-        Current = profile ??
-            throw new ArgumentNullException(nameof(profile));
+        ArgumentNullException.ThrowIfNull(profile);
+        _store?.Save(profile);
+        Current = profile;
     }
 
     public CreatorVoiceSettings CurrentCreatorVoice =>
@@ -55,7 +63,7 @@ public sealed class ClipEditorialProfileSession :
             descriptionSignature,
             defaultTags,
             Current.VoicePerspective,
-            Current.CopyObjective);
+            Current.CopyObjective, Current.DefaultTone);
         Update(profile);
         return CreatorVoiceSettings.FromProfile(profile);
     }

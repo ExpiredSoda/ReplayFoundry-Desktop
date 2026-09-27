@@ -45,6 +45,9 @@ internal static class SettingsFeatureComposition
             dependencies.Preferences.MetadataLearningConsent);
         model.AttachTasteLearning(dependencies.Feedback.TasteLearning);
         model.AttachWritingLearning(() => WriterLearningOverviewReader.Read());
+        var sharedTraining = Platform.Research.SharedTrainingContributionService.Current;
+        model.AttachSharedTraining(sharedTraining);
+        _ = Task.Run(sharedTraining.SendPendingAsync);
         return model;
     }
 

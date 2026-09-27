@@ -19,7 +19,7 @@ public partial class PublishView : UserControl
     public PublishView()
     {
         InitializeComponent();
-        ApplyContentLayout(compact: false);
+        ApplyContentLayout(1280);
         SizeChanged += OnSizeChanged;
         Loaded += OnLoaded;
     }
@@ -46,21 +46,28 @@ public partial class PublishView : UserControl
         SetValue(IsCompactLayoutPropertyKey, layout.IsCompact);
         SetValue(IsStandardLayoutPropertyKey, layout.IsStandard);
         SetValue(IsWideLayoutPropertyKey, layout.IsWide);
-        // Keep both panels together while there is room for readable clip titles and day cells.
-        // On small windows the same controls stack, with bounded lists and page scrolling.
-        ApplyContentLayout(width > 0 && width < 960);
+        ApplyContentLayout(width);
     }
 
-    private void ApplyContentLayout(bool compact)
+    private void ApplyContentLayout(double width)
     {
-        LibraryPublishColumn.Width = new GridLength(compact ? 1 : .85, GridUnitType.Star);
-        CalendarPublishColumn.Width = compact ? new GridLength(0) : new GridLength(1.15, GridUnitType.Star);
-        PrimaryPublishRow.Height = compact ? new GridLength(470) : new GridLength(1, GridUnitType.Star);
-        SecondaryPublishRow.Height = compact ? new GridLength(490) : new GridLength(0);
-        Grid.SetColumn(PublishCalendar, compact ? 0 : 1); Grid.SetRow(PublishCalendar, compact ? 1 : 0);
-        LibraryBrowser.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 6, 0);
-        PublishCalendar.Margin = compact ? new Thickness(0, 12, 0, 0) : new Thickness(6, 0, 0, 0);
-        ActivityRow.Height = new GridLength(compact ? 260 : 112);
-        WorkspaceLayout.Height = Math.Max(compact ? 1290 : 560, ActualHeight - 48);
+        bool stacked = width > 0 && width < 900;
+        bool activityBesidePlanner = width <= 0 || width >= 1180;
+        LibraryPublishColumn.Width = new GridLength(.95, GridUnitType.Star);
+        CalendarPublishColumn.Width = stacked ? new GridLength(0) : new GridLength(1.05, GridUnitType.Star);
+        ActivityPublishColumn.Width = new GridLength(activityBesidePlanner ? Math.Clamp(width * .27, 320, 420) : 0);
+        PrimaryPublishRow.Height = activityBesidePlanner ? new GridLength(1, GridUnitType.Star) : new GridLength(stacked ? 440 : 510);
+        SecondaryPublishRow.Height = new GridLength(stacked ? 480 : activityBesidePlanner ? 0 : 500);
+        TertiaryPublishRow.Height = new GridLength(stacked ? 500 : 0);
+        Grid.SetColumn(PublishCalendar, stacked ? 0 : 1);
+        Grid.SetRow(PublishCalendar, stacked ? 1 : 0);
+        Grid.SetColumn(PublishActivity, activityBesidePlanner ? 2 : 0);
+        Grid.SetRow(PublishActivity, stacked ? 2 : activityBesidePlanner ? 0 : 1);
+        Grid.SetColumnSpan(PublishActivity, !stacked && !activityBesidePlanner ? 2 : 1);
+        LibraryBrowser.Margin = stacked ? new Thickness(0) : new Thickness(0, 0, 6, 0);
+        PublishCalendar.Margin = stacked ? new Thickness(0, 12, 0, 0) : new Thickness(6, 0, activityBesidePlanner ? 6 : 0, 0);
+        PublishActivity.Margin = activityBesidePlanner ? new Thickness(6, 0, 0, 0) : new Thickness(0, 12, 0, 0);
+        // Short windows scroll the workspace before compressing readable content into a strip.
+        WorkspaceLayout.Height = Math.Max(stacked ? 1500 : activityBesidePlanner ? 560 : 1090, ActualHeight - 48);
     }
 }

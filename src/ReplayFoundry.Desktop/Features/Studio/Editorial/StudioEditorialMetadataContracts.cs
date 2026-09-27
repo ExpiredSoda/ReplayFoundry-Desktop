@@ -10,7 +10,8 @@ internal sealed record StudioPendingEditorialDraft(
 internal sealed record StudioPendingEditorialProfileDraft(
     string AudienceAddress,
     string NamingGuidance,
-    string DescriptionSignature);
+    string DescriptionSignature,
+    string Tone = "Natural");
 
 public enum StudioEditorialVariant
 {

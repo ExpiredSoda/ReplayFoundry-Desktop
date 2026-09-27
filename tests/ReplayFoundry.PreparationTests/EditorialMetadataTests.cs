@@ -37,6 +37,17 @@ internal static partial class EditorialMetadataTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
+        new("Writing actions and locks survive all request clones", WritingIntentSurvivesRequestClones),
+        new("Studio exposes separate rewrite and new-angle requests", StudioWritingActionsHaveDifferentIntent),
+        new("Pending writing cannot overwrite newer saved copy", WritingCannotOverwriteNewerSavedCopy),
+        new("Typing cancels pending writing and retains the unsaved draft", TypingCancelsPendingWritingWithoutLosingDraft),
+        new("Writing alternatives preserve history and expire on edits", AlternativesPreserveHistoryAndExpireOnManualEdits),
+        new("Writing defaults survive restart and corrupt files are preserved", WritingDefaultsSurviveRestart),
+        new("Failed writing-default save retains the previous profile", WritingDefaultsKeepPreviousOnFailure),
+        new("Studio tone survives rebind and can be saved as default", StudioToneSurvivesRebind),
+        new("Writing alternatives and descriptions survive project serialization", WritingAlternativesSurviveProjectSave),
+        new("Provider copy cannot change locked wording", ProviderCopyHonorsLocks),
+        new("Writing alternatives require agreement on quality", WritingAlternativesRequireQualityAgreement),
         new("Studio typing updates only draft-dependent surfaces", StudioTypingKeepsSavedSurfacesStable),
         new("Editorial profile snapshots reusable tags", ProfileIsImmutable),
         new("Editorial copy objectives remain typed and independent of custom guidance", CopyObjectiveIsTypedAndIndependentOfGuidance),

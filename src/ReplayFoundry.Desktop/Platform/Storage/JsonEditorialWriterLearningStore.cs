@@ -8,6 +8,7 @@ using ReplayFoundry.Desktop.Features.Settings;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial;
 using ReplayFoundry.Desktop.Media.Intelligence.Editorial.Preferences;
 using ReplayFoundry.Desktop.Platform.VisualSemantic;
+using ReplayFoundry.Desktop.Platform.Research;
 
 namespace ReplayFoundry.Desktop.Platform.Storage;
 
@@ -18,18 +19,20 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
     private static readonly Dictionary<(string Path, long Length, DateTime Modified), string> SourceGroups = new();
     private readonly string _root;
     private readonly Func<bool> _enabled;
+    private readonly SharedTrainingContributionService? _sharing;
     private static readonly JsonSerializerOptions Options = ReplayFoundryLocalJsonPolicy.IndentedCamelCase;
-    public JsonEditorialWriterLearningStore(string? root = null, Func<bool>? enabled = null)
+    public JsonEditorialWriterLearningStore(string? root = null, Func<bool>? enabled = null, SharedTrainingContributionService? sharing = null)
     {
         _root = ReplayFoundryLocalDataPaths.Resolve(root, Path.Combine("Personalization", "Writer"));
+        _sharing = sharing ?? (root is null ? SharedTrainingContributionService.Current : null);
         _enabled = enabled ?? (() =>
         {
             var consent = new JsonEditorialMetadataPreferenceLearningConsentStore().Current;
             return consent.IsEnabled && consent.NoticeVersion == EditorialMetadataPreferenceLearningConsentSnapshot.CurrentNoticeVersion;
         });
     }
-    public bool IsEnabled => _enabled();
-    public string? LearningDirectory => IsEnabled ? _root : null;
+    public bool IsEnabled => _enabled() || _sharing?.IsEnabled == true;
+    public string? LearningDirectory => _enabled() ? _root : null;
 
     public void RetainValidatedBatch(string contextPath, string validatedOutput,
         IReadOnlyList<ClipEditorialMetadataRequest> requests)
@@ -65,6 +68,7 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
                 string[] tags = metadata.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()!).ToArray();
                 var context = new JsonObject
                 {
+                    ["capturedAtUtc"] = DateTimeOffset.UtcNow.ToString("O"),
                     ["prompt"] = JsonNode.Parse(prompt.GetRawText()), ["factSha256"] = row.GetProperty("factSha256").GetString(),
                     ["sourceGroup"] = SourceGroup(request.Context),
                     ["generated"] = Copy(TitleBody(title, request.Context), description, tags, metadata.GetProperty("grounding")),
@@ -87,6 +91,7 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
                 };
                 string key = ContextKey(request.Context, title, description);
                 WriteAtomic(Path.Combine(directory, key + ".json"), context.ToJsonString(Options));
+                TryShare(context, request.Context);
             }
             foreach (var file in new DirectoryInfo(directory).EnumerateFiles("*.json").OrderByDescending(file => file.LastWriteTimeUtc).Skip(512))
                 file.Delete();
@@ -128,7 +133,7 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
                 !JsonNode.DeepEquals(chosen[field], original[field])).ToArray();
             var example = new JsonObject
             {
-                ["schema"] = "foundry-writer-example-2", ["sourceGroup"] = captured["sourceGroup"]!.DeepClone(),
+                ["schema"] = "foundry-writer-example-3", ["sourceGroup"] = captured["sourceGroup"]!.DeepClone(),
                 ["factSha256"] = captured["factSha256"]!.DeepClone(), ["prompt"] = captured["prompt"]!.DeepClone(),
                 ["chosen"] = chosen, ["rejected"] = changed ? original.DeepClone() : null,
                 ["kind"] = changed ? "HumanCorrection" : "ExplicitWordingApproval",
@@ -136,6 +141,7 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
                     correctedEvent = feedback.CorrectedEvent.Trim(), fields,
                     factsReviewed = explicitApproval }),
                 ["evidence"] = captured["evidence"]?.DeepClone(),
+                ["edits"] = EditorialWordingEditTrace.Create(original, chosen, captured["lastExampleId"]?.GetValue<string>()),
             };
             using JsonDocument canonical = JsonDocument.Parse(example.ToJsonString());
             string id = Qwen3VlCanonicalJson.ComputeObjectSha256(canonical.RootElement, "id");
@@ -146,13 +152,23 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
             Directory.CreateDirectory(directory);
             if (Directory.EnumerateFiles(directory, "*.json").Take(10_000).Count() >= 10_000) return false;
             WriteAtomic(Path.Combine(directory, id + ".json"), json);
+            TryShare(captured.AsObject(), context, example);
             // Later edits stay linked to the same facts and compare against the
             // immediately previous saved wording, not an unrelated model draft.
             captured["generated"] = chosen.DeepClone();
+            captured["lastExampleId"] = id;
             captured["pendingFeedback"] = JsonSerializer.SerializeToNode(new { reason = feedback.Reason, correctedEvent = feedback.CorrectedEvent.Trim() });
             WriteAtomic(Path.Combine(_root, "contexts", ContextKey(context, afterTitle, afterDescription) + ".json"), captured.ToJsonString(Options));
             return true;
         }
+    }
+
+    private void TryShare(JsonObject captured, ClipEditorialContext context, JsonObject? example = null)
+    {
+        try { _sharing?.Capture(captured, context, example); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or
+            CryptographicException or InvalidOperationException or ArgumentException)
+        { ReplayFoundry.Desktop.Platform.Diagnostics.SafeDiagnosticTrace.Write("Training contribution could not be queued", error); }
     }
 
     private static JsonObject Copy(string title, string description, IEnumerable<string> tags, JsonElement grounding) => new()
