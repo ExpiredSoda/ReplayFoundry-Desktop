@@ -50,6 +50,12 @@ internal static partial class UiUxApplicationSurfaceTests
 {
     public static IReadOnlyList<TestCase> GetTests() =>
     [
+        new("Caption sliders update the preview without unrelated notification storms", CaptionSlidersNotifyOnlyChangedControls),
+        new("Bound caption checkboxes and sliders preserve dependent state", BoundCaptionControlsPreserveDependentState),
+        new("Publish drag preview moves one bounded cached card", PublishDragMovesBoundedCachedCard),
+        new("Library scrubbing resumes even when the Slider consumes release", LibraryScrubCompletesWhenSliderConsumesRelease),
+        new("Nested galleries pass the wheel to their containing panel at the edge", NestedScrollViewersHandOffAtEdges),
+        new("Unloaded preview variants do not start position timers", PreviewTimersStayIdleUntilPlayback),
         .. MenuConsolidationTests(),
         new("Preview ratings follow the selected clip without implicit feedback", PreviewFeedbackTracksCurrentClip),
         new("Manual range gestures undo atomically, cancel and clamp without resizing", ManualRangeEditsAreReversible),

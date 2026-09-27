@@ -1,10 +1,11 @@
 <UserControl
     x:Class="ReplayFoundry.Desktop.Features.Settings.CreatorVoiceSettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ReplayFoundry.Desktop.Presentation.Controls">
     <Border Style="{DynamicResource Control.CanvasPane}">
         <StackPanel>
-            <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="Creator voice" />
+            <TextBlock Style="{DynamicResource Text.WorkspaceTitle}" Text="Writing &amp; learning" />
             <TextBlock
                 Margin="0,6,0,0"
                 Style="{DynamicResource Text.Body}"
@@ -16,10 +17,70 @@
                 Style="{DynamicResource Control.CanvasInsetCard}">
                 <TextBlock
                     Style="{DynamicResource Text.Meta}"
-                    Text="Session only: these choices remain local and reset when Replay Foundry closes. Existing clip copy is unchanged until you ask for a rewrite."
+                    Text="{Binding CreatorVoice.PersistenceDetail}"
                     TextWrapping="Wrap" />
             </Border>
 
+            <Border
+                Margin="0,12,0,0"
+                Style="{DynamicResource Control.CanvasInsetCard}">
+                <StackPanel>
+                    <controls:FoundryHeading
+                        Text="Writing assistance"
+                        Style="{DynamicResource Text.SectionTitle}" />
+                    <CheckBox
+                        Margin="0,10,0,0"
+                        Content="Use local AI for rewrites"
+                        AutomationProperties.Name="Use local AI when rewriting Studio and Publish titles"
+                        IsChecked="{Binding UseLocalAiForEditorialRerolls, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Style="{DynamicResource Control.FormCheckBox}" />
+                    <TextBlock
+                        Margin="0,5,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        TextWrapping="Wrap"
+                        Text="{Binding EditorialRerollPreferenceDetail}" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        TextWrapping="Wrap"
+                        Text="For new clips, choose the writing method in Generate." />
+                    <TextBlock
+                        Margin="0,5,0,0"
+                        Foreground="{DynamicResource Brush.StatusInfo}"
+                        TextWrapping="Wrap"
+                        Text="{Binding EditorialRerollPreferenceNotice}"
+                        Visibility="{Binding HasEditorialRerollPreferenceNotice, Converter={StaticResource BoolToVisibility}}" />
+                    <Border
+                        Margin="0,12,0,12"
+                        Height="1"
+                        Background="{DynamicResource Brush.BorderSubtle}" />
+                    <CheckBox
+                        Content="Learn from my wording corrections"
+                        AutomationProperties.Name="Learn locally from saved title and description corrections"
+                        IsChecked="{Binding IsEditorialMetadataPreferenceLearningEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Style="{DynamicResource Control.FormCheckBox}" />
+                    <TextBlock
+                        Margin="0,5,0,0"
+                        Style="{DynamicResource Text.Meta}"
+                        TextWrapping="Wrap"
+                        ><Run Text="Optional, off by default. Explicit wording edits and approvals teach your writing style. " />
+                        <Run Text="Clip likes, renders and uploads do not approve the wording. " />
+                        <Run Text="Training requires 64 eligible examples from 6 recordings, followed by independent qualification." /></TextBlock>
+                    <TextBlock
+                        Margin="0,5,0,0"
+                        Foreground="{DynamicResource Brush.StatusInfo}"
+                        TextWrapping="Wrap"
+                        Text="{Binding EditorialMetadataPreferenceLearningNotice}"
+                        Visibility="{Binding HasEditorialMetadataPreferenceLearningNotice, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+            <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}" DataContext="{Binding WritingLearning}">
+                <StackPanel>
+                    <TextBlock Text="{Binding State}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.BrandCyan}" />
+                    <TextBlock Margin="0,5,0,8" Text="{Binding Summary}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
+                    <Button HorizontalAlignment="Left" Content="Refresh writing feedback" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Border>
             <TextBlock Margin="0,14,0,0" Style="{DynamicResource Text.FormLabel}" Text="Audience name" />
             <TextBox
                 Margin="0,4,0,0"
@@ -84,6 +145,13 @@
                 Command="{Binding CreatorVoice.SaveCommand}"
                 Content="Save creator voice"
                 Style="{DynamicResource Control.PrimaryButton}" />
+            <Border Margin="0,16,0,0" Style="{DynamicResource Control.CanvasInsetCard}">
+                <StackPanel>
+                    <TextBlock Text="Your learning, your choice" FontWeight="SemiBold" />
+                    <TextBlock Margin="0,5,0,8" Text="Local learning does not enable community sharing. Review text contributions separately in Privacy &amp; connections." TextWrapping="Wrap" Style="{DynamicResource Text.Meta}" />
+                    <Button HorizontalAlignment="Left" Content="Review community sharing →" Style="{DynamicResource Control.GhostButton}" Command="{Binding SelectSectionCommand}" CommandParameter="{Binding PrivacySection}" />
+                </StackPanel>
+            </Border>
         </StackPanel>
     </Border>
 </UserControl>

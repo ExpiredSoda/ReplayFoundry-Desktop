@@ -92,7 +92,21 @@ $pythonNetwork = Get-ChildItem -LiteralPath `
     (Join-Path $root 'src/ReplayFoundry.VisualSemanticHost') -Recurse -Filter '*.py' |
     Select-String -Pattern '^\s*(?:import|from)\s+(?:requests|httpx|aiohttp|urllib\.request|socket|websockets)\b'
 if ($pythonNetwork) {
-    Fail 'the local Qwen host gained an unreviewed network dependency'
+    $hostManifest = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ReplayFoundry.ProductionVisualHost.psd1')
+    $ownerOnlyTransports = @(
+        'replayfoundry_visual_semantic/editorial/writer/community_runner.py',
+        'replayfoundry_visual_semantic/editorial/writer/community_release.py'
+    )
+    foreach ($match in $pythonNetwork) {
+        $relative = [IO.Path]::GetRelativePath((Join-Path $root 'src/ReplayFoundry.VisualSemanticHost'), $match.Path).Replace('\', '/')
+        if ($relative -notin $ownerOnlyTransports -or $relative -notin $hostManifest.ForbiddenSourceFiles -or
+            $relative.Replace('replayfoundry_visual_semantic/', '') -in $hostManifest.Modules) {
+            Fail 'the packaged local Qwen host gained a network dependency'
+        }
+    }
+    Require-Text 'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/community_runner.py' 'https://replayfoundry.com/api/internal/writer-learning' 'Owner training must use its fixed private endpoint'
+    Require-Text 'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/community_runner.py' 'NoRedirect' 'Owner training must reject redirects'
+    Require-Text 'src/ReplayFoundry.VisualSemanticHost/replayfoundry_visual_semantic/editorial/writer/community_runner.py' 'child_env.pop\("REPLAYFOUNDRY_COMMUNITY_RELEASE_TOKEN"' 'Training subprocesses must not inherit release credentials'
 }
 
 Require-Text `

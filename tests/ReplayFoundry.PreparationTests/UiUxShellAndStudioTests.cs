@@ -211,12 +211,12 @@ internal static partial class UiUxApplicationSurfaceTests
                 "new DispatcherTimer(",
                 StringComparison.Ordinal) &&
             codeBehind.Contains(
-                "DispatcherPriority.Normal",
+                "DispatcherPriority.Background",
                 StringComparison.Ordinal) &&
             codeBehind.Contains(
                 "PreviewPlayer.Position",
                 StringComparison.Ordinal),
-            "Timed caption effects must sample native media and its bounded UI-thread presentation clock.");
+            "Timed captions must sample native media on the UI thread while yielding to keyboard and mouse input.");
         TestAssert.True(
             codeBehind.Contains(
                 "IsVisibleChanged += OnIsVisibleChanged",

@@ -8,12 +8,12 @@
         <StackPanel>
             <TextBlock
                 Style="{DynamicResource Text.WorkspaceTitle}"
-                Text="Local tools &amp; AI" />
+                Text="Clips &amp; AI tools" />
             <TextBlock
                 Margin="0,6,0,0"
                 Style="{DynamicResource Text.Body}"
                 TextWrapping="Wrap"
-                Text="General AI finds moments and writes copy even before you train anything. Your optional personal models learn separately from explicit feedback, on this PC." />
+                Text="Manage the tools that find your moments. Personal clip preferences stay on this PC; wording controls are in Writing &amp; learning." />
             <Border
                 Margin="0,16,0,0"
                 Style="{DynamicResource Control.CanvasInsetCard}"
@@ -54,69 +54,9 @@
                     <TextBlock Margin="0,6,0,0" Style="{DynamicResource Text.Meta}" Text="{Binding QualificationSummary}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
-            <Border
-                Margin="0,12,0,0"
-                Style="{DynamicResource Control.CanvasInsetCard}">
-                <StackPanel>
-                    <controls:FoundryHeading
-                        Text="Title &amp; description"
-                        Style="{DynamicResource Text.SectionTitle}" />
-                    <CheckBox
-                        Margin="0,10,0,0"
-                        Content="Use local AI for rewrites"
-                        AutomationProperties.Name="Use local AI when rewriting Studio and Publish titles"
-                        IsChecked="{Binding UseLocalAiForEditorialRerolls, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Style="{DynamicResource Control.FormCheckBox}" />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialRerollPreferenceDetail}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        Text="For new clips, choose the writing method in Generate." />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Foreground="{DynamicResource Brush.StatusInfo}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialRerollPreferenceNotice}"
-                        Visibility="{Binding HasEditorialRerollPreferenceNotice, Converter={StaticResource BoolToVisibility}}" />
-                    <Border
-                        Margin="0,12,0,12"
-                        Height="1"
-                        Background="{DynamicResource Brush.BorderSubtle}" />
-                    <CheckBox
-                        Content="Learn from my wording corrections"
-                        AutomationProperties.Name="Learn locally from saved title and description corrections"
-                        IsChecked="{Binding IsEditorialMetadataPreferenceLearningEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Style="{DynamicResource Control.FormCheckBox}" />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        ><Run Text="Optional, off by default. Explicit wording edits and approvals teach your writing style. " />
-                        <Run Text="Clip likes, renders and uploads do not approve the wording. " />
-                        <Run Text="Training requires 64 eligible examples from 6 recordings, followed by independent qualification." /></TextBlock>
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Foreground="{DynamicResource Brush.StatusInfo}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialMetadataPreferenceLearningNotice}"
-                        Visibility="{Binding HasEditorialMetadataPreferenceLearningNotice, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
-            </Border>
-            <Border Margin="0,12,0,0" Style="{DynamicResource Control.CanvasInsetCard}" DataContext="{Binding WritingLearning}">
-                <StackPanel>
-                    <TextBlock Text="{Binding State}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.BrandCyan}" />
-                    <TextBlock Margin="0,5,0,8" Text="{Binding Summary}" Style="{DynamicResource Text.Meta}" TextWrapping="Wrap" />
-                    <Button HorizontalAlignment="Left" Content="Refresh writing feedback" Command="{Binding RefreshCommand}" />
-                </StackPanel>
-            </Border>
             <Expander
                 Margin="0,16,0,0"
-                Header="Learning data &amp; model controls"
+                Header="Clip learning details &amp; reset"
                 Style="{DynamicResource Control.QuietExpander}">
                 <StackPanel
                     Margin="0,10,0,0">
@@ -152,44 +92,11 @@
                                 ToolTip="Clears the personal clip model and its learning history. Your clips and projects stay." />
                         </WrapPanel>
                     </StackPanel>
-                    <TextBlock
-                        Margin="0,10,0,0"
-                        Style="{DynamicResource Text.FormLabel}"
-                        Text="Writing learning" />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialMetadataPreferenceLearningDetail}" />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialMetadataPreferenceLearningPrivacy}" />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialMetadataPreferenceLearningEnabledAtText}" />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialMetadataPreferenceLearningPersistence}" />
-                    <TextBlock
-                        Margin="0,8,0,0"
-                        Style="{DynamicResource Text.FormLabel}"
-                        Text="Rewrite preference" />
-                    <TextBlock
-                        Margin="0,5,0,0"
-                        Style="{DynamicResource Text.Meta}"
-                        TextWrapping="Wrap"
-                        Text="{Binding EditorialRerollPreferencePersistence}" />
                 </StackPanel>
             </Expander>
             <Expander
                 Margin="0,12,0,0"
-                Header="Installed tools &amp; maintenance"
+                IsExpanded="True" Header="Installed tools &amp; maintenance"
                 Style="{DynamicResource Control.QuietExpander}">
                 <StackPanel>
                     <TextBlock

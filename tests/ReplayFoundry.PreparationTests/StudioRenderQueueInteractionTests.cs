@@ -2272,12 +2272,12 @@ internal static partial class UiUxApplicationSurfaceTests
                 "new DispatcherTimer(",
                 StringComparison.Ordinal) &&
             code.Contains(
-                "DispatcherPriority.Normal",
+                "DispatcherPriority.Background",
                 StringComparison.Ordinal) &&
             code.Contains(
                 "_positionTimer.Stop();",
                 StringComparison.Ordinal),
-            "The Studio media surface must ignore an unchanged source and use a dependable UI-thread playback clock that is stopped with the native media graph.");
+            "The Studio media surface must ignore an unchanged source and stop its input-friendly sampling clock with the native media graph.");
         return Task.CompletedTask;
     }
 

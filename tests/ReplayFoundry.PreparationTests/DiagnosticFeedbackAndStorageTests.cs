@@ -322,16 +322,19 @@ internal static partial class UiUxApplicationSurfaceTests
                 consent,
                 outbox,
                 coordinator);
-            var view = new PrivacyDiagnosticsSettingsView
+            var view = new AboutSettingsView
             {
                 DataContext = new BugReportSettingsHost(settings),
             };
             view.Measure(new Size(1_200, 1_200));
             view.Arrange(new Rect(0, 0, 1_200, 1_200));
             view.UpdateLayout();
+            (FindVisualDescendant<Expander>(view) ??
+                throw new InvalidOperationException("The support report disclosure was not found.")).IsExpanded = true;
+            view.UpdateLayout();
             ListBox reports = FindVisualDescendant<ListBox>(view) ??
                 throw new InvalidOperationException(
-                    "The Privacy settings report list was not found.");
+                    "The Help settings report list was not found.");
             TestAssert.True(
                 reports.ItemContainerGenerator.ContainerFromIndex(0) is not null,
                 "The first report row should materialize its read-only status projections.");

@@ -916,7 +916,7 @@ internal static partial class UiUxApplicationSurfaceTests
             view.Arrange(new Rect(0, 0, view.Width, view.Height));
             view.UpdateLayout();
             ListBox sidebar = EnumerateVisualDescendants<ListBox>(view)
-                .Single(list => list != selector && ReferenceEquals(list.ItemsSource, model.Sections));
+                .Single(list => list != selector && list.Items.OfType<SettingsSectionItem>().SequenceEqual(model.Sections));
             TestAssert.Equal(model.SelectedSectionItem, (SettingsSectionItem)sidebar.SelectedItem,
                 "The wide sidebar must retain the page chosen in compact navigation.");
             TestAssert.Equal(Visibility.Collapsed, selector.Visibility,

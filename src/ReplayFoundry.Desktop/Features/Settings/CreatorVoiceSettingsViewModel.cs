@@ -61,6 +61,10 @@ public sealed class CreatorVoiceSettingsViewModel : ObservableObject
         DefaultTags != string.Join(", ", _profileEditor.CurrentCreatorVoice.DefaultTags);
 
     public bool IsAvailable => true;
+    public bool IsPersistent => _profileEditor.IsPersistent;
+    public string PersistenceDetail => IsPersistent
+        ? "Save your voice defaults below. Learning choices save automatically on this PC."
+        : "Voice defaults last for this app session. Save below to apply your edits.";
 
     public ICommand SaveCommand => _saveCommand;
 

@@ -522,6 +522,22 @@ internal static partial class UiUxApplicationSurfaceTests
             settings.SelectedSection = section;
             TestAssert.Equal(section, settings.SelectedSection, $"Section {section} should be reachable.");
         }
+        settings.SettingsSearch = "titles learning";
+        TestAssert.Equal(SettingsSection.CreatorVoice, settings.FilteredSections.Single().Key,
+            "Searching a writing task should find the combined writing and learning page.");
+        settings.SettingsSearch = "sharing";
+        TestAssert.Equal(SettingsSection.PrivacyDiagnostics, settings.FilteredSections.Single().Key,
+            "Sharing must lead to privacy, independently of local learning.");
+        settings.SettingsSearch = "no matching preference";
+        TestAssert.True(settings.HasNoSettingsMatches, "An unmatched search needs a recoverable empty state.");
+        settings.SettingsSearch = "";
+        TestAssert.Equal(5, settings.FilteredSections.Count, "Clearing search restores all settings sections.");
+        settings.SelectedSection = SettingsSection.CreatorVoice;
+        settings.CreatorVoice.NamingGuidance = "An unsaved draft";
+        settings.SelectedSection = SettingsSection.About;
+        settings.SelectedSection = SettingsSection.CreatorVoice;
+        TestAssert.Equal("An unsaved draft", settings.CreatorVoice.NamingGuidance,
+            "Navigating or searching Settings must not discard an unsaved creator-voice edit.");
         return Task.CompletedTask;
     }
 

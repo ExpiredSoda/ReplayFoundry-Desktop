@@ -5,6 +5,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using System.Runtime.InteropServices;
 
 namespace ReplayFoundry.Desktop.Features.Publish.Sections;
@@ -104,11 +105,11 @@ public partial class PublishLibraryBrowserView : UserControl
         return null;
     }
 
-    private sealed class DragPreviewAdorner : Adorner
+    internal sealed class DragPreviewAdorner : Adorner
     {
-        private readonly VisualBrush _preview;
+        private readonly Border _preview;
         private readonly Size _previewSize;
-        private Point _position;
+        private readonly TranslateTransform _translation = new();
 
         public DragPreviewAdorner(UIElement adornedElement, FrameworkElement source)
             : base(adornedElement)
@@ -123,7 +124,7 @@ public partial class PublishLibraryBrowserView : UserControl
             _previewSize = new Size(
                 previewWidth,
                 Math.Clamp(sourceHeight * previewScale, 72, 112));
-            _preview = new VisualBrush(source)
+            var brush = new VisualBrush(source)
             {
                 AlignmentX = AlignmentX.Left,
                 AlignmentY = AlignmentY.Top,
@@ -131,7 +132,19 @@ public partial class PublishLibraryBrowserView : UserControl
                 Viewbox = new Rect(0, 0, sourceWidth, sourceHeight),
                 ViewboxUnits = BrushMappingMode.Absolute,
             };
-            Effect = new DropShadowEffect
+            // Snapshot the small card once. Moving a drag ghost must not repaint
+            // a live ListBox item or blur a planner-sized surface on each pointer event.
+            var drawing = new DrawingVisual();
+            using (var context = drawing.RenderOpen())
+                context.DrawRectangle(brush, null, new Rect(_previewSize));
+            var dpi = VisualTreeHelper.GetDpi(source);
+            var bitmap = new RenderTargetBitmap(
+                (int)Math.Ceiling(_previewSize.Width * dpi.DpiScaleX),
+                (int)Math.Ceiling(_previewSize.Height * dpi.DpiScaleY),
+                dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            bitmap.Render(drawing);
+            bitmap.Freeze();
+            var shadow = new DropShadowEffect
             {
                 BlurRadius = 18,
                 Direction = 270,
@@ -139,12 +152,26 @@ public partial class PublishLibraryBrowserView : UserControl
                 ShadowDepth = 8,
                 Color = Colors.Black,
             };
+            shadow.Freeze();
+            var accent = (Brush)source.FindResource("Brush.StatusInfo");
+            _preview = new Border
+            {
+                Width = _previewSize.Width, Height = _previewSize.Height,
+                Background = new ImageBrush(bitmap), BorderBrush = accent,
+                BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(10),
+                Opacity = 0.96, Effect = shadow, CacheMode = new BitmapCache(),
+                RenderTransform = _translation,
+                Child = new Border { Width = 4, HorizontalAlignment = HorizontalAlignment.Left, Background = accent },
+            };
+            AddVisualChild(_preview);
         }
 
         public void UpdatePosition(Point position)
         {
-            _position = position;
-            InvalidateVisual();
+            _translation.X = Math.Clamp(position.X + 18, 0,
+                Math.Max(0, AdornedElement.RenderSize.Width - _previewSize.Width));
+            _translation.Y = Math.Clamp(position.Y + 18, 0,
+                Math.Max(0, AdornedElement.RenderSize.Height - _previewSize.Height));
         }
 
         public void UpdateFromCurrentCursor()
@@ -160,35 +187,20 @@ public partial class PublishLibraryBrowserView : UserControl
                 new Point(cursor.X, cursor.Y)));
         }
 
-        protected override void OnRender(DrawingContext drawingContext)
+        protected override int VisualChildrenCount => 1;
+        protected override Visual GetVisualChild(int index) => index == 0
+            ? _preview : throw new ArgumentOutOfRangeException(nameof(index));
+
+        protected override Size MeasureOverride(Size constraint)
         {
-            Point origin = new(_position.X + 18, _position.Y + 18);
-            double maximumX = Math.Max(0, AdornedElement.RenderSize.Width -
-                _previewSize.Width);
-            double maximumY = Math.Max(0, AdornedElement.RenderSize.Height -
-                _previewSize.Height);
-            var bounds = new Rect(
-                Math.Clamp(origin.X, 0, maximumX),
-                Math.Clamp(origin.Y, 0, maximumY),
-                _previewSize.Width,
-                _previewSize.Height);
-            var clip = new RectangleGeometry(bounds, 10, 10);
-            drawingContext.PushClip(clip);
-            drawingContext.PushOpacity(0.96);
-            drawingContext.DrawRoundedRectangle(
-                _preview,
-                new Pen(
-                    (Brush)FindResource("Brush.StatusInfo"),
-                    2),
-                bounds,
-                10,
-                10);
-            drawingContext.DrawRectangle(
-                (Brush)FindResource("Brush.StatusInfo"),
-                null,
-                new Rect(bounds.X, bounds.Y, 4, bounds.Height));
-            drawingContext.Pop();
-            drawingContext.Pop();
+            _preview.Measure(_previewSize);
+            return AdornedElement.RenderSize;
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            _preview.Arrange(new Rect(_previewSize));
+            return finalSize;
         }
 
         [DllImport("user32.dll")]
