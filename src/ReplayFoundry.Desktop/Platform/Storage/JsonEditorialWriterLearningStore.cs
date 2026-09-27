@@ -115,8 +115,8 @@ public sealed class JsonEditorialWriterLearningStore : IEditorialWriterLearningS
         bool changed = beforeTitle != afterTitle || beforeDescription.Trim() != afterDescription.Trim() ||
             !beforeTags.SequenceEqual(afterTags, StringComparer.OrdinalIgnoreCase);
         if (!changed && !explicitApproval) return false;
-        if (afterTitle.Length is < 1 or > 100 || afterDescription.Trim().Length is < 1 or > 420 ||
-            afterTags.Count is < 1 or > 8 || afterTags.Any(tag => string.IsNullOrWhiteSpace(tag) || tag.Length > 60)) return false;
+        if (afterTitle.Length is < 1 or > 100 || afterDescription.Trim().Length is < 1 or > 5000 ||
+            afterTags.Count > 8 || afterTags.Any(tag => string.IsNullOrWhiteSpace(tag) || tag.Length > 60)) return false;
         lock (Gate)
         {
             if (!IsEnabled) return false;

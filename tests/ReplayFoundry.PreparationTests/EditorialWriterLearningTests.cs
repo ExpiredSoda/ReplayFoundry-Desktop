@@ -186,6 +186,22 @@ internal static class EditorialWriterLearningTests
             TestAssert.True(approved.RootElement.GetProperty("feedback").GetProperty("factsReviewed").GetBoolean(), "Only the explicit review supplies reviewed facts.");
             TestAssert.Equal(0, approved.RootElement.GetProperty("edits").GetProperty("fields").GetArrayLength(), "An approval cannot invent a text edit.");
             TestAssert.True(approved.RootElement.GetProperty("edits").GetProperty("parentExampleId").GetString() is { Length: 64 }, "Successive saves link to their preceding feedback.");
+            string longDescription = new string('x', 4990) + " 🎮 ending";
+            TestAssert.True(store.Record(context, "The door closed", description, tags, "The door closed", longDescription, []),
+                "Saving a longer description and removing all tags must retain the edit.");
+            string revisedDescription = longDescription.Replace("ending", "edited", StringComparison.Ordinal);
+            TestAssert.True(store.Record(context, "The door closed", longDescription, [], "The door closed", revisedDescription, []),
+                "A later edit of a long description keeps its previous saved wording.");
+            using JsonDocument extended = Directory.GetFiles(Path.Combine(root, "writer", "examples"), "*.json")
+                .Select(path => JsonDocument.Parse(File.ReadAllText(path)))
+                .Single(doc => doc.RootElement.GetProperty("chosen").GetProperty("description").GetString() == revisedDescription);
+            TestAssert.Equal(0, extended.RootElement.GetProperty("chosen").GetProperty("tags").GetArrayLength(), "Removing tags remains explicit.");
+            var descriptionEdit = extended.RootElement.GetProperty("edits").GetProperty("fields")[0];
+            var descriptionOps = descriptionEdit.GetProperty("operations").EnumerateArray().ToArray();
+            TestAssert.Equal(longDescription, string.Concat(descriptionOps.Where(op => op.GetProperty("op").GetString() != "add").Select(op => op.GetProperty("text").GetString())), "Long Unicode edits reconstruct the previous description.");
+            TestAssert.Equal(revisedDescription, string.Concat(descriptionOps.Where(op => op.GetProperty("op").GetString() != "remove").Select(op => op.GetProperty("text").GetString())), "Long Unicode edits reconstruct the saved description.");
+            TestAssert.False(store.Record(context, "The door closed", revisedDescription, [], "The door closed", new string('x', 5001), []),
+                "Capture retains the Studio size boundary.");
             enabled = false;
             TestAssert.False(store.Record(context, "I found a passage", description, tags, title, description, tags), "Turning learning off stops capture.");
         }

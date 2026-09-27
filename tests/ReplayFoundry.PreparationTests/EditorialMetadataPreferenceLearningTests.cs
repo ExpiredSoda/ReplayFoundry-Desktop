@@ -481,7 +481,7 @@ internal static class EditorialMetadataPreferenceLearningTests
         foreach (string required in new[]
                  {
                      "titles and descriptions",
-                     "Nothing is uploaded",
+                     "Local learning alone does not authorize uploads",
                      "clip facts",
                      "separate recordings",
                      "existing writer",
@@ -508,7 +508,7 @@ internal static class EditorialMetadataPreferenceLearningTests
             "Settings should expose an immediate opt-out.");
         TestAssert.True(
             settings.EditorialMetadataPreferenceLearningNotice.Contains(
-                "Nothing was uploaded",
+                "This action did not upload anything",
                 StringComparison.OrdinalIgnoreCase),
             "Enabling local learning must not imply any upload.");
 

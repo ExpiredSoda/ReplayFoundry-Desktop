@@ -42,14 +42,14 @@ def validate(trace, row):
                 or field["field"] not in expected or field["field"] in seen
                 or field["before"] != row["rejected"][field["field"]]
                 or field["after"] != row["chosen"][field["field"]]
-                or not isinstance(field["operations"], list) or not 1 <= len(field["operations"]) <= 840):
+                or not isinstance(field["operations"], list) or not 1 <= len(field["operations"]) <= 10000):
             raise ValueError("Edit trace changed the captured before/after wording")
         seen.add(field["field"])
         for operation in field["operations"]:
             if (not isinstance(operation, dict) or set(operation) != {"op", "text"}
                     or operation["op"] not in {"keep", "remove", "add"}
                     or not isinstance(operation["text"], str) or not operation["text"]
-                    or len(operation["text"]) > 420):
+                    or len(operation["text"]) > 5000):
                 raise ValueError("Invalid edit operation")
         before = "".join(op["text"] for op in field["operations"] if op["op"] != "add")
         after = "".join(op["text"] for op in field["operations"] if op["op"] != "remove")
